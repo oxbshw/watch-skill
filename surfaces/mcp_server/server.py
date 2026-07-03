@@ -167,6 +167,96 @@ def list_videos() -> str:
     return "\n".join(lines)
 
 
+def _loop_state_report(state: Any) -> str:
+    from agentvision.loop.reportfmt import format_loop_state
+
+    return format_loop_state(state)
+
+
+@mcp.tool(output_schema=None)
+def capture(
+    target: str,
+    duration: float = 10.0,
+    script: list[dict[str, Any]] | None = None,
+) -> list[Any]:
+    """Record a target to video and index it: an http(s) URL (headless browser
+    session, optional interaction script of goto/click/fill/scroll/wait steps),
+    `screen:` (full desktop), `window:<exact title>`, or an existing video file.
+    Returns the video_id for follow-up ask_video/get_moment calls."""
+    import tempfile
+
+    from agentvision.index import index_watch_result
+    from agentvision.loop import capture as run_capture
+    from agentvision.report import render_report
+    from agentvision.watch import watch
+
+    try:
+        out_dir = Path(tempfile.mkdtemp(prefix="agentvision-capture-"))
+        cap = run_capture(target, out_dir, script=script, duration_seconds=duration)
+        result = watch(str(cap.video_path), use_cache=False)
+        result.acquisition.source = f"capture:{target}"
+        video_id = index_watch_result(result)
+    except AgentVisionError as exc:
+        return [_error_payload(exc)]
+    frames = [str(f.path) for f in (result.perception.frames if result.perception else [])]
+    return [
+        f"video_id: {video_id}\ncaptured {cap.kind} -> {cap.video_path}\n\n" + render_report(result),
+        *_frame_images(frames),
+    ]
+
+
+@mcp.tool
+def loop_start(
+    target: str,
+    pass_criteria: str,
+    script: list[dict[str, Any]] | None = None,
+    max_iterations: int = 5,
+    duration: float = 8.0,
+) -> str:
+    """START THE LOOP: capture the target (URL/screen:/window:/file), watch the
+    recording, and critique it against your natural-language pass criteria via
+    the strong vision model. Returns loop_id + structured issues. YOU apply the
+    suggested fixes, then call loop_iterate -- the loop never edits code itself."""
+    from agentvision.loop import loop_start as start
+
+    try:
+        state = start(
+            target, pass_criteria, script=script,
+            max_iterations=max_iterations, duration_seconds=duration,
+        )
+    except AgentVisionError as exc:
+        return _error_payload(exc)
+    return _loop_state_report(state)
+
+
+@mcp.tool
+def loop_iterate(loop_id: str) -> str:
+    """CONTINUE THE LOOP after you applied fixes: re-captures the same target
+    with the same script, re-critiques, and diffs against the previous
+    iteration (fixed / unchanged / new issues). Stops on pass, max_iterations,
+    or no-progress; on pass it renders a before/after MP4+GIF proof."""
+    from agentvision.loop import loop_iterate as iterate
+
+    try:
+        state = iterate(loop_id)
+    except AgentVisionError as exc:
+        return _error_payload(exc)
+    return _loop_state_report(state)
+
+
+@mcp.tool
+def loop_status(loop_id: str) -> str:
+    """Inspect a loop's persisted state (status, scores per iteration, artifacts)."""
+    from agentvision.loop import loop_status as status
+
+    try:
+        state = status(loop_id)
+    except AgentVisionError as exc:
+        return _error_payload(exc)
+    scores = " -> ".join(str(it["critique"]["score"]) for it in state.iterations)
+    return _loop_state_report(state) + f"\nscore history: {scores}"
+
+
 @mcp.tool
 def doctor() -> str:
     """Health check + self-heal: ffmpeg/yt-dlp presence (bootstraps if missing),

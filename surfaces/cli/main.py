@@ -192,6 +192,94 @@ def search(query: str = typer.Argument(...)) -> None:
             print(f"- [{stamp}] ({hit['kind']}, {hit['score']:.2f}) {hit['text']}")
 
 
+loop_app = typer.Typer(help="THE LOOP: capture -> critique -> fix -> re-capture.")
+app.add_typer(loop_app, name="loop")
+
+
+def _print_loop_state(state) -> None:
+    from agentvision.loop.reportfmt import format_loop_state
+
+    print(format_loop_state(state))
+
+
+@app.command()
+def capture(
+    target: str = typer.Argument(..., help="URL, screen:, window:<title>, or video file."),
+    duration: float = typer.Option(10.0, "--duration", help="Recording length in seconds."),
+    script_json: str | None = typer.Option(
+        None, "--script", help="Interaction script as JSON list of steps."
+    ),
+    out_dir: str | None = typer.Option(None, "--out-dir"),
+) -> None:
+    """Record a URL session / the screen / a window to video."""
+    import tempfile
+    from pathlib import Path
+
+    from agentvision.errors import AgentVisionError
+    from agentvision.loop import capture as run_capture
+
+    try:
+        script = json.loads(script_json) if script_json else None
+        dest = Path(out_dir) if out_dir else Path(tempfile.mkdtemp(prefix="agentvision-capture-"))
+        result = run_capture(target, dest, script=script, duration_seconds=duration)
+    except AgentVisionError as exc:
+        print(json.dumps(exc.to_dict(), indent=2))
+        raise typer.Exit(code=1)
+    print(f"captured {result.kind}: {result.video_path}")
+
+
+@loop_app.command("start")
+def loop_start_cmd(
+    target: str = typer.Argument(...),
+    pass_criteria: str = typer.Argument(..., help="Natural-language pass criteria."),
+    script_json: str | None = typer.Option(None, "--script"),
+    max_iterations: int = typer.Option(5, "--max-iterations"),
+    duration: float = typer.Option(8.0, "--duration"),
+) -> None:
+    """Capture + critique the first iteration; prints loop_id and issues."""
+    from agentvision.errors import AgentVisionError
+    from agentvision.loop import loop_start
+
+    try:
+        script = json.loads(script_json) if script_json else None
+        state = loop_start(
+            target, pass_criteria, script=script,
+            max_iterations=max_iterations, duration_seconds=duration,
+        )
+    except AgentVisionError as exc:
+        print(json.dumps(exc.to_dict(), indent=2))
+        raise typer.Exit(code=1)
+    _print_loop_state(state)
+
+
+@loop_app.command("iterate")
+def loop_iterate_cmd(loop_id: str = typer.Argument(...)) -> None:
+    """Re-capture + re-critique after you applied fixes; diffs vs previous."""
+    from agentvision.errors import AgentVisionError
+    from agentvision.loop import loop_iterate
+
+    try:
+        state = loop_iterate(loop_id)
+    except AgentVisionError as exc:
+        print(json.dumps(exc.to_dict(), indent=2))
+        raise typer.Exit(code=1)
+    _print_loop_state(state)
+
+
+@loop_app.command("status")
+def loop_status_cmd(loop_id: str = typer.Argument(...)) -> None:
+    """Show a loop's persisted state."""
+    from agentvision.errors import AgentVisionError
+    from agentvision.loop import loop_status
+
+    try:
+        state = loop_status(loop_id)
+    except AgentVisionError as exc:
+        print(json.dumps(exc.to_dict(), indent=2))
+        raise typer.Exit(code=1)
+    _print_loop_state(state)
+
+
 @app.command()
 def version() -> None:
     """Print the AgentVision version."""
