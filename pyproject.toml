@@ -1,0 +1,64 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "agentvision"
+version = "0.1.0"
+description = "Give any agent a video input: watch, index, ask, and iterate on video via MCP, CLI, REST, and Python."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "AgentVision contributors" }]
+keywords = ["video", "agents", "mcp", "vision", "transcription", "ffmpeg", "yt-dlp"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Multimedia :: Video",
+]
+dependencies = [
+    "pydantic>=2.7",
+    "pydantic-settings>=2.3",
+    "typer>=0.12",
+    "rich>=13.7",
+    "httpx>=0.27",
+]
+
+[project.optional-dependencies]
+perceive = [
+    "scenedetect>=0.6.4",
+    "opencv-python-headless>=4.9",
+    "imagehash>=4.3",
+    "Pillow>=10.3",
+]
+ocr = ["rapidocr-onnxruntime>=1.3"]
+whisper = ["faster-whisper>=1.0"]
+index = ["sentence-transformers>=3.0", "numpy>=1.26"]
+mcp = ["fastmcp>=2.3"]
+api = ["fastapi>=0.111", "uvicorn>=0.30"]
+loop = ["playwright>=1.44"]
+all = ["agentvision[perceive,ocr,whisper,index,mcp,api,loop]"]
+
+[project.scripts]
+agentvision = "surfaces.cli.main:app"
+
+[project.urls]
+Homepage = "https://github.com/agentvision/agentvision"
+
+[dependency-groups]
+dev = ["pytest>=8.2", "pytest-timeout>=2.3"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["core/agentvision", "surfaces"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+timeout = 300
+
+[tool.uv]
+package = true

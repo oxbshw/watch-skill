@@ -1,0 +1,29 @@
+# Self-managed portable binaries (bootstrapped by `agentvision doctor`)
+bin/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+dist/
+build/
+
+# Environment / secrets
+.env
+.env.*
+
+# Runtime data (never commit user data)
+*.db
+*.sqlite3
+.agentvision/
+
+# Test / tool caches
+.pytest_cache/
+.ruff_cache/
+.coverage
+
+# OS noise
+Thumbs.db
+Desktop.ini
+.DS_Store
