@@ -86,6 +86,9 @@ def watch(
     ),
     out_dir: str | None = typer.Option(None, "--out-dir", help="Working directory."),
     no_cache: bool = typer.Option(False, "--no-cache", help="Bypass the download cache."),
+    index: bool = typer.Option(
+        True, "--index/--no-index", help="Persist to the searchable index (ask/search later)."
+    ),
 ) -> None:
     """Watch a video: acquire -> scenes -> frames -> OCR -> transcript -> report."""
     from pathlib import Path
@@ -119,9 +122,74 @@ def watch(
         _console.print(f"[red]error:[/red] {exc}")
         print(json.dumps(exc.to_dict(), indent=2))
         raise typer.Exit(code=1)
+    if index and result.perception is not None:
+        from agentvision.index import index_watch_result
+
+        video_id = index_watch_result(result)
+        print(f"> **Indexed:** video_id `{video_id}` — follow up with `agentvision ask {video_id} ...`\n")
     if question:
         print(f"> **Question:** {question}\n")
     print(render_report(result))
+
+
+@app.command()
+def serve(
+    http: bool = typer.Option(False, "--http", help="Streamable HTTP instead of stdio."),
+    host: str = typer.Option("127.0.0.1", "--host"),
+    port: int = typer.Option(8747, "--port"),
+) -> None:
+    """Run the MCP server (stdio default; --http for streamable HTTP)."""
+    from surfaces.mcp_server.server import main as mcp_main
+
+    mcp_main(http=http, host=host, port=port)
+
+
+@app.command()
+def ask(
+    video: str = typer.Argument(..., help="video_id or the original source URL/path."),
+    question: str = typer.Argument(...),
+    max_frames: int = typer.Option(6, "--max-frames"),
+) -> None:
+    """Ask an already-indexed video a question (retrieval, no re-processing)."""
+    from agentvision.errors import AgentVisionError
+    from agentvision.index import ask_video
+    from agentvision.perceive.budget import format_time
+
+    try:
+        result = ask_video(video, question, max_frames=max_frames)
+    except AgentVisionError as exc:
+        print(json.dumps(exc.to_dict(), indent=2))
+        raise typer.Exit(code=1)
+    print(f"# Evidence for: {question}\n")
+    for hit in result["hits"]:
+        stamp = format_time(hit["timestamp"]) if hit["timestamp"] is not None else "--:--"
+        print(f"- [{stamp}] ({hit['kind']}, score {hit['score']:.2f}) {hit['text']}")
+    print("\nFrames:")
+    for frame in result["frames"]:
+        print(f"- t={format_time(frame['timestamp'])}: `{frame['frame_path']}`")
+
+
+@app.command("list")
+def list_cmd() -> None:
+    """List indexed videos."""
+    from agentvision.index import list_videos
+
+    for row in list_videos():
+        print(f"{row['id']}  {row['duration_seconds']:8.1f}s  {row['title'] or row['source']}")
+
+
+@app.command()
+def search(query: str = typer.Argument(...)) -> None:
+    """Search across every indexed video."""
+    from agentvision.index import search_videos
+    from agentvision.perceive.budget import format_time
+
+    for group in search_videos(query):
+        video = group["video"] or {}
+        print(f"\n## {video.get('title') or video.get('source')} ({video.get('id')})")
+        for hit in group["hits"]:
+            stamp = format_time(hit["timestamp"]) if hit["timestamp"] is not None else "--:--"
+            print(f"- [{stamp}] ({hit['kind']}, {hit['score']:.2f}) {hit['text']}")
 
 
 @app.command()

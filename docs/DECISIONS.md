@@ -46,6 +46,12 @@ swaps. Newest entries at the bottom of each section.
   avoids GUI DLL baggage on servers/CI.
 - **Whisper: faster-whisper (CTranslate2)** — prebuilt Windows wheels, no
   Rust/C++ toolchain needed, CPU-friendly with int8.
+- **Embeddings: fastembed (ONNX) instead of sentence-transformers.** The
+  plan called for sentence-transformers, but it drags in torch (~2 GB
+  installed); this machine has <7 GB free disk total across drives, so the
+  install would fail outright. fastembed serves the same MiniLM-class models
+  (`sentence-transformers/all-MiniLM-L6-v2`) through onnxruntime, which the
+  OCR stack already installs. Same vectors, ~50 MB instead of ~2 GB.
 
 ## Reference-inherited defaults (see docs/REFERENCE_ANALYSIS.md)
 
