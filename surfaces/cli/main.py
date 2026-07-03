@@ -58,6 +58,73 @@ def doctor(
 
 
 @app.command()
+def watch(
+    source: str = typer.Argument(..., help="URL, direct media URL, manifest, or local path."),
+    question: str | None = typer.Argument(None, help="Optional question (echoed in output)."),
+    start: str | None = typer.Option(None, "--start", help="Range start (SS, MM:SS, HH:MM:SS)."),
+    end: str | None = typer.Option(None, "--end", help="Range end (SS, MM:SS, HH:MM:SS)."),
+    max_frames: int | None = typer.Option(None, "--max-frames", help="Override the frame cap."),
+    resolution: int | None = typer.Option(None, "--resolution", help="Frame width px (default 512)."),
+    timestamps: str | None = typer.Option(
+        None, "--timestamps", help="Comma-separated absolute times to pin frames at."
+    ),
+    transcript_only: bool = typer.Option(
+        False, "--transcript-only", help="Skip frames; captions-first fast path."
+    ),
+    no_ocr: bool = typer.Option(False, "--no-ocr", help="Skip the OCR pass."),
+    no_whisper: bool = typer.Option(
+        False, "--no-whisper", help="Disable local whisper fallback (captions only)."
+    ),
+    cloud_stt: bool = typer.Option(
+        False, "--cloud-stt", help="OPT-IN: allow cloud STT for extracted audio."
+    ),
+    whisper_model: str | None = typer.Option(
+        None, "--whisper-model", help="faster-whisper size (tiny..large-v3, default auto)."
+    ),
+    duration: float | None = typer.Option(
+        None, "--duration", help="Bound live-stream capture to N seconds."
+    ),
+    out_dir: str | None = typer.Option(None, "--out-dir", help="Working directory."),
+    no_cache: bool = typer.Option(False, "--no-cache", help="Bypass the download cache."),
+) -> None:
+    """Watch a video: acquire -> scenes -> frames -> OCR -> transcript -> report."""
+    from pathlib import Path
+
+    from agentvision.errors import AgentVisionError
+    from agentvision.perceive.budget import parse_time
+    from agentvision.report import render_report
+    from agentvision.watch import watch as run_watch
+
+    cues = None
+    if timestamps:
+        cues = [t for t in (parse_time(tok) for tok in timestamps.split(",") if tok.strip()) if t is not None]
+    try:
+        result = run_watch(
+            source,
+            start_seconds=parse_time(start),
+            end_seconds=parse_time(end),
+            max_frames=max_frames,
+            frame_width=resolution,
+            cue_timestamps=cues,
+            transcript_only=transcript_only,
+            run_ocr=False if no_ocr else None,
+            allow_local_whisper=False if no_whisper else None,
+            allow_cloud_stt=True if cloud_stt else None,
+            whisper_model=whisper_model,
+            duration_cap=duration,
+            out_dir=Path(out_dir) if out_dir else None,
+            use_cache=not no_cache,
+        )
+    except AgentVisionError as exc:
+        _console.print(f"[red]error:[/red] {exc}")
+        print(json.dumps(exc.to_dict(), indent=2))
+        raise typer.Exit(code=1)
+    if question:
+        print(f"> **Question:** {question}\n")
+    print(render_report(result))
+
+
+@app.command()
 def version() -> None:
     """Print the AgentVision version."""
     print(__version__)

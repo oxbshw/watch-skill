@@ -1,6 +1,12 @@
 """Source acquisition: resolve ANY input to a local video file.
 
-Implemented in Milestone 1: yt-dlp with self-healing auto-update, cobalt.tools
-fallback, direct ffmpeg pull for media URLs and HLS/DASH manifests, local
-files, screen/window capture handoff, and a content-addressed download cache.
+Self-healing chain: yt-dlp -> auto-update + retry -> cobalt.tools -> direct
+ffmpeg pull. Content-addressed cache with LRU eviction. Privacy invariants:
+no cookies/logins, video files never leave the machine.
 """
+
+from agentvision.acquire.resolver import acquire, fetch_captions_only
+from agentvision.acquire.sources import SourceKind, classify_source
+from agentvision.acquire.types import AcquireResult
+
+__all__ = ["AcquireResult", "SourceKind", "acquire", "classify_source", "fetch_captions_only"]
