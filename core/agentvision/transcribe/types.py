@@ -6,14 +6,18 @@ from dataclasses import dataclass, field
 
 @dataclass
 class Segment:
-    """One timestamped span of speech."""
+    """One timestamped span of speech (``speaker`` set when diarization ran)."""
 
     start: float
     end: float
     text: str
+    speaker: str | None = None
 
     def to_dict(self) -> dict:
-        return {"start": self.start, "end": self.end, "text": self.text}
+        out = {"start": self.start, "end": self.end, "text": self.text}
+        if self.speaker is not None:
+            out["speaker"] = self.speaker
+        return out
 
 
 @dataclass
@@ -40,10 +44,11 @@ class Transcript:
         return Transcript(segments=kept, source=self.source)
 
     def formatted(self) -> str:
-        """`[MM:SS] text` lines — the agent-facing rendering."""
+        """`[MM:SS] text` lines (speaker-prefixed when diarized) — the agent-facing rendering."""
         lines = []
         for seg in self.segments:
             start = int(seg.start)
             stamp = f"[{start // 60:02d}:{start % 60:02d}]"
-            lines.append(f"{stamp} {seg.text}")
+            who = f"{seg.speaker}: " if seg.speaker else ""
+            lines.append(f"{stamp} {who}{seg.text}")
         return "\n".join(lines)

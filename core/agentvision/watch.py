@@ -60,6 +60,7 @@ def watch(
     allow_local_whisper: bool | None = None,
     allow_cloud_stt: bool | None = None,
     whisper_model: str | None = None,
+    diarize: bool | None = None,
     duration_cap: float | None = None,
     out_dir: Path | None = None,
     use_cache: bool = True,
@@ -118,6 +119,14 @@ def watch(
     )
     if start_seconds is not None or end_seconds is not None:
         transcript = transcript.filter_range(start_seconds, end_seconds)
+
+    from agentvision.config import get_settings
+
+    do_diarize = get_settings().diarization_enabled if diarize is None else diarize
+    if do_diarize and transcript and acq.video_path is not None:
+        from agentvision.transcribe.diarize import diarize_transcript
+
+        transcript = diarize_transcript(transcript, acq.video_path, work_dir)
 
     return WatchResult(
         acquisition=acq,

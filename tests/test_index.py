@@ -200,3 +200,35 @@ def test_fts_survives_special_characters(indexed_video: str) -> None:
     # FTS5 MATCH syntax characters must not crash free-text questions
     result = ask_video(indexed_video, 'what is "this" AND (that) -thing?')
     assert isinstance(result["hits"], list)
+
+
+def test_ocr_text_lands_in_index_and_retrieval(sample_video: Path, tmp_path: Path) -> None:
+    """OCR-in-index verification (M4): fake OCR blocks are stored, searchable,
+    and surfaced by ask_video/get_moment — without needing rapidocr at test time."""
+    from agentvision.perceive.types import OcrBlock
+
+    result = watch(
+        str(sample_video), out_dir=tmp_path / "ocr work", run_ocr=False,
+        allow_local_whisper=False, allow_cloud_stt=False,
+    )
+    assert result.perception is not None and result.perception.frames
+    target = result.perception.frames[0]
+    target.ocr_blocks = [
+        OcrBlock(text="ERROR CODE 0xDEADBEEF", bbox=(10, 10, 200, 40), confidence=0.97)
+    ]
+    video_id = index_watch_result(result)
+
+    conn = connect()
+    try:
+        rows = conn.execute(
+            "SELECT text, timestamp FROM ocr_blocks WHERE video_id = ?", (video_id,)
+        ).fetchall()
+    finally:
+        conn.close()
+    assert [r["text"] for r in rows] == ["ERROR CODE 0xDEADBEEF"]
+
+    hits = ask_video(video_id, "what error code is shown on screen?")["hits"]
+    assert any("0xDEADBEEF" in h["text"] and h["kind"] == "ocr" for h in hits)
+
+    moment = get_moment(video_id, target.timestamp_seconds, window=4)
+    assert any("0xDEADBEEF" in o["text"] for o in moment.ocr)

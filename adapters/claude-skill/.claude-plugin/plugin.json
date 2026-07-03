@@ -1,0 +1,8 @@
+{
+  "name": "agentvision-watch",
+  "version": "1.0.0",
+  "description": "Give the agent a video input via AgentVision: watch, index, ask, and iterate (THE LOOP).",
+  "author": { "name": "AgentVision contributors" },
+  "license": "MIT",
+  "skills": "./skills/"
+}

@@ -41,6 +41,7 @@ index = ["fastembed>=0.5", "numpy>=1.26"]
 mcp = ["fastmcp>=2.3"]
 api = ["fastapi>=0.111", "uvicorn>=0.30"]
 loop = ["playwright>=1.44"]
+diarize = ["pyannote.audio>=3.1"]
 all = ["agentvision[perceive,ocr,whisper,index,mcp,api,loop]"]
 
 [project.scripts]

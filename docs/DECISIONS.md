@@ -61,3 +61,27 @@ swaps. Newest entries at the bottom of each section.
 - Privacy invariants as hard rules with tests: the video file never leaves
   the machine; no cookies/logins; only extracted mono-16kHz audio may go to a
   cloud STT API, and only when the user explicitly enabled cloud STT.
+
+## Milestone 4
+
+- **REST error mapping is prefix-based.** `acquire.*`/`vision.*`/`transcribe.*`
+  → 502 (upstream), `perceive.*`/`loop.*` → 422, `index.*`/`*.not_found` → 404,
+  `config.*` → 400. The structured `{error, message, fix, details}` body is
+  preserved verbatim in `detail` so REST agents get the same actionable
+  errors as MCP agents.
+- **The REST API refuses non-loopback binds without a bearer token**
+  (`config.public_bind_no_token`). Safe-by-default beats convenient-by-default
+  for a server that can read local files.
+- **`diarize` extra is NOT part of `all`.** pyannote pulls torch (~2 GB) and
+  needs a gated Hugging Face model; forcing that on every `[all]` install
+  would wreck the "clean machine, only Python" bootstrap story. Diarization
+  degrades loudly-but-gracefully: transcript comes back unlabeled with a
+  structured hint on stderr. The speaker-assignment logic is a pure function
+  over a `SpeakerTurn` contract, so it is fully tested without torch.
+- **Claude Skill adapter is instructions-only.** Unlike the reference (which
+  bundles scripts), our SKILL.md shells into the installed `agentvision` CLI —
+  one engine, no drift between skill and core. The trade-off (the package must
+  be installed) is handled by the skill's Step 0 (`pip install agentvision`).
+- **Demo GIF is committed** (`docs/assets/loop_before_after.gif`, ~140 KB) —
+  it is our own generated artifact from the M3 acceptance demo, and the README
+  needs it to communicate THE LOOP in three seconds.

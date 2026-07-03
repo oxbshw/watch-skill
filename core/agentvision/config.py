@@ -62,6 +62,13 @@ class Settings(BaseSettings):
         description="OPT-IN: allow sending extracted audio to a cloud STT API. "
         "The video file itself NEVER leaves the machine regardless.",
     )
+    diarization_enabled: bool = Field(
+        default=False,
+        description="Label transcript segments by speaker (needs the diarize extra + HF token).",
+    )
+    huggingface_token: SecretStr | None = Field(
+        default=None, description="Hugging Face token for gated pyannote diarization models."
+    )
 
     # --- API keys (provider-scoped; never logged) -------------------------
     anthropic_api_key: SecretStr | None = None

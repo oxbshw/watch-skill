@@ -81,6 +81,9 @@ def watch(
     whisper_model: str | None = typer.Option(
         None, "--whisper-model", help="faster-whisper size (tiny..large-v3, default auto)."
     ),
+    diarize: bool = typer.Option(
+        False, "--diarize", help="Label transcript by speaker (diarize extra + HF token)."
+    ),
     duration: float | None = typer.Option(
         None, "--duration", help="Bound live-stream capture to N seconds."
     ),
@@ -114,6 +117,7 @@ def watch(
             allow_local_whisper=False if no_whisper else None,
             allow_cloud_stt=True if cloud_stt else None,
             whisper_model=whisper_model,
+            diarize=True if diarize else None,
             duration_cap=duration,
             out_dir=Path(out_dir) if out_dir else None,
             use_cache=not no_cache,
@@ -142,6 +146,22 @@ def serve(
     from surfaces.mcp_server.server import main as mcp_main
 
     mcp_main(http=http, host=host, port=port)
+
+
+@app.command()
+def api(
+    host: str = typer.Option("127.0.0.1", "--host"),
+    port: int = typer.Option(8748, "--port"),
+) -> None:
+    """Run the REST API (FastAPI; OpenAPI spec at /openapi.json)."""
+    from agentvision.errors import AgentVisionError
+    from surfaces.api import serve as api_serve
+
+    try:
+        api_serve(host=host, port=port)
+    except AgentVisionError as exc:
+        print(json.dumps(exc.to_dict(), indent=2))
+        raise typer.Exit(code=1)
 
 
 @app.command()
