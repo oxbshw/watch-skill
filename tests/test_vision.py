@@ -216,3 +216,41 @@ def test_parse_numbered_tolerates_sloppy_models() -> None:
     # partial numbering still respects positions
     assert _parse_numbered("2: only the second", 2) == ["", "only the second"]
     assert _parse_numbered("", 2) == ["", ""]
+
+
+def test_describe_batch_retries_transient_then_degrades(
+    frame: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Regression: one timed-out describe call (swapped machine) killed the
+    whole indexing pass. A batch retries once, then yields empty strings
+    while OTHER batches still run."""
+    monkeypatch.setenv("AGENTVISION_VISION_BATCH_SIZE", "2")
+    reset_settings()
+    calls: list[int] = []
+
+    class FlakyClient:
+        def generate(self, prompt: str, images: list) -> str:
+            calls.append(len(images))
+            if len(calls) <= 2:  # first batch fails twice (initial + retry)
+                raise VisionError("timed out", code="vision.call_failed")
+            return "\n".join(f"{i + 1}: ok {len(calls)}" for i in range(len(images)))
+
+    model = ClientVisionModel(FlakyClient())
+    out = model.describe_frames([frame] * 4)
+    assert calls == [2, 2, 2]              # batch1, batch1-retry, batch2
+    assert out[:2] == ["", ""]             # degraded batch
+    assert out[2] and out[3]               # second batch survived
+
+
+def test_describe_batch_config_error_still_raises(
+    frame: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Non-transient failures (no API key) must NOT be swallowed."""
+    reset_settings()
+
+    class KeylessClient:
+        def generate(self, prompt: str, images: list) -> str:
+            raise VisionError("no key", code="vision.no_api_key")
+
+    with pytest.raises(VisionError):
+        ClientVisionModel(KeylessClient()).describe_frames([frame])

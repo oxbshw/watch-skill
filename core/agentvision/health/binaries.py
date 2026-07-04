@@ -14,8 +14,6 @@ import sys
 import zipfile
 from pathlib import Path
 
-import httpx
-
 from agentvision.config import get_settings
 from agentvision.errors import DependencyError
 
@@ -67,6 +65,8 @@ def require_binary(name: str) -> Path:
 
 def _download_file(url: str, dest: Path, timeout: float = 600.0) -> Path:
     """Stream ``url`` to ``dest`` (atomic: temp file then rename)."""
+    import httpx  # lazy: keeps `agentvision --help` under the cold-start budget
+
     dest.parent.mkdir(parents=True, exist_ok=True)
     tmp = dest.with_suffix(dest.suffix + ".part")
     try:

@@ -68,8 +68,32 @@ class ClientVisionModel:
         batch_size = max(1, get_settings().vision_batch_size)
         out: list[str] = []
         for i in range(0, len(frames), batch_size):
-            out.extend(self._describe_batch(frames[i : i + batch_size], context))
+            batch = frames[i : i + batch_size]
+            out.extend(self._describe_batch_with_retry(batch, context))
         return out
+
+    def _describe_batch_with_retry(self, batch: list[Path], context: str) -> list[str]:
+        """One transient failure (timeout on a loaded machine) must not cost
+        the whole indexing pass: retry the batch once, then degrade to empty
+        descriptions for JUST this batch and keep going. Non-transient errors
+        (missing key, unknown provider) still raise."""
+        from agentvision.errors import VisionError
+
+        transient = ("vision.call_failed", "vision.http_error")
+        for attempt in (1, 2):
+            try:
+                return self._describe_batch(batch, context)
+            except VisionError as exc:
+                if exc.code not in transient:
+                    raise
+                if attempt == 2:
+                    import sys
+
+                    print(
+                        f"[agentvision] describe batch dropped after retry ({exc.code})",
+                        file=sys.stderr,
+                    )
+        return [""] * len(batch)
 
     def _describe_batch(self, frames: list[Path], context: str) -> list[str]:
         example = "\n".join(f"{i + 1}: <description of image {i + 1}>" for i in range(len(frames)))

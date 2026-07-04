@@ -10,10 +10,7 @@ import json
 import sys
 
 import typer
-from agentvision import __version__
-from agentvision.health.doctor import DoctorReport, run_doctor
 from rich.console import Console
-from rich.table import Table
 
 app = typer.Typer(
     name="agentvision",
@@ -27,7 +24,9 @@ _console = Console(stderr=True)
 _STATUS_STYLE = {"ok": "green", "warn": "yellow", "fail": "red"}
 
 
-def _render_report(report: DoctorReport) -> None:
+def _render_report(report) -> None:
+    from rich.table import Table
+
     table = Table(title="agentvision doctor")
     table.add_column("check")
     table.add_column("status")
@@ -46,7 +45,9 @@ def doctor(
     fix: bool = typer.Option(True, "--fix/--no-fix", help="Auto-remediate fixable issues."),
     as_json: bool = typer.Option(False, "--json", help="Emit machine-readable JSON to stdout."),
 ) -> None:
-    """Check (and self-heal) dependencies: ffmpeg, yt-dlp, disk, GPU, API keys."""
+    """Check (and self-heal) dependencies: ffmpeg, yt-dlp, deno, disk, GPU, API keys."""
+    from agentvision.health.doctor import run_doctor
+
     report = run_doctor(fix=fix)
     if as_json:
         print(json.dumps(report.to_dict(), indent=2))
@@ -338,8 +339,44 @@ def setup(
 
 
 @app.command()
+def clean(
+    cache: bool = typer.Option(False, "--cache", help="Evict the download cache to its size cap."),
+    all_cache: bool = typer.Option(False, "--all-cache", help="Empty the download cache entirely."),
+    loops: bool = typer.Option(False, "--loops", help="Keep only the 10 most recent loops."),
+    keep_loops: int = typer.Option(10, "--keep-loops", help="How many recent loops to keep."),
+    orphans: bool = typer.Option(False, "--orphans", help="Remove frame dirs for de-indexed videos."),
+    everything: bool = typer.Option(False, "--all", help="Cache-to-cap + loops + orphans."),
+    dry_run: bool = typer.Option(False, "--dry-run", help="Report only; delete nothing."),
+) -> None:
+    """Reclaim disk: bounded cache, bounded loop archives, orphaned frames."""
+    from agentvision.health.clean import clean_cache, clean_loops, clean_orphan_frames
+
+    if everything:
+        cache = loops = orphans = True
+    if not (cache or all_cache or loops or orphans):
+        print("Nothing selected. Use --all, or any of --cache/--all-cache/--loops/--orphans.")
+        raise typer.Exit(code=1)
+    total = 0
+    for label, enabled, fn in (
+        ("cache", cache or all_cache, lambda: clean_cache(all_entries=all_cache, dry_run=dry_run)),
+        ("loops", loops, lambda: clean_loops(keep=keep_loops, dry_run=dry_run)),
+        ("orphan frames", orphans, lambda: clean_orphan_frames(dry_run=dry_run)),
+    ):
+        if not enabled:
+            continue
+        report = fn()
+        total += report.freed_bytes
+        verb = "would free" if dry_run else "freed"
+        print(f"{label}: {verb} {report.freed_bytes / 1024**2:.1f} MiB "
+              f"({len(report.removed)} removed, {len(report.kept)} kept)")
+    print(f"total {'reclaimable' if dry_run else 'reclaimed'}: {total / 1024**2:.1f} MiB")
+
+
+@app.command()
 def version() -> None:
     """Print the AgentVision version."""
+    from agentvision import __version__
+
     print(__version__)
 
 
