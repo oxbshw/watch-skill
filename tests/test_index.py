@@ -232,3 +232,23 @@ def test_ocr_text_lands_in_index_and_retrieval(sample_video: Path, tmp_path: Pat
 
     moment = get_moment(video_id, target.timestamp_seconds, window=4)
     assert any("0xDEADBEEF" in o["text"] for o in moment.ocr)
+
+
+def test_describe_scene_crash_never_sinks_indexing(
+    sample_video: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Regression: an unexpected exception in the cheap vision tier crashed
+    index_watch_result AFTER the heavy pipeline work. Descriptions are
+    opportunistic — any failure must degrade to 'no descriptions'."""
+    import agentvision.vision as vision_pkg
+
+    def exploding_get_vision(*args, **kwargs):
+        raise AttributeError("simulated mid-upgrade config mismatch")
+
+    monkeypatch.setattr(vision_pkg, "get_vision", exploding_get_vision)
+    result = watch(
+        str(sample_video), out_dir=tmp_path / "boom work", run_ocr=False,
+        allow_local_whisper=False, allow_cloud_stt=False,
+    )
+    video_id = index_watch_result(result, describe_scenes=True)  # must not raise
+    assert get_video(video_id) is not None

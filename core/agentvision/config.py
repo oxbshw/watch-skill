@@ -75,6 +75,7 @@ class Settings(BaseSettings):
     openai_api_key: SecretStr | None = None
     gemini_api_key: SecretStr | None = None
     groq_api_key: SecretStr | None = None
+    openrouter_api_key: SecretStr | None = None
     ollama_base_url: str = "http://127.0.0.1:11434"
 
     # --- vision tiers ------------------------------------------------------
@@ -88,6 +89,21 @@ class Settings(BaseSettings):
     vision_strong_model: str = Field(default="claude-sonnet-5")
     cost_ceiling_usd: float = Field(
         default=1.0, description="Warn/abort ceiling for a single cloud vision call."
+    )
+    vision_batch_size: int = Field(
+        default=8,
+        description="Frames per describe_frames call. Lower (2-4) for small local models.",
+    )
+    vision_timeout_seconds: float = Field(
+        default=180.0, description="HTTP timeout for cloud vision calls."
+    )
+    vision_local_timeout_seconds: float = Field(
+        default=900.0,
+        description="Timeout for local (Ollama) vision calls — CPU model loads take minutes.",
+    )
+    critic_frame_cap: int = Field(
+        default=10,
+        description="Max frames sent to the loop critic in one call. Lower (4) for local models.",
     )
 
     # --- surfaces ----------------------------------------------------------

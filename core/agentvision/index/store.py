@@ -106,10 +106,13 @@ def set_scene_description(conn: sqlite3.Connection, scene_row_id: int, descripti
 
 def _index_texts(conn: sqlite3.Connection, video_id: str, items: list[tuple]) -> None:
     """Insert FTS rows and (when available) embedding rows for text items."""
+    from agentvision.index.textnorm import normalize_for_search
+
     for kind, ref_id, timestamp, text in items:
         conn.execute(
-            "INSERT INTO fts (text, video_id, kind, ref_id, timestamp) VALUES (?, ?, ?, ?, ?)",
-            (text, video_id, kind, ref_id, timestamp),
+            "INSERT INTO fts (text, text_norm, video_id, kind, ref_id, timestamp) "
+            "VALUES (?, ?, ?, ?, ?, ?)",
+            (text, normalize_for_search(text), video_id, kind, ref_id, timestamp),
         )
     vectors = emb.embed_texts([text for _, _, _, text in items])
     if vectors:
@@ -146,6 +149,11 @@ def _maybe_describe_scenes(conn: sqlite3.Connection, video_id: str) -> None:
         import sys
 
         print(f"[agentvision] scene descriptions skipped ({exc.code})", file=sys.stderr)
+        return
+    except Exception as exc:  # descriptions are opportunistic — NEVER sink the watch
+        import sys
+
+        print(f"[agentvision] scene descriptions skipped (unexpected: {exc})", file=sys.stderr)
         return
     for row, description in zip(rows, descriptions):
         if description:

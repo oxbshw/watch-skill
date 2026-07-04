@@ -81,3 +81,38 @@ def test_phash_identical_image_is_zero(sample_video: Path, tmp_path: Path) -> No
     result = perceive(sample_video, tmp_path / "frames", run_ocr=False, max_frames=4)
     frame = result.frames[0]
     assert hamming_distance(compute_phash(frame.path), frame.phash) == 0
+
+
+def test_resolve_ocr_lang_routing() -> None:
+    """Arabic-script languages route to the ar model; everything else default."""
+    from agentvision.perceive.ocr import resolve_ocr_lang
+
+    assert resolve_ocr_lang("ar") == "ar"
+    assert resolve_ocr_lang("ar-SA") == "ar"
+    assert resolve_ocr_lang("fa") == "ar"   # Persian shares the script
+    assert resolve_ocr_lang("ur") == "ar"
+    assert resolve_ocr_lang("en") == "default"
+    assert resolve_ocr_lang(None) == "default"
+    assert resolve_ocr_lang("zh") == "default"  # bundled models cover it
+
+
+def test_ocr_frame_dispatches_engine_by_lang(tmp_path, monkeypatch) -> None:
+    """Regression: Arabic videos got garbage OCR because the bundled ch/en
+    recognition model ran on Arabic text. lang must select the engine."""
+    from agentvision.perceive import ocr as mod
+
+    chosen: list[str] = []
+
+    class FakeEngine:
+        def __call__(self, path):
+            return [], None
+
+    monkeypatch.setattr(
+        mod, "_get_engine", lambda lang="default": chosen.append(lang) or FakeEngine()
+    )
+    img = tmp_path / "f.jpg"
+    img.write_bytes(b"fake")
+    mod.ocr_frame(img, lang="ar")
+    mod.ocr_frame(img, lang="en")
+    mod.ocr_frame(img)
+    assert chosen == ["ar", "default", "default"]

@@ -301,6 +301,43 @@ def loop_status_cmd(loop_id: str = typer.Argument(...)) -> None:
 
 
 @app.command()
+def setup(
+    yes: bool = typer.Option(False, "--yes", "-y", help="Configure all detected agents without prompting."),
+    only: str | None = typer.Option(None, "--only", help="Comma list of agent keys (e.g. cursor,codex)."),
+) -> None:
+    """Detect installed AI agents and write the MCP config into each one.
+
+    Backs up any existing config file before touching it. From clone to a
+    working /watch in under two minutes.
+    """
+    from agentvision.health.agents_setup import configure_agent, detect_agents
+
+    wanted = {k.strip() for k in only.split(",")} if only else None
+    targets = [t for t in detect_agents() if t.detected]
+    if wanted is not None:
+        targets = [t for t in targets if t.key in wanted]
+    if not targets:
+        print("No supported agents detected on this machine.")
+        print("Manual configs for every agent: docs/agents/README.md")
+        raise typer.Exit(code=0)
+
+    _console.print("[bold]Detected agents:[/bold]")
+    for t in targets:
+        state = "already configured" if t.configured else "will configure"
+        _console.print(f"  - {t.label}  ({state}; {t.config_path})")
+    todo = [t for t in targets if not t.configured]
+    if not todo:
+        print("Everything already configured. Restart the agents to pick it up.")
+        raise typer.Exit(code=0)
+    if not yes and not typer.confirm(f"Write MCP config into {len(todo)} agent(s)?", default=True):
+        raise typer.Exit(code=0)
+    for t in todo:
+        changed, message = configure_agent(t)
+        _console.print(("[green]+[/green] " if changed else "[yellow]=[/yellow] ") + message)
+    print("\nDone. Restart each agent, then try: \"watch this video ...\" in its chat.")
+
+
+@app.command()
 def version() -> None:
     """Print the AgentVision version."""
     print(__version__)

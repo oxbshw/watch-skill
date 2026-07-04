@@ -9,7 +9,8 @@ import json
 from pathlib import Path
 from typing import Any
 
-from fastmcp import FastMCP
+import anyio
+from fastmcp import Context, FastMCP
 from fastmcp.utilities.types import Image
 
 from agentvision.config import get_settings
@@ -42,33 +43,32 @@ def _frame_images(frame_paths: list[str], cap: int | None = None) -> list[Image]
     return [Image(path=p) for p in paths]
 
 
-@mcp.tool(output_schema=None)
-def watch_video(
+def _run_watch(
     source: str,
-    question: str | None = None,
-    start: str | None = None,
-    end: str | None = None,
-    budget: int | None = None,
-) -> list[Any]:
-    """Watch ANY video (URL, direct media URL, HLS/DASH manifest, local path):
-    downloads, extracts scene-aware deduped frames, transcribes
-    (captions -> local whisper), OCRs, and INDEXES it for follow-up questions.
-    Returns a report plus key frames as images. Use start/end (SS, MM:SS or
-    HH:MM:SS) to zoom into a section with denser sampling; budget caps frames."""
+    start: str | None,
+    end: str | None,
+    budget: int | None,
+    progress_cb,
+) -> tuple[str, Any]:
+    """The synchronous watch+index pipeline shared by both watch paths."""
     from agentvision.index import index_watch_result
-    from agentvision.report import render_report
     from agentvision.watch import watch
 
-    try:
-        result = watch(
-            source,
-            start_seconds=parse_time(start),
-            end_seconds=parse_time(end),
-            max_frames=budget,
-        )
-        video_id = index_watch_result(result)
-    except AgentVisionError as exc:
-        return [_error_payload(exc)]
+    result = watch(
+        source,
+        start_seconds=parse_time(start),
+        end_seconds=parse_time(end),
+        max_frames=budget,
+        on_progress=progress_cb,
+    )
+    progress_cb("indexing (search + embeddings + scene descriptions)", 0.9)
+    video_id = index_watch_result(result)
+    return video_id, result
+
+
+def _watch_response(video_id: str, result: Any, question: str | None) -> list[Any]:
+    from agentvision.report import render_report
+
     header = f"video_id: {video_id}\n"
     if question:
         header += f"question (answer it from the frames + transcript below): {question}\n"
@@ -77,10 +77,77 @@ def watch_video(
 
 
 @mcp.tool(output_schema=None)
+async def watch_video(
+    source: str,
+    question: str | None = None,
+    start: str | None = None,
+    end: str | None = None,
+    budget: int | None = None,
+    background: bool = False,
+    ctx: Context | None = None,
+) -> list[Any]:
+    """FIRST LOOK at any video — use when given a video you have NOT analyzed
+    yet. Accepts any URL yt-dlp supports (1800+ sites), direct media URLs,
+    HLS/DASH manifests, and local file paths. Downloads, extracts scene-aware
+    deduplicated frames, OCRs them, transcribes (captions first, then local
+    whisper), and INDEXES everything. Returns a report + key frames as
+    images. For follow-ups about the same video call ask_video — never
+    re-watch. start/end (SS, MM:SS, HH:MM:SS) zoom into a section with denser
+    sampling; budget caps frame count. Long video or strict client timeout?
+    Pass background=true for an instant job_id, then poll get_status."""
+    from agentvision import jobs
+
+    job = jobs.start_job(
+        "watch",
+        lambda progress: _run_watch(source, start, end, budget, progress),
+    )
+    if background:
+        return [
+            f"started background watch: job_id `{job.job_id}`\n"
+            f"Poll get_status('{job.job_id}') every few seconds; when done it "
+            "returns the video_id for ask_video."
+        ]
+    while job.status == "running":
+        if ctx is not None:
+            try:
+                await ctx.report_progress(job.progress, total=1.0, message=job.phase)
+            except Exception:
+                pass  # client may not support progress notifications
+        await anyio.sleep(1.5)
+    if job.status == "failed":
+        return [json.dumps(job.error, ensure_ascii=False, indent=2)]
+    video_id, result = job.result
+    return _watch_response(video_id, result, question)
+
+
+@mcp.tool
+def get_status(job_id: str) -> str:
+    """Check a background job started with watch_video(background=true).
+    Returns status/phase/progress; when done it includes the video_id to use
+    with ask_video. Poll every few seconds, not in a tight loop."""
+    from agentvision import jobs
+
+    try:
+        job = jobs.get_job(job_id)
+    except AgentVisionError as exc:
+        return _error_payload(exc)
+    payload = job.to_dict()
+    if job.status == "done":
+        video_id, result = job.result
+        payload["video_id"] = video_id
+        payload["next"] = f"ask_video('{video_id}', <your question>)"
+        payload["transcript_source"] = result.transcript.source
+    return json.dumps(payload, ensure_ascii=False, indent=2)
+
+
+@mcp.tool(output_schema=None)
 def ask_video(video: str, question: str, max_frames: int = 6) -> list[Any]:
-    """Ask about an ALREADY-ANALYZED video (by video_id or original source URL).
-    Answers come from the persistent index via hybrid keyword+vector retrieval â€”
-    fast, no re-processing. Returns evidence with timestamps + relevant frames."""
+    """ANY follow-up question about a video you (or anyone) already watched —
+    ALWAYS prefer this over re-running watch_video: it answers in seconds
+    from the persistent index (hybrid keyword+vector retrieval over
+    transcript, OCR, and scene descriptions), returning timestamped evidence
+    plus only the relevant frames. Accepts a video_id or the original
+    source URL/path. Works across sessions — the index is permanent."""
     from agentvision.index import ask_video as ask
 
     try:
@@ -107,8 +174,11 @@ def ask_video(video: str, question: str, max_frames: int = 6) -> list[Any]:
 
 @mcp.tool(output_schema=None)
 def get_moment(video: str, timestamp: str, window: float = 10.0) -> list[Any]:
-    """Zoom into one moment of an indexed video: frames + transcript + OCR
-    within `window` seconds around `timestamp` (SS, MM:SS, or HH:MM:SS)."""
+    """Zoom into ONE SPECIFIC MOMENT of an indexed video — use when the user
+    names a timestamp ("what happens at 2:30?") or when an ask_video hit
+    needs more surrounding detail. Returns dense frames + transcript + OCR
+    within `window` seconds around `timestamp` (SS, MM:SS, or HH:MM:SS).
+    For a broad question about the whole video, use ask_video instead."""
     from agentvision.index import get_moment as moment
 
     try:
@@ -130,9 +200,12 @@ def get_moment(video: str, timestamp: str, window: float = 10.0) -> list[Any]:
 
 @mcp.tool
 def search_videos(query: str) -> str:
-    """Search across EVERY video ever analyzed (hybrid keyword + semantic).
-    Returns matching videos with timestamped evidence; follow up with
-    ask_video/get_moment on a hit."""
+    """Find something across EVERY video ever watched, when you don't know
+    which video contains it ("which video mentioned X?"). Hybrid keyword +
+    semantic search; Arabic and other scripts are matched with proper
+    normalization. Returns videos with timestamped evidence — follow up with
+    ask_video or get_moment on a hit. For a question about one known video,
+    use ask_video directly."""
     from agentvision.index import search_videos as search
 
     groups = search(query)
@@ -151,7 +224,9 @@ def search_videos(query: str) -> str:
 
 @mcp.tool
 def list_videos() -> str:
-    """List every video in the persistent index (id, title, duration, source)."""
+    """See what is already in the index (id, title, duration, source) — check
+    here BEFORE watch_video when the video might have been analyzed in an
+    earlier session; if it's listed, go straight to ask_video."""
     from agentvision.index import list_videos as videos
 
     rows = videos()
@@ -179,10 +254,12 @@ def capture(
     duration: float = 10.0,
     script: list[dict[str, Any]] | None = None,
 ) -> list[Any]:
-    """Record a target to video and index it: an http(s) URL (headless browser
-    session, optional interaction script of goto/click/fill/scroll/wait steps),
-    `screen:` (full desktop), `window:<exact title>`, or an existing video file.
-    Returns the video_id for follow-up ask_video/get_moment calls."""
+    """Record NEW footage when none exists yet — a live web page (headless
+    browser session with optional goto/click/fill/scroll/wait script),
+    `screen:` (full desktop), `window:<exact title>`, or adopt an existing
+    video file. The recording is analyzed and indexed; returns video_id for
+    ask_video. To record AND judge against pass criteria, use loop_start
+    instead — capture alone never critiques."""
     import tempfile
 
     from agentvision.index import index_watch_result
@@ -213,10 +290,13 @@ def loop_start(
     max_iterations: int = 5,
     duration: float = 8.0,
 ) -> str:
-    """START THE LOOP: capture the target (URL/screen:/window:/file), watch the
-    recording, and critique it against your natural-language pass criteria via
-    the strong vision model. Returns loop_id + structured issues. YOU apply the
-    suggested fixes, then call loop_iterate -- the loop never edits code itself."""
+    """START THE LOOP when you built/changed something visual and need to
+    VERIFY it actually looks right: records the target (URL / screen: /
+    window:<title> / video file), watches the recording, and critiques it
+    against your natural-language pass criteria with the strong vision
+    model. Returns loop_id + structured issues with timestamps and suggested
+    fixes. YOU apply the fixes in code, then call loop_iterate — the loop
+    observes, it never edits anything itself."""
     from agentvision.loop import loop_start as start
 
     try:
@@ -231,10 +311,11 @@ def loop_start(
 
 @mcp.tool
 def loop_iterate(loop_id: str) -> str:
-    """CONTINUE THE LOOP after you applied fixes: re-captures the same target
-    with the same script, re-critiques, and diffs against the previous
-    iteration (fixed / unchanged / new issues). Stops on pass, max_iterations,
-    or no-progress; on pass it renders a before/after MP4+GIF proof."""
+    """CONTINUE THE LOOP — call this ONLY after you actually changed the code/
+    UI in response to loop_start's issues. Re-captures the same target with
+    the same script, re-critiques, and diffs against the previous iteration
+    (fixed / unchanged / new issues). Stops on pass, max_iterations, or
+    no-progress; on pass it renders the before/after MP4+GIF proof."""
     from agentvision.loop import loop_iterate as iterate
 
     try:
@@ -259,8 +340,10 @@ def loop_status(loop_id: str) -> str:
 
 @mcp.tool
 def doctor() -> str:
-    """Health check + self-heal: ffmpeg/yt-dlp presence (bootstraps if missing),
-    yt-dlp freshness (self-updates), disk space, GPU, API keys."""
+    """Run this when ANY other tool fails with a dependency/download error, or
+    on first use. Checks AND self-heals: installs missing ffmpeg/yt-dlp,
+    updates a stale yt-dlp, verifies disk space, GPU, and API keys. Each
+    failing check includes a `fix` you can act on."""
     from agentvision.health.doctor import run_doctor
 
     return json.dumps(run_doctor(fix=True).to_dict(), indent=2)

@@ -110,11 +110,11 @@ def _extract_and_dedup(
     return kept, dropped
 
 
-def _run_ocr(frames: list[Frame]) -> None:
+def _run_ocr(frames: list[Frame], lang: str | None = None) -> None:
     """Attach OCR blocks in place; degrade loudly (not silently) if OCR is unavailable."""
     for i, frame in enumerate(frames):
         try:
-            frame.ocr_blocks = ocr.ocr_frame(frame.path)
+            frame.ocr_blocks = ocr.ocr_frame(frame.path, lang=lang)
         except PerceptionError as exc:
             print(f"[agentvision] OCR unavailable — skipping ({exc.code})", file=sys.stderr)
             return
@@ -132,6 +132,7 @@ def perceive(
     frame_width: int | None = None,
     cue_timestamps: list[float] | None = None,
     run_ocr: bool | None = None,
+    ocr_lang: str | None = None,
     metadata: VideoMetadata | None = None,
 ) -> PerceptionResult:
     """Run the full perception pass over ``video_path``.
@@ -179,7 +180,7 @@ def perceive(
     out_dir.mkdir(parents=True, exist_ok=True)
     frames, dropped = _extract_and_dedup(video_path, merged, out_dir, width)
     if do_ocr and frames:
-        _run_ocr(frames)
+        _run_ocr(frames, lang=ocr_lang)
 
     return PerceptionResult(
         source=source_label or str(video_path),

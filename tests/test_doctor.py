@@ -142,3 +142,24 @@ def test_health_log_roundtrip(isolated_settings: Path) -> None:
     assert incidents[0]["extra_field"] == 42
     assert incidents[1]["detail"] == "second"
     assert "ts" in incidents[0]
+
+
+def test_server_command_never_points_into_a_venv(monkeypatch) -> None:
+    """Regression: `agentvision setup` wrote `agentvision serve` into agent
+    configs because the venv entry point was on PATH — invisible to every
+    other app. A venv-resolved exe must fall back to `uv --directory`."""
+    from agentvision.health import agents_setup as mod
+
+    monkeypatch.setattr(
+        mod.shutil, "which",
+        lambda name: r"F:\proj\.venv\Scripts\agentvision.EXE" if name == "agentvision" else None,
+    )
+    command, args = mod.server_command()
+    assert command == "uv"
+    assert args[0] == "--directory" and args[-2:] == ["agentvision", "serve"]
+
+    monkeypatch.setattr(
+        mod.shutil, "which",
+        lambda name: r"C:\Users\x\.local\bin\agentvision.exe" if name == "agentvision" else None,
+    )
+    assert mod.server_command() == ("agentvision", ["serve"])

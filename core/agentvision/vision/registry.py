@@ -37,6 +37,12 @@ PROVIDERS: dict[str, ProviderSpec] = {
         key_setting="gemini_api_key",
         default_price_per_mtok=1.25,
     ),
+    "openrouter": ProviderSpec(
+        name="openrouter",
+        endpoint="https://openrouter.ai/api/v1/chat/completions",
+        key_setting="openrouter_api_key",
+        default_price_per_mtok=3.0,
+    ),
     "ollama": ProviderSpec(
         name="ollama",
         endpoint="{base}/api/chat",  # base from settings.ollama_base_url
@@ -52,6 +58,10 @@ MODEL_PRICES: dict[str, float] = {
     "claude-fable-5": 15.0,
     "gpt-4o-mini": 0.15,
     "gemini-2.0-flash": 0.10,
+    # OpenRouter routes many models; ":free" variants cost nothing.
+    "qwen/qwen2.5-vl-72b-instruct:free": 0.0,
+    "google/gemini-2.0-flash-exp:free": 0.0,
+    "anthropic/claude-sonnet-4.5": 3.0,
 }
 
 

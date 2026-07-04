@@ -136,3 +136,84 @@ def test_http_error_is_structured(frame: Path, monkeypatch: pytest.MonkeyPatch) 
         VisionClient("anthropic", "m").generate("x", [frame])
     assert excinfo.value.code == "vision.http_error"
     assert excinfo.value.details["body"] == json.dumps({"error": "rate"}).replace(" ", "")
+
+
+def test_openrouter_wire_format(frame: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("AGENTVISION_OPENROUTER_API_KEY", "or-test-key")
+    reset_settings()
+    capture: dict = {}
+    _mock_post(
+        monkeypatch,
+        {"choices": [{"message": {"content": "a red frame via openrouter"}}]},
+        capture,
+    )
+
+    out = VisionClient("openrouter", "qwen/qwen2.5-vl-72b-instruct:free").generate(
+        "describe", [frame]
+    )
+    assert out == "a red frame via openrouter"
+    assert capture["url"] == "https://openrouter.ai/api/v1/chat/completions"
+    assert capture["headers"]["Authorization"] == "Bearer or-test-key"
+    assert capture["headers"]["X-Title"] == "AgentVision"  # attribution headers
+    # OpenAI-compatible body shape
+    assert capture["body"]["model"] == "qwen/qwen2.5-vl-72b-instruct:free"
+    assert capture["body"]["messages"][0]["content"][0]["type"] == "image_url"
+
+
+def test_openrouter_free_model_costs_nothing() -> None:
+    from agentvision.vision.registry import price_for
+
+    assert price_for("openrouter", "qwen/qwen2.5-vl-72b-instruct:free") == 0.0
+
+
+def test_describe_frames_batches_by_setting(
+    frame: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """24 frames with batch size 8 -> 3 calls, order preserved (small local
+    models cannot handle 24 images in one prompt)."""
+    monkeypatch.setenv("AGENTVISION_VISION_BATCH_SIZE", "8")
+    monkeypatch.setenv("AGENTVISION_ANTHROPIC_API_KEY", "k")
+    reset_settings()
+    calls: list[int] = []
+
+    class FakeClient:
+        def generate(self, prompt: str, images: list) -> str:
+            calls.append(len(images))
+            return "\n".join(f"{i + 1}: frame {len(calls)}-{i + 1}" for i in range(len(images)))
+
+    model = ClientVisionModel(FakeClient())
+    out = model.describe_frames([frame] * 24)
+    assert calls == [8, 8, 8]
+    assert len(out) == 24
+    assert out[0] == "frame 1-1" and out[8] == "frame 2-1" and out[23] == "frame 3-8"
+
+
+def test_local_provider_gets_longer_timeout(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Regression: 180s cloud timeout killed Ollama CPU calls mid model-load."""
+    from agentvision.vision.client import _timeout_for
+
+    reset_settings()
+    assert _timeout_for("ollama") == 900.0
+    assert _timeout_for("anthropic") == 180.0
+    monkeypatch.setenv("AGENTVISION_VISION_LOCAL_TIMEOUT_SECONDS", "120")
+    reset_settings()
+    assert _timeout_for("ollama") == 120.0
+
+
+def test_parse_numbered_tolerates_sloppy_models() -> None:
+    """Regression: qwen2.5vl:3b echoed the literal placeholder `N: ...`,
+    which the strict parser dropped -> empty descriptions."""
+    from agentvision.vision.model import _parse_numbered
+
+    assert _parse_numbered("1: a red frame\n2: a blue frame", 2) == [
+        "a red frame", "a blue frame",
+    ]
+    # literal placeholder echo (the live bug)
+    assert _parse_numbered("N: A red screen with black bars.", 1) == [
+        "A red screen with black bars.",
+    ]
+    # no numbering at all -> lines in order
+    assert _parse_numbered("- a cat\n- a dog", 2) == ["a cat", "a dog"]
+    # partial numbering still respects positions
+    assert _parse_numbered("2: only the second", 2) == ["", "only the second"]
+    assert _parse_numbered("", 2) == ["", ""]

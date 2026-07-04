@@ -18,8 +18,16 @@ from agentvision.errors import VisionError
 from agentvision.vision.cost import guard_cost
 from agentvision.vision.registry import PROVIDERS
 
-_TIMEOUT = 180.0
 _MAX_TOKENS = 1500
+
+
+def _timeout_for(provider: str) -> float:
+    """Cloud calls get the standard timeout; local inference (Ollama on CPU)
+    can legitimately take minutes to load a model, so it gets its own knob."""
+    settings = get_settings()
+    if provider == "ollama":
+        return settings.vision_local_timeout_seconds
+    return settings.vision_timeout_seconds
 
 
 def _b64(path: Path) -> str:
@@ -73,6 +81,15 @@ def _openai_extract(data: dict) -> str:
     return data["choices"][0]["message"]["content"] or ""
 
 
+def _openrouter_request(model: str, key: str, prompt: str, images: list[Path]) -> tuple[str, dict, dict]:
+    # OpenAI-compatible wire format; only the endpoint, auth, and attribution
+    # headers differ (OpenRouter asks for Referer/Title to identify the app).
+    _, headers, body = _openai_request(model, key, prompt, images)
+    headers["HTTP-Referer"] = "https://github.com/agentvision/agentvision"
+    headers["X-Title"] = "AgentVision"
+    return PROVIDERS["openrouter"].endpoint, headers, body
+
+
 def _gemini_request(model: str, key: str, prompt: str, images: list[Path]) -> tuple[str, dict, dict]:
     parts: list[dict[str, Any]] = [
         {"inline_data": {"mime_type": _media_type(p), "data": _b64(p)}} for p in images
@@ -105,6 +122,7 @@ def _ollama_extract(data: dict) -> str:
 _BUILDERS: dict[str, tuple[Callable, Callable]] = {
     "anthropic": (_anthropic_request, _anthropic_extract),
     "openai": (_openai_request, _openai_extract),
+    "openrouter": (_openrouter_request, _openai_extract),
     "gemini": (_gemini_request, _gemini_extract),
     "ollama": (_ollama_request, _ollama_extract),
 }
@@ -143,7 +161,9 @@ class VisionClient:
         build, extract = _BUILDERS[self.provider]
         endpoint, headers, body = build(self.model, self._api_key(), prompt, images)
         try:
-            response = httpx.post(endpoint, headers=headers, json=body, timeout=_TIMEOUT)
+            response = httpx.post(
+                endpoint, headers=headers, json=body, timeout=_timeout_for(self.provider)
+            )
             response.raise_for_status()
             text = extract(response.json())
         except httpx.HTTPStatusError as exc:

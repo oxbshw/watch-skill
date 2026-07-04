@@ -100,3 +100,34 @@ def test_download_does_not_update_on_plain_failure(
     with pytest.raises(AcquisitionError):
         ytdlp.download("https://example.com/v", tmp_path)
     assert updates == []
+
+
+def test_pick_subtitle_prefers_original_language(tmp_path) -> None:
+    """Regression: an Arabic video must yield Arabic subs, not the English
+    auto-translation the default sub-langs pattern happens to match."""
+    from agentvision.acquire.ytdlp import _pick_subtitle
+
+    out = tmp_path / "subs dir"
+    out.mkdir()
+    for name in ("media.en.vtt", "media.ar.vtt", "media.en-orig.vtt"):
+        (out / name).write_text("WEBVTT\n", encoding="utf-8")
+    picked = _pick_subtitle(out, original_lang="ar")
+    assert picked is not None and picked.name == "media.ar.vtt"
+    # without language info: plain variants still beat -orig ones
+    assert "-orig" not in _pick_subtitle(out).name
+
+
+def test_ensure_original_subs_skips_when_present(tmp_path, monkeypatch) -> None:
+    """No second yt-dlp call when the original-language track already landed."""
+    from agentvision.acquire import ytdlp as mod
+
+    out = tmp_path / "subs dir"
+    out.mkdir()
+    (out / "media.ar.vtt").write_text("WEBVTT\n", encoding="utf-8")
+    calls: list = []
+    monkeypatch.setattr(mod, "_run_yt_dlp", lambda *a, **k: calls.append(a))
+    mod._ensure_original_subs(out, "https://x", {"language": "ar"})
+    assert calls == []
+    # missing track -> one targeted call with that language pattern
+    mod._ensure_original_subs(out, "https://x", {"language": "fr"})
+    assert len(calls) == 1 and "fr.*" in calls[0][0]

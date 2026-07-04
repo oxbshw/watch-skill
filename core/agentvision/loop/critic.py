@@ -11,11 +11,10 @@ from pathlib import Path
 
 from pydantic import BaseModel, Field, ValidationError
 
+from agentvision.config import get_settings
 from agentvision.errors import LoopError, VisionError
 from agentvision.perceive.types import PerceptionResult
 from agentvision.vision import get_vision
-
-_MAX_CRITIC_FRAMES = 10
 
 
 class Issue(BaseModel):
@@ -61,10 +60,11 @@ critical or major issues."""
 
 
 def _select_frames(perception: PerceptionResult) -> list:
+    cap = max(2, get_settings().critic_frame_cap)
     frames = perception.frames
-    if len(frames) <= _MAX_CRITIC_FRAMES:
+    if len(frames) <= cap:
         return frames
-    idx = [round(i * (len(frames) - 1) / (_MAX_CRITIC_FRAMES - 1)) for i in range(_MAX_CRITIC_FRAMES)]
+    idx = [round(i * (len(frames) - 1) / (cap - 1)) for i in range(cap)]
     return [frames[i] for i in dict.fromkeys(idx)]
 
 

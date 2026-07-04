@@ -249,6 +249,7 @@ def check_api_keys() -> CheckResult:
             ("openai", settings.openai_api_key),
             ("gemini", settings.gemini_api_key),
             ("groq", settings.groq_api_key),
+            ("openrouter", settings.openrouter_api_key),
         )
         if key is not None and key.get_secret_value().strip()
     ]

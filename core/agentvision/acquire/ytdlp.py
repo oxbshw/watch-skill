@@ -69,13 +69,44 @@ def _common_subtitle_args() -> list[str]:
     ]
 
 
-def _pick_subtitle(out_dir: Path) -> Path | None:
-    """Best VTT: prefer plain-language variants over '-orig' auto-translations."""
+def _pick_subtitle(out_dir: Path, original_lang: str | None = None) -> Path | None:
+    """Best VTT, in order: the video's ORIGINAL language, then plain variants,
+    then anything. An original-language track always beats an auto-translation
+    ('en' subs on an Arabic video are machine-translated, not spoken)."""
     candidates = sorted(out_dir.glob("media*.vtt"))
     if not candidates:
         return None
+    if original_lang:
+        prefix = original_lang.split("-")[0].lower()
+        originals = [c for c in candidates if c.name.lower().split(".")[-2].startswith(prefix)]
+        if originals:
+            plain = [c for c in originals if "-orig" not in c.name]
+            return (plain or originals)[0]
     preferred = [c for c in candidates if "-orig" not in c.name]
     return (preferred or candidates)[0]
+
+
+def _ensure_original_subs(out_dir: Path, url: str, info: dict[str, Any]) -> None:
+    """Fetch the original-language track when the first pass missed it.
+
+    The first pass uses the configured ``subtitle_langs`` (default en.*); for
+    a video spoken in another language that yields an auto-TRANSLATION. One
+    targeted follow-up call fetches the real thing.
+    """
+    lang = (info.get("language") or "").split("-")[0].lower()
+    if not lang:
+        return
+    if any(c.name.lower().split(".")[-2].startswith(lang) for c in out_dir.glob("media*.vtt")):
+        return
+    args = [
+        "--skip-download",
+        "--write-subs", "--write-auto-subs",
+        "--sub-langs", f"{lang}.*",
+        "--sub-format", "vtt", "--convert-subs", "vtt",
+        "--no-playlist", "--ignore-errors",
+        "-o", str(out_dir / "media.%(ext)s"),
+    ]
+    _run_yt_dlp(args, url, timeout=300.0)
 
 
 def _pick_video(out_dir: Path) -> Path | None:
@@ -97,6 +128,7 @@ def _read_info(out_dir: Path, url: str) -> dict[str, Any]:
         "title": raw.get("title"),
         "uploader": raw.get("uploader") or raw.get("channel"),
         "duration": raw.get("duration"),
+        "language": raw.get("language"),
         "url": raw.get("webpage_url") or url,
     }
 
@@ -110,11 +142,12 @@ def fetch_captions(url: str, out_dir: Path) -> dict[str, Any]:
         "-o", str(out_dir / "media.%(ext)s"),
     ]
     _run_yt_dlp(args, url, timeout=300.0)
-    subtitle = _pick_subtitle(out_dir)
+    info = _read_info(out_dir, url)
+    _ensure_original_subs(out_dir, url, info)
     return {
         "video_path": None,
-        "subtitle_path": subtitle,
-        "info": _read_info(out_dir, url),
+        "subtitle_path": _pick_subtitle(out_dir, original_lang=info.get("language")),
+        "info": info,
     }
 
 
@@ -140,10 +173,12 @@ def _download_once(url: str, out_dir: Path, audio_only: bool) -> dict[str, Any]:
             fix="the resolver will try auto-update and fallback acquirers",
             details={"url": url, "stderr_tail": result.stderr[-2000:]},
         )
+    info = _read_info(out_dir, url)
+    _ensure_original_subs(out_dir, url, info)
     return {
         "video_path": video,
-        "subtitle_path": _pick_subtitle(out_dir),
-        "info": _read_info(out_dir, url),
+        "subtitle_path": _pick_subtitle(out_dir, original_lang=info.get("language")),
+        "info": info,
     }
 
 

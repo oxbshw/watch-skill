@@ -85,3 +85,34 @@ swaps. Newest entries at the bottom of each section.
 - **Demo GIF is committed** (`docs/assets/loop_before_after.gif`, ~140 KB) —
   it is our own generated artifact from the M3 acceptance demo, and the README
   needs it to communicate THE LOOP in three seconds.
+
+## Phase 1 — live golden-path findings (v1.0 hardening)
+
+- **OpenRouter added as a first-class provider.** OpenAI-compatible wire
+  format with attribution headers; `:free` model variants get a 0.0 price in
+  the cost guard. Chosen because one key routes to every major vision model.
+- **Original-language captions beat auto-translations.** Live bug: an Arabic
+  video yielded ENGLISH auto-translated captions because the default
+  `sub-langs en.*` matched the translation track. Fix: read `language` from
+  the info.json, fetch the original track when missing, and prefer it in
+  subtitle picking. The "transcript" a user gets is now what is actually
+  said, not a machine translation of it.
+- **Arabic FTS was byte-exact.** unicode61 gives no Arabic folding: hamza
+  variants, alef maqsura, ta marbuta, and diacritics all broke matching.
+  Fix: `text_norm` shadow column (migration v2) + the same folding applied
+  to queries. Display text is never modified.
+- **Arabic OCR needs a script-specific model.** The bundled RapidOCR ch/en
+  models produce garbage on Arabic. Fix: managed per-script rec models
+  (downloaded once into `<data_dir>/models/ocr/`), auto-selected from the
+  video's detected language. Verified live on real Arabic frames
+  ("ماهي البرمجة" @ 0.97 confidence).
+- **Local vision needs its own timeout + tiny batches.** Ollama CPU model
+  loads take minutes (8 GB RAM machine): separate
+  `vision_local_timeout_seconds` (900s) and `vision_batch_size` (2-4 for
+  small local models; 24-image prompts overflow their context).
+- **Scene descriptions must never sink a watch.** A crash inside the
+  opportunistic describe step aborted the pipeline after all the heavy work;
+  it now catches everything, logs, and degrades to no-descriptions.
+- **On 8 GB RAM, vision and whisper must run sequentially.** Loading
+  qwen2.5vl:3b (~3.4 GB) while faster-whisper holds memory fails outright.
+  The golden-path script runs stages strictly in order for this reason.

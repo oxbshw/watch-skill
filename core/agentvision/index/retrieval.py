@@ -40,12 +40,19 @@ class MomentContext:
 
 
 def _fts_query(text: str) -> str:
-    """Sanitize free text into an OR-of-terms FTS5 MATCH expression."""
-    terms = ["".join(ch for ch in tok if ch.isalnum()) for tok in text.split()]
+    """Sanitize free text into an OR-of-terms FTS5 MATCH over the normalized column.
+
+    Terms are folded with the same normalization used at index time, so
+    Arabic hamza/diacritic variants (and case) match reliably.
+    """
+    from agentvision.index.textnorm import normalize_for_search
+
+    normalized = normalize_for_search(text)
+    terms = ["".join(ch for ch in tok if ch.isalnum()) for tok in normalized.split()]
     terms = [t for t in terms if t]
     if not terms:
         return '""'
-    return " OR ".join(f'"{t}"' for t in terms)
+    return " OR ".join(f'text_norm:"{t}"' for t in terms)
 
 
 def _fts_hits(conn: sqlite3.Connection, query: str, video_id: str | None) -> list[Hit]:

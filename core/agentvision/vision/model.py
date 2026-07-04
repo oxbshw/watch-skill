@@ -10,6 +10,30 @@ from agentvision.vision.client import VisionClient
 Tier = Literal["cheap", "strong"]
 
 
+def _parse_numbered(raw: str, count: int) -> list[str]:
+    """Parse `N: description` lines; degrade gracefully for sloppy models.
+
+    Small local models sometimes echo the placeholder (`N: ...`) or skip
+    numbering entirely — when no numbered lines parse, non-empty lines are
+    assigned in order rather than thrown away.
+    """
+    by_number: dict[int, str] = {}
+    for line in raw.splitlines():
+        head, _, rest = line.strip().partition(":")
+        if head.strip().isdigit() and rest.strip():
+            by_number[int(head)] = rest.strip()
+    if by_number:
+        return [by_number.get(i + 1, "") for i in range(count)]
+    lines = []
+    for line in raw.splitlines():
+        text = line.strip().lstrip("-*• ").strip()
+        if text.upper().startswith("N:"):
+            text = text[2:].strip()
+        if text:
+            lines.append(text)
+    return [lines[i] if i < len(lines) else "" for i in range(count)]
+
+
 class VisionModel(Protocol):
     """What the engine needs from any vision model."""
 
@@ -33,21 +57,29 @@ class ClientVisionModel:
         self.client = client
 
     def describe_frames(self, frames: list[Path], context: str = "") -> list[str]:
-        """Batch describe: one call, numbered one-liners out."""
+        """Describe frames in numbered batches.
+
+        Batch size comes from settings (``vision_batch_size``); small local
+        models get small batches — 24 images in one prompt overflows their
+        context and wrecks the numbered-list format.
+        """
         if not frames:
             return []
+        batch_size = max(1, get_settings().vision_batch_size)
+        out: list[str] = []
+        for i in range(0, len(frames), batch_size):
+            out.extend(self._describe_batch(frames[i : i + batch_size], context))
+        return out
+
+    def _describe_batch(self, frames: list[Path], context: str) -> list[str]:
+        example = "\n".join(f"{i + 1}: <description of image {i + 1}>" for i in range(len(frames)))
         prompt = (
             f"You are indexing video frames.{' Context: ' + context if context else ''} "
-            f"For EACH of the {len(frames)} images, in order, output exactly one line: "
-            "`N: <one-line visual description>` (N is 1-based). No other text."
+            f"Describe EACH of the {len(frames)} images in one line, in this exact format:\n"
+            f"{example}\nNo other text."
         )
         raw = self.client.generate(prompt, frames)
-        by_number: dict[int, str] = {}
-        for line in raw.splitlines():
-            head, _, rest = line.strip().partition(":")
-            if head.strip().isdigit() and rest.strip():
-                by_number[int(head)] = rest.strip()
-        return [by_number.get(i + 1, "") for i in range(len(frames))]
+        return _parse_numbered(raw, len(frames))
 
     def answer_over_frames(self, question: str, frames: list[Path], context: str = "") -> str:
         prompt = (

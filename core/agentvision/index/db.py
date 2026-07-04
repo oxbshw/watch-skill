@@ -1,12 +1,49 @@
-"""SQLite index with a schema_version table and migration runner from day one."""
+"""SQLite index with a schema_version table and migration runner from day one.
+
+Migrations are SQL scripts or Python callables (for data transforms SQL
+cannot express, e.g. re-normalizing text through Python).
+"""
 from __future__ import annotations
 
 import sqlite3
 from pathlib import Path
+from typing import Callable, Union
 
 from agentvision.config import get_settings
 
-MIGRATIONS: list[str] = [
+Migration = Union[str, Callable[[sqlite3.Connection], None]]
+
+
+def _migration_v2_fts_norm(conn: sqlite3.Connection) -> None:
+    """v2 — add a normalized shadow column to FTS for Arabic-aware search.
+
+    Rebuilds the fts virtual table with ``text_norm`` and repopulates it from
+    the existing rows, folding each one through normalize_for_search.
+    """
+    from agentvision.index.textnorm import normalize_for_search
+
+    rows = conn.execute(
+        "SELECT text, video_id, kind, ref_id, timestamp FROM fts"
+    ).fetchall()
+    conn.executescript(
+        """
+        DROP TABLE fts;
+        CREATE VIRTUAL TABLE fts USING fts5(
+            text UNINDEXED, text_norm,
+            video_id UNINDEXED, kind UNINDEXED, ref_id UNINDEXED, timestamp UNINDEXED
+        );
+        """
+    )
+    for row in rows:
+        conn.execute(
+            "INSERT INTO fts (text, text_norm, video_id, kind, ref_id, timestamp) "
+            "VALUES (?, ?, ?, ?, ?, ?)",
+            (row["text"], normalize_for_search(row["text"]),
+             row["video_id"], row["kind"], row["ref_id"], row["timestamp"]),
+        )
+
+
+MIGRATIONS: list[Migration] = [
     # v1 — initial schema
     """
     CREATE TABLE videos (
@@ -71,6 +108,8 @@ MIGRATIONS: list[str] = [
         text, video_id UNINDEXED, kind UNINDEXED, ref_id UNINDEXED, timestamp UNINDEXED
     );
     """,
+    # v2 — Arabic-aware normalized FTS column (Python data transform)
+    _migration_v2_fts_norm,
 ]
 
 
@@ -95,10 +134,13 @@ def schema_version(conn: sqlite3.Connection) -> int:
 def migrate(conn: sqlite3.Connection) -> int:
     """Apply pending migrations in order; returns the resulting version."""
     current = schema_version(conn)
-    for version, script in enumerate(MIGRATIONS, start=1):
+    for version, migration in enumerate(MIGRATIONS, start=1):
         if version <= current:
             continue
         with conn:
-            conn.executescript(script)
+            if callable(migration):
+                migration(conn)
+            else:
+                conn.executescript(migration)
             conn.execute("INSERT INTO schema_version (version) VALUES (?)", (version,))
     return schema_version(conn)

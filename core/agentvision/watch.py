@@ -8,6 +8,7 @@ from __future__ import annotations
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Callable
 
 from agentvision.acquire import AcquireResult, acquire, fetch_captions_only
 from agentvision.acquire.sources import classify_source, is_url_kind
@@ -64,6 +65,7 @@ def watch(
     duration_cap: float | None = None,
     out_dir: Path | None = None,
     use_cache: bool = True,
+    on_progress: "Callable[[str, float], None] | None" = None,
 ) -> WatchResult:
     """Analyze any video source; returns frames + transcript + metadata.
 
@@ -74,6 +76,11 @@ def watch(
     work_dir = Path(out_dir).resolve() if out_dir else Path(tempfile.mkdtemp(prefix="agentvision-"))
     work_dir.mkdir(parents=True, exist_ok=True)
 
+    def progress(phase: str, fraction: float) -> None:
+        if on_progress is not None:
+            on_progress(phase, fraction)
+
+    progress("acquiring source", 0.05)
     kind = classify_source(source)
     acq: AcquireResult
     if transcript_only and not cue_timestamps and is_url_kind(kind):
@@ -93,6 +100,7 @@ def watch(
         )
     _validate_window(start_seconds, end_seconds, metadata.duration_seconds)
 
+    progress("extracting frames (scenes, dedup, OCR)", 0.35)
     perception: PerceptionResult | None = None
     if not transcript_only and acq.video_path is not None:
         perception = perceive(
@@ -105,9 +113,11 @@ def watch(
             frame_width=frame_width,
             cue_timestamps=cue_timestamps,
             run_ocr=run_ocr,
+            ocr_lang=acq.info.get("language"),  # auto: Arabic video -> Arabic OCR
             metadata=metadata,
         )
 
+    progress("transcribing (captions -> local whisper)", 0.7)
     transcript = get_transcript(
         acq.video_path,
         work_dir,
