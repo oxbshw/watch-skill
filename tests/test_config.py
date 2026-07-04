@@ -4,7 +4,6 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-
 from agentvision.config import Settings, get_settings, reset_settings
 
 

@@ -1,7 +1,8 @@
 # AgentVision in Codex CLI (OpenAI)
 
-**Status: machine-tested ✅** (config written and connection verified on the
-development machine).
+**Status: machine-configured ◐** — config written by `agentvision setup` on
+a real machine; `codex mcp list` shows agentvision enabled and the server
+command answers MCP `initialize`. A full codex chat session was not run.
 
 ## Install
 

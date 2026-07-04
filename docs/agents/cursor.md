@@ -1,7 +1,8 @@
 # AgentVision in Cursor
 
-**Status: machine-tested ✅** (config written and connection verified on the
-development machine).
+**Status: machine-configured ◐** — `agentvision setup` wrote this config on
+a real machine and the server command answered MCP `initialize`; a full
+in-Cursor chat session was not run.
 
 ## Install
 

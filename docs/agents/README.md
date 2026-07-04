@@ -1,16 +1,19 @@
 # AgentVision agent matrix
 
 One engine, every agent. Each page gives exact install + config + a 3-step
-smoke test. Statuses are honest: **machine-tested ✅** means it was run on a
-real machine by us; **doc-verified ☑** means the config matches the agent's
-official documentation but was not executed here — reports welcome.
+smoke test. Statuses are honestly graded:
+- **machine-tested ✅** — full end-to-end run in the agent (tools called, answers received)
+- **machine-configured ◐** — `agentvision setup` wrote the config on a real machine, the file
+  parses in the agent's own tooling, and the exact server command answered an MCP
+  `initialize` from a neutral directory; an in-app chat session was not run
+- **doc-verified ☑** — config matches the agent's official docs; not executed here
 
 | Agent | Surface | Config file | Status |
 |-------|---------|-------------|--------|
 | [Claude Code](claude-code.md) | MCP (stdio) | `claude mcp add` / `.mcp.json` | machine-tested ✅ |
-| [Claude Desktop](claude-desktop.md) | MCP (stdio) | `claude_desktop_config.json` | machine-tested ✅ |
-| [Cursor](cursor.md) | MCP (stdio) | `~/.cursor/mcp.json` | machine-tested ✅ |
-| [Codex CLI](codex-cli.md) | MCP (stdio) | `~/.codex/config.toml` | machine-tested ✅ |
+| [Claude Desktop](claude-desktop.md) | MCP (stdio) | `claude_desktop_config.json` | machine-configured ◐ |
+| [Cursor](cursor.md) | MCP (stdio) | `~/.cursor/mcp.json` | machine-configured ◐ |
+| [Codex CLI](codex-cli.md) | MCP (stdio) | `~/.codex/config.toml` | machine-configured ◐ (`codex mcp list` shows it enabled) |
 | [Cline](cline.md) | MCP (stdio) | `cline_mcp_settings.json` | doc-verified ☑ |
 | [Windsurf](windsurf.md) | MCP (stdio) | `~/.codeium/windsurf/mcp_config.json` | doc-verified ☑ |
 | [Gemini CLI](gemini-cli.md) | MCP (stdio) | `~/.gemini/settings.json` | doc-verified ☑ |

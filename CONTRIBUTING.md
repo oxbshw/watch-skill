@@ -44,7 +44,10 @@ deps (onnxruntime, CTranslate2) publish wheels there first.
   required for the suite to pass: gate with `pytest.importorskip` or design
   the code so pure logic is testable without the backend (see
   `transcribe/diarize.py` for the pattern).
-- Run `uv run pytest -q` before every commit.
+- Run `uv run pytest -q -m "not network"` and `uvx ruff check .` before
+  every commit — both are CI merge gates. Tests that genuinely need the
+  network get `@pytest.mark.network` (excluded from the gate, run by the
+  manual integration workflow).
 
 ## Commits
 

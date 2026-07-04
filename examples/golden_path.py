@@ -19,7 +19,6 @@ Run:  uv run python "examples/golden_path.py" [--skip youtube,tiktok,...]
 from __future__ import annotations
 
 import argparse
-import json
 import shutil
 import sys
 import tempfile

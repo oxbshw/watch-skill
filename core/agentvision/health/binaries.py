@@ -139,6 +139,50 @@ def bootstrap_ffmpeg_portable() -> tuple[Path, Path]:
     return wanted["ffmpeg.exe"], wanted["ffprobe.exe"]  # type: ignore[return-value]
 
 
+def bootstrap_deno() -> Path:
+    """Get a deno binary into the managed bin dir (copy or portable zip).
+
+    yt-dlp needs a JavaScript runtime for YouTube n-sig decryption; without
+    one YouTube throttles downloads to a crawl. Prefers copying an existing
+    system deno (e.g. winget's, which lands off-PATH for running processes);
+    falls back to the official release zip.
+    """
+    bin_dir = managed_bin_dir(create=True)
+    dest = bin_dir / _exe_name("deno")
+    existing = shutil.which("deno")
+    if existing is None and _WINDOWS:
+        winget_root = (
+            Path.home() / "AppData" / "Local" / "Microsoft" / "WinGet" / "Packages"
+        )
+        for candidate in winget_root.glob("DenoLand.Deno*/deno.exe"):
+            existing = str(candidate)
+            break
+    if existing:
+        shutil.copy2(existing, dest)
+        return dest
+    platform_tag = "x86_64-pc-windows-msvc" if _WINDOWS else (
+        "aarch64-apple-darwin" if sys.platform == "darwin" else "x86_64-unknown-linux-gnu"
+    )
+    url = f"https://github.com/denoland/deno/releases/latest/download/deno-{platform_tag}.zip"
+    zip_path = bin_dir / "deno.zip"
+    _download_file(url, zip_path)
+    with zipfile.ZipFile(zip_path) as zf:
+        for member in zf.namelist():
+            if member.rsplit("/", 1)[-1].lower().startswith("deno"):
+                with zf.open(member) as src, dest.open("wb") as dst:
+                    shutil.copyfileobj(src, dst)
+                break
+    zip_path.unlink(missing_ok=True)
+    if not dest.is_file():
+        raise DependencyError(
+            "deno bootstrap failed",
+            code="health.bootstrap_failed",
+            fix="install deno manually: winget install DenoLand.Deno",
+        )
+    _make_executable(dest)
+    return dest
+
+
 def prepend_bin_dir_to_path() -> None:
     """Make managed binaries visible to subprocesses spawned via bare names."""
     bin_dir = str(managed_bin_dir())

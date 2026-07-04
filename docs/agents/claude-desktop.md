@@ -1,7 +1,8 @@
 # AgentVision in Claude Desktop
 
-**Status: machine-tested ✅** (config written and tools verified on the
-development machine).
+**Status: machine-configured ◐** — `agentvision setup` wrote this config on
+a real machine (existing keys preserved, backup taken) and the server
+command answered MCP `initialize`; a full in-app session was not run.
 
 ## Install
 

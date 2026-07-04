@@ -116,7 +116,7 @@ def _index_texts(conn: sqlite3.Connection, video_id: str, items: list[tuple]) ->
         )
     vectors = emb.embed_texts([text for _, _, _, text in items])
     if vectors:
-        for (kind, ref_id, timestamp, text), vector in zip(items, vectors):
+        for (kind, ref_id, timestamp, text), vector in zip(items, vectors, strict=False):
             conn.execute(
                 """INSERT INTO embeddings (video_id, kind, ref_id, timestamp, text, vector, dim)
                    VALUES (?, ?, ?, ?, ?, ?, ?)""",
@@ -155,7 +155,7 @@ def _maybe_describe_scenes(conn: sqlite3.Connection, video_id: str) -> None:
 
         print(f"[agentvision] scene descriptions skipped (unexpected: {exc})", file=sys.stderr)
         return
-    for row, description in zip(rows, descriptions):
+    for row, description in zip(rows, descriptions, strict=False):
         if description:
             set_scene_description(conn, row["id"], description)
 

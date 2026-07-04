@@ -6,7 +6,6 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-
 from agentvision.config import reset_settings
 
 _AMBIENT_KEYS = (
@@ -27,6 +26,11 @@ def isolated_settings(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
         monkeypatch.delenv(var, raising=False)
     data_dir = tmp_path / "agent vision data"
     monkeypatch.setenv("AGENTVISION_DATA_DIR", str(data_dir))
+    # Tests must NEVER reach a live vision backend: a developer's .env may
+    # point at a reachable local Ollama (this bit us — the API test sat in
+    # real CPU inference). Keyless cloud providers fail fast and structured.
+    monkeypatch.setenv("AGENTVISION_VISION_CHEAP_PROVIDER", "anthropic")
+    monkeypatch.setenv("AGENTVISION_VISION_STRONG_PROVIDER", "anthropic")
     reset_settings()
     yield data_dir
     reset_settings()

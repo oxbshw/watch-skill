@@ -1,0 +1,21 @@
+name: Feature request
+description: Something AgentVision should do
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: What can't your agent do today? Concrete scenario beats abstract capability.
+    validations:
+      required: true
+  - type: textarea
+    id: shape
+    attributes:
+      label: What would it look like?
+      description: A CLI/MCP call you wish existed, or expected output.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options: [acquire, perceive, transcribe, index/search, vision providers, the Loop, surfaces (MCP/CLI/REST), docs]

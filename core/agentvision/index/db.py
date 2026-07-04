@@ -6,12 +6,12 @@ cannot express, e.g. re-normalizing text through Python).
 from __future__ import annotations
 
 import sqlite3
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable, Union
 
 from agentvision.config import get_settings
 
-Migration = Union[str, Callable[[sqlite3.Connection], None]]
+Migration = str | Callable[[sqlite3.Connection], None]
 
 
 def _migration_v2_fts_norm(conn: sqlite3.Connection) -> None:

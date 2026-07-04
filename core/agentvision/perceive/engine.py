@@ -163,7 +163,11 @@ def perceive(
     cues = sorted({round(t, 3) for t in (cue_timestamps or []) if lo <= t <= hi})
     cues = _even_sample(cues, cap)
 
-    scene_spans = detect_or_empty(video_path)
+    scene_spans = detect_or_empty(
+        video_path,
+        start_seconds if focused else None,
+        end_seconds if focused else None,
+    )
     candidates = _scene_candidates(scene_spans, lo, hi)
     engine = "scene" if len(scene_spans) >= 2 else "uniform"
     detail_target = max(0, target - len(cues))
@@ -196,10 +200,14 @@ def perceive(
     )
 
 
-def detect_or_empty(video_path: Path) -> list[tuple[float, float]]:
+def detect_or_empty(
+    video_path: Path,
+    start_seconds: float | None = None,
+    end_seconds: float | None = None,
+) -> list[tuple[float, float]]:
     """Scene detection that degrades to uniform sampling instead of failing."""
     try:
-        return scenes.detect_scenes(video_path)
+        return scenes.detect_scenes(video_path, start_seconds, end_seconds)
     except PerceptionError as exc:
         print(f"[agentvision] scene detection unavailable ({exc.code}) — uniform sampling", file=sys.stderr)
         return []

@@ -11,7 +11,6 @@ import inspect
 from pathlib import Path
 
 import pytest
-
 from agentvision.errors import TranscriptionError
 from agentvision.transcribe import cloud
 

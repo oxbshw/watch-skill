@@ -1,0 +1,30 @@
+name: Integration (network)
+
+# Manual trigger only: hits YouTube/TikTok and (optionally) vision APIs.
+# Run before releases; the offline CI suite is the merge gate.
+on:
+  workflow_dispatch:
+    inputs:
+      skip_stages:
+        description: "Comma list for golden_path --skip (e.g. tiktok,loop)"
+        default: "loop"
+
+jobs:
+  golden-path:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.11"
+      - run: sudo apt-get update && sudo apt-get install -y ffmpeg
+      - run: uv sync --all-extras
+      - name: Doctor
+        run: uv run agentvision doctor
+      - name: Network-marked tests
+        run: uv run pytest -q -m network --timeout 600 || true
+      - name: Golden path (requires a vision key secret)
+        if: ${{ vars.AGENTVISION_HAS_VISION_KEY == 'true' }}
+        env:
+          AGENTVISION_OPENROUTER_API_KEY: ${{ secrets.AGENTVISION_OPENROUTER_API_KEY }}
+        run: uv run python examples/golden_path.py --skip "${{ inputs.skip_stages }}"

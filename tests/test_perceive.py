@@ -116,3 +116,15 @@ def test_ocr_frame_dispatches_engine_by_lang(tmp_path, monkeypatch) -> None:
     mod.ocr_frame(img, lang="en")
     mod.ocr_frame(img)
     assert chosen == ["ar", "default", "default"]
+
+
+def test_focused_scene_detection_scans_only_the_window(sample_video, tmp_path) -> None:
+    """Regression: a focused watch decoded the WHOLE video for scene
+    detection (minutes of wasted decode on long sources). The window must
+    bound the scan — scenes returned must lie within it."""
+    from agentvision.perceive.scenes import detect_scenes
+
+    spans = detect_scenes(sample_video, start_seconds=4.0, end_seconds=8.0)
+    for start, end in spans:
+        assert start >= 3.9, f"scene starts before the window: {start}"
+        assert end <= 8.2, f"scene ends after the window: {end}"

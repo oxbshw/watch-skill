@@ -10,13 +10,12 @@ from pathlib import Path
 from typing import Any
 
 import anyio
-from fastmcp import Context, FastMCP
-from fastmcp.utilities.types import Image
-
 from agentvision.config import get_settings
 from agentvision.errors import AgentVisionError
 from agentvision.health.binaries import prepend_bin_dir_to_path
 from agentvision.perceive.budget import format_time, parse_time
+from fastmcp import Context, FastMCP
+from fastmcp.utilities.types import Image
 
 mcp = FastMCP(
     name="agentvision",

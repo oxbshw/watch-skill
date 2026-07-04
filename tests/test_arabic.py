@@ -10,7 +10,6 @@ import sqlite3
 from pathlib import Path
 
 import pytest
-
 from agentvision.index.textnorm import normalize_for_search
 
 

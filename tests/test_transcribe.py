@@ -83,3 +83,28 @@ def test_merge_overlapping_keeps_distinct_text_at_boundary() -> None:
     chunk_b = [Segment(19.5, 30, "different words")]
     merged = merge_overlapping([chunk_a, chunk_b])
     assert len(merged) == 2
+
+
+def test_extract_audio_windowed(sample_video, tmp_path) -> None:
+    """Regression: a focused watch (end=60s) transcribed the WHOLE audio —
+    tens of wasted CPU-minutes on long videos. The window must be cut at
+    extraction time."""
+    from agentvision.transcribe.audio import audio_duration, extract_audio
+
+    full = extract_audio(sample_video, tmp_path / "full.mp3")
+    windowed = extract_audio(
+        sample_video, tmp_path / "win.mp3", start_seconds=2.0, end_seconds=6.0
+    )
+    assert audio_duration(full) > 10
+    assert 3.0 <= audio_duration(windowed) <= 5.0  # ~4s window
+
+
+def test_transcript_offset_shifts_timestamps() -> None:
+    from agentvision.transcribe.types import Segment, Transcript
+
+    t = Transcript(segments=[Segment(0.0, 2.0, "hello"), Segment(3.0, 5.0, "world")])
+    shifted = t.offset(120.0)
+    assert shifted.segments[0].start == 120.0
+    assert shifted.segments[1].end == 125.0
+    assert t.segments[0].start == 0.0  # original untouched
+    assert t.offset(0.0) is t

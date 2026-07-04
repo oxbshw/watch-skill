@@ -26,6 +26,8 @@ def get_transcript(
     allow_cloud: bool | None = None,
     whisper_model: str | None = None,
     preferred_cloud_backend: str | None = None,
+    start_seconds: float | None = None,
+    end_seconds: float | None = None,
 ) -> Transcript:
     """Run the ladder. Any rung may be force-disabled; defaults come from settings."""
     settings = get_settings()
@@ -48,8 +50,13 @@ def get_transcript(
 
     if use_local:
         try:
-            audio_path = audio_mod.extract_audio(video_path, work_dir / "audio.mp3")
-            return local.transcribe_local(audio_path, model_size=model)
+            # focused mode: whisper only ever sees the requested window
+            audio_path = audio_mod.extract_audio(
+                video_path, work_dir / "audio.mp3",
+                start_seconds=start_seconds, end_seconds=end_seconds,
+            )
+            transcript = local.transcribe_local(audio_path, model_size=model)
+            return transcript.offset(start_seconds or 0.0)
         except TranscriptionError as exc:
             print(f"[agentvision] local whisper unavailable ({exc.code})", file=sys.stderr)
 

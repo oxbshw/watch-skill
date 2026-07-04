@@ -12,7 +12,7 @@ MEDIA_EXTS = {
 MANIFEST_EXTS = {".m3u8", ".mpd"}
 
 
-class SourceKind(str, Enum):
+class SourceKind(str, Enum):  # noqa: UP042 — StrEnum needs 3.11+, str+Enum reads the same
     """What kind of input the user handed us."""
 
     PAGE_URL = "page_url"        # any website; yt-dlp's 1800+ extractors

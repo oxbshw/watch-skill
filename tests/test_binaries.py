@@ -5,7 +5,6 @@ import sys
 from pathlib import Path
 
 import pytest
-
 from agentvision.config import reset_settings
 from agentvision.errors import DependencyError
 from agentvision.health import binaries

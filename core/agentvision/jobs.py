@@ -13,8 +13,9 @@ import threading
 import time
 import traceback
 import uuid
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any, Callable
+from typing import Any
 
 from agentvision.errors import AgentVisionError
 
@@ -76,21 +77,26 @@ def start_job(kind: str, work: Callable[[Callable[[str, float], None]], Any]) ->
         job.progress = max(0.0, min(1.0, fraction))
 
     def runner() -> None:
+        # ORDER MATTERS: `status` is what pollers wait on, so result/error
+        # must be fully populated before status flips away from "running".
         try:
             job.result = work(progress)
-            job.status, job.phase, job.progress = "done", "finished", 1.0
+            job.phase, job.progress = "finished", 1.0
+            job.finished_at = time.time()
+            job.status = "done"
         except AgentVisionError as exc:
-            job.status, job.error = "failed", exc.to_dict()
-        except Exception as exc:  # keep the traceback for the status report
+            job.error = exc.to_dict()
+            job.finished_at = time.time()
             job.status = "failed"
+        except Exception as exc:  # keep the traceback for the status report
             job.error = {
                 "error": "job.crashed",
                 "message": str(exc),
                 "fix": "report this — unexpected failures should be structured errors",
                 "details": {"traceback": traceback.format_exc()[-1500:]},
             }
-        finally:
             job.finished_at = time.time()
+            job.status = "failed"
 
     threading.Thread(target=runner, name=f"agentvision-{kind}-{job.job_id}", daemon=True).start()
     return job

@@ -8,9 +8,9 @@ import pytest
 pytest.importorskip("fastapi", reason="api extra not installed")
 pytest.importorskip("scenedetect", reason="perceive extra not installed")
 
+from agentvision.config import reset_settings  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
 
-from agentvision.config import reset_settings  # noqa: E402
 from surfaces.api import create_app  # noqa: E402
 
 
@@ -93,6 +93,7 @@ def test_watch_then_ask_roundtrip(client: TestClient, sample_video: Path) -> Non
 
 def test_public_bind_without_token_refused() -> None:
     from agentvision.errors import ConfigError
+
     from surfaces.api import serve
 
     with pytest.raises(ConfigError) as excinfo:

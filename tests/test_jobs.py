@@ -4,7 +4,6 @@ from __future__ import annotations
 import time
 
 import pytest
-
 from agentvision import jobs
 from agentvision.errors import AcquisitionError, AgentVisionError
 

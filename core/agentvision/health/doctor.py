@@ -12,10 +12,11 @@ import re
 import shutil
 import subprocess
 import sys
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import date, datetime
 from pathlib import Path
-from typing import Callable, Literal
+from typing import Literal
 
 from agentvision.config import get_settings
 from agentvision.errors import DependencyError
@@ -223,6 +224,33 @@ def check_disk_space() -> CheckResult:
     )
 
 
+def check_js_runtime(fix: bool = True) -> CheckResult:
+    """A JS runtime (deno) for yt-dlp's YouTube n-sig decryption.
+
+    Without one, YouTube throttles downloads to a crawl (observed live:
+    a 100 MB video taking 30+ minutes). Warn-level, not fail — every other
+    source works fine without it.
+    """
+    if binaries.find_binary("deno"):
+        return CheckResult("js-runtime", "ok", f"deno at {binaries.find_binary('deno')}")
+    if not fix:
+        return CheckResult(
+            "js-runtime", "warn",
+            "no deno found — YouTube downloads will be heavily throttled "
+            "(fix: winget install DenoLand.Deno)",
+        )
+    try:
+        path = binaries.bootstrap_deno()
+        record_incident("bootstrap", "installed deno for yt-dlp YouTube extraction")
+        return CheckResult("js-runtime", "ok", f"deno at {path}", fix_applied="bootstrap")
+    except DependencyError:
+        return CheckResult(
+            "js-runtime", "warn",
+            "could not bootstrap deno — YouTube downloads will be throttled "
+            "(fix: winget install DenoLand.Deno, or place deno in the managed bin dir)",
+        )
+
+
 def check_gpu() -> CheckResult:
     """Detect an NVIDIA GPU (informational; whisper picks CPU/GPU automatically)."""
     if shutil.which("nvidia-smi") is None:
@@ -268,6 +296,7 @@ def run_doctor(fix: bool = True) -> DoctorReport:
     report.checks.append(check_ffmpeg(fix=fix))
     report.checks.append(check_yt_dlp(fix=fix))
     report.checks.append(check_yt_dlp_freshness(fix=fix))
+    report.checks.append(check_js_runtime(fix=fix))
     report.checks.append(check_disk_space())
     report.checks.append(check_gpu())
     report.checks.append(check_api_keys())

@@ -7,9 +7,10 @@ httpx. The cost guard runs before every non-local call.
 from __future__ import annotations
 
 import base64
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 import httpx
 

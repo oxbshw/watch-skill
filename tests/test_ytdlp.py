@@ -4,7 +4,6 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-
 from agentvision.acquire import ytdlp
 from agentvision.errors import AcquisitionError
 

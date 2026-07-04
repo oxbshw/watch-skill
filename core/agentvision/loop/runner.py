@@ -54,7 +54,7 @@ class LoopState:
         )
 
     @classmethod
-    def load(cls, loop_id: str) -> "LoopState":
+    def load(cls, loop_id: str) -> LoopState:
         path = get_settings().loops_dir / loop_id / "state.json"
         if not path.is_file():
             raise LoopError(

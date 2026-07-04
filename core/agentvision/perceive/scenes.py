@@ -18,15 +18,36 @@ def _import_scenedetect():
     return detect, ContentDetector
 
 
-def detect_scenes(video_path: Path) -> list[tuple[float, float]]:
+def detect_scenes(
+    video_path: Path,
+    start_seconds: float | None = None,
+    end_seconds: float | None = None,
+) -> list[tuple[float, float]]:
     """Detect cuts; return (start_seconds, end_seconds) per scene.
 
-    An empty list means the video is effectively one static shot — callers
-    fall back to uniform sampling.
+    ``start/end`` bound the scan — a focused watch of one minute must not
+    decode a whole hour of video (live finding: 10 min of decode for a 60 s
+    window on a slow machine). An empty list means the video is effectively
+    one static shot — callers fall back to uniform sampling.
     """
     detect, ContentDetector = _import_scenedetect()
     try:
-        scene_list = detect(str(video_path), ContentDetector())
+        scene_list = detect(
+            str(video_path),
+            ContentDetector(),
+            start_time=start_seconds,
+            end_time=end_seconds,
+        )
+    except TypeError:
+        # older scenedetect without start/end kwargs — full scan fallback
+        try:
+            scene_list = detect(str(video_path), ContentDetector())
+        except Exception as exc:
+            raise PerceptionError(
+                f"scene detection failed: {exc}",
+                code="perceive.scene_detection_failed",
+                details={"path": str(video_path)},
+            ) from exc
     except Exception as exc:  # scenedetect raises plain Exceptions on bad media
         raise PerceptionError(
             f"scene detection failed: {exc}",

@@ -60,6 +60,20 @@ packages = ["core/agentvision", "surfaces"]
 testpaths = ["tests"]
 addopts = "-q"
 timeout = 300
+markers = [
+    "network: hits the real network (excluded from CI's merge gate)",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B"]
+ignore = [
+    "E501",  # long lines in docstrings/prompts are deliberate
+    "B008",  # typer.Option in defaults is the typer idiom
+]
 
 [tool.uv]
 package = true

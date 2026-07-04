@@ -10,11 +10,10 @@ import json
 import sys
 
 import typer
-from rich.console import Console
-from rich.table import Table
-
 from agentvision import __version__
 from agentvision.health.doctor import DoctorReport, run_doctor
+from rich.console import Console
+from rich.table import Table
 
 app = typer.Typer(
     name="agentvision",
@@ -54,7 +53,7 @@ def doctor(
     else:
         _render_report(report)
     if not report.ok:
-        raise typer.Exit(code=1)
+        raise typer.Exit(code=1) from None
 
 
 @app.command()
@@ -125,7 +124,7 @@ def watch(
     except AgentVisionError as exc:
         _console.print(f"[red]error:[/red] {exc}")
         print(json.dumps(exc.to_dict(), indent=2))
-        raise typer.Exit(code=1)
+        raise typer.Exit(code=1) from None
     if index and result.perception is not None:
         from agentvision.index import index_watch_result
 
@@ -155,13 +154,14 @@ def api(
 ) -> None:
     """Run the REST API (FastAPI; OpenAPI spec at /openapi.json)."""
     from agentvision.errors import AgentVisionError
+
     from surfaces.api import serve as api_serve
 
     try:
         api_serve(host=host, port=port)
     except AgentVisionError as exc:
         print(json.dumps(exc.to_dict(), indent=2))
-        raise typer.Exit(code=1)
+        raise typer.Exit(code=1) from None
 
 
 @app.command()
@@ -179,7 +179,7 @@ def ask(
         result = ask_video(video, question, max_frames=max_frames)
     except AgentVisionError as exc:
         print(json.dumps(exc.to_dict(), indent=2))
-        raise typer.Exit(code=1)
+        raise typer.Exit(code=1) from None
     print(f"# Evidence for: {question}\n")
     for hit in result["hits"]:
         stamp = format_time(hit["timestamp"]) if hit["timestamp"] is not None else "--:--"
@@ -244,7 +244,7 @@ def capture(
         result = run_capture(target, dest, script=script, duration_seconds=duration)
     except AgentVisionError as exc:
         print(json.dumps(exc.to_dict(), indent=2))
-        raise typer.Exit(code=1)
+        raise typer.Exit(code=1) from None
     print(f"captured {result.kind}: {result.video_path}")
 
 
@@ -268,7 +268,7 @@ def loop_start_cmd(
         )
     except AgentVisionError as exc:
         print(json.dumps(exc.to_dict(), indent=2))
-        raise typer.Exit(code=1)
+        raise typer.Exit(code=1) from None
     _print_loop_state(state)
 
 
@@ -282,7 +282,7 @@ def loop_iterate_cmd(loop_id: str = typer.Argument(...)) -> None:
         state = loop_iterate(loop_id)
     except AgentVisionError as exc:
         print(json.dumps(exc.to_dict(), indent=2))
-        raise typer.Exit(code=1)
+        raise typer.Exit(code=1) from None
     _print_loop_state(state)
 
 
@@ -296,7 +296,7 @@ def loop_status_cmd(loop_id: str = typer.Argument(...)) -> None:
         state = loop_status(loop_id)
     except AgentVisionError as exc:
         print(json.dumps(exc.to_dict(), indent=2))
-        raise typer.Exit(code=1)
+        raise typer.Exit(code=1) from None
     _print_loop_state(state)
 
 

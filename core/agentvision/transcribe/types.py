@@ -34,7 +34,19 @@ class Transcript:
     def __bool__(self) -> bool:
         return bool(self.segments)
 
-    def filter_range(self, start: float | None, end: float | None) -> "Transcript":
+    def offset(self, seconds: float) -> Transcript:
+        """Shift all timestamps (window-extracted audio back to source time)."""
+        if not seconds:
+            return self
+        return Transcript(
+            segments=[
+                Segment(s.start + seconds, s.end + seconds, s.text, s.speaker)
+                for s in self.segments
+            ],
+            source=self.source,
+        )
+
+    def filter_range(self, start: float | None, end: float | None) -> Transcript:
         """Segments overlapping [start, end] (same semantics as the reference)."""
         if start is None and end is None:
             return self

@@ -1,0 +1,37 @@
+name: Bug report
+description: Something broke
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What did you run, what did you expect, what did you get?
+      placeholder: |
+        agentvision watch "https://..." failed with ...
+    validations:
+      required: true
+  - type: textarea
+    id: doctor
+    attributes:
+      label: Doctor report
+      description: Paste the FULL output of `agentvision doctor --json` (it contains no secrets — keys are reported as present/absent only).
+      render: json
+    validations:
+      required: true
+  - type: textarea
+    id: error
+    attributes:
+      label: Structured error
+      description: If a tool/CLI call failed, paste the `{error, message, fix, details}` JSON it printed.
+      render: json
+  - type: input
+    id: agent
+    attributes:
+      label: Agent / surface
+      placeholder: Claude Code MCP / Cursor / CLI / REST / Python
+  - type: input
+    id: source
+    attributes:
+      label: Video source (if shareable)
+      placeholder: URL or "local file, 34 min, mp4"

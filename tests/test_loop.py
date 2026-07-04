@@ -57,7 +57,7 @@ def test_parse_critique_extracts_from_prose() -> None:
     ],
 )
 def test_parse_critique_rejects_invalid(raw: str) -> None:
-    with pytest.raises(Exception):
+    with pytest.raises((RuntimeError, Exception)):  # noqa: B017
         parse_critique(raw)
 
 
@@ -88,7 +88,7 @@ def _fake_perception(phashes: list[str], timestamps: list[float]) -> PerceptionR
             index=i, timestamp_seconds=ts, path=Path(f"frame_{i}.jpg"),
             scene_id=i, phash=ph, reason="scene-start",
         )
-        for i, (ph, ts) in enumerate(zip(phashes, timestamps))
+        for i, (ph, ts) in enumerate(zip(phashes, timestamps, strict=False))
     ]
     meta = VideoMetadata(
         duration_seconds=max(timestamps) + 1 if timestamps else 0,

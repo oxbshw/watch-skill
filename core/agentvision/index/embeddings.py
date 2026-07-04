@@ -50,7 +50,7 @@ def unpack_vector(blob: bytes, dim: int) -> list[float]:
 
 def cosine_similarity(a: list[float], b: list[float]) -> float:
     """Cosine similarity without numpy (vectors are short; hot path is SQL)."""
-    dot = sum(x * y for x, y in zip(a, b))
+    dot = sum(x * y for x, y in zip(a, b, strict=False))
     norm_a = sum(x * x for x in a) ** 0.5
     norm_b = sum(y * y for y in b) ** 0.5
     if norm_a == 0 or norm_b == 0:

@@ -9,7 +9,6 @@ import pytest
 pytest.importorskip("PIL", reason="perceive extra not installed")
 
 import httpx  # noqa: E402
-
 from agentvision.config import reset_settings  # noqa: E402
 from agentvision.errors import VisionError  # noqa: E402
 from agentvision.vision import client as client_mod  # noqa: E402

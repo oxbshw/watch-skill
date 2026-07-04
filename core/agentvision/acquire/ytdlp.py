@@ -44,6 +44,9 @@ def is_breakage(stderr: str) -> bool:
 
 def _run_yt_dlp(args: list[str], url: str, timeout: float = 3600.0) -> subprocess.CompletedProcess[str]:
     """Run yt-dlp with progress echoed to our stderr and stderr captured."""
+    from agentvision.health.binaries import prepend_bin_dir_to_path
+
+    prepend_bin_dir_to_path()  # yt-dlp must find the managed deno for YouTube n-sig
     yt_dlp = require_binary("yt-dlp")
     cmd = [str(yt_dlp), *args, "--", url]
     result = subprocess.run(

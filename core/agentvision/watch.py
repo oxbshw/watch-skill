@@ -6,9 +6,9 @@ builds on the same WatchResult.
 from __future__ import annotations
 
 import tempfile
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable
 
 from agentvision.acquire import AcquireResult, acquire, fetch_captions_only
 from agentvision.acquire.sources import classify_source, is_url_kind
@@ -65,7 +65,7 @@ def watch(
     duration_cap: float | None = None,
     out_dir: Path | None = None,
     use_cache: bool = True,
-    on_progress: "Callable[[str, float], None] | None" = None,
+    on_progress: Callable[[str, float], None] | None = None,
 ) -> WatchResult:
     """Analyze any video source; returns frames + transcript + metadata.
 
@@ -126,6 +126,8 @@ def watch(
         allow_local=allow_local_whisper,
         allow_cloud=allow_cloud_stt,
         whisper_model=whisper_model,
+        start_seconds=start_seconds,
+        end_seconds=end_seconds,
     )
     if start_seconds is not None or end_seconds is not None:
         transcript = transcript.filter_range(start_seconds, end_seconds)

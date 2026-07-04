@@ -7,7 +7,7 @@ bootstrap download) records what broke and what was done about it, so
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -17,7 +17,7 @@ from agentvision.config import get_settings
 def record_incident(kind: str, detail: str, **extra: Any) -> None:
     """Append one incident line. Never raises — health logging is best-effort."""
     entry = {
-        "ts": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "ts": datetime.now(UTC).isoformat(timespec="seconds"),
         "kind": kind,
         "detail": detail,
         **extra,

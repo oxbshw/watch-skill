@@ -18,12 +18,27 @@ MAX_UPLOAD_BYTES = 24 * 1024 * 1024  # margin under both APIs' 25 MB cap
 CHUNK_OVERLAP_SECONDS = 2.0  # fixes the reference's words-lost-at-boundary bug
 
 
-def extract_audio(video_path: Path, out_path: Path) -> Path:
-    """Extract mono 16 kHz 64 kbps mp3 (~480 kB/min)."""
+def extract_audio(
+    video_path: Path,
+    out_path: Path,
+    start_seconds: float | None = None,
+    end_seconds: float | None = None,
+) -> Path:
+    """Extract mono 16 kHz 64 kbps mp3 (~480 kB/min), optionally windowed.
+
+    Focused watches pass start/end so whisper only ever sees the requested
+    window — transcribing a 10-minute video to answer about its first minute
+    is wasted compute (and on CPU, tens of minutes)."""
     ffmpeg = require_binary("ffmpeg")
     out_path.parent.mkdir(parents=True, exist_ok=True)
+    window: list[str] = []
+    if start_seconds is not None and start_seconds > 0:
+        window += ["-ss", f"{start_seconds:.3f}"]
+    if end_seconds is not None:
+        window += ["-to", f"{end_seconds:.3f}"]
     cmd = [
         str(ffmpeg), "-hide_banner", "-loglevel", "error", "-y",
+        *window,
         "-i", str(video_path.resolve()),
         "-vn", "-acodec", "libmp3lame", "-ar", "16000", "-ac", "1", "-b:a", "64k",
         str(out_path.resolve()),

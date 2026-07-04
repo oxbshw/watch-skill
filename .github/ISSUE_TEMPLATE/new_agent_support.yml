@@ -1,0 +1,23 @@
+name: New agent support
+description: Get AgentVision working in another AI agent / IDE
+labels: [agent-support]
+body:
+  - type: input
+    id: agent
+    attributes:
+      label: Agent name + version
+      placeholder: e.g. Zed 0.160, Goose 1.2
+    validations:
+      required: true
+  - type: textarea
+    id: mcp
+    attributes:
+      label: How does it speak MCP (or HTTP)?
+      description: Link its MCP config docs. If it has no MCP, the REST API + OpenAPI spec is the path.
+    validations:
+      required: true
+  - type: textarea
+    id: tried
+    attributes:
+      label: What you tried
+      description: Config you wrote, what connected, what failed. If it worked — paste the working config and we'll add a docs/agents page crediting you.

@@ -106,7 +106,7 @@ def critique_recording(
     vision = get_vision("strong", provider=provider, model=model)
     prompt, frame_paths = _build_prompt(perception, pass_criteria)
     last_error: Exception | None = None
-    for attempt in range(2):
+    for _ in range(2):
         try:
             raw = vision.client.generate(prompt, frame_paths)
             return parse_critique(raw)

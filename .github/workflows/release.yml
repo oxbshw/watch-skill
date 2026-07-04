@@ -1,0 +1,53 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.11"
+      - run: sudo apt-get update && sudo apt-get install -y ffmpeg
+      - run: uv sync --all-extras
+      - name: Offline suite must be green
+        run: uv run pytest -q -m "not network" --timeout 300
+        env:
+          AGENTVISION_VISION_CHEAP_PROVIDER: anthropic
+          AGENTVISION_VISION_STRONG_PROVIDER: anthropic
+      - name: Build wheel + sdist
+        run: uv build
+      - name: Build the Claude Skill bundle
+        run: |
+          uv run python - <<'EOF'
+          import zipfile
+          from pathlib import Path
+          root = Path("adapters/claude-skill/skills/watch")
+          Path("dist").mkdir(exist_ok=True)
+          with zipfile.ZipFile("dist/agentvision-watch.skill", "w", zipfile.ZIP_DEFLATED) as z:
+              for f in root.rglob("*"):
+                  if f.is_file():
+                      z.write(f, f.relative_to(root))
+          EOF
+      - name: Extract changelog section
+        run: |
+          awk '/^## /{n++} n==1' CHANGELOG.md > release-notes.md || cp CHANGELOG.md release-notes.md
+      - name: GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          body_path: release-notes.md
+          files: |
+            dist/*.whl
+            dist/*.tar.gz
+            dist/agentvision-watch.skill
+      # PyPI publishing — uncomment once the PyPI project + trusted publisher
+      # are set up (https://docs.pypi.org/trusted-publishers/):
+      # - name: Publish to PyPI
+      #   run: uv publish

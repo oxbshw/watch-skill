@@ -6,7 +6,6 @@ from datetime import date, datetime, timedelta
 from pathlib import Path
 
 import pytest
-
 from agentvision.health import doctor
 from agentvision.health.log import read_incidents, record_incident
 

@@ -18,13 +18,12 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
-from fastapi import Depends, FastAPI, HTTPException, Query, Request
-from pydantic import BaseModel, Field
-
 from agentvision import __version__
 from agentvision.config import get_settings
 from agentvision.errors import AgentVisionError
 from agentvision.perceive.budget import parse_time
+from fastapi import Depends, FastAPI, HTTPException, Query, Request
+from pydantic import BaseModel, Field
 
 _HTTP_STATUS_BY_PREFIX = {
     "acquire": 502,
@@ -162,7 +161,7 @@ def create_app() -> FastAPI:
             )
             video_id = index_watch_result(result)
         except AgentVisionError as exc:
-            raise _http_error(exc)
+            raise _http_error(exc) from exc
         frames = [str(f.path) for f in (result.perception.frames if result.perception else [])]
         return {
             "video_id": video_id,
@@ -181,7 +180,7 @@ def create_app() -> FastAPI:
         try:
             result = ask(req.video, req.question, max_frames=req.max_frames)
         except AgentVisionError as exc:
-            raise _http_error(exc)
+            raise _http_error(exc) from exc
         result["frames"] = _frame_payload(
             [f["frame_path"] for f in result["frames"]], req.inline_frames
         )
@@ -200,7 +199,7 @@ def create_app() -> FastAPI:
         try:
             ctx = moment(video, parse_time(timestamp) or 0.0, window=window)
         except AgentVisionError as exc:
-            raise _http_error(exc)
+            raise _http_error(exc) from exc
         return {
             "video_id": ctx.video_id,
             "timestamp": ctx.timestamp,
@@ -238,7 +237,7 @@ def create_app() -> FastAPI:
             result.acquisition.source = f"capture:{req.target}"
             video_id = index_watch_result(result)
         except AgentVisionError as exc:
-            raise _http_error(exc)
+            raise _http_error(exc) from exc
         return {"video_id": video_id, "kind": cap.kind, "video_path": str(cap.video_path)}
 
     @app.post("/v1/loops", tags=["loop"])
@@ -252,7 +251,7 @@ def create_app() -> FastAPI:
                 max_iterations=req.max_iterations, duration_seconds=req.duration,
             )
         except AgentVisionError as exc:
-            raise _http_error(exc)
+            raise _http_error(exc) from exc
         return _loop_response(state)
 
     @app.post("/v1/loops/{loop_id}/iterate", tags=["loop"])
@@ -263,7 +262,7 @@ def create_app() -> FastAPI:
         try:
             state = iterate(loop_id)
         except AgentVisionError as exc:
-            raise _http_error(exc)
+            raise _http_error(exc) from exc
         return _loop_response(state)
 
     @app.get("/v1/loops/{loop_id}", tags=["loop"])
@@ -274,7 +273,7 @@ def create_app() -> FastAPI:
         try:
             state = status(loop_id)
         except AgentVisionError as exc:
-            raise _http_error(exc)
+            raise _http_error(exc) from exc
         return _loop_response(state)
 
     return app
@@ -283,7 +282,6 @@ def create_app() -> FastAPI:
 def serve(host: str = "127.0.0.1", port: int = 8748) -> None:
     """Run the REST API with uvicorn. Refuses public binds without a token."""
     import uvicorn
-
     from agentvision.errors import ConfigError
 
     if host not in ("127.0.0.1", "localhost", "::1") and get_settings().api_bearer_token is None:
