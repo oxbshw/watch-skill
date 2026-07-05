@@ -26,6 +26,20 @@ def _escalation_dir(video_id: str) -> Path:
     return dest
 
 
+def _profile_for(video: dict) -> dict:
+    """Adaptive profile overrides for this video's content-type (or {})."""
+    settings = get_settings()
+    if not settings.lessons_enabled:
+        return {}
+    try:
+        from agentvision.lessons.classify import classify_content_type  # noqa: PLC0415
+        from agentvision.lessons.profiles import get_profile  # noqa: PLC0415
+
+        return get_profile(classify_content_type(video))
+    except Exception:  # profiles must never break an answer
+        return {}
+
+
 def dense_resample(video: dict, hits: list[Hit]) -> tuple[int, int]:
     """Step (a): re-sample densely (and at high resolution) around the top
     candidate timestamps, OCR the new frames, and merge into the index.
@@ -43,11 +57,17 @@ def dense_resample(video: dict, hits: list[Hit]) -> tuple[int, int]:
         print(f"[agentvision] escalation resample skipped ({exc.code})", file=sys.stderr)
         return 0, 0
 
+    profile = _profile_for(video)
+    width = settings.answer_resample_width * float(profile.get("resample_width_mult", 1.0))
+    resolution = int(
+        settings.answer_resample_resolution * float(profile.get("resample_resolution_mult", 1.0))
+    )
+
     centers: list[float] = []
     for hit in hits:
         if hit.timestamp is None:
             continue
-        if all(abs(hit.timestamp - c) > settings.answer_resample_width for c in centers):
+        if all(abs(hit.timestamp - c) > width for c in centers):
             centers.append(hit.timestamp)
         if len(centers) >= _MAX_RESAMPLE_WINDOWS:
             break
@@ -55,7 +75,7 @@ def dense_resample(video: dict, hits: list[Hit]) -> tuple[int, int]:
         return 0, 0
 
     new_items = 0
-    half = settings.answer_resample_width / 2
+    half = width / 2
     for center in centers:
         work = Path(tempfile.mkdtemp(prefix="agentvision-esc-", dir=_escalation_dir(video["id"])))
         try:
@@ -64,7 +84,7 @@ def dense_resample(video: dict, hits: list[Hit]) -> tuple[int, int]:
                 start_seconds=max(0.0, center - half),
                 end_seconds=center + half,
                 max_frames=_RESAMPLE_FRAME_BUDGET,
-                frame_width=settings.answer_resample_resolution,
+                frame_width=resolution,
                 run_ocr=True,
             )
         except AgentVisionError as exc:

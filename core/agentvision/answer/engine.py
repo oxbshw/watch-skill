@@ -15,6 +15,7 @@ from pathlib import Path
 from agentvision.answer import cache
 from agentvision.answer.confidence import merge_model_certainty, retrieval_confidence
 from agentvision.answer.ladder import (
+    _profile_for,
     dense_resample,
     estimate_verify_cost,
     zoom_crops_reocr,
@@ -183,6 +184,9 @@ def answer_question(
             return hit
 
     lessons = _lesson_lines(question, video)
+    profile = _profile_for(video)
+    target = min(0.95, settings.answer_confidence_target + profile.get("confidence_target_bump", 0.0))
+    floor = min(target, settings.answer_confidence_floor + profile.get("confidence_floor_bump", 0.0))
     budget = settings.answer_token_budget
     spent = est_text_tokens(question) + est_text_tokens(lessons)
     escalations: list[str] = []
@@ -194,17 +198,16 @@ def answer_question(
     model_answer: str | None = None
 
     # --- escalation ladder: stop as soon as confidence clears the target ----
-    if confidence < settings.answer_confidence_target:
-        new_items, cost = dense_resample(video, hits)
-        escalations.append("dense_resample")
-        spent += cost
-        if new_items:
-            hits = hybrid_search(question, video_id=video["id"], k=k)
-            confidence = retrieval_confidence(hits)
-
-    if confidence < settings.answer_confidence_target:
-        new_items, cost = zoom_crops_reocr(video, hits)
-        escalations.append("zoom_crops_reocr")
+    # (adaptive profiles may reorder: screencasts with missed-OCR history
+    # try the OCR-recovery step first)
+    steps = [("dense_resample", dense_resample), ("zoom_crops_reocr", zoom_crops_reocr)]
+    if profile.get("ocr_first"):
+        steps.reverse()
+    for step_name, step in steps:
+        if confidence >= target:
+            break
+        new_items, cost = step(video, hits)
+        escalations.append(step_name)
         spent += cost
         if new_items:
             hits = hybrid_search(question, video_id=video["id"], k=k)
@@ -217,7 +220,7 @@ def answer_question(
     do_verify = verify if verify is not None else settings.answer_verify_enabled
     model_rejected = False
     if do_verify and evidence:
-        tiers = ["cheap"] if confidence >= settings.answer_confidence_target else ["cheap", "strong"]
+        tiers = ["cheap"] if confidence >= target else ["cheap", "strong"]
         for tier in tiers:
             call_cost = estimate_verify_cost(len(frames), question + lessons)
             if spent + call_cost > budget:
@@ -242,9 +245,7 @@ def answer_question(
             model_answer = None
 
     # --- compose -------------------------------------------------------------
-    honest_floor = (
-        confidence < settings.answer_confidence_floor or not evidence or model_rejected
-    )
+    honest_floor = confidence < floor or not evidence or model_rejected
     if honest_floor:
         text = _honest_floor_text(question, evidence)
     else:
