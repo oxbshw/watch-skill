@@ -7,8 +7,8 @@ swaps. Newest entries at the bottom of each section.
 
 - **Monorepo with `core/` never importing `surfaces/`.** Enforced by review
   and a unit test (import-graph check planned). Surfaces are thin wrappers.
-- **Hatchling multi-package wheel**: `core/agentvision` and `surfaces` both
-  ship in the `agentvision` distribution. One install gives the SDK, the CLI,
+- **Hatchling multi-package wheel**: `core/watch_skill` and `surfaces` both
+  ship in the `watch-skill` distribution. One install gives the SDK, the CLI,
   the MCP server, and the REST app.
 
 ## Environment
@@ -23,10 +23,10 @@ swaps. Newest entries at the bottom of each section.
 
 ## Self-managed binaries
 
-- **Managed bin dir defaults to `~/.agentvision/bin`, not the repo `bin/`.**
+- **Managed bin dir defaults to `~/.watch-skill/bin`, not the repo `bin/`.**
   The package must bootstrap itself when installed from PyPI too, where there
   is no repo checkout. A repo-local `bin/` (gitignored) is still honored when
-  present — set `AGENTVISION_BIN_DIR` or drop binaries there manually.
+  present — set `WATCHSKILL_BIN_DIR` or drop binaries there manually.
   Lookup order: managed bin dir first, then PATH — so a self-healing update
   controls the binary actually used even when a stale system copy exists.
 - **yt-dlp**: bootstrapped as the standalone `yt-dlp.exe` from GitHub
@@ -79,9 +79,9 @@ swaps. Newest entries at the bottom of each section.
   structured hint on stderr. The speaker-assignment logic is a pure function
   over a `SpeakerTurn` contract, so it is fully tested without torch.
 - **Claude Skill adapter is instructions-only.** Unlike the reference (which
-  bundles scripts), our SKILL.md shells into the installed `agentvision` CLI —
+  bundles scripts), our SKILL.md shells into the installed `watch-skill` CLI —
   one engine, no drift between skill and core. The trade-off (the package must
-  be installed) is handled by the skill's Step 0 (`pip install agentvision`).
+  be installed) is handled by the skill's Step 0 (`pip install watch-skill`).
 - **Demo GIF is committed** (`docs/assets/loop_before_after.gif`, ~140 KB) —
   it is our own generated artifact from the M3 acceptance demo, and the README
   needs it to communicate THE LOOP in three seconds.
@@ -158,7 +158,7 @@ unless noted; ranges in pyproject are now `>=tested,<next-major`.
 | Capability | Tool | Verdict | Evidence |
 |---|---|---|---|
 | Download/extraction | yt-dlp | **kept** | Release cadence healthy (2026.07.04, released the day before this audit); doctor's self-update healed a 26-day-old binary during the audit run. No credible successor. |
-| Acquire fallback | cobalt | **demoted to opt-in** | Live check 2026-07-05: anonymous POST to api.cobalt.tools returns `error.api.auth.jwt.missing` — the public API now requires auth. The chain skips cobalt unless `AGENTVISION_COBALT_API_URL` points at a self-hosted instance (regression-tested), saving a doomed network round-trip before the ffmpeg fallback. |
+| Acquire fallback | cobalt | **demoted to opt-in** | Live check 2026-07-05: anonymous POST to api.cobalt.tools returns `error.api.auth.jwt.missing` — the public API now requires auth. The chain skips cobalt unless `WATCHSKILL_COBALT_API_URL` points at a self-hosted instance (regression-tested), saving a doomed network round-trip before the ffmpeg fallback. |
 | Local STT | faster-whisper | **kept** (1.2.1, current) | This machine has no NVIDIA GPU (doctor), so CT2 int8 CPU is the sweet spot. distil-whisper large-v3 is English-only — incompatible with the multilingual launch story. Parakeet/canary want NeMo/GPU. whisper.cpp would add binary management for no measured CPU win over CT2. |
 | Scene detection | PySceneDetect | **kept** (0.7, current) | ffmpeg `scdet` alone lacks adaptive content detection and midpoint sampling (we'd rebuild both); TransNetV2 drags torch (~2 GB) into a stack that deliberately has none. |
 | OCR | RapidOCR | **kept + major upgrade** (1.4 → 3.9) | 9-script rendered benchmark above. PaddleOCR 3.x needs paddlepaddle (heavy, historically fragile wheels on Windows) to run the same PP-OCR models rapidocr serves via onnxruntime; EasyOCR needs torch. |
@@ -200,7 +200,7 @@ questions — the honest response until a re-watch refreshes it.
 
 ### Launch benchmark (2026-07-05, dev machine: Windows 10, 8 GB RAM, no GPU)
 
-- **Cold CLI start** (`agentvision version`): 1.2–1.3 s.
+- **Cold CLI start** (`watch-skill version`): 1.2–1.3 s.
 - **Full watch, 10 s local sample** (defaults: scenes + frames + OCR + local
   whisper): 32.9 s warm. First-ever run additionally downloads the whisper
   model and OCR models (one-time).

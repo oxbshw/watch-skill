@@ -11,13 +11,13 @@ import pytest
 
 pytest.importorskip("scenedetect", reason="perceive extra not installed")
 
-from agentvision.errors import LoopError  # noqa: E402
-from agentvision.loop import runner as runner_mod  # noqa: E402
-from agentvision.loop.capture import CaptureResult  # noqa: E402
-from agentvision.loop.critic import Critique, Issue, parse_critique  # noqa: E402
-from agentvision.loop.diff import align_frames, compare_issues  # noqa: E402
-from agentvision.loop.runner import loop_iterate, loop_start, loop_status  # noqa: E402
-from agentvision.perceive.types import Frame, PerceptionResult, VideoMetadata  # noqa: E402
+from watch_skill.errors import LoopError  # noqa: E402
+from watch_skill.loop import runner as runner_mod  # noqa: E402
+from watch_skill.loop.capture import CaptureResult  # noqa: E402
+from watch_skill.loop.critic import Critique, Issue, parse_critique  # noqa: E402
+from watch_skill.loop.diff import align_frames, compare_issues  # noqa: E402
+from watch_skill.loop.runner import loop_iterate, loop_start, loop_status  # noqa: E402
+from watch_skill.perceive.types import Frame, PerceptionResult, VideoMetadata  # noqa: E402
 
 # --- critic schema -----------------------------------------------------------
 
@@ -62,7 +62,7 @@ def test_parse_critique_rejects_invalid(raw: str) -> None:
 
 
 def test_critic_retries_once_on_malformed(monkeypatch: pytest.MonkeyPatch) -> None:
-    from agentvision.loop import critic as critic_mod
+    from watch_skill.loop import critic as critic_mod
 
     outputs = iter(["not json at all", '{"verdict": "pass", "score": 90, "issues": []}'])
 

@@ -6,8 +6,8 @@ from datetime import date, datetime, timedelta
 from pathlib import Path
 
 import pytest
-from agentvision.health import doctor
-from agentvision.health.log import read_incidents, record_incident
+from watch_skill.health import doctor
+from watch_skill.health.log import read_incidents, record_incident
 
 
 def _completed(stdout: str = "", returncode: int = 0) -> subprocess.CompletedProcess[str]:
@@ -125,8 +125,8 @@ def test_api_keys_reports_local_only_without_keys() -> None:
 
 def test_api_keys_reports_configured_providers(monkeypatch: pytest.MonkeyPatch) -> None:
     secret = "gsk-very-secret-value"
-    monkeypatch.setenv("AGENTVISION_GROQ_API_KEY", secret)
-    from agentvision.config import reset_settings
+    monkeypatch.setenv("WATCHSKILL_GROQ_API_KEY", secret)
+    from watch_skill.config import reset_settings
 
     reset_settings()
     result = doctor.check_api_keys()
@@ -160,26 +160,26 @@ def test_health_log_roundtrip(isolated_settings: Path) -> None:
 
 
 def test_server_command_never_points_into_a_venv(monkeypatch, tmp_path) -> None:
-    """Regression: `agentvision setup` wrote `agentvision serve` into agent
+    """Regression: `watch-skill setup` wrote `watch-skill serve` into agent
     configs because the venv entry point was on PATH — invisible to every
     other app. A venv-resolved exe must fall back to `uv --directory`.
 
     Paths are built with the native separator: hardcoded Windows raw strings
     don't split into parts on POSIX (first Linux CI run caught this)."""
-    from agentvision.health import agents_setup as mod
+    from watch_skill.health import agents_setup as mod
 
-    venv_exe = str(tmp_path / "proj" / ".venv" / "Scripts" / "agentvision.EXE")
+    venv_exe = str(tmp_path / "proj" / ".venv" / "Scripts" / "watch_skill.EXE")
     monkeypatch.setattr(
         mod.shutil, "which",
-        lambda name: venv_exe if name == "agentvision" else None,
+        lambda name: venv_exe if name == "watch-skill" else None,
     )
     command, args = mod.server_command()
     assert command == "uv"
-    assert args[0] == "--directory" and args[-2:] == ["agentvision", "serve"]
+    assert args[0] == "--directory" and args[-2:] == ["watch-skill", "serve"]
 
-    global_exe = str(tmp_path / "tools" / "bin" / "agentvision.exe")
+    global_exe = str(tmp_path / "tools" / "bin" / "watch-skill.exe")
     monkeypatch.setattr(
         mod.shutil, "which",
-        lambda name: global_exe if name == "agentvision" else None,
+        lambda name: global_exe if name == "watch-skill" else None,
     )
-    assert mod.server_command() == ("agentvision", ["serve"])
+    assert mod.server_command() == ("watch-skill", ["serve"])

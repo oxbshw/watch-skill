@@ -7,7 +7,7 @@
               └───────────────┬────────────────────────────────┘
                               ▼
               ┌────────────────────────────────────────────────┐
-              │  core/agentvision  (all logic lives here)      │
+              │  core/watch_skill  (all logic lives here)      │
               │                                                │
               │  acquire ──► perceive ──► transcribe ──► index │
               │     │            │             │           ▲   │
@@ -36,7 +36,7 @@ Rule #1: `core/` never imports `surfaces/`. Surfaces render; core computes.
 | `jobs.py` | thread-backed background jobs for long operations | `start_job()`, `get_job()` |
 | `watch.py` | the front door: acquire → perceive → transcribe with progress callbacks | `watch()` |
 
-Errors are structured everywhere: raise `AgentVisionError` subclasses with a
+Errors are structured everywhere: raise `WatchSkillError` subclasses with a
 stable `code`, human `message`, and actionable `fix`.
 
 ## The accuracy/economy tension (and how the ladder reconciles it)
@@ -93,7 +93,7 @@ a custom differ.
 ## Data on disk
 
 ```
-~/.agentvision/
+~/.watch-skill/
 ├── bin/          managed binaries (ffmpeg fallback, yt-dlp, deno)
 ├── cache/        downloads keyed by source hash (LRU, size-capped)
 ├── frames/       indexed videos' kept frames (persist across sessions)

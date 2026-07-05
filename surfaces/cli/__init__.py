@@ -1,1 +1,1 @@
-"""Typer CLI: `agentvision watch|ask|loop|doctor|serve ...`."""
+"""Typer CLI: `watch-skill watch|ask|loop|doctor|serve ...`."""

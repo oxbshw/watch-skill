@@ -9,14 +9,14 @@ import pytest
 
 pytest.importorskip("playwright", reason="loop extra not installed")
 
-from agentvision.loop.capture import capture, capture_file  # noqa: E402
+from watch_skill.loop.capture import capture, capture_file  # noqa: E402
 
 _HTML = """<!doctype html>
 <html><head><style>
   body { font-family: sans-serif; background: #202030; color: white; }
   .box { width: 300px; height: 120px; background: #4caf50; margin: 40px; }
 </style></head>
-<body><h1>AgentVision capture test page</h1><div class="box"></div>
+<body><h1>Watch Skill capture test page</h1><div class="box"></div>
 <p style="margin-top:900px">bottom of the page</p></body></html>
 """
 

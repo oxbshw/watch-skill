@@ -1,17 +1,17 @@
 ---
 name: watch
 version: "0.6.0"
-description: Watch any video (URL, stream, or local path) via AgentVision. Downloads, extracts scene-aware deduped frames, OCRs them, transcribes (captions first, then local Whisper — offline by default), indexes everything, and hands the result to the agent. Follow-up questions are answered from the persistent index without re-processing.
+description: Watch any video (URL, stream, or local path) via Watch Skill. Downloads, extracts scene-aware deduped frames, OCRs them, transcribes (captions first, then local Whisper — offline by default), indexes everything, and hands the result to the agent. Follow-up questions are answered from the persistent index without re-processing.
 argument-hint: "<video-url-or-path> [question]"
 allowed-tools: Bash, Read, AskUserQuestion
 license: MIT
 user-invocable: true
 ---
 
-# /watch (AgentVision)
+# /watch (Watch Skill)
 
 You don't have a video input; this skill gives you one. It is a thin wrapper
-around the `agentvision` CLI — all logic lives in the engine, so this skill
+around the `watch-skill` CLI — all logic lives in the engine, so this skill
 works identically on every harness (Claude Code, Codex, Cursor, ...).
 
 This is a drop-in upgrade of the classic claude-video `/watch` skill:
@@ -23,7 +23,7 @@ dedup, local Whisper (offline by default, no API key needed), and THE LOOP
 ## Step 0 — Preflight (first invocation per session)
 
 ```bash
-agentvision doctor --json
+watch-skill doctor --json
 ```
 
 - Exit 0 → proceed silently. Do NOT announce that setup is fine.
@@ -31,8 +31,8 @@ agentvision doctor --json
   auto-bootstraps ffmpeg and yt-dlp into a managed bin dir on Windows/macOS/
   Linux; re-run once after it reports fixes. Only involve the user when a
   check still fails after remediation.
-- If `agentvision` itself is not on PATH: `pip install agentvision` (or
-  `uv tool install agentvision`), then re-run the doctor.
+- If `watch-skill` itself is not on PATH: `pip install watch-skill` (or
+  `uv tool install watch-skill`), then re-run the doctor.
 
 No API key is ever required: transcription falls back to LOCAL faster-whisper.
 Cloud STT is opt-in (`--cloud-stt`) and only ever uploads extracted mono
@@ -43,7 +43,7 @@ audio — the video file never leaves the machine.
 Parse the user input into source + optional question, then:
 
 ```bash
-agentvision watch "<source>" [--start T --end T] [--max-frames N] [--transcript-only]
+watch-skill watch "<source>" [--start T --end T] [--max-frames N] [--transcript-only]
 ```
 
 - Any yt-dlp-supported site (1800+), direct media URLs, HLS/DASH manifests
@@ -77,8 +77,8 @@ The video is already indexed. For any follow-up question in this or a LATER
 session:
 
 ```bash
-agentvision ask <video_id> "<question>"      # self-healing answer + evidence
-agentvision search "<phrase>"                 # across every video ever watched
+watch-skill ask <video_id> "<question>"      # self-healing answer + evidence
+watch-skill search "<phrase>"                 # across every video ever watched
 ```
 
 `ask` (v0.6) answers text-first with timestamped evidence, a confidence
@@ -93,7 +93,7 @@ If the user corrects one of your video answers, report it so the system
 learns (locally):
 
 ```bash
-agentvision lessons add <video_id> "<question>" "<your wrong answer>" "<the correction>"
+watch-skill lessons add <video_id> "<question>" "<your wrong answer>" "<the correction>"
 ```
 
 ## THE LOOP — iterate on your own output
@@ -101,14 +101,14 @@ agentvision lessons add <video_id> "<question>" "<your wrong answer>" "<the corr
 When the user asks you to fix UI/visual output and verify the fix:
 
 ```bash
-agentvision loop start "<url-or-screen:-or-file>" "<pass criteria>" [--script '<json steps>']
+watch-skill loop start "<url-or-screen:-or-file>" "<pass criteria>" [--script '<json steps>']
 # ... you apply the suggested fixes ...
-agentvision loop iterate <loop_id>
+watch-skill loop iterate <loop_id>
 ```
 
 The critique returns structured issues with timestamps and suggested fixes.
 YOU change the code; the loop only observes. On pass it renders a
-before/after MP4+GIF proof. `agentvision capture "<target>"` records without
+before/after MP4+GIF proof. `watch-skill capture "<target>"` records without
 critiquing.
 
 ## Security posture
@@ -117,4 +117,4 @@ critiquing.
   audio may go to a cloud STT API, and only with explicit `--cloud-stt`.
 - No cookies, no logins — only public data is requested.
 - API keys live in env vars / `.env`; they are never logged or echoed.
-- Downloads are cached under `~/.agentvision/cache` (LRU, size-capped).
+- Downloads are cached under `~/.watch-skill/cache` (LRU, size-capped).

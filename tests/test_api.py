@@ -8,8 +8,8 @@ import pytest
 pytest.importorskip("fastapi", reason="api extra not installed")
 pytest.importorskip("scenedetect", reason="perceive extra not installed")
 
-from agentvision.config import reset_settings  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
+from watch_skill.config import reset_settings  # noqa: E402
 
 from surfaces.api import create_app  # noqa: E402
 
@@ -17,8 +17,8 @@ from surfaces.api import create_app  # noqa: E402
 @pytest.fixture()
 def client(monkeypatch: pytest.MonkeyPatch) -> TestClient:
     # keyless, modelless test environment: no whisper download, no OCR pass
-    monkeypatch.setenv("AGENTVISION_LOCAL_WHISPER_ENABLED", "false")
-    monkeypatch.setenv("AGENTVISION_OCR_ENABLED", "false")
+    monkeypatch.setenv("WATCHSKILL_LOCAL_WHISPER_ENABLED", "false")
+    monkeypatch.setenv("WATCHSKILL_OCR_ENABLED", "false")
     reset_settings()
     return TestClient(create_app())
 
@@ -41,7 +41,7 @@ def test_openapi_spec_covers_every_operation(client: TestClient) -> None:
 
 
 def test_bearer_auth_enforced(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("AGENTVISION_API_BEARER_TOKEN", "s3cret")
+    monkeypatch.setenv("WATCHSKILL_API_BEARER_TOKEN", "s3cret")
     reset_settings()
     client = TestClient(create_app())
     assert client.get("/v1/videos").status_code == 401
@@ -76,7 +76,7 @@ def test_watch_then_ask_roundtrip(client: TestClient, sample_video: Path) -> Non
     video_id = body["video_id"]
     assert body["frames"], "watch must return frame descriptors"
     assert body["frames"][0].get("base64"), "first frame should be inlined"
-    assert "# agentvision: video report" in body["report"]
+    assert "# watch-skill: video report" in body["report"]
 
     listed = client.get("/v1/videos").json()
     assert any(v["id"] == video_id for v in listed)
@@ -92,7 +92,7 @@ def test_watch_then_ask_roundtrip(client: TestClient, sample_video: Path) -> Non
 
 
 def test_public_bind_without_token_refused() -> None:
-    from agentvision.errors import ConfigError
+    from watch_skill.errors import ConfigError
 
     from surfaces.api import serve
 

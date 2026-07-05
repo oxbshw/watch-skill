@@ -1,7 +1,7 @@
 #!/usr/bin/env sh
-# AgentVision one-command installer for macOS/Linux.
-#   curl -fsSL https://raw.githubusercontent.com/oxbshw/agentvision/main/install.sh | sh
-# Installs uv (and thereby Python) if missing, clones/updates AgentVision,
+# Watch Skill one-command installer for macOS/Linux.
+#   curl -fsSL https://raw.githubusercontent.com/oxbshw/watch-skill/main/install.sh | sh
+# Installs uv (and thereby Python) if missing, clones/updates Watch Skill,
 # syncs dependencies, runs the self-healing doctor, and offers to register
 # the MCP server in every AI agent found on the machine.
 #
@@ -10,12 +10,12 @@
 
 set -eu
 
-REPO="https://github.com/oxbshw/agentvision"
-INSTALL_DIR="${AGENTVISION_HOME:-$HOME/agentvision}"
+REPO="https://github.com/oxbshw/watch-skill"
+INSTALL_DIR="${WATCHSKILL_HOME:-$HOME/watch-skill}"
 
 step() { printf '\n==> %s\n' "$1"; }
 
-step "AgentVision installer"
+step "Watch Skill installer"
 
 # --- uv (installs its own Python if none exists) ---------------------------
 if ! command -v uv >/dev/null 2>&1; then
@@ -51,19 +51,19 @@ cd "$INSTALL_DIR"
 uv sync --extra all
 
 step "Running the doctor (checks ffmpeg / yt-dlp / deno)"
-uv run agentvision doctor || true
+uv run watch-skill doctor || true
 
-step "Registering AgentVision in your AI agents"
-uv run agentvision setup --yes || true
+step "Registering Watch Skill in your AI agents"
+uv run watch-skill setup --yes || true
 
 step "Done"
 cat <<EOF
 
 If your agent was not auto-configured, paste this MCP server config:
 
-  { "mcpServers": { "agentvision": {
+  { "mcpServers": { "watch-skill": {
       "command": "uv",
-      "args": ["--directory", "$INSTALL_DIR", "run", "agentvision", "serve"] } } }
+      "args": ["--directory", "$INSTALL_DIR", "run", "watch-skill", "serve"] } } }
 
 Per-agent guides: $INSTALL_DIR/docs/agents/README.md
 Try it: restart your agent and say  "watch this video: <any URL>"

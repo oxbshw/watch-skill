@@ -1,8 +1,8 @@
 {
-  "name": "agentvision-watch",
+  "name": "watch-skill",
   "version": "0.6.0",
-  "description": "Give the agent a video input via AgentVision: watch, index, ask, and iterate (THE LOOP).",
-  "author": { "name": "AgentVision contributors" },
+  "description": "Give the agent a video input via Watch Skill: watch, index, ask, and iterate (THE LOOP).",
+  "author": { "name": "Watch Skill contributors" },
   "license": "MIT",
   "skills": "./skills/"
 }

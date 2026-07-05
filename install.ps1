@@ -1,16 +1,16 @@
-# AgentVision one-command installer for Windows.
-#   powershell -ExecutionPolicy Bypass -c "irm https://raw.githubusercontent.com/oxbshw/agentvision/main/install.ps1 | iex"
-# Installs uv (and thereby Python) if missing, clones/updates AgentVision,
+# Watch Skill one-command installer for Windows.
+#   powershell -ExecutionPolicy Bypass -c "irm https://raw.githubusercontent.com/oxbshw/watch-skill/main/install.ps1 | iex"
+# Installs uv (and thereby Python) if missing, clones/updates Watch Skill,
 # syncs dependencies, runs the self-healing doctor, and offers to register
 # the MCP server in every AI agent found on the machine.
 
 $ErrorActionPreference = 'Stop'
-$repo = 'https://github.com/oxbshw/agentvision'
-$installDir = Join-Path $env:USERPROFILE 'agentvision'
+$repo = 'https://github.com/oxbshw/watch-skill'
+$installDir = Join-Path $env:USERPROFILE 'watch-skill'
 
 function Write-Step($msg) { Write-Host "`n==> $msg" -ForegroundColor Cyan }
 
-Write-Step "AgentVision installer"
+Write-Step "Watch Skill installer"
 
 # --- uv (installs its own Python if none exists) -------------------------
 if (-not (Get-Command uv -ErrorAction SilentlyContinue)) {
@@ -35,10 +35,10 @@ if (Test-Path (Join-Path $installDir 'pyproject.toml')) {
     git clone $repo $installDir
 } else {
     Write-Step "git not found - downloading source zip"
-    $zip = Join-Path $env:TEMP 'agentvision.zip'
+    $zip = Join-Path $env:TEMP 'watch_skill.zip'
     Invoke-WebRequest "$repo/archive/refs/heads/main.zip" -OutFile $zip
     Expand-Archive $zip -DestinationPath $env:TEMP -Force
-    Move-Item (Join-Path $env:TEMP 'agentvision-main') $installDir -Force
+    Move-Item (Join-Path $env:TEMP 'watch-skill-main') $installDir -Force
 }
 
 # --- dependencies + self-healing doctor ------------------------------------
@@ -47,9 +47,9 @@ Push-Location $installDir
 try {
     uv sync --extra all
     Write-Step "Running the doctor (bootstraps ffmpeg / yt-dlp / deno)"
-    uv run agentvision doctor
-    Write-Step "Registering AgentVision in your AI agents"
-    uv run agentvision setup --yes
+    uv run watch-skill doctor
+    Write-Step "Registering Watch Skill in your AI agents"
+    uv run watch-skill setup --yes
 } finally {
     Pop-Location
 }
@@ -58,9 +58,9 @@ Write-Step "Done"
 Write-Host @"
 If your agent was not auto-configured, paste this MCP server config:
 
-  { "mcpServers": { "agentvision": {
+  { "mcpServers": { "watch-skill": {
       "command": "uv",
-      "args": ["--directory", "$($installDir -replace '\\','\\\\')", "run", "agentvision", "serve"] } } }
+      "args": ["--directory", "$($installDir -replace '\\','\\\\')", "run", "watch-skill", "serve"] } } }
 
 Per-agent guides: $installDir\docs\agents\README.md
 Try it: restart your agent and say  "watch this video: <any URL>"

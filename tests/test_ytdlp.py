@@ -4,8 +4,8 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-from agentvision.acquire import ytdlp
-from agentvision.errors import AcquisitionError
+from watch_skill.acquire import ytdlp
+from watch_skill.errors import AcquisitionError
 
 
 @pytest.mark.parametrize(
@@ -104,7 +104,7 @@ def test_download_does_not_update_on_plain_failure(
 def test_pick_subtitle_prefers_original_language(tmp_path) -> None:
     """Regression: an Arabic video must yield Arabic subs, not the English
     auto-translation the default sub-langs pattern happens to match."""
-    from agentvision.acquire.ytdlp import _pick_subtitle
+    from watch_skill.acquire.ytdlp import _pick_subtitle
 
     out = tmp_path / "subs dir"
     out.mkdir()
@@ -118,7 +118,7 @@ def test_pick_subtitle_prefers_original_language(tmp_path) -> None:
 
 def test_ensure_original_subs_skips_when_present(tmp_path, monkeypatch) -> None:
     """No second yt-dlp call when the original-language track already landed."""
-    from agentvision.acquire import ytdlp as mod
+    from watch_skill.acquire import ytdlp as mod
 
     out = tmp_path / "subs dir"
     out.mkdir()

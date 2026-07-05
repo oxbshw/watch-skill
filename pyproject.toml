@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "agentvision"
+name = "watch-skill"
 version = "0.6.0"
 description = "Give any agent a video input: watch, index, ask, and iterate on video via MCP, CLI, REST, and Python."
 readme = "README.md"
@@ -42,19 +42,19 @@ mcp = ["fastmcp>=3.4,<4"]
 api = ["fastapi>=0.139,<1", "uvicorn>=0.50,<1"]
 loop = ["playwright>=1.61,<2"]
 diarize = ["pyannote.audio>=4.0,<5"]
-all = ["agentvision[perceive,ocr,whisper,index,mcp,api,loop]"]
+all = ["watch-skill[perceive,ocr,whisper,index,mcp,api,loop]"]
 
 [project.scripts]
-agentvision = "surfaces.cli.main:app"
+watch-skill = "surfaces.cli.main:app"
 
 [project.urls]
-Homepage = "https://github.com/oxbshw/agentvision"
+Homepage = "https://github.com/oxbshw/watch-skill"
 
 [dependency-groups]
 dev = ["pytest>=9.1,<10", "pytest-timeout>=2.4,<3", "ruff>=0.15,<0.16"]
 
 [tool.hatch.build.targets.wheel]
-packages = ["core/agentvision", "surfaces"]
+packages = ["core/watch_skill", "surfaces"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

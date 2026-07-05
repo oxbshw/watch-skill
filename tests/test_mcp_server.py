@@ -42,7 +42,7 @@ def test_watch_then_ask_roundtrip(sample_video: Path) -> None:
     )
     text = result.content[0].text
     assert "video_id:" in text
-    assert "# agentvision: video report" in text
+    assert "# watch-skill: video report" in text
     images = [c for c in result.content if c.type == "image"]
     assert images, "watch_video returned no image blocks"
 
@@ -70,8 +70,8 @@ def test_ask_unknown_video_returns_structured_error() -> None:
 
 
 def test_frame_cap_respected(sample_video: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("AGENTVISION_RESPONSE_FRAME_CAP", "3")
-    from agentvision.config import reset_settings
+    monkeypatch.setenv("WATCHSKILL_RESPONSE_FRAME_CAP", "3")
+    from watch_skill.config import reset_settings
 
     reset_settings()
     result = _call("watch_video", source=str(sample_video), budget=10)

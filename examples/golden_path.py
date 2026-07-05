@@ -27,12 +27,12 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "core"))
 
-from agentvision.config import get_settings
-from agentvision.errors import AgentVisionError, VisionError
-from agentvision.index import ask_video, index_watch_result
-from agentvision.index.db import connect
-from agentvision.vision import get_vision
-from agentvision.watch import watch
+from watch_skill.config import get_settings
+from watch_skill.errors import VisionError, WatchSkillError
+from watch_skill.index import ask_video, index_watch_result
+from watch_skill.index.db import connect
+from watch_skill.vision import get_vision
+from watch_skill.watch import watch
 
 # Stable, short, public test sources.
 YOUTUBE_URL = "https://www.youtube.com/watch?v=aqz-KE-bpKQ"  # Big Buck Bunny (CC-BY)
@@ -88,7 +88,7 @@ def _watch_and_index(source: str, label: str, **kwargs) -> str:
     print(f"{label}: video_id={video_id} frames={frames} "
           f"transcript={result.transcript.source} scene_descriptions={described}")
     if described == 0:
-        raise AgentVisionError(
+        raise WatchSkillError(
             f"no scene descriptions written for {label} — cheap vision tier did not run",
             code="goldenpath.no_descriptions",
         )
@@ -110,7 +110,7 @@ def watch_local() -> str:
     # synthesize a clip so the stage is self-contained
     import subprocess
 
-    from agentvision.health.binaries import require_binary
+    from watch_skill.health.binaries import require_binary
 
     clip = Path(tempfile.mkdtemp(prefix="gp-local-")) / "local clip.mp4"
     subprocess.run(
@@ -127,12 +127,12 @@ def watch_local() -> str:
 def ask_and_verify(video_id: str) -> None:
     answer = ask_video(video_id, "what is shown at the very beginning?")
     if not answer["hits"]:
-        raise AgentVisionError("ask_video returned no hits", code="goldenpath.no_hits")
+        raise WatchSkillError("ask_video returned no hits", code="goldenpath.no_hits")
     for hit in answer["hits"][:3]:
         print(f"- [{hit['timestamp']}] ({hit['kind']}) {hit['text'][:80]}")
     missing = [f["frame_path"] for f in answer["frames"] if not Path(f["frame_path"]).is_file()]
     if missing:
-        raise AgentVisionError(
+        raise WatchSkillError(
             f"cited frames do not exist on disk: {missing}", code="goldenpath.bad_frames"
         )
     print(f"frames cited: {len(answer['frames'])} (all exist on disk)")
@@ -140,8 +140,8 @@ def ask_and_verify(video_id: str) -> None:
 
 @stage("THE LOOP with the real vision critic")
 def loop_real_critic() -> None:
-    from agentvision.loop import loop_iterate, loop_start
-    from agentvision.loop.reportfmt import format_loop_state
+    from watch_skill.loop import loop_iterate, loop_start
+    from watch_skill.loop.reportfmt import format_loop_state
 
     demo = Path(__file__).parent / "loop_demo"
     page = Path(tempfile.mkdtemp(prefix="gp-loop-")) / "page.html"
@@ -153,14 +153,14 @@ def loop_real_critic() -> None:
     state = loop_start(page.as_uri(), criteria, duration_seconds=5.0)  # REAL critic
     print(format_loop_state(state))
     if state.iterations[0]["critique"]["verdict"] != "fail":
-        raise AgentVisionError(
+        raise WatchSkillError(
             "real critic passed the broken page", code="goldenpath.critic_blind"
         )
     shutil.copy2(demo / "page_fixed.html", page)
     state = loop_iterate(state.loop_id)
     print(format_loop_state(state))
     if state.status != "passed":
-        raise AgentVisionError(
+        raise WatchSkillError(
             f"real critic did not pass the fixed page (status={state.status})",
             code="goldenpath.critic_strict",
         )
@@ -178,12 +178,12 @@ def arabic_case() -> None:
     print(f"arabic video: id={video_id} transcript={result.transcript.source} "
           f"segments={len(result.transcript.segments)}")
     if not result.transcript:
-        raise AgentVisionError("no Arabic transcript produced", code="goldenpath.no_transcript")
+        raise WatchSkillError("no Arabic transcript produced", code="goldenpath.no_transcript")
     sample = result.transcript.segments[0].text
     print(f"first segment: {sample!r}")
     answer = ask_video(video_id, "ما موضوع الفيديو؟")
     if not answer["hits"]:
-        raise AgentVisionError("Arabic question got no hits", code="goldenpath.arabic_no_hits")
+        raise WatchSkillError("Arabic question got no hits", code="goldenpath.arabic_no_hits")
     print(f"arabic hits: {len(answer['hits'])}; top: {answer['hits'][0]['text'][:70]!r}")
 
 

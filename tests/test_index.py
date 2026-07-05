@@ -7,8 +7,8 @@ import pytest
 
 pytest.importorskip("scenedetect", reason="perceive extra not installed")
 
-from agentvision.errors import IndexError_  # noqa: E402
-from agentvision.index import (  # noqa: E402
+from watch_skill.errors import IndexError_  # noqa: E402
+from watch_skill.index import (  # noqa: E402
     ask_video,
     get_moment,
     get_video,
@@ -17,8 +17,8 @@ from agentvision.index import (  # noqa: E402
     search_videos,
     video_id_for,
 )
-from agentvision.index.db import MIGRATIONS, connect, migrate, schema_version  # noqa: E402
-from agentvision.watch import watch  # noqa: E402
+from watch_skill.index.db import MIGRATIONS, connect, migrate, schema_version  # noqa: E402
+from watch_skill.watch import watch  # noqa: E402
 
 
 @pytest.fixture()
@@ -32,7 +32,7 @@ def indexed_video(sample_video: Path, tmp_path: Path) -> str:
     )
     # synthesized clip has no speech; inject a fake transcript so text
     # retrieval has something to find (transcription itself is tested live)
-    from agentvision.transcribe.types import Segment, Transcript
+    from watch_skill.transcribe.types import Segment, Transcript
 
     result.transcript = Transcript(
         segments=[
@@ -146,7 +146,7 @@ def test_search_finds_phrase_across_two_videos(
     """M2 acceptance: search_videos finds a phrase across 2 different videos."""
     import shutil
 
-    from agentvision.transcribe.types import Segment, Transcript
+    from watch_skill.transcribe.types import Segment, Transcript
 
     second_video = tmp_path / "second copy dir" / "another clip.mp4"
     second_video.parent.mkdir(parents=True)
@@ -173,13 +173,13 @@ def test_search_finds_phrase_across_two_videos(
 def test_scene_descriptions_indexed_when_vision_available(
     indexed_video: str, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    from agentvision.index import store as store_mod
+    from watch_skill.index import store as store_mod
 
     class FakeModel:
         def describe_frames(self, frames, context=""):
             return [f"a synthetic scene number {i}" for i in range(len(frames))]
 
-    monkeypatch.setattr("agentvision.vision.get_vision", lambda tier: FakeModel())
+    monkeypatch.setattr("watch_skill.vision.get_vision", lambda tier: FakeModel())
     conn = connect()
     try:
         with conn:
@@ -199,9 +199,9 @@ def test_embedding_model_is_pinned_per_index(indexed_video: str, monkeypatch) ->
     """Regression (multilingual embeddings swap): an index must record which
     model wrote its vectors, and queries must embed with the RECORDED model —
     mixing models silently breaks cosine scores."""
-    from agentvision.index import embeddings as emb
-    from agentvision.index.db import get_meta, set_meta
-    from agentvision.index.retrieval import hybrid_search
+    from watch_skill.index import embeddings as emb
+    from watch_skill.index.db import get_meta, set_meta
+    from watch_skill.index.retrieval import hybrid_search
 
     conn = connect()
     try:
@@ -219,7 +219,7 @@ def test_embedding_model_is_pinned_per_index(indexed_video: str, monkeypatch) ->
         used.append(model_name)
         return real(texts)  # embed with the default; scores don't matter here
 
-    monkeypatch.setattr("agentvision.index.retrieval.emb.embed_texts", spy)
+    monkeypatch.setattr("watch_skill.index.retrieval.emb.embed_texts", spy)
     hybrid_search("warning screen", video_id=indexed_video)
     assert used == ["legacy-model"]
 
@@ -229,8 +229,8 @@ def test_batch_cosine_matches_pure_python() -> None:
     produce the same scores as the reference pure-Python cosine."""
     import random
 
-    from agentvision.index import embeddings as emb
-    from agentvision.index.retrieval import _batch_cosine
+    from watch_skill.index import embeddings as emb
+    from watch_skill.index.retrieval import _batch_cosine
 
     random.seed(11)
     dim = 16
@@ -254,7 +254,7 @@ def test_fts_survives_special_characters(indexed_video: str) -> None:
 def test_ocr_text_lands_in_index_and_retrieval(sample_video: Path, tmp_path: Path) -> None:
     """OCR-in-index verification (M4): fake OCR blocks are stored, searchable,
     and surfaced by ask_video/get_moment — without needing rapidocr at test time."""
-    from agentvision.perceive.types import OcrBlock
+    from watch_skill.perceive.types import OcrBlock
 
     result = watch(
         str(sample_video), out_dir=tmp_path / "ocr work", run_ocr=False,
@@ -289,7 +289,7 @@ def test_describe_scene_crash_never_sinks_indexing(
     """Regression: an unexpected exception in the cheap vision tier crashed
     index_watch_result AFTER the heavy pipeline work. Descriptions are
     opportunistic — any failure must degrade to 'no descriptions'."""
-    import agentvision.vision as vision_pkg
+    import watch_skill.vision as vision_pkg
 
     def exploding_get_vision(*args, **kwargs):
         raise AttributeError("simulated mid-upgrade config mismatch")

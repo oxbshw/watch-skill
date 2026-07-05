@@ -11,7 +11,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-from agentvision.index.textnorm import normalize_for_search
+from watch_skill.index.textnorm import normalize_for_search
 
 # (lang, stored segment, query that must find it)
 FTS_MATRIX = [
@@ -35,8 +35,8 @@ FTS_MATRIX = [
 @pytest.mark.parametrize("lang,stored,query", FTS_MATRIX, ids=[c[0] for c in FTS_MATRIX])
 def test_fts_finds_text_in_language(lang: str, stored: str, query: str) -> None:
     """End-to-end through the real schema + query builder per language."""
-    from agentvision.index.db import connect
-    from agentvision.index.retrieval import _fts_query
+    from watch_skill.index.db import connect
+    from watch_skill.index.retrieval import _fts_query
 
     conn = connect()  # isolated data dir via conftest fixture
     try:
@@ -65,7 +65,7 @@ def test_migration_v4_renormalizes_cjk_rows(tmp_path: Path) -> None:
     """A pre-v4 index (CJK stored as one unsplittable token) becomes findable."""
     import sqlite3
 
-    from agentvision.index.db import MIGRATIONS, migrate
+    from watch_skill.index.db import MIGRATIONS, migrate
 
     db = tmp_path / "legacy dir" / "index.db"
     db.parent.mkdir(parents=True)
@@ -100,7 +100,7 @@ OCR_ROUTES = [
 
 @pytest.mark.parametrize("lang,expected", OCR_ROUTES, ids=[r[0] for r in OCR_ROUTES])
 def test_ocr_routes_language_to_script_model(lang: str, expected: str) -> None:
-    from agentvision.perceive.ocr import resolve_ocr_lang
+    from watch_skill.perceive.ocr import resolve_ocr_lang
 
     assert resolve_ocr_lang(lang) == expected
     assert resolve_ocr_lang(f"{lang}-XX") == expected  # region tags fold
@@ -111,7 +111,7 @@ def test_ocr_routes_language_to_script_model(lang: str, expected: str) -> None:
 def test_detected_language_reaches_ocr(sample_video: Path, tmp_path: Path, monkeypatch) -> None:
     """The video's detected language must select the OCR engine (auto mode)."""
     pytest.importorskip("scenedetect", reason="perceive extra not installed")
-    from agentvision.perceive import engine as perceive_engine
+    from watch_skill.perceive import engine as perceive_engine
 
     seen: list[str | None] = []
 
@@ -143,9 +143,9 @@ def test_ask_video_in_language(
 ) -> None:
     """A transcript in each language answers a question asked in that language."""
     pytest.importorskip("scenedetect", reason="perceive extra not installed")
-    from agentvision.index import ask_video, index_watch_result
-    from agentvision.transcribe.types import Segment, Transcript
-    from agentvision.watch import watch
+    from watch_skill.index import ask_video, index_watch_result
+    from watch_skill.transcribe.types import Segment, Transcript
+    from watch_skill.watch import watch
 
     result = watch(
         str(sample_video), out_dir=tmp_path / f"work {lang}",

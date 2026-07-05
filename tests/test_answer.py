@@ -13,14 +13,14 @@ import pytest
 
 pytest.importorskip("scenedetect", reason="perceive extra not installed")
 
-from agentvision.answer import answer_question  # noqa: E402
-from agentvision.answer.confidence import retrieval_confidence  # noqa: E402
-from agentvision.answer.engine import _sanitize_timestamps  # noqa: E402
-from agentvision.answer.types import est_frame_tokens  # noqa: E402
-from agentvision.index import index_watch_result  # noqa: E402
-from agentvision.index.retrieval import Hit  # noqa: E402
-from agentvision.transcribe.types import Segment, Transcript  # noqa: E402
-from agentvision.watch import watch  # noqa: E402
+from watch_skill.answer import answer_question  # noqa: E402
+from watch_skill.answer.confidence import retrieval_confidence  # noqa: E402
+from watch_skill.answer.engine import _sanitize_timestamps  # noqa: E402
+from watch_skill.answer.types import est_frame_tokens  # noqa: E402
+from watch_skill.index import index_watch_result  # noqa: E402
+from watch_skill.index.retrieval import Hit  # noqa: E402
+from watch_skill.transcribe.types import Segment, Transcript  # noqa: E402
+from watch_skill.watch import watch  # noqa: E402
 
 _TS = re.compile(r"\b\d{1,2}:\d{2}(?::\d{2})?\b")
 
@@ -86,7 +86,7 @@ def test_lexical_anchor_separates_present_from_absent() -> None:
     assert present > absent  # raw signal separates; the engine cap widens it
 
     # engine-level: zero lexical grounding caps below the floor
-    from agentvision.answer.engine import _grounded_confidence
+    from watch_skill.answer.engine import _grounded_confidence
 
     assert _grounded_confidence(giraffe_hits, "when does the giraffe ride the bicycle?", 0.35) < 0.35
     assert _grounded_confidence(trunks_hits, "what about the elephants trunks?", 0.35) >= 0.35
@@ -147,7 +147,7 @@ def test_totally_empty_index_floor(sample_video: Path, tmp_path: Path) -> None:
 # ---- escalation ladder ------------------------------------------------------
 
 def test_ladder_runs_in_order_and_stops_at_target(indexed: str, monkeypatch) -> None:
-    from agentvision.answer import engine as mod
+    from watch_skill.answer import engine as mod
 
     calls: list[str] = []
     strong_hits = [
@@ -177,7 +177,7 @@ def test_ladder_runs_in_order_and_stops_at_target(indexed: str, monkeypatch) -> 
 
 
 def test_ladder_full_walk_on_stubborn_low_confidence(indexed: str, monkeypatch) -> None:
-    from agentvision.answer import engine as mod
+    from watch_skill.answer import engine as mod
 
     calls: list[str] = []
     monkeypatch.setattr(
@@ -194,7 +194,7 @@ def test_ladder_full_walk_on_stubborn_low_confidence(indexed: str, monkeypatch) 
 # ---- verify pass ------------------------------------------------------------
 
 def test_verify_pass_confirms_and_marks_verified(indexed: str, monkeypatch) -> None:
-    from agentvision.answer import engine as mod
+    from watch_skill.answer import engine as mod
 
     monkeypatch.setattr(
         mod, "_try_model_verify",
@@ -210,7 +210,7 @@ def test_verify_pass_confirms_and_marks_verified(indexed: str, monkeypatch) -> N
 def test_verify_pass_rejection_forces_floor(indexed: str, monkeypatch) -> None:
     """Model looked at the frames and did NOT see the claim -> honest floor,
     not the unverified claim."""
-    from agentvision.answer import engine as mod
+    from watch_skill.answer import engine as mod
 
     monkeypatch.setattr(
         mod, "_try_model_verify", lambda q, e, f, lessons, tier: (False, 0.1, "not visible")
@@ -232,10 +232,10 @@ def test_no_provider_degrades_gracefully(indexed: str) -> None:
 # ---- budget guard -----------------------------------------------------------
 
 def test_budget_guard_stops_model_calls(indexed: str, monkeypatch) -> None:
-    from agentvision.answer import engine as mod
+    from watch_skill.answer import engine as mod
 
-    monkeypatch.setenv("AGENTVISION_ANSWER_TOKEN_BUDGET", "10")
-    from agentvision.config import reset_settings
+    monkeypatch.setenv("WATCHSKILL_ANSWER_TOKEN_BUDGET", "10")
+    from watch_skill.config import reset_settings
 
     reset_settings()
     called = []
@@ -279,8 +279,8 @@ def test_cache_invalidated_on_rewatch(indexed: str, sample_video: Path, tmp_path
 
 
 def test_savings_meter_math(indexed: str) -> None:
-    from agentvision.answer.cache import lifetime_stats
-    from agentvision.index.db import connect
+    from watch_skill.answer.cache import lifetime_stats
+    from watch_skill.index.db import connect
 
     answer = answer_question(indexed, "when does the moving test pattern start?", use_cache=False)
     conn = connect()
@@ -301,9 +301,9 @@ def test_savings_meter_math(indexed: str) -> None:
 # ---- index augmentation -------------------------------------------------------
 
 def test_augment_video_adds_without_deleting(indexed: str) -> None:
-    from agentvision.index.db import connect
-    from agentvision.index.store import augment_video
-    from agentvision.perceive.types import OcrBlock
+    from watch_skill.index.db import connect
+    from watch_skill.index.store import augment_video
+    from watch_skill.perceive.types import OcrBlock
 
     class FakeFrame:
         def __init__(self, tmp: Path):

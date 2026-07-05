@@ -1,5 +1,5 @@
 name: New agent support
-description: Get AgentVision working in another AI agent / IDE
+description: Get Watch Skill working in another AI agent / IDE
 labels: [agent-support]
 body:
   - type: input

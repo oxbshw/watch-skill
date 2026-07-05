@@ -2,10 +2,10 @@
 from __future__ import annotations
 
 import pytest
-from agentvision.errors import (
+from watch_skill.errors import (
     AcquisitionError,
-    AgentVisionError,
     DependencyError,
+    WatchSkillError,
 )
 
 
@@ -22,21 +22,21 @@ def test_error_carries_structure() -> None:
 
 
 def test_error_code_override() -> None:
-    err = AgentVisionError("boom", code="custom.code")
+    err = WatchSkillError("boom", code="custom.code")
     assert err.code == "custom.code"
 
 
 def test_str_includes_code_and_fix() -> None:
-    err = DependencyError("ffmpeg missing", fix="run agentvision doctor")
+    err = DependencyError("ffmpeg missing", fix="run watch-skill doctor")
     text = str(err)
     assert "health.dependency_missing" in text
-    assert "run agentvision doctor" in text
+    assert "run watch-skill doctor" in text
 
 
 def test_errors_are_catchable_as_base() -> None:
-    with pytest.raises(AgentVisionError):
+    with pytest.raises(WatchSkillError):
         raise DependencyError("x")
 
 
 def test_details_default_to_empty_dict() -> None:
-    assert AgentVisionError("x").details == {}
+    assert WatchSkillError("x").details == {}

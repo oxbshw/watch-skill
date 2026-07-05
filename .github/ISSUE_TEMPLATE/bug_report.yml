@@ -8,14 +8,14 @@ body:
       label: What happened?
       description: What did you run, what did you expect, what did you get?
       placeholder: |
-        agentvision watch "https://..." failed with ...
+        watch-skill watch "https://..." failed with ...
     validations:
       required: true
   - type: textarea
     id: doctor
     attributes:
       label: Doctor report
-      description: Paste the FULL output of `agentvision doctor --json` (it contains no secrets — keys are reported as present/absent only).
+      description: Paste the FULL output of `watch-skill doctor --json` (it contains no secrets — keys are reported as present/absent only).
       render: json
     validations:
       required: true

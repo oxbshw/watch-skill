@@ -1,4 +1,4 @@
-"""AgentVision CLI entry point.
+"""Watch Skill CLI entry point.
 
 Milestone 0 ships `doctor` and `version`; watch/ask/loop/serve arrive with
 their core modules. Progress goes to stderr, results to stdout, so agents can
@@ -13,7 +13,7 @@ import typer
 from rich.console import Console
 
 app = typer.Typer(
-    name="agentvision",
+    name="watch-skill",
     help="Give any agent a video input: watch, index, ask, and iterate.",
     no_args_is_help=True,
     add_completion=False,
@@ -27,7 +27,7 @@ _STATUS_STYLE = {"ok": "green", "warn": "yellow", "fail": "red"}
 def _render_report(report) -> None:
     from rich.table import Table
 
-    table = Table(title="agentvision doctor")
+    table = Table(title="watch-skill doctor")
     table.add_column("check")
     table.add_column("status")
     table.add_column("detail", overflow="fold")
@@ -46,7 +46,7 @@ def doctor(
     as_json: bool = typer.Option(False, "--json", help="Emit machine-readable JSON to stdout."),
 ) -> None:
     """Check (and self-heal) dependencies: ffmpeg, yt-dlp, deno, disk, GPU, API keys."""
-    from agentvision.health.doctor import run_doctor
+    from watch_skill.health.doctor import run_doctor
 
     report = run_doctor(fix=fix)
     if as_json:
@@ -96,10 +96,10 @@ def watch(
     """Watch a video: acquire -> scenes -> frames -> OCR -> transcript -> report."""
     from pathlib import Path
 
-    from agentvision.errors import AgentVisionError
-    from agentvision.perceive.budget import parse_time
-    from agentvision.report import render_report
-    from agentvision.watch import watch as run_watch
+    from watch_skill.errors import WatchSkillError
+    from watch_skill.perceive.budget import parse_time
+    from watch_skill.report import render_report
+    from watch_skill.watch import watch as run_watch
 
     cues = None
     if timestamps:
@@ -122,15 +122,15 @@ def watch(
             out_dir=Path(out_dir) if out_dir else None,
             use_cache=not no_cache,
         )
-    except AgentVisionError as exc:
+    except WatchSkillError as exc:
         _console.print(f"[red]error:[/red] {exc}")
         print(json.dumps(exc.to_dict(), indent=2))
         raise typer.Exit(code=1) from None
     if index and result.perception is not None:
-        from agentvision.index import index_watch_result
+        from watch_skill.index import index_watch_result
 
         video_id = index_watch_result(result)
-        print(f"> **Indexed:** video_id `{video_id}` — follow up with `agentvision ask {video_id} ...`\n")
+        print(f"> **Indexed:** video_id `{video_id}` — follow up with `watch-skill ask {video_id} ...`\n")
     if question:
         print(f"> **Question:** {question}\n")
     print(render_report(result))
@@ -154,13 +154,13 @@ def api(
     port: int = typer.Option(8748, "--port"),
 ) -> None:
     """Run the REST API (FastAPI; OpenAPI spec at /openapi.json)."""
-    from agentvision.errors import AgentVisionError
+    from watch_skill.errors import WatchSkillError
 
     from surfaces.api import serve as api_serve
 
     try:
         api_serve(host=host, port=port)
-    except AgentVisionError as exc:
+    except WatchSkillError as exc:
         print(json.dumps(exc.to_dict(), indent=2))
         raise typer.Exit(code=1) from None
 
@@ -175,8 +175,8 @@ def ask(
     no_cache: bool = typer.Option(False, "--no-cache", help="Bypass the semantic answer cache."),
 ) -> None:
     """Ask an already-indexed video a question (self-healing answer engine)."""
-    from agentvision.answer import answer_question
-    from agentvision.errors import AgentVisionError
+    from watch_skill.answer import answer_question
+    from watch_skill.errors import WatchSkillError
 
     try:
         answer = answer_question(
@@ -185,7 +185,7 @@ def ask(
             verify=False if no_verify else None,
             use_cache=not no_cache,
         )
-    except AgentVisionError as exc:
+    except WatchSkillError as exc:
         print(json.dumps(exc.to_dict(), indent=2))
         raise typer.Exit(code=1) from None
     print(answer.text)
@@ -211,12 +211,12 @@ def forget(
     video: str = typer.Argument(..., help="video_id or original source to remove from the index."),
 ) -> None:
     """Forget one video: its index rows, cached answers, and frames dir."""
-    from agentvision.errors import AgentVisionError
-    from agentvision.index.store import forget_video
+    from watch_skill.errors import WatchSkillError
+    from watch_skill.index.store import forget_video
 
     try:
         row = forget_video(video)
-    except AgentVisionError as exc:
+    except WatchSkillError as exc:
         print(json.dumps(exc.to_dict(), indent=2))
         raise typer.Exit(code=1) from None
     print(f"forgotten: {row['id']} — {row['title'] or row['source']}")
@@ -225,7 +225,7 @@ def forget(
 @app.command()
 def stats() -> None:
     """Lifetime token savings and answer counts."""
-    from agentvision.answer.cache import lifetime_stats
+    from watch_skill.answer.cache import lifetime_stats
 
     data = lifetime_stats()
     print(f"answers served : {data['answers_count']}")
@@ -235,7 +235,7 @@ def stats() -> None:
 @app.command("list")
 def list_cmd() -> None:
     """List indexed videos."""
-    from agentvision.index import list_videos
+    from watch_skill.index import list_videos
 
     for row in list_videos():
         print(f"{row['id']}  {row['duration_seconds']:8.1f}s  {row['title'] or row['source']}")
@@ -244,8 +244,8 @@ def list_cmd() -> None:
 @app.command()
 def search(query: str = typer.Argument(...)) -> None:
     """Search across every indexed video."""
-    from agentvision.index import search_videos
-    from agentvision.perceive.budget import format_time
+    from watch_skill.index import search_videos
+    from watch_skill.perceive.budget import format_time
 
     for group in search_videos(query):
         video = group["video"] or {}
@@ -260,7 +260,7 @@ app.add_typer(loop_app, name="loop")
 
 
 def _print_loop_state(state) -> None:
-    from agentvision.loop.reportfmt import format_loop_state
+    from watch_skill.loop.reportfmt import format_loop_state
 
     print(format_loop_state(state))
 
@@ -278,14 +278,14 @@ def capture(
     import tempfile
     from pathlib import Path
 
-    from agentvision.errors import AgentVisionError
-    from agentvision.loop import capture as run_capture
+    from watch_skill.errors import WatchSkillError
+    from watch_skill.loop import capture as run_capture
 
     try:
         script = json.loads(script_json) if script_json else None
-        dest = Path(out_dir) if out_dir else Path(tempfile.mkdtemp(prefix="agentvision-capture-"))
+        dest = Path(out_dir) if out_dir else Path(tempfile.mkdtemp(prefix="watch-skill-capture-"))
         result = run_capture(target, dest, script=script, duration_seconds=duration)
-    except AgentVisionError as exc:
+    except WatchSkillError as exc:
         print(json.dumps(exc.to_dict(), indent=2))
         raise typer.Exit(code=1) from None
     print(f"captured {result.kind}: {result.video_path}")
@@ -300,8 +300,8 @@ def loop_start_cmd(
     duration: float = typer.Option(8.0, "--duration"),
 ) -> None:
     """Capture + critique the first iteration; prints loop_id and issues."""
-    from agentvision.errors import AgentVisionError
-    from agentvision.loop import loop_start
+    from watch_skill.errors import WatchSkillError
+    from watch_skill.loop import loop_start
 
     try:
         script = json.loads(script_json) if script_json else None
@@ -309,7 +309,7 @@ def loop_start_cmd(
             target, pass_criteria, script=script,
             max_iterations=max_iterations, duration_seconds=duration,
         )
-    except AgentVisionError as exc:
+    except WatchSkillError as exc:
         print(json.dumps(exc.to_dict(), indent=2))
         raise typer.Exit(code=1) from None
     _print_loop_state(state)
@@ -318,12 +318,12 @@ def loop_start_cmd(
 @loop_app.command("iterate")
 def loop_iterate_cmd(loop_id: str = typer.Argument(...)) -> None:
     """Re-capture + re-critique after you applied fixes; diffs vs previous."""
-    from agentvision.errors import AgentVisionError
-    from agentvision.loop import loop_iterate
+    from watch_skill.errors import WatchSkillError
+    from watch_skill.loop import loop_iterate
 
     try:
         state = loop_iterate(loop_id)
-    except AgentVisionError as exc:
+    except WatchSkillError as exc:
         print(json.dumps(exc.to_dict(), indent=2))
         raise typer.Exit(code=1) from None
     _print_loop_state(state)
@@ -332,12 +332,12 @@ def loop_iterate_cmd(loop_id: str = typer.Argument(...)) -> None:
 @loop_app.command("status")
 def loop_status_cmd(loop_id: str = typer.Argument(...)) -> None:
     """Show a loop's persisted state."""
-    from agentvision.errors import AgentVisionError
-    from agentvision.loop import loop_status
+    from watch_skill.errors import WatchSkillError
+    from watch_skill.loop import loop_status
 
     try:
         state = loop_status(loop_id)
-    except AgentVisionError as exc:
+    except WatchSkillError as exc:
         print(json.dumps(exc.to_dict(), indent=2))
         raise typer.Exit(code=1) from None
     _print_loop_state(state)
@@ -353,7 +353,7 @@ def setup(
     Backs up any existing config file before touching it. From clone to a
     working /watch in under two minutes.
     """
-    from agentvision.health.agents_setup import configure_agent, detect_agents
+    from watch_skill.health.agents_setup import configure_agent, detect_agents
 
     wanted = {k.strip() for k in only.split(",")} if only else None
     targets = [t for t in detect_agents() if t.detected]
@@ -394,12 +394,12 @@ def clean(
     dry_run: bool = typer.Option(False, "--dry-run", help="Report only; delete nothing."),
 ) -> None:
     """Reclaim disk: bounded cache, bounded loop archives, orphaned frames."""
-    from agentvision.health.clean import clean_cache, clean_loops, clean_orphan_frames
+    from watch_skill.health.clean import clean_cache, clean_loops, clean_orphan_frames
 
     if everything:
         cache = loops = orphans = True
     if cache_answers:
-        from agentvision.answer.cache import clear as clear_answers
+        from watch_skill.answer.cache import clear as clear_answers
 
         removed = 0 if dry_run else clear_answers()
         print(f"answer cache: {'would clear' if dry_run else 'cleared'} ({removed} rows)")
@@ -441,7 +441,7 @@ def lessons_add(
     no_reask: bool = typer.Option(False, "--no-reask", help="Skip the immediate re-ask check."),
 ) -> None:
     """Report a wrong answer + its correction; the system learns from it."""
-    from agentvision.lessons import report_mistake
+    from watch_skill.lessons import report_mistake
 
     outcome = report_mistake(
         video, question, wrong, correction,
@@ -456,11 +456,11 @@ def lessons_list(
     limit: int = typer.Option(20, "--limit"),
 ) -> None:
     """List stored lessons (newest first)."""
-    from agentvision.lessons import list_lessons
+    from watch_skill.lessons import list_lessons
 
     rows = list_lessons(session_id=session, limit=limit)
     if not rows:
-        print("No lessons stored yet — report one with `agentvision lessons add`.")
+        print("No lessons stored yet — report one with `watch-skill lessons add`.")
         return
     for row in rows:
         mark = "✓" if row["validated"] else " "
@@ -474,7 +474,7 @@ def lessons_rm(
     session: str | None = typer.Option(None, "--session", help="Remove a whole session."),
 ) -> None:
     """Remove lessons by id or by session."""
-    from agentvision.lessons import remove_lessons
+    from watch_skill.lessons import remove_lessons
 
     removed = remove_lessons(ids=list(ids) if ids else None, session_id=session)
     print(f"removed {removed} lesson(s)")
@@ -483,7 +483,7 @@ def lessons_rm(
 @lessons_app.command("export-evals")
 def lessons_export_evals() -> None:
     """Convert every lesson into a replayable eval case."""
-    from agentvision.lessons import export_evals
+    from watch_skill.lessons import export_evals
 
     print(f"eval cases written to {export_evals()}")
 
@@ -495,7 +495,7 @@ app.add_typer(evals_app, name="evals")
 @evals_app.command("run")
 def evals_run() -> None:
     """Replay the eval suite; pass-rate rising over time = it learns."""
-    from agentvision.lessons import run_evals
+    from watch_skill.lessons import run_evals
 
     result = run_evals()
     print(json.dumps(result, ensure_ascii=False, indent=2))
@@ -511,7 +511,7 @@ app.add_typer(profiles_app, name="profiles")
 @profiles_app.command("show")
 def profiles_show() -> None:
     """Show the active adaptive profiles (data, not code)."""
-    from agentvision.lessons import show_profiles
+    from watch_skill.lessons import show_profiles
 
     rows = show_profiles()
     if not rows:
@@ -523,15 +523,15 @@ def profiles_show() -> None:
 @profiles_app.command("reset")
 def profiles_reset() -> None:
     """Drop all adaptive profiles (lessons stay)."""
-    from agentvision.lessons import reset_profiles
+    from watch_skill.lessons import reset_profiles
 
     print(f"reset {reset_profiles()} profile(s)")
 
 
 @app.command()
 def version() -> None:
-    """Print the AgentVision version."""
-    from agentvision import __version__
+    """Print the Watch Skill version."""
+    from watch_skill import __version__
 
     print(__version__)
 

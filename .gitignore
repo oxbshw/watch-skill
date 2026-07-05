@@ -1,4 +1,4 @@
-# Self-managed portable binaries (bootstrapped by `agentvision doctor`)
+# Self-managed portable binaries (bootstrapped by `watch-skill doctor`)
 bin/
 
 # Python
@@ -16,7 +16,7 @@ build/
 # Runtime data (never commit user data)
 *.db
 *.sqlite3
-.agentvision/
+.watch-skill/
 
 # Test / tool caches
 .pytest_cache/
@@ -35,3 +35,4 @@ CLAUDE.md
 AGENTS.local.md
 *_REPORT.md
 *.session.md
+issues_export.local.json

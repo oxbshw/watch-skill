@@ -9,12 +9,12 @@ import pytest
 pytest.importorskip("PIL", reason="perceive extra not installed")
 
 import httpx  # noqa: E402
-from agentvision.config import reset_settings  # noqa: E402
-from agentvision.errors import VisionError  # noqa: E402
-from agentvision.vision import client as client_mod  # noqa: E402
-from agentvision.vision.client import VisionClient  # noqa: E402
-from agentvision.vision.cost import estimate_call_tokens, guard_cost  # noqa: E402
-from agentvision.vision.model import ClientVisionModel, get_vision  # noqa: E402
+from watch_skill.config import reset_settings  # noqa: E402
+from watch_skill.errors import VisionError  # noqa: E402
+from watch_skill.vision import client as client_mod  # noqa: E402
+from watch_skill.vision.client import VisionClient  # noqa: E402
+from watch_skill.vision.cost import estimate_call_tokens, guard_cost  # noqa: E402
+from watch_skill.vision.model import ClientVisionModel, get_vision  # noqa: E402
 
 
 @pytest.fixture()
@@ -39,7 +39,7 @@ def _mock_post(monkeypatch: pytest.MonkeyPatch, payload: dict, capture: dict) ->
 
 
 def test_anthropic_wire_format(frame: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("AGENTVISION_ANTHROPIC_API_KEY", "test-key")
+    monkeypatch.setenv("WATCHSKILL_ANTHROPIC_API_KEY", "test-key")
     reset_settings()
     capture: dict = {}
     _mock_post(monkeypatch, {"content": [{"type": "text", "text": "a red frame"}]}, capture)
@@ -53,7 +53,7 @@ def test_anthropic_wire_format(frame: Path, monkeypatch: pytest.MonkeyPatch) -> 
 
 
 def test_openai_wire_format(frame: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("AGENTVISION_OPENAI_API_KEY", "test-key")
+    monkeypatch.setenv("WATCHSKILL_OPENAI_API_KEY", "test-key")
     reset_settings()
     capture: dict = {}
     _mock_post(
@@ -84,7 +84,7 @@ def test_cost_guard_estimates_and_blocks(
 ) -> None:
     tokens = estimate_call_tokens([frame])
     assert tokens > (512 * 288) // 750  # image + text allowance
-    monkeypatch.setenv("AGENTVISION_COST_CEILING_USD", "0.000001")
+    monkeypatch.setenv("WATCHSKILL_COST_CEILING_USD", "0.000001")
     reset_settings()
     with pytest.raises(VisionError) as excinfo:
         guard_cost("anthropic", "claude-fable-5", [frame])
@@ -98,7 +98,7 @@ def test_cost_guard_free_for_local() -> None:
 def test_describe_frames_parses_numbered_lines(
     frame: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setenv("AGENTVISION_ANTHROPIC_API_KEY", "k")
+    monkeypatch.setenv("WATCHSKILL_ANTHROPIC_API_KEY", "k")
     reset_settings()
     capture: dict = {}
     _mock_post(
@@ -112,8 +112,8 @@ def test_describe_frames_parses_numbered_lines(
 
 
 def test_tier_selection_from_settings(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("AGENTVISION_VISION_CHEAP_PROVIDER", "ollama")
-    monkeypatch.setenv("AGENTVISION_VISION_CHEAP_MODEL", "llava")
+    monkeypatch.setenv("WATCHSKILL_VISION_CHEAP_PROVIDER", "ollama")
+    monkeypatch.setenv("WATCHSKILL_VISION_CHEAP_MODEL", "llava")
     reset_settings()
     model = get_vision("cheap")
     assert model.client.provider == "ollama"
@@ -123,7 +123,7 @@ def test_tier_selection_from_settings(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_http_error_is_structured(frame: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("AGENTVISION_ANTHROPIC_API_KEY", "k")
+    monkeypatch.setenv("WATCHSKILL_ANTHROPIC_API_KEY", "k")
     reset_settings()
 
     def fake_post(url, headers=None, json=None, timeout=None):
@@ -138,7 +138,7 @@ def test_http_error_is_structured(frame: Path, monkeypatch: pytest.MonkeyPatch) 
 
 
 def test_openrouter_wire_format(frame: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("AGENTVISION_OPENROUTER_API_KEY", "or-test-key")
+    monkeypatch.setenv("WATCHSKILL_OPENROUTER_API_KEY", "or-test-key")
     reset_settings()
     capture: dict = {}
     _mock_post(
@@ -153,14 +153,14 @@ def test_openrouter_wire_format(frame: Path, monkeypatch: pytest.MonkeyPatch) ->
     assert out == "a red frame via openrouter"
     assert capture["url"] == "https://openrouter.ai/api/v1/chat/completions"
     assert capture["headers"]["Authorization"] == "Bearer or-test-key"
-    assert capture["headers"]["X-Title"] == "AgentVision"  # attribution headers
+    assert capture["headers"]["X-Title"] == "Watch Skill"  # attribution headers
     # OpenAI-compatible body shape
     assert capture["body"]["model"] == "qwen/qwen2.5-vl-72b-instruct:free"
     assert capture["body"]["messages"][0]["content"][0]["type"] == "image_url"
 
 
 def test_openrouter_free_model_costs_nothing() -> None:
-    from agentvision.vision.registry import price_for
+    from watch_skill.vision.registry import price_for
 
     assert price_for("openrouter", "qwen/qwen2.5-vl-72b-instruct:free") == 0.0
 
@@ -170,8 +170,8 @@ def test_describe_frames_batches_by_setting(
 ) -> None:
     """24 frames with batch size 8 -> 3 calls, order preserved (small local
     models cannot handle 24 images in one prompt)."""
-    monkeypatch.setenv("AGENTVISION_VISION_BATCH_SIZE", "8")
-    monkeypatch.setenv("AGENTVISION_ANTHROPIC_API_KEY", "k")
+    monkeypatch.setenv("WATCHSKILL_VISION_BATCH_SIZE", "8")
+    monkeypatch.setenv("WATCHSKILL_ANTHROPIC_API_KEY", "k")
     reset_settings()
     calls: list[int] = []
 
@@ -189,12 +189,12 @@ def test_describe_frames_batches_by_setting(
 
 def test_local_provider_gets_longer_timeout(monkeypatch: pytest.MonkeyPatch) -> None:
     """Regression: 180s cloud timeout killed Ollama CPU calls mid model-load."""
-    from agentvision.vision.client import _timeout_for
+    from watch_skill.vision.client import _timeout_for
 
     reset_settings()
     assert _timeout_for("ollama") == 900.0
     assert _timeout_for("anthropic") == 180.0
-    monkeypatch.setenv("AGENTVISION_VISION_LOCAL_TIMEOUT_SECONDS", "120")
+    monkeypatch.setenv("WATCHSKILL_VISION_LOCAL_TIMEOUT_SECONDS", "120")
     reset_settings()
     assert _timeout_for("ollama") == 120.0
 
@@ -202,7 +202,7 @@ def test_local_provider_gets_longer_timeout(monkeypatch: pytest.MonkeyPatch) -> 
 def test_parse_numbered_tolerates_sloppy_models() -> None:
     """Regression: qwen2.5vl:3b echoed the literal placeholder `N: ...`,
     which the strict parser dropped -> empty descriptions."""
-    from agentvision.vision.model import _parse_numbered
+    from watch_skill.vision.model import _parse_numbered
 
     assert _parse_numbered("1: a red frame\n2: a blue frame", 2) == [
         "a red frame", "a blue frame",
@@ -224,7 +224,7 @@ def test_describe_batch_retries_transient_then_degrades(
     """Regression: one timed-out describe call (swapped machine) killed the
     whole indexing pass. A batch retries once, then yields empty strings
     while OTHER batches still run."""
-    monkeypatch.setenv("AGENTVISION_VISION_BATCH_SIZE", "2")
+    monkeypatch.setenv("WATCHSKILL_VISION_BATCH_SIZE", "2")
     reset_settings()
     calls: list[int] = []
 

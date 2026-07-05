@@ -8,8 +8,8 @@ import pytest
 pytest.importorskip("scenedetect", reason="perceive extra not installed")
 pytest.importorskip("imagehash", reason="perceive extra not installed")
 
-from agentvision.perceive import perceive, probe  # noqa: E402
-from agentvision.perceive.scenes import compute_phash, hamming_distance  # noqa: E402
+from watch_skill.perceive import perceive, probe  # noqa: E402
+from watch_skill.perceive.scenes import compute_phash, hamming_distance  # noqa: E402
 
 
 def test_probe_metadata(sample_video: Path) -> None:
@@ -85,7 +85,7 @@ def test_phash_identical_image_is_zero(sample_video: Path, tmp_path: Path) -> No
 
 def test_resolve_ocr_lang_routing() -> None:
     """Each script routes to its RapidOCR model; everything else default."""
-    from agentvision.perceive.ocr import resolve_ocr_lang
+    from watch_skill.perceive.ocr import resolve_ocr_lang
 
     assert resolve_ocr_lang("ar") == "arabic"
     assert resolve_ocr_lang("ar-SA") == "arabic"
@@ -114,7 +114,7 @@ class _FakeOcrOutput:
 def test_ocr_frame_dispatches_engine_by_lang(tmp_path, monkeypatch) -> None:
     """Regression: Arabic videos got garbage OCR because the bundled ch/en
     recognition model ran on Arabic text. lang must select the engine."""
-    from agentvision.perceive import ocr as mod
+    from watch_skill.perceive import ocr as mod
 
     chosen: list[str] = []
 
@@ -137,7 +137,7 @@ def test_ocr_frame_parses_rapidocr3_output(tmp_path, monkeypatch) -> None:
     """Regression (rapidocr 1.x → 3.x): results moved from a list of
     [box, text, score] rows to an output object with parallel boxes/txts/
     scores. Parse the new shape, filter by confidence, and handle None."""
-    from agentvision.perceive import ocr as mod
+    from watch_skill.perceive import ocr as mod
 
     box = [[10, 20], [110, 20], [110, 60], [10, 60]]
     output = _FakeOcrOutput(
@@ -168,7 +168,7 @@ def test_focused_scene_detection_scans_only_the_window(sample_video, tmp_path) -
     """Regression: a focused watch decoded the WHOLE video for scene
     detection (minutes of wasted decode on long sources). The window must
     bound the scan — scenes returned must lie within it."""
-    from agentvision.perceive.scenes import detect_scenes
+    from watch_skill.perceive.scenes import detect_scenes
 
     spans = detect_scenes(sample_video, start_seconds=4.0, end_seconds=8.0)
     for start, end in spans:

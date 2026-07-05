@@ -14,109 +14,6 @@ resolution-markers = [
 ]
 
 [[package]]
-name = "agentvision"
-version = "0.6.0"
-source = { editable = "." }
-dependencies = [
-    { name = "httpx" },
-    { name = "pydantic" },
-    { name = "pydantic-settings" },
-    { name = "rich" },
-    { name = "typer" },
-]
-
-[package.optional-dependencies]
-all = [
-    { name = "fastapi" },
-    { name = "fastembed" },
-    { name = "faster-whisper" },
-    { name = "fastmcp" },
-    { name = "imagehash" },
-    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
-    { name = "numpy", version = "2.5.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
-    { name = "onnxruntime" },
-    { name = "opencv-python-headless" },
-    { name = "pillow" },
-    { name = "playwright" },
-    { name = "python-bidi" },
-    { name = "rapidocr" },
-    { name = "scenedetect" },
-    { name = "uvicorn" },
-]
-api = [
-    { name = "fastapi" },
-    { name = "uvicorn" },
-]
-diarize = [
-    { name = "pyannote-audio" },
-]
-index = [
-    { name = "fastembed" },
-    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
-    { name = "numpy", version = "2.5.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
-]
-loop = [
-    { name = "playwright" },
-]
-mcp = [
-    { name = "fastmcp" },
-]
-ocr = [
-    { name = "onnxruntime" },
-    { name = "python-bidi" },
-    { name = "rapidocr" },
-]
-perceive = [
-    { name = "imagehash" },
-    { name = "opencv-python-headless" },
-    { name = "pillow" },
-    { name = "scenedetect" },
-]
-whisper = [
-    { name = "faster-whisper" },
-]
-
-[package.dev-dependencies]
-dev = [
-    { name = "pytest" },
-    { name = "pytest-timeout" },
-    { name = "ruff" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "agentvision", extras = ["perceive", "ocr", "whisper", "index", "mcp", "api", "loop"], marker = "extra == 'all'" },
-    { name = "fastapi", marker = "extra == 'api'", specifier = ">=0.139,<1" },
-    { name = "fastembed", marker = "extra == 'index'", specifier = ">=0.8,<0.9" },
-    { name = "faster-whisper", marker = "extra == 'whisper'", specifier = ">=1.2,<2" },
-    { name = "fastmcp", marker = "extra == 'mcp'", specifier = ">=3.4,<4" },
-    { name = "httpx", specifier = ">=0.28,<1" },
-    { name = "imagehash", marker = "extra == 'perceive'", specifier = ">=4.3,<5" },
-    { name = "numpy", marker = "extra == 'index'", specifier = ">=2.4,<3" },
-    { name = "onnxruntime", marker = "extra == 'ocr'", specifier = ">=1.27,<2" },
-    { name = "opencv-python-headless", marker = "extra == 'perceive'", specifier = ">=5.0,<6" },
-    { name = "pillow", marker = "extra == 'perceive'", specifier = ">=12.3,<13" },
-    { name = "playwright", marker = "extra == 'loop'", specifier = ">=1.61,<2" },
-    { name = "pyannote-audio", marker = "extra == 'diarize'", specifier = ">=4.0,<5" },
-    { name = "pydantic", specifier = ">=2.13,<3" },
-    { name = "pydantic-settings", specifier = ">=2.14,<3" },
-    { name = "python-bidi", marker = "extra == 'ocr'", specifier = ">=0.6,<1" },
-    { name = "rapidocr", marker = "extra == 'ocr'", specifier = ">=3.9,<4" },
-    { name = "rich", specifier = ">=15.0,<16" },
-    { name = "scenedetect", marker = "extra == 'perceive'", specifier = ">=0.7,<0.8" },
-    { name = "typer", specifier = ">=0.26,<1" },
-    { name = "uvicorn", marker = "extra == 'api'", specifier = ">=0.50,<1" },
-]
-provides-extras = ["perceive", "ocr", "whisper", "index", "mcp", "api", "loop", "diarize", "all"]
-
-[package.metadata.requires-dev]
-dev = [
-    { name = "pytest", specifier = ">=9.1,<10" },
-    { name = "pytest-timeout", specifier = ">=2.4,<3" },
-    { name = "ruff", specifier = ">=0.15,<0.16" },
-]
-
-[[package]]
 name = "aiofile"
 version = "3.11.1"
 source = { registry = "https://pypi.org/simple" }
@@ -4855,6 +4752,109 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/2e/41/06cce5dbb9f77591512957710ac709e60b12e6216a2f2d0d607fd49706e8/uvicorn-0.50.0.tar.gz", hash = "sha256:0c92e1bc2259cb7faa4fcef774a5966588f2e88542744550b66799fba10b76f1", size = 93257, upload-time = "2026-07-04T05:03:26.33Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/a0/3a/eb70620ca2bf8213603d5c731460687c49fee38b0072f0b4a637781f0a53/uvicorn-0.50.0-py3-none-any.whl", hash = "sha256:05f0eb19edf38208f79f43df8a63081b48df31b0cd1e5997be957a4dc97d1b19", size = 72716, upload-time = "2026-07-04T05:03:24.848Z" },
+]
+
+[[package]]
+name = "watch-skill"
+version = "0.6.0"
+source = { editable = "." }
+dependencies = [
+    { name = "httpx" },
+    { name = "pydantic" },
+    { name = "pydantic-settings" },
+    { name = "rich" },
+    { name = "typer" },
+]
+
+[package.optional-dependencies]
+all = [
+    { name = "fastapi" },
+    { name = "fastembed" },
+    { name = "faster-whisper" },
+    { name = "fastmcp" },
+    { name = "imagehash" },
+    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
+    { name = "numpy", version = "2.5.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
+    { name = "onnxruntime" },
+    { name = "opencv-python-headless" },
+    { name = "pillow" },
+    { name = "playwright" },
+    { name = "python-bidi" },
+    { name = "rapidocr" },
+    { name = "scenedetect" },
+    { name = "uvicorn" },
+]
+api = [
+    { name = "fastapi" },
+    { name = "uvicorn" },
+]
+diarize = [
+    { name = "pyannote-audio" },
+]
+index = [
+    { name = "fastembed" },
+    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
+    { name = "numpy", version = "2.5.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
+]
+loop = [
+    { name = "playwright" },
+]
+mcp = [
+    { name = "fastmcp" },
+]
+ocr = [
+    { name = "onnxruntime" },
+    { name = "python-bidi" },
+    { name = "rapidocr" },
+]
+perceive = [
+    { name = "imagehash" },
+    { name = "opencv-python-headless" },
+    { name = "pillow" },
+    { name = "scenedetect" },
+]
+whisper = [
+    { name = "faster-whisper" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "pytest" },
+    { name = "pytest-timeout" },
+    { name = "ruff" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "fastapi", marker = "extra == 'api'", specifier = ">=0.139,<1" },
+    { name = "fastembed", marker = "extra == 'index'", specifier = ">=0.8,<0.9" },
+    { name = "faster-whisper", marker = "extra == 'whisper'", specifier = ">=1.2,<2" },
+    { name = "fastmcp", marker = "extra == 'mcp'", specifier = ">=3.4,<4" },
+    { name = "httpx", specifier = ">=0.28,<1" },
+    { name = "imagehash", marker = "extra == 'perceive'", specifier = ">=4.3,<5" },
+    { name = "numpy", marker = "extra == 'index'", specifier = ">=2.4,<3" },
+    { name = "onnxruntime", marker = "extra == 'ocr'", specifier = ">=1.27,<2" },
+    { name = "opencv-python-headless", marker = "extra == 'perceive'", specifier = ">=5.0,<6" },
+    { name = "pillow", marker = "extra == 'perceive'", specifier = ">=12.3,<13" },
+    { name = "playwright", marker = "extra == 'loop'", specifier = ">=1.61,<2" },
+    { name = "pyannote-audio", marker = "extra == 'diarize'", specifier = ">=4.0,<5" },
+    { name = "pydantic", specifier = ">=2.13,<3" },
+    { name = "pydantic-settings", specifier = ">=2.14,<3" },
+    { name = "python-bidi", marker = "extra == 'ocr'", specifier = ">=0.6,<1" },
+    { name = "rapidocr", marker = "extra == 'ocr'", specifier = ">=3.9,<4" },
+    { name = "rich", specifier = ">=15.0,<16" },
+    { name = "scenedetect", marker = "extra == 'perceive'", specifier = ">=0.7,<0.8" },
+    { name = "typer", specifier = ">=0.26,<1" },
+    { name = "uvicorn", marker = "extra == 'api'", specifier = ">=0.50,<1" },
+    { name = "watch-skill", extras = ["perceive", "ocr", "whisper", "index", "mcp", "api", "loop"], marker = "extra == 'all'" },
+]
+provides-extras = ["perceive", "ocr", "whisper", "index", "mcp", "api", "loop", "diarize", "all"]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "pytest", specifier = ">=9.1,<10" },
+    { name = "pytest-timeout", specifier = ">=2.4,<3" },
+    { name = "ruff", specifier = ">=0.15,<0.16" },
 ]
 
 [[package]]

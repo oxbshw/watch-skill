@@ -6,31 +6,31 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-from agentvision.config import reset_settings
+from watch_skill.config import reset_settings
 
 _AMBIENT_KEYS = (
-    "AGENTVISION_ANTHROPIC_API_KEY",
-    "AGENTVISION_OPENAI_API_KEY",
-    "AGENTVISION_GEMINI_API_KEY",
-    "AGENTVISION_GROQ_API_KEY",
-    "AGENTVISION_OPENROUTER_API_KEY",
-    "AGENTVISION_BIN_DIR",
-    "AGENTVISION_DATA_DIR",
+    "WATCHSKILL_ANTHROPIC_API_KEY",
+    "WATCHSKILL_OPENAI_API_KEY",
+    "WATCHSKILL_GEMINI_API_KEY",
+    "WATCHSKILL_GROQ_API_KEY",
+    "WATCHSKILL_OPENROUTER_API_KEY",
+    "WATCHSKILL_BIN_DIR",
+    "WATCHSKILL_DATA_DIR",
 )
 
 
 @pytest.fixture(autouse=True)
 def isolated_settings(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """Point AgentVision at a throwaway data dir (with spaces) for every test."""
+    """Point Watch Skill at a throwaway data dir (with spaces) for every test."""
     for var in _AMBIENT_KEYS:
         monkeypatch.delenv(var, raising=False)
     data_dir = tmp_path / "agent vision data"
-    monkeypatch.setenv("AGENTVISION_DATA_DIR", str(data_dir))
+    monkeypatch.setenv("WATCHSKILL_DATA_DIR", str(data_dir))
     # Tests must NEVER reach a live vision backend: a developer's .env may
     # point at a reachable local Ollama (this bit us — the API test sat in
     # real CPU inference). Keyless cloud providers fail fast and structured.
-    monkeypatch.setenv("AGENTVISION_VISION_CHEAP_PROVIDER", "anthropic")
-    monkeypatch.setenv("AGENTVISION_VISION_STRONG_PROVIDER", "anthropic")
+    monkeypatch.setenv("WATCHSKILL_VISION_CHEAP_PROVIDER", "anthropic")
+    monkeypatch.setenv("WATCHSKILL_VISION_STRONG_PROVIDER", "anthropic")
     reset_settings()
     yield data_dir
     reset_settings()

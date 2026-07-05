@@ -25,9 +25,9 @@ a fraction of the tokens.
   `escalations_used`, `cached`, `budget_stopped`, evidence timestamps.
 
 ### Self-improve loop (`lessons/`) — local, never uploaded
-- `report_mistake` (MCP + `agentvision lessons add`): a wrong answer + its
+- `report_mistake` (MCP + `watch-skill lessons add`): a wrong answer + its
   correction becomes a classified lesson (missed-ocr / wrong-timestamp /
-  hallucination / language / sampling-miss) in `~/.agentvision/lessons.db`,
+  hallucination / language / sampling-miss) in `~/.watch-skill/lessons.db`,
   shared by every agent on the machine; where the class is mechanical the
   question is re-asked immediately to confirm the lesson works.
 - Relevant lessons inject into future asks under a hard ~300-token cap.
@@ -45,13 +45,13 @@ a fraction of the tokens.
   questions are free and marked `cached: true`; invalidated on re-watch,
   cleared with `clean --cache-answers`.
 - **Savings meter**: every answer ends with `~N tokens saved vs raw-frame
-  injection`; lifetime meter via `agentvision stats` / the `stats` MCP tool.
+  injection`; lifetime meter via `watch-skill stats` / the `stats` MCP tool.
 - Telegraphic scene descriptions (≤12 words, names/numbers kept) cut
   indexing and retrieval token weight.
 - **Per-question token budget** the escalation ladder respects and reports.
 
 ### Also
-- `agentvision forget <video_id>` removes one video (rows, cached answers,
+- `watch-skill forget <video_id>` removes one video (rows, cached answers,
   frames dir) with a structured error on unknown ids (#3).
 - REST: `POST /v1/answer` returns the structured Answer; `/v1/ask` unchanged.
 - No breaking changes: every v0.5 MCP tool name/signature intact; index
@@ -66,7 +66,7 @@ First public release.
   breakage), direct media URLs, HLS/DASH manifests (bounded live capture),
   local files, screen/window/browser capture. Download cache with LRU cap.
   Optional self-hosted cobalt fallback (the public API now requires auth,
-  so it is opt-in via `AGENTVISION_COBALT_API_URL`).
+  so it is opt-in via `WATCHSKILL_COBALT_API_URL`).
 - **Smart perception**: PySceneDetect scene boundaries + midpoints,
   perceptual-hash dedup, duration-tiered frame budgets (hard cap 100,
   ≤2 fps), focused `--start/--end` mode with dense sampling, OCR on kept
@@ -95,7 +95,7 @@ First public release.
 - MCP server (stdio + streamable HTTP): 11 tools with agent-first
   descriptions, progress notifications, `background=true` + `get_status`
   polling for long watches.
-- CLI (`agentvision ...`) including `doctor` (self-healing: ffmpeg, yt-dlp,
+- CLI (`watch-skill ...`) including `doctor` (self-healing: ffmpeg, yt-dlp,
   deno, disk, GPU, keys) and `setup` (auto-writes MCP config into Claude
   Code/Desktop, Cursor, Codex CLI, Windsurf, Gemini CLI — with backups).
 - REST API (FastAPI, OpenAPI at /openapi.json, bearer auth).

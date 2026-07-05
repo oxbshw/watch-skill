@@ -7,9 +7,9 @@ import pytest
 
 pytest.importorskip("scenedetect", reason="perceive extra not installed")
 
-from agentvision.errors import AcquisitionError, PerceptionError  # noqa: E402
-from agentvision.report import render_report  # noqa: E402
-from agentvision.watch import watch  # noqa: E402
+from watch_skill.errors import AcquisitionError, PerceptionError  # noqa: E402
+from watch_skill.report import render_report  # noqa: E402
+from watch_skill.watch import watch  # noqa: E402
 
 
 def _run(sample_video: Path, tmp_path: Path, **kwargs):
@@ -34,7 +34,7 @@ def test_watch_local_file(sample_video: Path, tmp_path: Path) -> None:
 def test_watch_report_contract(sample_video: Path, tmp_path: Path) -> None:
     result = _run(sample_video, tmp_path)
     report = render_report(result)
-    assert "# agentvision: video report" in report
+    assert "# watch-skill: video report" in report
     assert "## Frames" in report
     assert "## Transcript" in report
     assert "t=00:" in report  # timestamps present

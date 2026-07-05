@@ -4,8 +4,8 @@ from __future__ import annotations
 import time
 from pathlib import Path
 
-from agentvision.config import get_settings, reset_settings
-from agentvision.health.clean import clean_cache, clean_loops, clean_orphan_frames
+from watch_skill.config import get_settings, reset_settings
+from watch_skill.health.clean import clean_cache, clean_loops, clean_orphan_frames
 
 
 def _fake_cache_entry(name: str, size: int, age_rank: int) -> Path:
@@ -23,7 +23,7 @@ def _fake_cache_entry(name: str, size: int, age_rank: int) -> Path:
 
 
 def test_clean_cache_evicts_oldest_to_cap(monkeypatch) -> None:
-    monkeypatch.setenv("AGENTVISION_CACHE_MAX_BYTES", "2500")
+    monkeypatch.setenv("WATCHSKILL_CACHE_MAX_BYTES", "2500")
     reset_settings()
     old = _fake_cache_entry("aa", 2000, age_rank=3)
     newer = _fake_cache_entry("bb", 2000, age_rank=1)
@@ -34,7 +34,7 @@ def test_clean_cache_evicts_oldest_to_cap(monkeypatch) -> None:
 
 
 def test_clean_cache_dry_run_deletes_nothing(monkeypatch) -> None:
-    monkeypatch.setenv("AGENTVISION_CACHE_MAX_BYTES", "10")
+    monkeypatch.setenv("WATCHSKILL_CACHE_MAX_BYTES", "10")
     reset_settings()
     entry = _fake_cache_entry("cc", 5000, age_rank=1)
     report = clean_cache(dry_run=True)

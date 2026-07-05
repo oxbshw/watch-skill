@@ -4,8 +4,8 @@ from __future__ import annotations
 import time
 
 import pytest
-from agentvision import jobs
-from agentvision.errors import AcquisitionError, AgentVisionError
+from watch_skill import jobs
+from watch_skill.errors import AcquisitionError, WatchSkillError
 
 
 def _wait(job: jobs.Job, timeout: float = 5.0) -> None:
@@ -51,7 +51,7 @@ def test_job_crash_becomes_structured() -> None:
 
 
 def test_get_job_unknown_is_structured() -> None:
-    with pytest.raises(AgentVisionError) as excinfo:
+    with pytest.raises(WatchSkillError) as excinfo:
         jobs.get_job("nope")
     assert excinfo.value.code == "jobs.not_found"
 

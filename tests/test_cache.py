@@ -5,7 +5,7 @@ import os
 import time
 from pathlib import Path
 
-from agentvision.acquire import cache
+from watch_skill.acquire import cache
 
 URL_A = "https://example.com/watch?v=aaa"
 URL_B = "https://example.com/watch?v=bbb"

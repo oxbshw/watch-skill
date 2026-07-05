@@ -10,10 +10,10 @@ import pytest
 pytest.importorskip("fastmcp", reason="mcp extra not installed")
 pytest.importorskip("scenedetect", reason="perceive extra not installed")
 
-from agentvision.index import index_watch_result  # noqa: E402
-from agentvision.transcribe.types import Segment, Transcript  # noqa: E402
-from agentvision.watch import watch  # noqa: E402
 from fastmcp import Client  # noqa: E402
+from watch_skill.index import index_watch_result  # noqa: E402
+from watch_skill.transcribe.types import Segment, Transcript  # noqa: E402
+from watch_skill.watch import watch  # noqa: E402
 
 from surfaces.mcp_server.server import mcp  # noqa: E402
 
@@ -103,10 +103,10 @@ def test_stats_tool_reports_savings(indexed: str) -> None:
 
 
 def test_forget_removes_video_and_answers(indexed: str) -> None:
-    from agentvision.answer import answer_question
-    from agentvision.errors import IndexError_
-    from agentvision.index.db import connect
-    from agentvision.index.store import forget_video, get_video
+    from watch_skill.answer import answer_question
+    from watch_skill.errors import IndexError_
+    from watch_skill.index.db import connect
+    from watch_skill.index.store import forget_video, get_video
 
     answer_question(indexed, "when do the bars appear?")  # populate the cache
     forget_video(indexed)
@@ -133,7 +133,7 @@ def test_v05_index_upgrades_losslessly(tmp_path: Path) -> None:
     via forward migration — and loses NOTHING."""
     import sqlite3
 
-    from agentvision.index.db import MIGRATIONS, migrate, schema_version
+    from watch_skill.index.db import MIGRATIONS, migrate, schema_version
 
     db = tmp_path / "v05 dir" / "index.db"
     db.parent.mkdir(parents=True)
@@ -183,7 +183,7 @@ def test_v05_index_upgrades_losslessly(tmp_path: Path) -> None:
 
 def test_describe_prompt_is_telegraphic() -> None:
     """The indexing prompt demands compact descriptions (token economy)."""
-    from agentvision.vision.model import ClientVisionModel
+    from watch_skill.vision.model import ClientVisionModel
 
     captured = {}
 

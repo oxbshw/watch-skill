@@ -1,4 +1,4 @@
-﻿"""AgentVision MCP server (FastMCP): stdio by default, streamable HTTP with --http.
+﻿"""Watch Skill MCP server (FastMCP): stdio by default, streamable HTTP with --http.
 
 Tools return text + image content blocks, capped at ``response_frame_cap``
 images per response â€” retrieval is designed to make more unnecessary.
@@ -10,15 +10,15 @@ from pathlib import Path
 from typing import Any
 
 import anyio
-from agentvision.config import get_settings
-from agentvision.errors import AgentVisionError
-from agentvision.health.binaries import prepend_bin_dir_to_path
-from agentvision.perceive.budget import format_time, parse_time
 from fastmcp import Context, FastMCP
 from fastmcp.utilities.types import Image
+from watch_skill.config import get_settings
+from watch_skill.errors import WatchSkillError
+from watch_skill.health.binaries import prepend_bin_dir_to_path
+from watch_skill.perceive.budget import format_time, parse_time
 
 mcp = FastMCP(
-    name="agentvision",
+    name="watch-skill",
     instructions=(
         "Give this agent a video input. watch_video analyzes + indexes any "
         "source (URL, direct media, HLS/DASH, local file); ask_video answers "
@@ -29,7 +29,7 @@ mcp = FastMCP(
 )
 
 
-def _error_payload(exc: AgentVisionError) -> str:
+def _error_payload(exc: WatchSkillError) -> str:
     return json.dumps(exc.to_dict(), ensure_ascii=False, indent=2)
 
 
@@ -50,8 +50,8 @@ def _run_watch(
     progress_cb,
 ) -> tuple[str, Any]:
     """The synchronous watch+index pipeline shared by both watch paths."""
-    from agentvision.index import index_watch_result
-    from agentvision.watch import watch
+    from watch_skill.index import index_watch_result
+    from watch_skill.watch import watch
 
     result = watch(
         source,
@@ -66,7 +66,7 @@ def _run_watch(
 
 
 def _watch_response(video_id: str, result: Any, question: str | None) -> list[Any]:
-    from agentvision.report import render_report
+    from watch_skill.report import render_report
 
     header = f"video_id: {video_id}\n"
     if question:
@@ -94,7 +94,7 @@ async def watch_video(
     re-watch. start/end (SS, MM:SS, HH:MM:SS) zoom into a section with denser
     sampling; budget caps frame count. Long video or strict client timeout?
     Pass background=true for an instant job_id, then poll get_status."""
-    from agentvision import jobs
+    from watch_skill import jobs
 
     job = jobs.start_job(
         "watch",
@@ -124,11 +124,11 @@ def get_status(job_id: str) -> str:
     """Check a background job started with watch_video(background=true).
     Returns status/phase/progress; when done it includes the video_id to use
     with ask_video. Poll every few seconds, not in a tight loop."""
-    from agentvision import jobs
+    from watch_skill import jobs
 
     try:
         job = jobs.get_job(job_id)
-    except AgentVisionError as exc:
+    except WatchSkillError as exc:
         return _error_payload(exc)
     payload = job.to_dict()
     if job.status == "done":
@@ -156,13 +156,13 @@ def ask_video(
     (near-zero image tokens); frames attach only when include_frames=true or
     the engine could not verify and you should look yourself. Accepts a
     video_id or the original source URL/path. Works across sessions."""
-    from agentvision.answer import answer_question
+    from watch_skill.answer import answer_question
 
     try:
         answer = answer_question(
             video, question, include_frames=include_frames, verify=verify
         )
-    except AgentVisionError as exc:
+    except WatchSkillError as exc:
         return [_error_payload(exc)]
     meta = [f"confidence: {answer.confidence:.2f}", f"verified: {str(answer.verified).lower()}"]
     if answer.cached:
@@ -192,28 +192,28 @@ def report_mistake(
     session_id: str | None = None,
 ) -> str:
     """The answer to a video question turned out WRONG? Report it here with
-    the correction — AgentVision learns from it locally (nothing uploaded):
+    the correction — Watch Skill learns from it locally (nothing uploaded):
     the mistake is classified, stored as a lesson, injected into future
     similar questions, and where possible the original question is re-asked
     immediately to confirm the lesson works. Do this whenever the user
     corrects a video answer; it makes every later answer better."""
-    from agentvision.lessons import report_mistake as report
+    from watch_skill.lessons import report_mistake as report
 
     try:
         outcome = report(
             video, question, wrong_answer, correction,
             agent="mcp", session_id=session_id,
         )
-    except AgentVisionError as exc:
+    except WatchSkillError as exc:
         return _error_payload(exc)
     return json.dumps(outcome, ensure_ascii=False, indent=2)
 
 
 @mcp.tool
 def stats() -> str:
-    """Lifetime token-savings meter: how many tokens AgentVision's text-first
+    """Lifetime token-savings meter: how many tokens Watch Skill's text-first
     answers + semantic cache have saved vs naive raw-frame injection."""
-    from agentvision.answer.cache import lifetime_stats
+    from watch_skill.answer.cache import lifetime_stats
 
     data = lifetime_stats()
     return (
@@ -229,12 +229,12 @@ def get_moment(video: str, timestamp: str, window: float = 10.0) -> list[Any]:
     needs more surrounding detail. Returns dense frames + transcript + OCR
     within `window` seconds around `timestamp` (SS, MM:SS, or HH:MM:SS).
     For a broad question about the whole video, use ask_video instead."""
-    from agentvision.index import get_moment as moment
+    from watch_skill.index import get_moment as moment
 
     try:
         ts = parse_time(timestamp) or 0.0
         ctx = moment(video, ts, window=window)
-    except AgentVisionError as exc:
+    except WatchSkillError as exc:
         return [_error_payload(exc)]
     lines = [f"# Moment {format_time(ctx.timestamp)} آ±{ctx.window / 2:.0f}s of {ctx.video_id}", ""]
     if ctx.segments:
@@ -256,7 +256,7 @@ def search_videos(query: str) -> str:
     normalization. Returns videos with timestamped evidence — follow up with
     ask_video or get_moment on a hit. For a question about one known video,
     use ask_video directly."""
-    from agentvision.index import search_videos as search
+    from watch_skill.index import search_videos as search
 
     groups = search(query)
     if not groups:
@@ -277,7 +277,7 @@ def list_videos() -> str:
     """See what is already in the index (id, title, duration, source) — check
     here BEFORE watch_video when the video might have been analyzed in an
     earlier session; if it's listed, go straight to ask_video."""
-    from agentvision.index import list_videos as videos
+    from watch_skill.index import list_videos as videos
 
     rows = videos()
     if not rows:
@@ -293,7 +293,7 @@ def list_videos() -> str:
 
 
 def _loop_state_report(state: Any) -> str:
-    from agentvision.loop.reportfmt import format_loop_state
+    from watch_skill.loop.reportfmt import format_loop_state
 
     return format_loop_state(state)
 
@@ -312,18 +312,18 @@ def capture(
     instead — capture alone never critiques."""
     import tempfile
 
-    from agentvision.index import index_watch_result
-    from agentvision.loop import capture as run_capture
-    from agentvision.report import render_report
-    from agentvision.watch import watch
+    from watch_skill.index import index_watch_result
+    from watch_skill.loop import capture as run_capture
+    from watch_skill.report import render_report
+    from watch_skill.watch import watch
 
     try:
-        out_dir = Path(tempfile.mkdtemp(prefix="agentvision-capture-"))
+        out_dir = Path(tempfile.mkdtemp(prefix="watch-skill-capture-"))
         cap = run_capture(target, out_dir, script=script, duration_seconds=duration)
         result = watch(str(cap.video_path), use_cache=False)
         result.acquisition.source = f"capture:{target}"
         video_id = index_watch_result(result)
-    except AgentVisionError as exc:
+    except WatchSkillError as exc:
         return [_error_payload(exc)]
     frames = [str(f.path) for f in (result.perception.frames if result.perception else [])]
     return [
@@ -347,14 +347,14 @@ def loop_start(
     model. Returns loop_id + structured issues with timestamps and suggested
     fixes. YOU apply the fixes in code, then call loop_iterate — the loop
     observes, it never edits anything itself."""
-    from agentvision.loop import loop_start as start
+    from watch_skill.loop import loop_start as start
 
     try:
         state = start(
             target, pass_criteria, script=script,
             max_iterations=max_iterations, duration_seconds=duration,
         )
-    except AgentVisionError as exc:
+    except WatchSkillError as exc:
         return _error_payload(exc)
     return _loop_state_report(state)
 
@@ -366,11 +366,11 @@ def loop_iterate(loop_id: str) -> str:
     the same script, re-critiques, and diffs against the previous iteration
     (fixed / unchanged / new issues). Stops on pass, max_iterations, or
     no-progress; on pass it renders the before/after MP4+GIF proof."""
-    from agentvision.loop import loop_iterate as iterate
+    from watch_skill.loop import loop_iterate as iterate
 
     try:
         state = iterate(loop_id)
-    except AgentVisionError as exc:
+    except WatchSkillError as exc:
         return _error_payload(exc)
     return _loop_state_report(state)
 
@@ -378,11 +378,11 @@ def loop_iterate(loop_id: str) -> str:
 @mcp.tool
 def loop_status(loop_id: str) -> str:
     """Inspect a loop's persisted state (status, scores per iteration, artifacts)."""
-    from agentvision.loop import loop_status as status
+    from watch_skill.loop import loop_status as status
 
     try:
         state = status(loop_id)
-    except AgentVisionError as exc:
+    except WatchSkillError as exc:
         return _error_payload(exc)
     scores = " -> ".join(str(it["critique"]["score"]) for it in state.iterations)
     return _loop_state_report(state) + f"\nscore history: {scores}"
@@ -394,13 +394,13 @@ def doctor() -> str:
     on first use. Checks AND self-heals: installs missing ffmpeg/yt-dlp,
     updates a stale yt-dlp, verifies disk space, GPU, and API keys. Each
     failing check includes a `fix` you can act on."""
-    from agentvision.health.doctor import run_doctor
+    from watch_skill.health.doctor import run_doctor
 
     return json.dumps(run_doctor(fix=True).to_dict(), indent=2)
 
 
 def main(http: bool = False, host: str = "127.0.0.1", port: int = 8747) -> None:
-    """Entry point used by `agentvision serve`."""
+    """Entry point used by `watch-skill serve`."""
     prepend_bin_dir_to_path()
     if http:
         mcp.run(transport="http", host=host, port=port)

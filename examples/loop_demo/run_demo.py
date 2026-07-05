@@ -21,12 +21,12 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "core"))
 
-from agentvision.config import get_settings
-from agentvision.errors import VisionError
-from agentvision.loop import Critique, Issue, loop_iterate, loop_start
-from agentvision.loop.reportfmt import format_loop_state
-from agentvision.perceive.types import PerceptionResult
-from agentvision.vision import get_vision
+from watch_skill.config import get_settings
+from watch_skill.errors import VisionError
+from watch_skill.loop import Critique, Issue, loop_iterate, loop_start
+from watch_skill.loop.reportfmt import format_loop_state
+from watch_skill.perceive.types import PerceptionResult
+from watch_skill.vision import get_vision
 
 HERE = Path(__file__).resolve().parent
 
@@ -73,7 +73,7 @@ def pick_critic():
 
 
 def main() -> int:
-    page = Path(tempfile.mkdtemp(prefix="agentvision-demo-")) / "page.html"
+    page = Path(tempfile.mkdtemp(prefix="watch-skill-demo-")) / "page.html"
     shutil.copy2(HERE / "page_broken.html", page)
     url = page.as_uri()
     criteria = (

@@ -11,8 +11,8 @@ import inspect
 from pathlib import Path
 
 import pytest
-from agentvision.errors import TranscriptionError
-from agentvision.transcribe import cloud
+from watch_skill.errors import TranscriptionError
+from watch_skill.transcribe import cloud
 
 
 def test_cloud_stt_refuses_when_disabled(
@@ -44,7 +44,7 @@ def test_cloud_stt_uploads_audio_only_by_construction() -> None:
 
 
 def test_ytdlp_never_uses_cookies_or_login() -> None:
-    from agentvision.acquire import ytdlp
+    from watch_skill.acquire import ytdlp
 
     source = inspect.getsource(ytdlp)
     for forbidden in ("--cookies", "--username", "--password", "cookies-from-browser"):
@@ -52,13 +52,13 @@ def test_ytdlp_never_uses_cookies_or_login() -> None:
 
 
 def test_ytdlp_guards_argv_injection() -> None:
-    from agentvision.acquire import ytdlp
+    from watch_skill.acquire import ytdlp
 
     source = inspect.getsource(ytdlp._run_yt_dlp)
     assert '"--", url' in source or "'--', url" in source
 
 
 def test_cloud_disabled_by_default() -> None:
-    from agentvision.config import get_settings
+    from watch_skill.config import get_settings
 
     assert get_settings().cloud_stt_enabled is False

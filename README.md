@@ -1,10 +1,10 @@
 <div align="center">
 
-# AgentVision
+# Watch Skill
 
 **Give any AI agent the ability to watch video — and to watch its own work and fix it.**
 
-[![CI](https://github.com/oxbshw/agentvision/actions/workflows/ci.yml/badge.svg)](https://github.com/oxbshw/agentvision/actions/workflows/ci.yml)
+[![CI](https://github.com/oxbshw/watch-skill/actions/workflows/ci.yml/badge.svg)](https://github.com/oxbshw/watch-skill/actions/workflows/ci.yml)
 [![Tests](https://img.shields.io/badge/tests-240%2B%20offline-brightgreen)](tests/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![MCP](https://img.shields.io/badge/MCP-stdio%20%2B%20HTTP-8A2BE2)](docs/agents/README.md)
@@ -24,15 +24,15 @@ GIF. Reproduce: `uv run python "examples/golden_path.py"`.*
 
 ```powershell
 # Windows
-powershell -ExecutionPolicy Bypass -c "irm https://raw.githubusercontent.com/oxbshw/agentvision/main/install.ps1 | iex"
+powershell -ExecutionPolicy Bypass -c "irm https://raw.githubusercontent.com/oxbshw/watch-skill/main/install.ps1 | iex"
 ```
 ```bash
 # macOS / Linux (community-verify wanted — written & linted, not yet machine-tested)
-curl -fsSL https://raw.githubusercontent.com/oxbshw/agentvision/main/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/oxbshw/watch-skill/main/install.sh | sh
 ```
 
 The installer gets uv/Python if missing, bootstraps ffmpeg + yt-dlp + deno
-(self-healing `doctor`), and **`agentvision setup` writes the MCP config into
+(self-healing `doctor`), and **`watch-skill setup` writes the MCP config into
 every agent it finds on your machine** — Claude Code, Claude Desktop, Cursor,
 Codex CLI, Windsurf, Gemini CLI — backing up anything it touches.
 
@@ -59,13 +59,13 @@ any agent that speaks MCP *or* HTTP works with zero custom code.
 
 ## Why this exists (and what it improves on)
 
-AgentVision began as an attempt to surpass
+Watch Skill began as an attempt to surpass
 [claude-video](https://github.com/bradautomates/claude-video) — the skill
 that first gave Claude a video input, and the source of several ideas we
 kept (token-aware frame budgets, captions-first transcription, focused
 mode). Credit where due. What's different:
 
-| | claude-video | AgentVision |
+| | claude-video | Watch Skill |
 |---|---|---|
 | Sources | curated platform list | anything yt-dlp speaks (1800+), HLS/DASH live, local files, **screen/browser capture** |
 | Agents | Claude (skill) | **any MCP agent + CLI + REST/OpenAPI + Python** (8 agents documented, 4 machine-tested) |
@@ -88,7 +88,7 @@ flowchart LR
     subgraph surfaces["surfaces (thin)"]
         MCP[MCP stdio/HTTP] --- CLI[CLI] --- API[REST + OpenAPI]
     end
-    subgraph core["core/agentvision — all logic"]
+    subgraph core["core/watch_skill — all logic"]
         AC[acquire<br/>yt-dlp→fallbacks<br/>+ LRU cache] --> PE[perceive<br/>scenes · phash dedup · OCR]
         PE --> TR[transcribe<br/>captions → local whisper]
         TR --> IX[(index<br/>SQLite FTS5 + vectors)]
@@ -119,12 +119,12 @@ vision provider in ~20 lines" and "add a new Loop type".
   timestamps can only come from indexed evidence; a fabricated one cannot
   survive composition (test-enforced).
 - **It learns from its mistakes** — `report_mistake` turns a correction
-  into a local lesson (classified, stored in `~/.agentvision/lessons.db`,
+  into a local lesson (classified, stored in `~/.watch-skill/lessons.db`,
   never uploaded) that injects into future similar questions across every
-  agent on your machine. `agentvision evals run` replays all past mistakes
+  agent on your machine. `watch-skill evals run` replays all past mistakes
   and prints the pass-rate — watch it climb.
 
-<img src="docs/assets/lessons_loop.gif" alt="report a wrong answer with its correction; AgentVision classifies the mistake, re-asks the question with the lesson applied, validates it, and every mistake becomes a replayable eval" width="640">
+<img src="docs/assets/lessons_loop.gif" alt="report a wrong answer with its correction; Watch Skill classifies the mistake, re-asks the question with the lesson applied, validates it, and every mistake becomes a replayable eval" width="640">
 
 ## Spends tokens like they're yours
 
@@ -135,7 +135,7 @@ vision provider in ~20 lines" and "add a new Loop type".
 - **Semantic answer cache**: repeat or near-duplicate questions return
   instantly at zero model cost (`cached: true`).
 - Every response ends with `~N tokens saved vs raw-frame injection`;
-  `agentvision stats` shows the lifetime meter.
+  `watch-skill stats` shows the lifetime meter.
 - **Hard budget**: a per-question token ceiling the escalation ladder
   respects — accuracy spends, the ceiling caps, and the answer says when it
   stopped early.
@@ -149,7 +149,7 @@ Russian, Hindi, Spanish, and French — not "should work", *tested*:
   auto-translations; the local whisper fallback auto-detects the language.
 - **On-screen text**: OCR routes each video to a script-specific model
   (Arabic, Cyrillic, Devanagari, Korean, …) — auto-downloaded on first use;
-  Latin scripts, Chinese, and Japanese read out of the box. `agentvision
+  Latin scripts, Chinese, and Japanese read out of the box. `watch-skill
   doctor` shows which script models are already cached.
 - **Search that actually matches**: Arabic hamza/diacritic folding, CJK
   substring search (`修理` finds `修理自行车的刹车`), Devanagari matras
@@ -170,23 +170,23 @@ Russian, Hindi, Spanish, and French — not "should work", *tested*:
 ## Manual install
 
 ```powershell
-git clone https://github.com/oxbshw/agentvision && cd agentvision
+git clone https://github.com/oxbshw/watch-skill && cd watch-skill
 uv sync --extra all          # or: pip install -e ".[all]"
-uv run agentvision doctor     # self-heals dependencies
-uv run agentvision setup      # writes MCP config into your agents (with backups)
+uv run watch-skill doctor     # self-heals dependencies
+uv run watch-skill setup      # writes MCP config into your agents (with backups)
 ```
 
 ```powershell
-agentvision watch "https://youtu.be/..." "what happens in this video?"
-agentvision ask <video_id> "when does the demo crash?"
-agentvision search "kubernetes"
-agentvision loop start "http://localhost:3000" "no layout shift; total shows a real price"
-agentvision serve            # MCP stdio   (--http for streamable HTTP)
-agentvision api              # REST on :8748, spec at /openapi.json
+watch-skill watch "https://youtu.be/..." "what happens in this video?"
+watch-skill ask <video_id> "when does the demo crash?"
+watch-skill search "kubernetes"
+watch-skill loop start "http://localhost:3000" "no layout shift; total shows a real price"
+watch-skill serve            # MCP stdio   (--http for streamable HTTP)
+watch-skill api              # REST on :8748, spec at /openapi.json
 ```
 
-Configuration is env vars / `.env` with the `AGENTVISION_` prefix — every
-knob documented in [core/agentvision/config.py](core/agentvision/config.py).
+Configuration is env vars / `.env` with the `WATCHSKILL_` prefix — every
+knob documented in [core/watch_skill/config.py](core/watch_skill/config.py).
 
 ## Contributing
 

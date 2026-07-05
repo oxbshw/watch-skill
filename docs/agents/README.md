@@ -1,9 +1,9 @@
-# AgentVision agent matrix
+# Watch Skill agent matrix
 
 One engine, every agent. Each page gives exact install + config + a 3-step
 smoke test. Statuses are honestly graded:
 - **machine-tested ✅** — full end-to-end run in the agent (tools called, answers received)
-- **machine-configured ◐** — `agentvision setup` wrote the config on a real machine, the file
+- **machine-configured ◐** — `watch-skill setup` wrote the config on a real machine, the file
   parses in the agent's own tooling, and the exact server command answered an MCP
   `initialize` from a neutral directory; an in-app chat session was not run
 - **doc-verified ☑** — config matches the agent's official docs; not executed here
@@ -19,10 +19,10 @@ smoke test. Statuses are honestly graded:
 | [Gemini CLI](gemini-cli.md) | MCP (stdio) | `~/.gemini/settings.json` | doc-verified ☑ |
 | [VS Code (Copilot agent)](vscode.md) | MCP (stdio) | `.vscode/mcp.json` | doc-verified ☑ |
 | Claude Code / claude.ai skills | Claude Skill | [`adapters/claude-skill/`](../../adapters/claude-skill/) | machine-tested ✅ |
-| Anything with HTTP | REST + OpenAPI | `agentvision api` → `/openapi.json` | machine-tested ✅ |
-| Any MCP client (remote) | MCP (streamable HTTP) | `agentvision serve --http` (`:8747/mcp`) | machine-tested ✅ |
+| Anything with HTTP | REST + OpenAPI | `watch-skill api` → `/openapi.json` | machine-tested ✅ |
+| Any MCP client (remote) | MCP (streamable HTTP) | `watch-skill serve --http` (`:8747/mcp`) | machine-tested ✅ |
 
-**Fast path:** `agentvision setup` detects the agents installed on your
+**Fast path:** `watch-skill setup` detects the agents installed on your
 machine and writes these configs for you (with a backup of any existing
 file).
 

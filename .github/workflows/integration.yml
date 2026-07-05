@@ -20,11 +20,11 @@ jobs:
       - run: sudo apt-get update && sudo apt-get install -y ffmpeg
       - run: uv sync --all-extras
       - name: Doctor
-        run: uv run agentvision doctor
+        run: uv run watch-skill doctor
       - name: Network-marked tests
         run: uv run pytest -q -m network --timeout 600 || true
       - name: Golden path (requires a vision key secret)
-        if: ${{ vars.AGENTVISION_HAS_VISION_KEY == 'true' }}
+        if: ${{ vars.WATCHSKILL_HAS_VISION_KEY == 'true' }}
         env:
-          AGENTVISION_OPENROUTER_API_KEY: ${{ secrets.AGENTVISION_OPENROUTER_API_KEY }}
+          WATCHSKILL_OPENROUTER_API_KEY: ${{ secrets.WATCHSKILL_OPENROUTER_API_KEY }}
         run: uv run python examples/golden_path.py --skip "${{ inputs.skip_stages }}"

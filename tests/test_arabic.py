@@ -10,7 +10,7 @@ import sqlite3
 from pathlib import Path
 
 import pytest
-from agentvision.index.textnorm import normalize_for_search
+from watch_skill.index.textnorm import normalize_for_search
 
 
 def test_normalize_folds_hamza_variants() -> None:
@@ -46,9 +46,9 @@ def test_normalize_lowercases_latin() -> None:
 )
 def test_fts_arabic_variants_match(stored: str, query: str) -> None:
     """End-to-end through the real schema + query builder."""
-    from agentvision.index.db import connect
-    from agentvision.index.retrieval import _fts_query
-    from agentvision.index.textnorm import normalize_for_search as norm
+    from watch_skill.index.db import connect
+    from watch_skill.index.retrieval import _fts_query
+    from watch_skill.index.textnorm import normalize_for_search as norm
 
     conn = connect()  # isolated data dir via conftest fixture
     try:
@@ -67,7 +67,7 @@ def test_fts_arabic_variants_match(stored: str, query: str) -> None:
 
 def test_migration_v2_normalizes_legacy_rows(tmp_path: Path) -> None:
     """A v1 database's rows survive the fts rebuild and become findable."""
-    from agentvision.index.db import MIGRATIONS, migrate
+    from watch_skill.index.db import MIGRATIONS, migrate
 
     db = tmp_path / "legacy dir" / "index.db"
     db.parent.mkdir(parents=True)
@@ -95,9 +95,9 @@ def test_migration_v2_normalizes_legacy_rows(tmp_path: Path) -> None:
 def test_ask_video_arabic_question(sample_video: Path, tmp_path: Path) -> None:
     """Arabic transcript indexed via the normal path answers an Arabic question."""
     pytest.importorskip("scenedetect", reason="perceive extra not installed")
-    from agentvision.index import ask_video, index_watch_result
-    from agentvision.transcribe.types import Segment, Transcript
-    from agentvision.watch import watch
+    from watch_skill.index import ask_video, index_watch_result
+    from watch_skill.transcribe.types import Segment, Transcript
+    from watch_skill.watch import watch
 
     result = watch(
         str(sample_video), out_dir=tmp_path / "عمل بالعربية",

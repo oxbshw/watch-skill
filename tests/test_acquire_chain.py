@@ -9,13 +9,13 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-from agentvision.acquire import cobalt, resolver
-from agentvision.acquire.sources import SourceKind
-from agentvision.errors import AcquisitionError
+from watch_skill.acquire import cobalt, resolver
+from watch_skill.acquire.sources import SourceKind
+from watch_skill.errors import AcquisitionError
 
 
 def test_cobalt_unconfigured_by_default(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.delenv("AGENTVISION_COBALT_API_URL", raising=False)
+    monkeypatch.delenv("WATCHSKILL_COBALT_API_URL", raising=False)
     assert cobalt.is_configured() is False
     with pytest.raises(AcquisitionError) as exc_info:
         cobalt._request_media_url("https://example.com/watch?v=x")
@@ -23,7 +23,7 @@ def test_cobalt_unconfigured_by_default(monkeypatch: pytest.MonkeyPatch) -> None
 
 
 def test_cobalt_configured_via_env(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("AGENTVISION_COBALT_API_URL", "http://localhost:9000/")
+    monkeypatch.setenv("WATCHSKILL_COBALT_API_URL", "http://localhost:9000/")
     assert cobalt.is_configured() is True
 
 
@@ -32,7 +32,7 @@ def test_chain_skips_cobalt_when_unconfigured(
 ) -> None:
     """Regression: yt-dlp failure must fall through directly to ffmpeg (no
     doomed cobalt call) unless the user set a self-hosted instance."""
-    monkeypatch.delenv("AGENTVISION_COBALT_API_URL", raising=False)
+    monkeypatch.delenv("WATCHSKILL_COBALT_API_URL", raising=False)
     calls: list[str] = []
 
     def fail_ytdlp(source, out_dir, audio_only=False):
@@ -60,7 +60,7 @@ def test_chain_skips_cobalt_when_unconfigured(
     assert calls == ["yt-dlp", "ffmpeg"]  # cobalt skipped
 
     calls.clear()
-    monkeypatch.setenv("AGENTVISION_COBALT_API_URL", "http://localhost:9000/")
+    monkeypatch.setenv("WATCHSKILL_COBALT_API_URL", "http://localhost:9000/")
     with pytest.raises(AcquisitionError):
         resolver._try_chain(
             "https://example.com/watch?v=x", SourceKind.PAGE_URL,

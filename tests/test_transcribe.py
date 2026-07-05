@@ -3,10 +3,10 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from agentvision.transcribe.audio import CHUNK_OVERLAP_SECONDS, plan_chunks
-from agentvision.transcribe.cloud import merge_overlapping
-from agentvision.transcribe.types import Segment, Transcript
-from agentvision.transcribe.vtt import parse_vtt
+from watch_skill.transcribe.audio import CHUNK_OVERLAP_SECONDS, plan_chunks
+from watch_skill.transcribe.cloud import merge_overlapping
+from watch_skill.transcribe.types import Segment, Transcript
+from watch_skill.transcribe.vtt import parse_vtt
 
 SAMPLE_VTT = """WEBVTT
 
@@ -89,7 +89,7 @@ def test_extract_audio_windowed(sample_video, tmp_path) -> None:
     """Regression: a focused watch (end=60s) transcribed the WHOLE audio —
     tens of wasted CPU-minutes on long videos. The window must be cut at
     extraction time."""
-    from agentvision.transcribe.audio import audio_duration, extract_audio
+    from watch_skill.transcribe.audio import audio_duration, extract_audio
 
     full = extract_audio(sample_video, tmp_path / "full.mp3")
     windowed = extract_audio(
@@ -100,7 +100,7 @@ def test_extract_audio_windowed(sample_video, tmp_path) -> None:
 
 
 def test_transcript_offset_shifts_timestamps() -> None:
-    from agentvision.transcribe.types import Segment, Transcript
+    from watch_skill.transcribe.types import Segment, Transcript
 
     t = Transcript(segments=[Segment(0.0, 2.0, "hello"), Segment(3.0, 5.0, "world")])
     shifted = t.offset(120.0)

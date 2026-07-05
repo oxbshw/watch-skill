@@ -1,8 +1,8 @@
 """Diarization: pure speaker-assignment logic + structured degradation."""
 from __future__ import annotations
 
-from agentvision.transcribe.diarize import SpeakerTurn, assign_speakers
-from agentvision.transcribe.types import Segment, Transcript
+from watch_skill.transcribe.diarize import SpeakerTurn, assign_speakers
+from watch_skill.transcribe.types import Segment, Transcript
 
 
 def _transcript() -> Transcript:
@@ -59,7 +59,7 @@ def test_diarize_audio_uses_pyannote4_token_kwarg(tmp_path, monkeypatch) -> None
     import sys
     import types
 
-    from agentvision.transcribe import diarize as mod
+    from watch_skill.transcribe import diarize as mod
 
     seen: dict = {}
 
@@ -96,7 +96,7 @@ def test_diarize_audio_uses_pyannote4_token_kwarg(tmp_path, monkeypatch) -> None
 
 def test_diarize_transcript_degrades_without_backend(tmp_path) -> None:
     """No pyannote / no token on this machine -> transcript returned unchanged."""
-    from agentvision.transcribe.diarize import diarize_transcript
+    from watch_skill.transcribe.diarize import diarize_transcript
 
     original = _transcript()
     video = tmp_path / "v.mp4"

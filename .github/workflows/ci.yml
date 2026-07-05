@@ -57,6 +57,6 @@ jobs:
         run: uv run pytest -q -m "not network" --timeout 300
         env:
           # keep CI hermetic: no live vision backends, no cloud keys
-          AGENTVISION_VISION_CHEAP_PROVIDER: anthropic
-          AGENTVISION_VISION_STRONG_PROVIDER: anthropic
+          WATCHSKILL_VISION_CHEAP_PROVIDER: anthropic
+          WATCHSKILL_VISION_STRONG_PROVIDER: anthropic
           FASTEMBED_CACHE_PATH: ci-model-cache

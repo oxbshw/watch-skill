@@ -1,5 +1,5 @@
 name: Feature request
-description: Something AgentVision should do
+description: Something Watch Skill should do
 labels: [enhancement]
 body:
   - type: textarea

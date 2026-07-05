@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import pytest
-from agentvision.perceive.budget import focused_budget, format_time, full_budget, parse_time
+from watch_skill.perceive.budget import focused_budget, format_time, full_budget, parse_time
 
 
 def test_full_budget_tiers() -> None:

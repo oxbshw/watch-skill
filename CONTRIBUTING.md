@@ -1,4 +1,4 @@
-# Contributing to AgentVision
+# Contributing to Watch Skill
 
 Thanks for helping agents see. This document is short on ceremony and long on
 the rules that actually keep the codebase healthy.
@@ -6,9 +6,9 @@ the rules that actually keep the codebase healthy.
 ## Setup
 
 ```powershell
-git clone <repo> agentvision && cd agentvision
+git clone <repo> watch-skill && cd watch-skill
 uv sync --extra all           # or: pip install -e ".[all]" in a venv
-uv run agentvision doctor      # bootstraps ffmpeg + yt-dlp
+uv run watch-skill doctor      # bootstraps ffmpeg + yt-dlp
 uv run pytest -q               # must be green before you start
 ```
 
@@ -18,10 +18,10 @@ deps (onnxruntime, CTranslate2) publish wheels there first.
 ## Architecture rules (non-negotiable)
 
 1. **`core/` never imports `surfaces/`.** All logic lives in
-   `core/agentvision/`; surfaces (MCP, CLI, REST) are thin wrappers. If a
+   `core/watch_skill/`; surfaces (MCP, CLI, REST) are thin wrappers. If a
    feature needs surface-specific rendering, put the data in core and the
    rendering in the surface.
-2. **Errors are structured.** Raise `AgentVisionError` subclasses with a
+2. **Errors are structured.** Raise `WatchSkillError` subclasses with a
    stable `code`, a human `message`, and a `fix` an agent can act on. Never
    let a bare exception cross a surface boundary.
 3. **Privacy invariants hold.** The video file never leaves the machine; only
@@ -58,13 +58,13 @@ or index databases (`.gitignore` already covers these — keep it that way).
 ## Adding a vision provider
 
 The registry is data, not code: add an entry to
-`core/agentvision/vision/registry.py` (endpoint, key setting, cost table) and
+`core/watch_skill/vision/registry.py` (endpoint, key setting, cost table) and
 a request/extract builder pair in `vision/client.py` only if the wire format
 is genuinely new. Update `tests/test_vision.py`.
 
 ## Adding an acquisition source
 
-Extend the fallback chain in `core/agentvision/acquire/resolver.py`. Each
+Extend the fallback chain in `core/watch_skill/acquire/resolver.py`. Each
 step must log why the previous one failed, and known-breakage patterns belong
 in `health/doctor.py` so self-healing covers them.
 

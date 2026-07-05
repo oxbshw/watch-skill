@@ -8,8 +8,8 @@ import pytest
 
 pytest.importorskip("scenedetect", reason="perceive extra not installed")
 
-from agentvision.index import index_watch_result  # noqa: E402
-from agentvision.lessons import (  # noqa: E402
+from watch_skill.index import index_watch_result  # noqa: E402
+from watch_skill.lessons import (  # noqa: E402
     export_evals,
     get_profile,
     list_lessons,
@@ -19,9 +19,9 @@ from agentvision.lessons import (  # noqa: E402
     run_evals,
     show_profiles,
 )
-from agentvision.lessons.classify import classify_error, derive_guidance  # noqa: E402
-from agentvision.transcribe.types import Segment, Transcript  # noqa: E402
-from agentvision.watch import watch  # noqa: E402
+from watch_skill.lessons.classify import classify_error, derive_guidance  # noqa: E402
+from watch_skill.transcribe.types import Segment, Transcript  # noqa: E402
+from watch_skill.watch import watch  # noqa: E402
 
 
 @pytest.fixture()
@@ -112,7 +112,7 @@ def test_injection_returns_relevant_guidance_and_touches_lru(indexed: str) -> No
         session_id="sess-3",
         reask=False,
     )
-    from agentvision.index.store import get_video
+    from watch_skill.index.store import get_video
 
     lines = relevant_guidance("what color are the calibration bars?", get_video(indexed))
     assert lines, "a directly relevant lesson must inject"
@@ -120,7 +120,7 @@ def test_injection_returns_relevant_guidance_and_touches_lru(indexed: str) -> No
 
 
 def test_injection_respects_token_cap(indexed: str, monkeypatch) -> None:
-    from agentvision.index.store import get_video
+    from watch_skill.index.store import get_video
 
     for i in range(6):
         report_mistake(
@@ -131,12 +131,12 @@ def test_injection_respects_token_cap(indexed: str, monkeypatch) -> None:
             session_id="sess-cap",
             reask=False,
         )
-    monkeypatch.setenv("AGENTVISION_LESSONS_INJECTION_TOKEN_CAP", "60")
-    from agentvision.config import reset_settings
+    monkeypatch.setenv("WATCHSKILL_LESSONS_INJECTION_TOKEN_CAP", "60")
+    from watch_skill.config import reset_settings
 
     reset_settings()
     try:
-        from agentvision.answer.types import est_text_tokens
+        from watch_skill.answer.types import est_text_tokens
 
         lines = relevant_guidance("question about calibration bars", get_video(indexed))
         assert sum(est_text_tokens(line) for line in lines) <= 60
@@ -147,13 +147,13 @@ def test_injection_respects_token_cap(indexed: str, monkeypatch) -> None:
 
 def test_lessons_never_break_answers(indexed: str, monkeypatch) -> None:
     """A crashing lessons store must not sink answer_question."""
-    import agentvision.answer.engine as mod
+    import watch_skill.answer.engine as mod
 
     def boom(question, video):
         raise RuntimeError("lessons db corrupted")
 
-    monkeypatch.setattr("agentvision.lessons.relevant_guidance", boom)
-    from agentvision.answer import answer_question
+    monkeypatch.setattr("watch_skill.lessons.relevant_guidance", boom)
+    from watch_skill.answer import answer_question
 
     answer = answer_question(indexed, "when do the calibration bars show?", use_cache=False)
     assert answer.evidence  # answered despite the broken store
@@ -173,8 +173,8 @@ def test_session_prune_and_lru_cap(indexed: str, monkeypatch) -> None:
     assert removed == 4
     assert list_lessons(session_id="sess-prune") == []
 
-    monkeypatch.setenv("AGENTVISION_LESSONS_MAX_COUNT", "3")
-    from agentvision.config import reset_settings
+    monkeypatch.setenv("WATCHSKILL_LESSONS_MAX_COUNT", "3")
+    from watch_skill.config import reset_settings
 
     reset_settings()
     try:
@@ -202,8 +202,8 @@ def test_profiles_aggregate_and_apply(indexed: str) -> None:
         )
     profiles = show_profiles()
     assert profiles, "3 same-class lessons must earn a profile"
-    from agentvision.index.store import get_video
-    from agentvision.lessons.classify import classify_content_type
+    from watch_skill.index.store import get_video
+    from watch_skill.lessons.classify import classify_content_type
 
     content_type = classify_content_type(get_video(indexed))
     overrides = get_profile(content_type)
@@ -211,7 +211,7 @@ def test_profiles_aggregate_and_apply(indexed: str) -> None:
 
 
 def test_profile_reorders_ladder(indexed: str, monkeypatch) -> None:
-    from agentvision.answer import engine as mod
+    from watch_skill.answer import engine as mod
 
     calls: list[str] = []
     monkeypatch.setattr(
@@ -221,7 +221,7 @@ def test_profile_reorders_ladder(indexed: str, monkeypatch) -> None:
         mod, "zoom_crops_reocr", lambda v, h: calls.append("zoom_crops_reocr") or (0, 0)
     )
     monkeypatch.setattr(mod, "_profile_for", lambda v: {"ocr_first": True})
-    from agentvision.answer import answer_question
+    from watch_skill.answer import answer_question
 
     answer_question(indexed, "zebra spaceship quantum", use_cache=False)
     assert calls == ["zoom_crops_reocr", "dense_resample"]
