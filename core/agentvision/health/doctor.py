@@ -267,6 +267,35 @@ def check_gpu() -> CheckResult:
     return CheckResult("gpu", "ok", "nvidia-smi present but unresponsive — assuming CPU")
 
 
+def check_ocr_models() -> CheckResult:
+    """Report which per-script OCR models are cached (informational).
+
+    Script models (Arabic, Cyrillic, Devanagari, Korean, …) auto-download on
+    first use into ``<data_dir>/models/ocr/``; this check tells the user what
+    is already local — useful before going offline.
+    """
+    models_dir = get_settings().data_dir / "models" / "ocr"
+    if not models_dir.is_dir():
+        return CheckResult(
+            "ocr-models", "ok",
+            "no script models cached yet — they auto-download on first use "
+            "(default Latin/Chinese/Japanese model ships with the OCR extra)",
+        )
+    scripts = sorted(
+        {
+            match.group(1)
+            for p in models_dir.rglob("*_rec_*.onnx")
+            if (match := re.match(r"([a-z_]+?)_PP-OCR", p.name)) is not None
+        }
+    )
+    if not scripts:
+        return CheckResult(
+            "ocr-models", "ok",
+            "no script models cached yet — they auto-download on first use",
+        )
+    return CheckResult("ocr-models", "ok", f"cached script models: {', '.join(scripts)}")
+
+
 def check_api_keys() -> CheckResult:
     """Report which provider keys are configured (informational, never values)."""
     settings = get_settings()
@@ -299,5 +328,6 @@ def run_doctor(fix: bool = True) -> DoctorReport:
     report.checks.append(check_js_runtime(fix=fix))
     report.checks.append(check_disk_space())
     report.checks.append(check_gpu())
+    report.checks.append(check_ocr_models())
     report.checks.append(check_api_keys())
     return report

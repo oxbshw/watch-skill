@@ -84,16 +84,31 @@ def test_phash_identical_image_is_zero(sample_video: Path, tmp_path: Path) -> No
 
 
 def test_resolve_ocr_lang_routing() -> None:
-    """Arabic-script languages route to the ar model; everything else default."""
+    """Each script routes to its RapidOCR model; everything else default."""
     from agentvision.perceive.ocr import resolve_ocr_lang
 
-    assert resolve_ocr_lang("ar") == "ar"
-    assert resolve_ocr_lang("ar-SA") == "ar"
-    assert resolve_ocr_lang("fa") == "ar"   # Persian shares the script
-    assert resolve_ocr_lang("ur") == "ar"
+    assert resolve_ocr_lang("ar") == "arabic"
+    assert resolve_ocr_lang("ar-SA") == "arabic"
+    assert resolve_ocr_lang("fa") == "arabic"   # Persian shares the script
+    assert resolve_ocr_lang("ur") == "arabic"
+    assert resolve_ocr_lang("ru") == "eslav"
+    assert resolve_ocr_lang("hi") == "devanagari"
+    assert resolve_ocr_lang("ko") == "korean"
     assert resolve_ocr_lang("en") == "default"
     assert resolve_ocr_lang(None) == "default"
-    assert resolve_ocr_lang("zh") == "default"  # bundled models cover it
+    # the bundled multilingual model reads these directly (benchmarked)
+    assert resolve_ocr_lang("zh") == "default"
+    assert resolve_ocr_lang("ja") == "default"
+    assert resolve_ocr_lang("fr") == "default"
+
+
+class _FakeOcrOutput:
+    """Mirror of RapidOCROutput's consumed surface (boxes/txts/scores)."""
+
+    def __init__(self, boxes=(), txts=(), scores=()):
+        self.boxes = list(boxes)
+        self.txts = tuple(txts)
+        self.scores = tuple(scores)
 
 
 def test_ocr_frame_dispatches_engine_by_lang(tmp_path, monkeypatch) -> None:
@@ -105,7 +120,7 @@ def test_ocr_frame_dispatches_engine_by_lang(tmp_path, monkeypatch) -> None:
 
     class FakeEngine:
         def __call__(self, path):
-            return [], None
+            return _FakeOcrOutput()
 
     monkeypatch.setattr(
         mod, "_get_engine", lambda lang="default": chosen.append(lang) or FakeEngine()
@@ -115,7 +130,38 @@ def test_ocr_frame_dispatches_engine_by_lang(tmp_path, monkeypatch) -> None:
     mod.ocr_frame(img, lang="ar")
     mod.ocr_frame(img, lang="en")
     mod.ocr_frame(img)
-    assert chosen == ["ar", "default", "default"]
+    assert chosen == ["arabic", "default", "default"]
+
+
+def test_ocr_frame_parses_rapidocr3_output(tmp_path, monkeypatch) -> None:
+    """Regression (rapidocr 1.x → 3.x): results moved from a list of
+    [box, text, score] rows to an output object with parallel boxes/txts/
+    scores. Parse the new shape, filter by confidence, and handle None."""
+    from agentvision.perceive import ocr as mod
+
+    box = [[10, 20], [110, 20], [110, 60], [10, 60]]
+    output = _FakeOcrOutput(
+        boxes=[box, box], txts=("kept text", "low confidence"), scores=(0.91, 0.2)
+    )
+
+    class FakeEngine:
+        def __init__(self, result):
+            self.result = result
+
+        def __call__(self, path):
+            return self.result
+
+    img = tmp_path / "f.jpg"
+    img.write_bytes(b"fake")
+
+    monkeypatch.setattr(mod, "_get_engine", lambda lang="default": FakeEngine(output))
+    blocks = mod.ocr_frame(img)
+    assert [b.text for b in blocks] == ["kept text"]
+    assert blocks[0].bbox == (10.0, 20.0, 110.0, 60.0)
+    assert blocks[0].confidence == 0.91
+
+    monkeypatch.setattr(mod, "_get_engine", lambda lang="default": FakeEngine(None))
+    assert mod.ocr_frame(img) == []
 
 
 def test_focused_scene_detection_scans_only_the_window(sample_video, tmp_path) -> None:

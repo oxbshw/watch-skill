@@ -105,7 +105,12 @@ def set_scene_description(conn: sqlite3.Connection, scene_row_id: int, descripti
 
 
 def _index_texts(conn: sqlite3.Connection, video_id: str, items: list[tuple]) -> None:
-    """Insert FTS rows and (when available) embedding rows for text items."""
+    """Insert FTS rows and (when available) embedding rows for text items.
+
+    Embeds with the model pinned in the index meta (set on first write) so
+    every vector in one index comes from one model.
+    """
+    from agentvision.index.db import get_meta, set_meta
     from agentvision.index.textnorm import normalize_for_search
 
     for kind, ref_id, timestamp, text in items:
@@ -114,8 +119,10 @@ def _index_texts(conn: sqlite3.Connection, video_id: str, items: list[tuple]) ->
             "VALUES (?, ?, ?, ?, ?, ?)",
             (text, normalize_for_search(text), video_id, kind, ref_id, timestamp),
         )
-    vectors = emb.embed_texts([text for _, _, _, text in items])
+    model_name = get_meta(conn, "embedding_model") or emb.MODEL_NAME
+    vectors = emb.embed_texts([text for _, _, _, text in items], model_name=model_name)
     if vectors:
+        set_meta(conn, "embedding_model", model_name)
         for (kind, ref_id, timestamp, text), vector in zip(items, vectors, strict=False):
             conn.execute(
                 """INSERT INTO embeddings (video_id, kind, ref_id, timestamp, text, vector, dim)

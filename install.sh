@@ -1,6 +1,6 @@
 #!/usr/bin/env sh
 # AgentVision one-command installer for macOS/Linux.
-#   curl -fsSL https://raw.githubusercontent.com/agentvision/agentvision/main/install.sh | sh
+#   curl -fsSL https://raw.githubusercontent.com/oxbshw/agentvision/main/install.sh | sh
 # Installs uv (and thereby Python) if missing, clones/updates AgentVision,
 # syncs dependencies, runs the self-healing doctor, and offers to register
 # the MCP server in every AI agent found on the machine.
@@ -10,7 +10,7 @@
 
 set -eu
 
-REPO="https://github.com/agentvision/agentvision"
+REPO="https://github.com/oxbshw/agentvision"
 INSTALL_DIR="${AGENTVISION_HOME:-$HOME/agentvision}"
 
 step() { printf '\n==> %s\n' "$1"; }

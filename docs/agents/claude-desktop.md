@@ -7,7 +7,7 @@ command answered MCP `initialize`; a full in-app session was not run.
 ## Install
 
 ```powershell
-git clone https://github.com/agentvision/agentvision && cd agentvision
+git clone https://github.com/oxbshw/agentvision && cd agentvision
 uv sync --all-extras
 uv run agentvision doctor
 ```

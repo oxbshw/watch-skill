@@ -5,4 +5,4 @@ the autonomous watch-critique-iterate loop. Surfaces (MCP, CLI, REST) are
 thin wrappers around this package and live outside it.
 """
 
-__version__ = "0.1.0"
+__version__ = "0.5.0"

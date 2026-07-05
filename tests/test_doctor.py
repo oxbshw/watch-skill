@@ -101,6 +101,22 @@ def test_disk_space_check_runs() -> None:
     assert result.status in ("ok", "warn")
 
 
+def test_ocr_models_check_empty_and_cached(isolated_settings) -> None:
+    """Doctor reports which per-script OCR models are already local."""
+    result = doctor.check_ocr_models()
+    assert result.status == "ok"
+    assert "auto-download" in result.message
+
+    models_dir = isolated_settings / "models" / "ocr"
+    models_dir.mkdir(parents=True)
+    (models_dir / "arabic_PP-OCRv4_rec_mobile.onnx").write_bytes(b"x")
+    (models_dir / "korean_PP-OCRv5_rec_mobile.onnx").write_bytes(b"x")
+    (models_dir / "PP-OCRv6_det_small.onnx").write_bytes(b"x")  # not a script rec
+    result = doctor.check_ocr_models()
+    assert "arabic" in result.message and "korean" in result.message
+    assert "det" not in result.message
+
+
 def test_api_keys_reports_local_only_without_keys() -> None:
     result = doctor.check_api_keys()
     assert result.status == "ok"
@@ -151,7 +167,7 @@ def test_server_command_never_points_into_a_venv(monkeypatch) -> None:
 
     monkeypatch.setattr(
         mod.shutil, "which",
-        lambda name: r"F:\proj\.venv\Scripts\agentvision.EXE" if name == "agentvision" else None,
+        lambda name: r"D:\proj\.venv\Scripts\agentvision.EXE" if name == "agentvision" else None,
     )
     command, args = mod.server_command()
     assert command == "uv"
@@ -159,6 +175,6 @@ def test_server_command_never_points_into_a_venv(monkeypatch) -> None:
 
     monkeypatch.setattr(
         mod.shutil, "which",
-        lambda name: r"C:\Users\x\.local\bin\agentvision.exe" if name == "agentvision" else None,
+        lambda name: r"C:\tools\bin\agentvision.exe" if name == "agentvision" else None,
     )
     assert mod.server_command() == ("agentvision", ["serve"])

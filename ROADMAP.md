@@ -23,9 +23,24 @@ way. PRs welcome — each item links to the module you'd touch.
 
 ## Medium term
 
+- **sqlite-vec for vector search** (`core/agentvision/index/`): the numpy
+  batch cosine handles 10k vectors in ~120 ms; past ~100k stored segments a
+  real ANN index pays off. sqlite-vec keeps everything in the one SQLite
+  file and ships Windows wheels; it's pre-1.0, so adopt once it stabilizes.
+  The index meta table (v3) already pins the embedding model per index, so
+  the migration is mechanical.
+- **yt-dlp PO-token / impersonation extras** (`core/agentvision/acquire/`):
+  some extractors increasingly require PO tokens or TLS-fingerprint
+  impersonation. Investigate shipping `yt-dlp`'s bgutil PO-token provider
+  and curl_cffi impersonation as an opt-in "hardened acquisition" extra, off
+  by default to preserve the no-cookies privacy invariant.
+- **Streaming watch progress over MCP** (`surfaces/mcp/`): progress
+  notifications exist; richer streaming (partial transcript/scene events as
+  they land) would let agents answer before the watch finishes.
 - **Embeddings upgrade path**: swappable embedding models (bge-m3 for
   serious multilingual retrieval) behind the existing `index/embeddings.py`
-  interface, with an index migration that re-embeds lazily.
+  interface, with an index migration that re-embeds lazily. The meta-table
+  model pinning (schema v3) is the first half of this.
 - **Scene graph**: object/person persistence across scenes ("track the red
   car"), built on the existing phash alignment.
 - **Remote MCP deployment recipe**: streamable HTTP + bearer auth behind a

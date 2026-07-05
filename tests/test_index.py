@@ -195,6 +195,56 @@ def test_scene_descriptions_indexed_when_vision_available(
     assert any(g["video"]["id"] == indexed_video for g in groups)
 
 
+def test_embedding_model_is_pinned_per_index(indexed_video: str, monkeypatch) -> None:
+    """Regression (multilingual embeddings swap): an index must record which
+    model wrote its vectors, and queries must embed with the RECORDED model —
+    mixing models silently breaks cosine scores."""
+    from agentvision.index import embeddings as emb
+    from agentvision.index.db import get_meta, set_meta
+    from agentvision.index.retrieval import hybrid_search
+
+    conn = connect()
+    try:
+        assert get_meta(conn, "embedding_model") == emb.MODEL_NAME
+        # simulate an index written by an older model
+        set_meta(conn, "embedding_model", "legacy-model")
+        conn.commit()
+    finally:
+        conn.close()
+
+    used: list[str | None] = []
+    real = emb.embed_texts
+
+    def spy(texts, model_name=None):
+        used.append(model_name)
+        return real(texts)  # embed with the default; scores don't matter here
+
+    monkeypatch.setattr("agentvision.index.retrieval.emb.embed_texts", spy)
+    hybrid_search("warning screen", video_id=indexed_video)
+    assert used == ["legacy-model"]
+
+
+def test_batch_cosine_matches_pure_python() -> None:
+    """Regression (numpy vectorization of _vector_hits): the matrix path must
+    produce the same scores as the reference pure-Python cosine."""
+    import random
+
+    from agentvision.index import embeddings as emb
+    from agentvision.index.retrieval import _batch_cosine
+
+    random.seed(11)
+    dim = 16
+    vectors = [[random.uniform(-1, 1) for _ in range(dim)] for _ in range(50)]
+    rows = [{"vector": emb.pack_vector(v), "dim": dim} for v in vectors]
+    query = [random.uniform(-1, 1) for _ in range(dim)]
+
+    fast = _batch_cosine(query, rows)
+    reference = [emb.cosine_similarity(query, v) for v in vectors]
+    assert len(fast) == len(reference)
+    for f, r in zip(fast, reference, strict=True):
+        assert abs(f - r) < 1e-5
+
+
 def test_fts_survives_special_characters(indexed_video: str) -> None:
     # FTS5 MATCH syntax characters must not crash free-text questions
     result = ask_video(indexed_video, 'what is "this" AND (that) -thing?')

@@ -1,8 +1,9 @@
 """Resolve ANY input to a local video file, with cache and fallback chain.
 
 Chain for network sources (each hop logs why the previous one failed):
-yt-dlp -> (auto-update + retry, inside ytdlp.download) -> cobalt.tools ->
-direct ffmpeg pull. Direct/manifest URLs try yt-dlp first too (it handles
+yt-dlp -> (auto-update + retry, inside ytdlp.download) -> self-hosted cobalt
+(only when AGENTVISION_COBALT_API_URL is set — the public instance requires
+auth) -> direct ffmpeg pull. Direct/manifest URLs try yt-dlp first too (it handles
 both), with ffmpeg as the reliable second step. Screen/window capture is
 provided by ``agentvision.loop.capture`` (Milestone 3) — the resolver returns
 a structured error pointing there until then.
@@ -75,10 +76,10 @@ def _try_chain(
         )
     except AcquisitionError as exc:
         failures.append(f"yt-dlp: {exc.message}")
-        record_incident("acquire_fallback", "yt-dlp failed, trying cobalt", url=source)
-        print(f"[agentvision] yt-dlp failed ({exc.code}) — trying cobalt…", file=sys.stderr)
+        record_incident("acquire_fallback", "yt-dlp failed, trying fallbacks", url=source)
+        print(f"[agentvision] yt-dlp failed ({exc.code}) — trying fallbacks…", file=sys.stderr)
 
-    if kind == SourceKind.PAGE_URL:
+    if kind == SourceKind.PAGE_URL and cobalt.is_configured():
         try:
             video = cobalt.download(source, out_dir / "media.mp4")
             return AcquireResult(

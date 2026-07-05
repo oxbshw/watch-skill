@@ -1,9 +1,11 @@
-"""cobalt.tools fallback acquirer.
+"""cobalt fallback acquirer (self-hosted instances only).
 
-Used only after yt-dlp (and its self-update retry) failed. Best-effort: the
-public cobalt API has changed before, so failures here are structured and the
-chain simply moves on. The instance is configurable via
-``AGENTVISION_COBALT_API_URL`` for self-hosted deployments.
+Used only after yt-dlp (and its self-update retry) failed, and only when the
+user configured ``AGENTVISION_COBALT_API_URL``. The public api.cobalt.tools
+now requires JWT auth (verified 2026-07-05: anonymous POST returns
+``error.api.auth.jwt.missing``), so without a configured self-hosted
+instance the chain skips straight to the direct-URL fallback instead of
+burning a doomed network round-trip.
 """
 from __future__ import annotations
 
@@ -15,18 +17,30 @@ import httpx
 
 from agentvision.errors import AcquisitionError
 
-DEFAULT_COBALT_API = "https://api.cobalt.tools/"
+
+def _api_url() -> str | None:
+    return os.environ.get("AGENTVISION_COBALT_API_URL") or None
 
 
-def _api_url() -> str:
-    return os.environ.get("AGENTVISION_COBALT_API_URL", DEFAULT_COBALT_API)
+def is_configured() -> bool:
+    """cobalt participates in the fallback chain only when an instance is set."""
+    return _api_url() is not None
 
 
 def _request_media_url(url: str, timeout: float = 60.0) -> str:
     """Ask the cobalt instance to resolve ``url`` to a downloadable media URL."""
+    api_url = _api_url()
+    if api_url is None:
+        raise AcquisitionError(
+            "no cobalt instance configured",
+            code="acquire.cobalt_not_configured",
+            fix="set AGENTVISION_COBALT_API_URL to a self-hosted cobalt instance "
+            "(the public API requires auth); the chain continues without it",
+            details={"url": url},
+        )
     try:
         response = httpx.post(
-            _api_url(),
+            api_url,
             json={"url": url, "videoQuality": "720", "filenameStyle": "basic"},
             headers={"Accept": "application/json", "Content-Type": "application/json"},
             timeout=timeout,

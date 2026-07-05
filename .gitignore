@@ -27,3 +27,10 @@ build/
 Thumbs.db
 Desktop.ini
 .DS_Store
+
+# Local assistant / workspace artifacts (never part of the product)
+CLAUDE.md
+.claude/
+AGENTS.local.md
+*_REPORT.md
+*.session.md

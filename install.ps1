@@ -1,11 +1,11 @@
 # AgentVision one-command installer for Windows.
-#   powershell -ExecutionPolicy Bypass -c "irm https://raw.githubusercontent.com/agentvision/agentvision/main/install.ps1 | iex"
+#   powershell -ExecutionPolicy Bypass -c "irm https://raw.githubusercontent.com/oxbshw/agentvision/main/install.ps1 | iex"
 # Installs uv (and thereby Python) if missing, clones/updates AgentVision,
 # syncs dependencies, runs the self-healing doctor, and offers to register
 # the MCP server in every AI agent found on the machine.
 
 $ErrorActionPreference = 'Stop'
-$repo = 'https://github.com/agentvision/agentvision'
+$repo = 'https://github.com/oxbshw/agentvision'
 $installDir = Join-Path $env:USERPROFILE 'agentvision'
 
 function Write-Step($msg) { Write-Host "`n==> $msg" -ForegroundColor Cyan }

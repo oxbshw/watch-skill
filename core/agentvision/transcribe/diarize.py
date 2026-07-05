@@ -17,7 +17,7 @@ from agentvision.config import get_settings
 from agentvision.errors import TranscriptionError
 from agentvision.transcribe.types import Segment, Transcript
 
-_PIPELINE_MODEL = "pyannote/speaker-diarization-3.1"
+_PIPELINE_MODEL = "pyannote/speaker-diarization-community-1"
 
 
 @dataclass
@@ -51,7 +51,8 @@ def diarize_audio(audio_path: Path, hf_token: str | None = None) -> list[Speaker
             fix="set AGENTVISION_HUGGINGFACE_TOKEN (accept the pyannote model terms on hf.co first)",
         )
     try:
-        pipeline = Pipeline.from_pretrained(_PIPELINE_MODEL, use_auth_token=token)
+        # pyannote.audio 4.x renamed use_auth_token= to token=
+        pipeline = Pipeline.from_pretrained(_PIPELINE_MODEL, token=token)
         annotation = pipeline(str(audio_path))
     except Exception as exc:
         raise TranscriptionError(

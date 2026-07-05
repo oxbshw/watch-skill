@@ -1,5 +1,10 @@
 """Local text embeddings via fastembed (ONNX MiniLM-class; no torch).
 
+The default model is multilingual: same 384 dims and interface as the
+English-only all-MiniLM-L6-v2 it replaced, but it actually retrieves
+Arabic/Russian/Hindi/Chinese — including cross-lingual (English question
+over an Arabic transcript). Benchmark in docs/DECISIONS.md.
+
 Degrades loudly: when fastembed is not installed, the index still works with
 FTS5 keyword search only — hybrid retrieval just loses its vector half.
 """
@@ -8,19 +13,25 @@ from __future__ import annotations
 import struct
 import sys
 
-_MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
-_model = None
+MODEL_NAME = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
+_models: dict[str, object] = {}
 _unavailable = False
 
 
-def _get_model():
-    global _model, _unavailable
-    if _model is not None or _unavailable:
-        return _model
+def _get_model(name: str):
+    global _unavailable
+    if name in _models or _unavailable:
+        return _models.get(name)
     try:
+        import warnings  # noqa: PLC0415
+
         from fastembed import TextEmbedding  # noqa: PLC0415
 
-        _model = TextEmbedding(model_name=_MODEL_NAME)
+        with warnings.catch_warnings():
+            # informational pooling-change notice; the multilingual bench in
+            # docs/DECISIONS.md was measured on the current (mean) pooling
+            warnings.filterwarnings("ignore", message=".*mean pooling.*")
+            _models[name] = TextEmbedding(model_name=name)
     except ImportError:
         _unavailable = True
         print(
@@ -28,12 +39,17 @@ def _get_model():
             '(install with `uv sync --extra index`)',
             file=sys.stderr,
         )
-    return _model
+    return _models.get(name)
 
 
-def embed_texts(texts: list[str]) -> list[list[float]] | None:
-    """Embed a batch of texts; ``None`` when embeddings are unavailable."""
-    model = _get_model()
+def embed_texts(texts: list[str], model_name: str | None = None) -> list[list[float]] | None:
+    """Embed a batch of texts; ``None`` when embeddings are unavailable.
+
+    ``model_name`` overrides the default — the index read/write paths pass
+    the model recorded in the index meta so stored vectors and query vectors
+    always come from the same model.
+    """
+    model = _get_model(model_name or MODEL_NAME)
     if model is None or not texts:
         return None if model is None else []
     return [vec.tolist() for vec in model.embed(texts)]

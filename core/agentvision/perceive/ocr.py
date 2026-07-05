@@ -1,14 +1,17 @@
-"""OCR on kept frames via RapidOCR (onnxruntime) — no system Tesseract needed.
+"""OCR on kept frames via RapidOCR (ONNX Runtime) — no system Tesseract needed.
 
-The bundled RapidOCR models read Latin + Chinese. Other scripts need a
-script-specific recognition model; we manage those like binaries: downloaded
-once into ``<data_dir>/models/ocr/`` and cached. ``ocr_lang="auto"`` picks the
-model from the video's detected language, so an Arabic video gets Arabic OCR
-without any flag.
+RapidOCR ships per-script recognition models and downloads the right one on
+first use into ``<data_dir>/models/ocr/`` (managed like our binaries, so the
+doctor can see them). ``ocr_lang="auto"`` picks the model from the video's
+detected language, so an Arabic video gets Arabic OCR without any flag.
+
+The default PP-OCRv6 ``multi`` recognizer covers Latin scripts (accents
+included), Chinese, and Japanese. Scripts it cannot read route to a
+dedicated model; the (ocr_version, det) combos below were picked by a
+rendered-ground-truth benchmark on real images — see docs/DECISIONS.md.
 """
 from __future__ import annotations
 
-import sys
 from pathlib import Path
 
 from agentvision.config import get_settings
@@ -17,17 +20,17 @@ from agentvision.perceive.types import OcrBlock
 
 _engines: dict[str, object] = {}
 
-# Script-specific recognition models (ONNX + charset dict), managed like
-# portable binaries. Languages sharing a script map to the same model.
-_REC_MODELS: dict[str, dict[str, str]] = {
-    "ar": {
-        "model": "https://huggingface.co/cycloneboy/arabic_PP-OCRv4_rec_infer/resolve/main/model.onnx",
-        "dict": "https://huggingface.co/cycloneboy/arabic_PP-OCRv4_rec_infer/resolve/main/arabic_dict.txt",
-        "model_file": "arabic_PP-OCRv4_rec_infer.onnx",
-        "dict_file": "arabic_dict.txt",
-    },
+# ISO 639-1 code → script model key. Languages sharing a script map to the
+# same model. Everything absent (en, zh, ja, es, fr, de, …) reads correctly
+# with the bundled default multilingual recognizer.
+_LANG_TO_SCRIPT: dict[str, str] = {
+    "ar": "arabic", "fa": "arabic", "ur": "arabic", "ug": "arabic", "ku": "arabic",
+    "ru": "eslav", "uk": "eslav", "be": "eslav",
+    "bg": "cyrillic", "sr": "cyrillic", "mk": "cyrillic",
+    "kk": "cyrillic", "ky": "cyrillic", "tg": "cyrillic", "mn": "cyrillic",
+    "hi": "devanagari", "mr": "devanagari", "ne": "devanagari", "sa": "devanagari",
+    "ko": "korean", "th": "th", "el": "el", "ta": "ta", "te": "te", "ka": "ka",
 }
-_SCRIPT_ALIASES = {"fa": "ar", "ur": "ar", "ug": "ar", "ku": "ar"}
 
 
 def resolve_ocr_lang(lang: str | None) -> str:
@@ -35,43 +38,41 @@ def resolve_ocr_lang(lang: str | None) -> str:
     if not lang:
         return "default"
     key = lang.split("-")[0].lower()
-    key = _SCRIPT_ALIASES.get(key, key)
-    return key if key in _REC_MODELS else "default"
+    return _LANG_TO_SCRIPT.get(key, "default")
 
 
-def _download(url: str, dest: Path) -> None:
-    import httpx
+def _script_params(script: str) -> dict:
+    """RapidOCR params for one script model (benchmarked combos)."""
+    from rapidocr.utils.typings import (  # noqa: PLC0415
+        LangDet,
+        LangRec,
+        ModelType,
+        OCRVersion,
+    )
 
-    dest.parent.mkdir(parents=True, exist_ok=True)
-    tmp = dest.with_suffix(dest.suffix + ".part")
-    with httpx.stream("GET", url, follow_redirects=True, timeout=120.0) as response:
-        response.raise_for_status()
-        with tmp.open("wb") as fh:
-            for chunk in response.iter_bytes():
-                fh.write(chunk)
-    tmp.replace(dest)
-
-
-def _rec_model_paths(lang: str) -> tuple[Path, Path]:
-    """Local paths for a script-specific rec model, downloading on first use."""
-    spec = _REC_MODELS[lang]
-    models_dir = get_settings().data_dir / "models" / "ocr"
-    model_path = models_dir / spec["model_file"]
-    dict_path = models_dir / spec["dict_file"]
-    for url_key, path in (("model", model_path), ("dict", dict_path)):
-        if path.is_file() and path.stat().st_size > 0:
-            continue
-        print(f"[agentvision] downloading {lang} OCR model: {path.name}", file=sys.stderr)
-        try:
-            _download(spec[url_key], path)
-        except Exception as exc:
-            raise PerceptionError(
-                f"could not download the {lang} OCR model: {exc}",
-                code="perceive.ocr_model_download_failed",
-                fix=f"check network access to huggingface.co, or place {path.name} "
-                f"manually under {models_dir}",
-            ) from exc
-    return model_path, dict_path
+    # Arabic: the v5 recognizer returns visually-ordered (reversed) text;
+    # v4 + the multilingual detector read 100% of the benchmark chars.
+    # Korean: the default detector missed half the line; multi det fixed it.
+    multi_det = {
+        "Det.lang_type": LangDet.MULTI,
+        "Det.ocr_version": OCRVersion.PPOCRV4,
+        "Det.model_type": ModelType.MOBILE,
+    }
+    v4 = {"Rec.ocr_version": OCRVersion.PPOCRV4, "Rec.model_type": ModelType.MOBILE}
+    v5 = {"Rec.ocr_version": OCRVersion.PPOCRV5, "Rec.model_type": ModelType.MOBILE}
+    table: dict[str, dict] = {
+        "arabic": {"Rec.lang_type": LangRec.ARABIC, **v4, **multi_det},
+        "eslav": {"Rec.lang_type": LangRec.ESLAV, **v5},
+        "cyrillic": {"Rec.lang_type": LangRec.CYRILLIC, **v5},
+        "devanagari": {"Rec.lang_type": LangRec.DEVANAGARI, **v5},
+        "korean": {"Rec.lang_type": LangRec.KOREAN, **v5, **multi_det},
+        "th": {"Rec.lang_type": LangRec.TH, **v5},
+        "el": {"Rec.lang_type": LangRec.EL, **v5},
+        "ta": {"Rec.lang_type": LangRec.TA, **v5},
+        "te": {"Rec.lang_type": LangRec.TE, **v5},
+        "ka": {"Rec.lang_type": LangRec.KA, **v4},
+    }
+    return table[script]
 
 
 def _get_engine(lang: str = "default"):
@@ -79,20 +80,29 @@ def _get_engine(lang: str = "default"):
     if lang in _engines:
         return _engines[lang]
     try:
-        from rapidocr_onnxruntime import RapidOCR  # noqa: PLC0415
+        from rapidocr import RapidOCR  # noqa: PLC0415
     except ImportError as exc:
         raise PerceptionError(
             "RapidOCR is not installed",
             code="perceive.missing_dependency",
             fix='install the OCR extra: `uv sync --extra ocr` or `pip install "agentvision[ocr]"`',
         ) from exc
-    if lang == "default":
-        _engines[lang] = RapidOCR()
-    else:
-        model_path, dict_path = _rec_model_paths(lang)
-        _engines[lang] = RapidOCR(
-            rec_model_path=str(model_path), rec_keys_path=str(dict_path)
-        )
+    models_dir = get_settings().data_dir / "models" / "ocr"
+    params: dict[str, object] = {
+        "Global.model_root_dir": str(models_dir),
+        "Global.log_level": "warning",  # keep MCP stdio clean
+    }
+    if lang != "default":
+        params.update(_script_params(lang))
+    try:
+        _engines[lang] = RapidOCR(params=params)
+    except Exception as exc:
+        raise PerceptionError(
+            f"could not initialize the {lang} OCR engine: {exc}",
+            code="perceive.ocr_model_download_failed",
+            fix=f"check network access (models auto-download to {models_dir}), "
+            "or retry with ocr_lang=None for the bundled default model",
+        ) from exc
     return _engines[lang]
 
 
@@ -102,18 +112,22 @@ def ocr_frame(
     """Extract text blocks from one frame. Empty list when nothing is legible.
 
     ``lang`` selects a script-specific recognition model when one is
-    available (currently: Arabic-script languages); anything else uses the
-    bundled Latin+Chinese models.
+    available (Arabic, Cyrillic, Devanagari, Korean, and more); anything
+    else — including Latin scripts, Chinese, and Japanese — uses the bundled
+    multilingual model.
     """
     engine = _get_engine(resolve_ocr_lang(lang))
-    result, _ = engine(str(image_path))
+    result = engine(str(image_path))
+    if result is None or not getattr(result, "txts", None):
+        return []
     blocks: list[OcrBlock] = []
-    for entry in result or []:
-        box, text, score = entry[0], str(entry[1]), float(entry[2])
+    for box, text, score in zip(result.boxes, result.txts, result.scores, strict=False):
+        text = str(text)
+        score = float(score)
         if score < min_confidence or not text.strip():
             continue
-        xs = [point[0] for point in box]
-        ys = [point[1] for point in box]
+        xs = [float(point[0]) for point in box]
+        ys = [float(point[1]) for point in box]
         blocks.append(
             OcrBlock(
                 text=text.strip(),

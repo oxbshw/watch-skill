@@ -116,3 +116,65 @@ swaps. Newest entries at the bottom of each section.
 - **On 8 GB RAM, vision and whisper must run sequentially.** Loading
   qwen2.5vl:3b (~3.4 GB) while faster-whisper holds memory fails outright.
   The golden-path script runs stages strictly in order for this reason.
+
+## 2026-07-05 — pre-launch dependency & tool audit
+
+Full stack review before the v0.5.0 launch. Everything on current stable
+unless noted; ranges in pyproject are now `>=tested,<next-major`.
+
+- **rapidocr 1.4 (as `rapidocr-onnxruntime`) → 3.9 (renamed `rapidocr`).**
+  MAJOR migration: results moved from `[box, text, score]` rows to an output
+  object (`boxes/txts/scores`), and 3.x ships per-script recognition models
+  with auto-download — which replaced our hand-managed Hugging Face Arabic
+  model entirely. Model routing was picked by a rendered-ground-truth
+  benchmark on this machine (9 scripts, char-hit rate):
+  - default PP-OCRv6 `multi` model: en/zh/ja/fr/es all 100% — Latin accents
+    included, so no routing needed for those.
+  - Arabic: PP-OCRv4 rec + multilingual det = 100% (the v5 rec returns
+    visually-reversed text; v4 wins). Needs `python-bidi` (added to the ocr
+    extra).
+  - Korean: PP-OCRv5 rec + multilingual det = 100% (default det missed half
+    the line). Russian/East-Slavic: PP-OCRv5 `eslav` = 100%.
+  - Devanagari: PP-OCRv5 rec = 71% on the bench render — best available;
+    revisit when RapidOCR ships a v6 Devanagari model.
+  Models now download into `<data_dir>/models/ocr/` (default would be inside
+  site-packages, which a reinstall wipes).
+- **pyannote.audio 3.1 → 4.0 (diarize extra).** Adapted to the breaking
+  rename `use_auth_token=` → `token=` and moved to the recommended
+  `speaker-diarization-community-1` pipeline. Covered by a fake-module
+  regression test (no torch in CI).
+- **numpy held at `>=2.4,<3` instead of forcing 2.5.** numpy 2.5 dropped
+  Python 3.11; we keep 3.11 support (installer bootstraps 3.11+), so 3.11
+  users resolve 2.4.x and 3.12+ users get 2.5.x. 2.4 is exactly one minor
+  behind — inside our freshness budget. Revisit when we drop 3.11.
+- **uvicorn 0.49 → 0.50, ffmpeg 8.1 → 8.1.2 (winget), Playwright browsers
+  refreshed.** yt-dlp self-updated to 2026.07.04 (doctor), deno 2.9.1 —
+  both already latest.
+- **ruff pinned in the dev group (`>=0.15,<0.16`)** so local lint matches CI
+  instead of floating with `uvx`.
+
+### Best-tool audit (evaluated 2026-07-05, per capability)
+
+| Capability | Tool | Verdict | Evidence |
+|---|---|---|---|
+| Download/extraction | yt-dlp | **kept** | Release cadence healthy (2026.07.04, released the day before this audit); doctor's self-update healed a 26-day-old binary during the audit run. No credible successor. |
+| Acquire fallback | cobalt | **demoted to opt-in** | Live check 2026-07-05: anonymous POST to api.cobalt.tools returns `error.api.auth.jwt.missing` — the public API now requires auth. The chain skips cobalt unless `AGENTVISION_COBALT_API_URL` points at a self-hosted instance (regression-tested), saving a doomed network round-trip before the ffmpeg fallback. |
+| Local STT | faster-whisper | **kept** (1.2.1, current) | This machine has no NVIDIA GPU (doctor), so CT2 int8 CPU is the sweet spot. distil-whisper large-v3 is English-only — incompatible with the multilingual launch story. Parakeet/canary want NeMo/GPU. whisper.cpp would add binary management for no measured CPU win over CT2. |
+| Scene detection | PySceneDetect | **kept** (0.7, current) | ffmpeg `scdet` alone lacks adaptive content detection and midpoint sampling (we'd rebuild both); TransNetV2 drags torch (~2 GB) into a stack that deliberately has none. |
+| OCR | RapidOCR | **kept + major upgrade** (1.4 → 3.9) | 9-script rendered benchmark above. PaddleOCR 3.x needs paddlepaddle (heavy, historically fragile wheels on Windows) to run the same PP-OCR models rapidocr serves via onnxruntime; EasyOCR needs torch. |
+| Vector search | manual cosine → **numpy batch** | **replaced (in-place)** | Measured on this machine: pure-Python cosine over 10k×384 vectors = 5.46 s; one numpy matrix product = 122 ms (45×). numpy already ships with the index extra; pure-Python loop kept as fallback. sqlite-vec (0.1.9, win wheel exists) deferred to the roadmap — pre-1.0, adds a loadable-extension moving part, and 122 ms at 10k vectors doesn't justify it yet. |
+| Embeddings | all-MiniLM-L6-v2 → **paraphrase-multilingual-MiniLM-L12-v2** | **replaced** | A/B on 8-language retrieval cases + cross-lingual: the old default failed Arabic→Arabic retrieval outright (relevant segment ranked below distractors); the multilingual model scores ar→ar 0.55 and **en→ar 0.58** vs ~0.0 for distractors. Same 384 dims (drop-in for the store), faster on this machine (22 vs 7 texts/s), +130 MB download. bge-m3/e5-large rejected: 1024+ dims and >2 GB — wrong size for the 8 GB-RAM target machine. Index meta now pins the embedding model per index (migration v3) so queries always embed with the model that wrote the vectors. |
+| MCP server | FastMCP | **kept** (3.4.2, current) | Actively maintained, current major, and built on the official `mcp` SDK (1.28.1) — we get protocol currency from the SDK plus the ergonomics (progress notifications, streamable HTTP) we already use. Dropping to the raw SDK is boilerplate with no capability gain. |
+| Frame dedup | phash (imagehash) | **kept** (4.3.2, current) | pdqhash now has Windows wheels (0.2.8), but our dedup is coarse scene-frame near-duplicate filtering, test-gated and working; no labeled dataset exists to demonstrate a pdq win, so a swap fails the "measurable axis" bar. videohash is unmaintained (last release 2022). |
+
+### Launch benchmark (2026-07-05, dev machine: Windows 10, 8 GB RAM, no GPU)
+
+- **Cold CLI start** (`agentvision version`): 1.2–1.3 s.
+- **Full watch, 10 s local sample** (defaults: scenes + frames + OCR + local
+  whisper): 32.9 s warm. First-ever run additionally downloads the whisper
+  model and OCR models (one-time).
+- **`ask` (CLI one-shot)**: 5.8 s end-to-end — ~1.3 s CLI start + ~3.2 s
+  loading the multilingual embedding model + retrieval itself. The MCP/REST
+  servers keep the model resident, so agent follow-ups don't pay the load.
+- Full offline suite on the upgraded stack: 202 passed (see CI for the
+  cross-platform matrix).

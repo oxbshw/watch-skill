@@ -23,11 +23,11 @@ GIF. Reproduce: `uv run python "examples/golden_path.py"`.*
 
 ```powershell
 # Windows
-powershell -ExecutionPolicy Bypass -c "irm https://raw.githubusercontent.com/<user>/agentvision/main/install.ps1 | iex"
+powershell -ExecutionPolicy Bypass -c "irm https://raw.githubusercontent.com/oxbshw/agentvision/main/install.ps1 | iex"
 ```
 ```bash
 # macOS / Linux (community-verify wanted — written & linted, not yet machine-tested)
-curl -fsSL https://raw.githubusercontent.com/<user>/agentvision/main/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/oxbshw/agentvision/main/install.sh | sh
 ```
 
 The installer gets uv/Python if missing, bootstraps ffmpeg + yt-dlp + deno
@@ -71,11 +71,11 @@ mode). Credit where due. What's different:
 | Sampling | uniform/keyframe fps | scene detection + perceptual-hash dedup, budget spent on *distinct* content |
 | Memory | re-process per session | **persistent index** — hybrid FTS5+vector retrieval, ask forever, cross-video search |
 | Transcription | captions → cloud Whisper API | captions (**original language first**) → **local** faster-whisper (offline default) → opt-in cloud |
-| OCR | — | on every kept frame; **per-script models** (Arabic verified live) |
+| OCR | — | on every kept frame; **per-script models** auto-selected + auto-downloaded (Arabic, Cyrillic, Devanagari, Korean, …) |
 | Self-verification | — | **THE LOOP**: capture → critique → fix → re-verify → proof GIF |
 | Vision models | Claude | Anthropic / OpenAI / Gemini / OpenRouter / **Ollama (fully local)** |
 | Self-healing | prints install commands | doctor installs/updates ffmpeg, yt-dlp, deno; auto-recovers extractor breakage |
-| Arabic / i18n | — | Arabic captions, OCR, and normalized search are test-gated |
+| i18n | — | test-gated matrix across 8+ languages: script-aware OCR, CJK + diacritic-folding search, **cross-lingual** retrieval |
 
 ## Architecture
 
@@ -88,7 +88,7 @@ flowchart LR
         MCP[MCP stdio/HTTP] --- CLI[CLI] --- API[REST + OpenAPI]
     end
     subgraph core["core/agentvision — all logic"]
-        AC[acquire<br/>yt-dlp→cobalt→ffmpeg<br/>+ LRU cache] --> PE[perceive<br/>scenes · phash dedup · OCR]
+        AC[acquire<br/>yt-dlp→fallbacks<br/>+ LRU cache] --> PE[perceive<br/>scenes · phash dedup · OCR]
         PE --> TR[transcribe<br/>captions → local whisper]
         TR --> IX[(index<br/>SQLite FTS5 + vectors)]
         PE --> VI[vision<br/>cheap/strong tiers<br/>5 providers]
@@ -100,6 +100,24 @@ flowchart LR
 
 Deep dive: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — including "add a
 vision provider in ~20 lines" and "add a new Loop type".
+
+## Works in your language
+
+The i18n matrix is test-gated across Arabic, Chinese, Japanese, Korean,
+Russian, Hindi, Spanish, and French — not "should work", *tested*:
+
+- **Transcripts**: original-language captions are preferred over
+  auto-translations; the local whisper fallback auto-detects the language.
+- **On-screen text**: OCR routes each video to a script-specific model
+  (Arabic, Cyrillic, Devanagari, Korean, …) — auto-downloaded on first use;
+  Latin scripts, Chinese, and Japanese read out of the box. `agentvision
+  doctor` shows which script models are already cached.
+- **Search that actually matches**: Arabic hamza/diacritic folding, CJK
+  substring search (`修理` finds `修理自行车的刹车`), Devanagari matras
+  survive tokenization, and `video` finds `vidéo`.
+- **Ask across languages**: the embedding model is multilingual — ask in
+  English about a video whose transcript is Arabic (or vice versa) and
+  retrieval still lands on the right moment.
 
 ## Local-first, by contract
 
@@ -113,7 +131,7 @@ vision provider in ~20 lines" and "add a new Loop type".
 ## Manual install
 
 ```powershell
-git clone https://github.com/<user>/agentvision && cd agentvision
+git clone https://github.com/oxbshw/agentvision && cd agentvision
 uv sync --all-extras          # or: pip install -e ".[all]"
 uv run agentvision doctor     # self-heals dependencies
 uv run agentvision setup      # writes MCP config into your agents (with backups)

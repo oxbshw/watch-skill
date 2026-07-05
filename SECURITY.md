@@ -23,16 +23,18 @@ that violates any of them is a security bug, not a feature:
 
 ## Reporting a vulnerability
 
-Open a GitHub security advisory (Security → Report a vulnerability) or email
-the maintainer. Please include reproduction steps. You can expect an initial
-response within a week. Please do not open public issues for exploitable
-problems before a fix ships.
+Open a GitHub security advisory on
+[oxbshw/agentvision](https://github.com/oxbshw/agentvision/security/advisories/new)
+(Security → Report a vulnerability), or contact the maintainer (@oxbshw).
+Please include reproduction steps. You can expect an initial response within
+a week. Please do not open public issues for exploitable problems before a
+fix ships.
 
 ## Scope notes for researchers
 
 - `agentvision serve --http` and `agentvision api` are designed for
   localhost/trusted-network use. Hardening them for hostile networks
-  (rate limiting, TLS) is deliberately out of scope for v1.
+  (rate limiting, TLS) is deliberately out of scope for 0.x.
 - yt-dlp and ffmpeg parse untrusted media; we ship self-updating yt-dlp and
   treat "stale yt-dlp" as a health defect, but sandboxing those parsers is
   the platform's job, not ours.

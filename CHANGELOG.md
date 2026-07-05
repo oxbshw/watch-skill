@@ -1,6 +1,6 @@
 # Changelog
 
-## v1.0.0 — 2026-07-04
+## v0.5.0 — 2026-07-05
 
 First public release.
 
@@ -8,19 +8,24 @@ First public release.
 - **Watch anything**: 1800+ sites via yt-dlp (self-updating on extractor
   breakage), direct media URLs, HLS/DASH manifests (bounded live capture),
   local files, screen/window/browser capture. Download cache with LRU cap.
+  Optional self-hosted cobalt fallback (the public API now requires auth,
+  so it is opt-in via `AGENTVISION_COBALT_API_URL`).
 - **Smart perception**: PySceneDetect scene boundaries + midpoints,
   perceptual-hash dedup, duration-tiered frame budgets (hard cap 100,
   ≤2 fps), focused `--start/--end` mode with dense sampling, OCR on kept
-  frames (RapidOCR; per-script models auto-selected — Arabic verified live).
+  frames (RapidOCR 3.x; per-script models auto-selected and auto-downloaded —
+  Arabic, Cyrillic, Devanagari, Korean and more, benchmarked per script).
 - **Transcription ladder**: platform captions (original language preferred
   over auto-translations) → local faster-whisper (RAM-aware model
   auto-select, fully offline) → opt-in cloud STT (Groq/OpenAI, chunked with
   2 s overlap). Focused watches transcribe only the requested window.
   Optional pyannote speaker diarization (`diarize` extra).
 - **Persistent index**: schema-versioned SQLite, FTS5 + local ONNX
-  embeddings hybrid retrieval, Arabic-aware text normalization (hamza/
-  ta-marbuta/diacritic folding). Analyze once, ask forever, search across
-  every video ever watched.
+  embeddings hybrid retrieval with a **multilingual embedding model**
+  (cross-lingual: ask in English over an Arabic transcript), numpy-batched
+  vector scoring, Arabic-aware text normalization (hamza/ta-marbuta/
+  diacritic folding). Analyze once, ask forever, search across every video
+  ever watched.
 - **Model-agnostic vision**: Anthropic / OpenAI / Gemini / OpenRouter /
   Ollama behind one interface; cheap + strong tiers; pre-call cost guard;
   batch-size and timeout knobs tuned for small local models.

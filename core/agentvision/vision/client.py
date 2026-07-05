@@ -86,7 +86,7 @@ def _openrouter_request(model: str, key: str, prompt: str, images: list[Path]) -
     # OpenAI-compatible wire format; only the endpoint, auth, and attribution
     # headers differ (OpenRouter asks for Referer/Title to identify the app).
     _, headers, body = _openai_request(model, key, prompt, images)
-    headers["HTTP-Referer"] = "https://github.com/agentvision/agentvision"
+    headers["HTTP-Referer"] = "https://github.com/oxbshw/agentvision"
     headers["X-Title"] = "AgentVision"
     return PROVIDERS["openrouter"].endpoint, headers, body
 

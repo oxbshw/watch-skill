@@ -43,6 +43,60 @@ def _migration_v2_fts_norm(conn: sqlite3.Connection) -> None:
         )
 
 
+def _migration_v4_fts_multilingual(conn: sqlite3.Connection) -> None:
+    """v4 — rebuild FTS for non-Latin scripts beyond Arabic.
+
+    Two fixes in one rebuild:
+    - tokenizer: default unicode61 excludes combining marks (M*) from
+      tokens, so Devanagari matras SPLIT words ('बारिश' became unfindable);
+      the rebuilt table keeps Mn/Mc inside tokens and folds diacritics at
+      match time (remove_diacritics 2 — query 'video' finds 'vidéo').
+    - text_norm re-fold: normalize_for_search now segments CJK runs into
+      per-character tokens (unicode61 treats an unspaced run as ONE token,
+      so no substring query could match).
+    Display text is untouched.
+    """
+    from agentvision.index.textnorm import normalize_for_search
+
+    rows = conn.execute(
+        "SELECT text, video_id, kind, ref_id, timestamp FROM fts"
+    ).fetchall()
+    conn.executescript(
+        """
+        DROP TABLE fts;
+        CREATE VIRTUAL TABLE fts USING fts5(
+            text UNINDEXED, text_norm,
+            video_id UNINDEXED, kind UNINDEXED, ref_id UNINDEXED, timestamp UNINDEXED,
+            tokenize = "unicode61 remove_diacritics 2 categories 'L* N* Co Mn Mc'"
+        );
+        """
+    )
+    for row in rows:
+        conn.execute(
+            "INSERT INTO fts (text, text_norm, video_id, kind, ref_id, timestamp) "
+            "VALUES (?, ?, ?, ?, ?, ?)",
+            (row["text"], normalize_for_search(row["text"]),
+             row["video_id"], row["kind"], row["ref_id"], row["timestamp"]),
+        )
+
+
+def _migration_v3_meta(conn: sqlite3.Connection) -> None:
+    """v3 — key/value meta table; pin the embedding model per index.
+
+    Vectors are only comparable when queries embed with the same model that
+    wrote them. Pre-v3 indexes were all built with the original English-only
+    default, so existing embeddings get pinned to it here; the multilingual
+    default applies to indexes created from now on.
+    """
+    conn.execute("CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT NOT NULL)")
+    row = conn.execute("SELECT COUNT(*) AS n FROM embeddings").fetchone()
+    if row["n"]:
+        conn.execute(
+            "INSERT INTO meta (key, value) VALUES ('embedding_model', ?)",
+            ("sentence-transformers/all-MiniLM-L6-v2",),
+        )
+
+
 MIGRATIONS: list[Migration] = [
     # v1 — initial schema
     """
@@ -110,7 +164,24 @@ MIGRATIONS: list[Migration] = [
     """,
     # v2 — Arabic-aware normalized FTS column (Python data transform)
     _migration_v2_fts_norm,
+    # v3 — meta table; embedding-model pinning
+    _migration_v3_meta,
+    # v4 — multilingual FTS rebuild (combining marks + CJK segmentation)
+    _migration_v4_fts_multilingual,
 ]
+
+
+def get_meta(conn: sqlite3.Connection, key: str) -> str | None:
+    row = conn.execute("SELECT value FROM meta WHERE key = ?", (key,)).fetchone()
+    return row["value"] if row else None
+
+
+def set_meta(conn: sqlite3.Connection, key: str, value: str) -> None:
+    conn.execute(
+        "INSERT INTO meta (key, value) VALUES (?, ?) "
+        "ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+        (key, value),
+    )
 
 
 def connect(db_path: Path | None = None) -> sqlite3.Connection:
