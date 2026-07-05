@@ -140,35 +140,86 @@ def get_status(job_id: str) -> str:
 
 
 @mcp.tool(output_schema=None)
-def ask_video(video: str, question: str, max_frames: int = 6) -> list[Any]:
+def ask_video(
+    video: str,
+    question: str,
+    max_frames: int = 6,
+    include_frames: bool | None = None,
+    verify: bool | None = None,
+) -> list[Any]:
     """ANY follow-up question about a video you (or anyone) already watched —
-    ALWAYS prefer this over re-running watch_video: it answers in seconds
-    from the persistent index (hybrid keyword+vector retrieval over
-    transcript, OCR, and scene descriptions), returning timestamped evidence
-    plus only the relevant frames. Accepts a video_id or the original
-    source URL/path. Works across sessions — the index is permanent."""
-    from agentvision.index import ask_video as ask
+    ALWAYS prefer this over re-running watch_video: the self-healing answer
+    engine retrieves from the persistent index, scores its own confidence,
+    escalates (dense re-sampling, zoom-crop re-OCR, stronger model) when
+    unsure, and states plainly when the video does not clearly show the
+    answer — it never guesses. Responses are TEXT-FIRST with timestamps
+    (near-zero image tokens); frames attach only when include_frames=true or
+    the engine could not verify and you should look yourself. Accepts a
+    video_id or the original source URL/path. Works across sessions."""
+    from agentvision.answer import answer_question
 
     try:
-        result = ask(video, question, max_frames=max_frames)
+        answer = answer_question(
+            video, question, include_frames=include_frames, verify=verify
+        )
     except AgentVisionError as exc:
         return [_error_payload(exc)]
+    meta = [f"confidence: {answer.confidence:.2f}", f"verified: {str(answer.verified).lower()}"]
+    if answer.cached:
+        meta.append("cached: true")
+    if answer.escalations_used:
+        meta.append(f"escalations_used: {', '.join(answer.escalations_used)}")
+    if answer.budget_stopped:
+        meta.append("stopped at the per-question token budget")
     lines = [
-        f"# Evidence for: {result['question']}",
-        f"video: {result['video']['title'] or result['video']['source']} "
-        f"(id {result['video']['id']}, {format_time(result['video']['duration_seconds'])})",
+        answer.text,
         "",
+        f"({' | '.join(meta)})",
+        f"~{answer.tokens_saved_estimate} tokens saved vs raw-frame injection",
     ]
-    for hit in result["hits"]:
-        stamp = format_time(hit["timestamp"]) if hit["timestamp"] is not None else "--:--"
-        lines.append(f"- [{stamp}] ({hit['kind']}, score {hit['score']:.2f}) {hit['text']}")
-    if not result["hits"]:
-        lines.append("_No matching evidence in the index for this question._")
-    lines.append("")
-    lines.append("Frames nearest the evidence follow as images (chronology in captions).")
-    for frame in result["frames"]:
-        lines.append(f"- frame at t={format_time(frame['timestamp'])}: `{frame['frame_path']}`")
-    return ["\n".join(lines), *_frame_images([f["frame_path"] for f in result["frames"]])]
+    if answer.frames:
+        lines.insert(-1, "Evidence frames attached (look for yourself).")
+        return ["\n".join(lines), *_frame_images(answer.frames, cap=max_frames)]
+    return ["\n".join(lines)]
+
+
+@mcp.tool
+def report_mistake(
+    video: str,
+    question: str,
+    wrong_answer: str,
+    correction: str,
+    session_id: str | None = None,
+) -> str:
+    """The answer to a video question turned out WRONG? Report it here with
+    the correction — AgentVision learns from it locally (nothing uploaded):
+    the mistake is classified, stored as a lesson, injected into future
+    similar questions, and where possible the original question is re-asked
+    immediately to confirm the lesson works. Do this whenever the user
+    corrects a video answer; it makes every later answer better."""
+    from agentvision.lessons import report_mistake as report
+
+    try:
+        outcome = report(
+            video, question, wrong_answer, correction,
+            agent="mcp", session_id=session_id,
+        )
+    except AgentVisionError as exc:
+        return _error_payload(exc)
+    return json.dumps(outcome, ensure_ascii=False, indent=2)
+
+
+@mcp.tool
+def stats() -> str:
+    """Lifetime token-savings meter: how many tokens AgentVision's text-first
+    answers + semantic cache have saved vs naive raw-frame injection."""
+    from agentvision.answer.cache import lifetime_stats
+
+    data = lifetime_stats()
+    return (
+        f"answers served: {data['answers_count']}\n"
+        f"tokens saved: ~{data['tokens_saved_total']:,} vs raw-frame injection"
+    )
 
 
 @mcp.tool(output_schema=None)

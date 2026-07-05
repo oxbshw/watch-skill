@@ -186,6 +186,24 @@ def create_app() -> FastAPI:
         )
         return result
 
+    @app.post("/v1/answer", tags=["video"])
+    def answer(req: AskRequest) -> dict[str, Any]:
+        """Self-healing answer (v0.6): confidence-scored, escalating, honest.
+
+        The structured twin of MCP ask_video — returns the full Answer
+        payload (confidence, verified, escalations_used, evidence, savings).
+        /v1/ask remains the raw-retrieval endpoint.
+        """
+        from agentvision.answer import answer_question
+
+        try:
+            result = answer_question(req.video, req.question)
+        except AgentVisionError as exc:
+            raise _http_error(exc) from exc
+        payload = result.to_dict()
+        payload["frames"] = _frame_payload(result.frames, req.inline_frames)
+        return payload
+
     @app.get("/v1/videos/{video}/moment", tags=["video"])
     def get_moment(
         video: str,

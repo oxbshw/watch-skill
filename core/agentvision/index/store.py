@@ -238,6 +238,34 @@ def get_video(video_id_or_source: str) -> dict[str, Any] | None:
         conn.close()
 
 
+def forget_video(video_id_or_source: str) -> dict[str, Any]:
+    """Delete one video from the index: rows (segments/scenes/ocr/embeddings/
+    cached answers via FK cascade, FTS manually) plus its frames directory.
+
+    Returns the forgotten video row; raises a structured error when unknown.
+    """
+    from agentvision.errors import IndexError_  # noqa: PLC0415
+
+    video = get_video(video_id_or_source)
+    if video is None:
+        raise IndexError_(
+            f"video not indexed: {video_id_or_source}",
+            code="index.video_not_found",
+            fix="list_videos()/`agentvision list` shows what can be forgotten",
+        )
+    conn = connect()
+    try:
+        with conn:
+            conn.execute("DELETE FROM fts WHERE video_id = ?", (video["id"],))
+            conn.execute("DELETE FROM videos WHERE id = ?", (video["id"],))
+    finally:
+        conn.close()
+    frames_dir = get_settings().data_dir / "frames" / video["id"]
+    if frames_dir.exists():
+        shutil.rmtree(frames_dir, ignore_errors=True)
+    return video
+
+
 def list_videos() -> list[dict[str, Any]]:
     """All indexed videos, most recently analyzed first."""
     conn = connect()

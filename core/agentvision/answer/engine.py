@@ -251,7 +251,11 @@ def answer_question(
     else:
         text = _answer_text(question, evidence, model_answer)
 
-    attach = include_frames if include_frames is not None else (not verified and not honest_floor)
+    # auto frame policy: attach only in the uncertain band — confident answers
+    # (verified or high-retrieval) stay text-only, floor answers point at
+    # get_moment instead. include_frames overrides in either direction.
+    uncertain = not verified and confidence < target
+    attach = include_frames if include_frames is not None else (uncertain and not honest_floor)
     frame_tokens = est_frame_tokens() * len(frames)
     spent += est_text_tokens(text) + (frame_tokens if attach else 0)
 

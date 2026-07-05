@@ -99,7 +99,11 @@ class ClientVisionModel:
         example = "\n".join(f"{i + 1}: <description of image {i + 1}>" for i in range(len(frames)))
         prompt = (
             f"You are indexing video frames.{' Context: ' + context if context else ''} "
-            f"Describe EACH of the {len(frames)} images in one line, in this exact format:\n"
+            f"Describe EACH of the {len(frames)} images in ONE telegraphic line: "
+            "max 12 words, concrete nouns and actions only, no articles, no "
+            "filler (write 'terminal, red error banner, stack trace' not 'The "
+            "image shows a terminal window that displays...'). Keep exact "
+            "names/numbers/text visible on screen. Format:\n"
             f"{example}\nNo other text."
         )
         raw = self.client.generate(prompt, frames)

@@ -50,7 +50,9 @@ def test_watch_then_ask_roundtrip(sample_video: Path) -> None:
     assert "sample clip.mp4" in listing.content[0].text or "Indexed videos" in listing.content[0].text
 
     asked = _call("ask_video", video=str(sample_video), question="what happens first?")
-    assert "Evidence" in asked.content[0].text
+    asked_text = asked.content[0].text
+    assert "confidence:" in asked_text
+    assert "tokens saved" in asked_text
 
 
 def test_get_moment_after_watch(sample_video: Path) -> None:

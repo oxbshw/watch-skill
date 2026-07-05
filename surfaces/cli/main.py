@@ -170,24 +170,66 @@ def ask(
     video: str = typer.Argument(..., help="video_id or the original source URL/path."),
     question: str = typer.Argument(...),
     max_frames: int = typer.Option(6, "--max-frames"),
+    frames: bool = typer.Option(False, "--frames", help="Always list evidence frame paths."),
+    no_verify: bool = typer.Option(False, "--no-verify", help="Skip the model verify pass."),
+    no_cache: bool = typer.Option(False, "--no-cache", help="Bypass the semantic answer cache."),
 ) -> None:
-    """Ask an already-indexed video a question (retrieval, no re-processing)."""
+    """Ask an already-indexed video a question (self-healing answer engine)."""
+    from agentvision.answer import answer_question
     from agentvision.errors import AgentVisionError
-    from agentvision.index import ask_video
-    from agentvision.perceive.budget import format_time
 
     try:
-        result = ask_video(video, question, max_frames=max_frames)
+        answer = answer_question(
+            video, question,
+            include_frames=True if frames else None,
+            verify=False if no_verify else None,
+            use_cache=not no_cache,
+        )
     except AgentVisionError as exc:
         print(json.dumps(exc.to_dict(), indent=2))
         raise typer.Exit(code=1) from None
-    print(f"# Evidence for: {question}\n")
-    for hit in result["hits"]:
-        stamp = format_time(hit["timestamp"]) if hit["timestamp"] is not None else "--:--"
-        print(f"- [{stamp}] ({hit['kind']}, score {hit['score']:.2f}) {hit['text']}")
-    print("\nFrames:")
-    for frame in result["frames"]:
-        print(f"- t={format_time(frame['timestamp'])}: `{frame['frame_path']}`")
+    print(answer.text)
+    flags = [f"confidence: {answer.confidence:.2f}"]
+    if answer.cached:
+        flags.append("cached: true")
+    if answer.verified:
+        flags.append("verified: true")
+    if answer.escalations_used:
+        flags.append(f"escalations: {', '.join(answer.escalations_used)}")
+    if answer.budget_stopped:
+        flags.append("stopped at token budget")
+    print(f"\n({' | '.join(flags)})")
+    if answer.frames:
+        print("Frames:")
+        for path in answer.frames[:max_frames]:
+            print(f"- `{path}`")
+    print(f"~{answer.tokens_saved_estimate} tokens saved vs raw-frame injection")
+
+
+@app.command()
+def forget(
+    video: str = typer.Argument(..., help="video_id or original source to remove from the index."),
+) -> None:
+    """Forget one video: its index rows, cached answers, and frames dir."""
+    from agentvision.errors import AgentVisionError
+    from agentvision.index.store import forget_video
+
+    try:
+        row = forget_video(video)
+    except AgentVisionError as exc:
+        print(json.dumps(exc.to_dict(), indent=2))
+        raise typer.Exit(code=1) from None
+    print(f"forgotten: {row['id']} — {row['title'] or row['source']}")
+
+
+@app.command()
+def stats() -> None:
+    """Lifetime token savings and answer counts."""
+    from agentvision.answer.cache import lifetime_stats
+
+    data = lifetime_stats()
+    print(f"answers served : {data['answers_count']}")
+    print(f"tokens saved   : ~{data['tokens_saved_total']:,} vs raw-frame injection")
 
 
 @app.command("list")
@@ -345,6 +387,9 @@ def clean(
     loops: bool = typer.Option(False, "--loops", help="Keep only the 10 most recent loops."),
     keep_loops: int = typer.Option(10, "--keep-loops", help="How many recent loops to keep."),
     orphans: bool = typer.Option(False, "--orphans", help="Remove frame dirs for de-indexed videos."),
+    cache_answers: bool = typer.Option(
+        False, "--cache-answers", help="Clear the semantic answer cache."
+    ),
     everything: bool = typer.Option(False, "--all", help="Cache-to-cap + loops + orphans."),
     dry_run: bool = typer.Option(False, "--dry-run", help="Report only; delete nothing."),
 ) -> None:
@@ -353,8 +398,18 @@ def clean(
 
     if everything:
         cache = loops = orphans = True
+    if cache_answers:
+        from agentvision.answer.cache import clear as clear_answers
+
+        removed = 0 if dry_run else clear_answers()
+        print(f"answer cache: {'would clear' if dry_run else 'cleared'} ({removed} rows)")
+        if not (cache or all_cache or loops or orphans):
+            return
     if not (cache or all_cache or loops or orphans):
-        print("Nothing selected. Use --all, or any of --cache/--all-cache/--loops/--orphans.")
+        print(
+            "Nothing selected. Use --all, or any of "
+            "--cache/--all-cache/--loops/--orphans/--cache-answers."
+        )
         raise typer.Exit(code=1)
     total = 0
     for label, enabled, fn in (
@@ -370,6 +425,107 @@ def clean(
         print(f"{label}: {verb} {report.freed_bytes / 1024**2:.1f} MiB "
               f"({len(report.removed)} removed, {len(report.kept)} kept)")
     print(f"total {'reclaimable' if dry_run else 'reclaimed'}: {total / 1024**2:.1f} MiB")
+
+
+lessons_app = typer.Typer(help="The local lessons store: learn from reported mistakes.")
+app.add_typer(lessons_app, name="lessons")
+
+
+@lessons_app.command("add")
+def lessons_add(
+    video: str = typer.Argument(..., help="video_id or original source."),
+    question: str = typer.Argument(...),
+    wrong: str = typer.Argument(..., help="The wrong answer that was given."),
+    correction: str = typer.Argument(..., help="What the correct answer actually is."),
+    session: str | None = typer.Option(None, "--session", help="Session id to group under."),
+    no_reask: bool = typer.Option(False, "--no-reask", help="Skip the immediate re-ask check."),
+) -> None:
+    """Report a wrong answer + its correction; the system learns from it."""
+    from agentvision.lessons import report_mistake
+
+    outcome = report_mistake(
+        video, question, wrong, correction,
+        agent="cli", session_id=session, reask=not no_reask,
+    )
+    print(json.dumps(outcome, ensure_ascii=False, indent=2))
+
+
+@lessons_app.command("list")
+def lessons_list(
+    session: str | None = typer.Option(None, "--session"),
+    limit: int = typer.Option(20, "--limit"),
+) -> None:
+    """List stored lessons (newest first)."""
+    from agentvision.lessons import list_lessons
+
+    rows = list_lessons(session_id=session, limit=limit)
+    if not rows:
+        print("No lessons stored yet — report one with `agentvision lessons add`.")
+        return
+    for row in rows:
+        mark = "✓" if row["validated"] else " "
+        print(f"[{mark}] #{row['id']} {row['error_class']:<15} ({row['content_type']}) "
+              f"{row['guidance'][:90]}")
+
+
+@lessons_app.command("rm")
+def lessons_rm(
+    ids: list[int] = typer.Argument(None, help="Lesson ids to remove."),
+    session: str | None = typer.Option(None, "--session", help="Remove a whole session."),
+) -> None:
+    """Remove lessons by id or by session."""
+    from agentvision.lessons import remove_lessons
+
+    removed = remove_lessons(ids=list(ids) if ids else None, session_id=session)
+    print(f"removed {removed} lesson(s)")
+
+
+@lessons_app.command("export-evals")
+def lessons_export_evals() -> None:
+    """Convert every lesson into a replayable eval case."""
+    from agentvision.lessons import export_evals
+
+    print(f"eval cases written to {export_evals()}")
+
+
+evals_app = typer.Typer(help="Replay lesson-derived evals against the current system.")
+app.add_typer(evals_app, name="evals")
+
+
+@evals_app.command("run")
+def evals_run() -> None:
+    """Replay the eval suite; pass-rate rising over time = it learns."""
+    from agentvision.lessons import run_evals
+
+    result = run_evals()
+    print(json.dumps(result, ensure_ascii=False, indent=2))
+    if result["total"] and result["pass_rate"] is not None:
+        print(f"\npass rate: {result['pass_rate']:.0%} "
+              f"({result['passed']}/{result['total']}, {result['skipped']} skipped)")
+
+
+profiles_app = typer.Typer(help="Adaptive per-content-type profiles learned from lessons.")
+app.add_typer(profiles_app, name="profiles")
+
+
+@profiles_app.command("show")
+def profiles_show() -> None:
+    """Show the active adaptive profiles (data, not code)."""
+    from agentvision.lessons import show_profiles
+
+    rows = show_profiles()
+    if not rows:
+        print("No profiles earned yet — they aggregate from lesson statistics.")
+        return
+    print(json.dumps(rows, ensure_ascii=False, indent=2, default=str))
+
+
+@profiles_app.command("reset")
+def profiles_reset() -> None:
+    """Drop all adaptive profiles (lessons stay)."""
+    from agentvision.lessons import reset_profiles
+
+    print(f"reset {reset_profiles()} profile(s)")
 
 
 @app.command()

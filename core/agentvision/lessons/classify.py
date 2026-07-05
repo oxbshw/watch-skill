@@ -61,7 +61,6 @@ def classify_content_type(video: dict[str, Any]) -> str:
 def classify_error(question: str, wrong_answer: str, correction: str) -> str:
     """Pick the error class from the report's own wording."""
     corr = correction.lower()
-    wrong = wrong_answer.lower()
 
     if any(k in corr for k in ("on-screen", "on screen", "ocr", "text says", "caption says",
                                "the text", "label", "written")):
