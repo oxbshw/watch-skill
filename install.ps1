@@ -45,7 +45,7 @@ if (Test-Path (Join-Path $installDir 'pyproject.toml')) {
 Write-Step "Installing dependencies (uv sync)"
 Push-Location $installDir
 try {
-    uv sync --all-extras
+    uv sync --extra all
     Write-Step "Running the doctor (bootstraps ffmpeg / yt-dlp / deno)"
     uv run agentvision doctor
     Write-Step "Registering AgentVision in your AI agents"

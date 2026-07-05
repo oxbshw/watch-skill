@@ -8,7 +8,7 @@ in-Cursor chat session was not run.
 
 ```powershell
 git clone https://github.com/oxbshw/agentvision && cd agentvision
-uv sync --all-extras
+uv sync --extra all
 uv run agentvision doctor
 ```
 

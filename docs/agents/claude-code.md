@@ -7,7 +7,7 @@ Claude Code on the development machine; all tools exercised end-to-end).
 
 ```powershell
 git clone https://github.com/oxbshw/agentvision && cd agentvision
-uv sync --all-extras
+uv sync --extra all
 uv run agentvision doctor        # bootstraps ffmpeg + yt-dlp
 ```
 

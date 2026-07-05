@@ -4,7 +4,8 @@
 
 **Give any AI agent the ability to watch video — and to watch its own work and fix it.**
 
-[![CI](https://img.shields.io/badge/tests-190%2B%20offline-brightgreen)](.github/workflows/ci.yml)
+[![CI](https://github.com/oxbshw/agentvision/actions/workflows/ci.yml/badge.svg)](https://github.com/oxbshw/agentvision/actions/workflows/ci.yml)
+[![Tests](https://img.shields.io/badge/tests-240%2B%20offline-brightgreen)](tests/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![MCP](https://img.shields.io/badge/MCP-stdio%20%2B%20HTTP-8A2BE2)](docs/agents/README.md)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-3776AB)](pyproject.toml)
@@ -132,7 +133,7 @@ Russian, Hindi, Spanish, and French — not "should work", *tested*:
 
 ```powershell
 git clone https://github.com/oxbshw/agentvision && cd agentvision
-uv sync --all-extras          # or: pip install -e ".[all]"
+uv sync --extra all          # or: pip install -e ".[all]"
 uv run agentvision doctor     # self-heals dependencies
 uv run agentvision setup      # writes MCP config into your agents (with backups)
 ```

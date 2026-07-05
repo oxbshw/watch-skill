@@ -9,7 +9,7 @@ Requires VS Code ≥ 1.99 with GitHub Copilot and agent mode enabled.
 
 ```powershell
 git clone https://github.com/oxbshw/agentvision && cd agentvision
-uv sync --all-extras
+uv sync --extra all
 uv run agentvision doctor
 ```
 

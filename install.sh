@@ -48,7 +48,7 @@ fi
 # --- dependencies + self-healing doctor --------------------------------------
 step "Installing dependencies (uv sync)"
 cd "$INSTALL_DIR"
-uv sync --all-extras
+uv sync --extra all
 
 step "Running the doctor (checks ffmpeg / yt-dlp / deno)"
 uv run agentvision doctor || true

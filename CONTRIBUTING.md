@@ -7,7 +7,7 @@ the rules that actually keep the codebase healthy.
 
 ```powershell
 git clone <repo> agentvision && cd agentvision
-uv sync --all-extras           # or: pip install -e ".[all]" in a venv
+uv sync --extra all           # or: pip install -e ".[all]" in a venv
 uv run agentvision doctor      # bootstraps ffmpeg + yt-dlp
 uv run pytest -q               # must be green before you start
 ```
