@@ -1,28 +1,29 @@
-"""M3 acceptance demo: THE LOOP on a deliberately broken checkout page.
+"""THE LOOP: capture a page -> critique -> apply a fix -> re-capture -> verify.
 
-Flow (exactly the agent handshake the MCP tools expose):
+The demo runs the exact agent handshake the MCP `loop_start` / `loop_iterate`
+tools expose, against a deliberately broken checkout page:
+
   1. loop_start on the broken page  -> critic finds the "$NaN" total (fail)
   2. the "agent" (this script) applies the fix by swapping in the fixed HTML
-  3. loop_iterate                   -> critic passes, diff reports the issue
-                                       FIXED, before/after MP4+GIF rendered
+  3. loop_iterate                   -> critic passes; the diff reports the
+                                       issue FIXED and renders a
+                                       before/after MP4 + GIF
 
-Critic selection: the real strong-tier vision critic when an API key is
-configured; otherwise a deterministic OCR-based critic so the demo runs on a
-machine with no cloud access (the loop machinery is identical either way).
+Critic selection: the real strong-tier vision critic when a vision provider
+is reachable; otherwise a deterministic OCR-based critic, so the demo runs
+on a machine with no cloud access (the loop machinery is identical).
 
-Run:  uv run python "examples/loop_demo/run_demo.py"
+Needs a browser for capture (Edge/Chrome, or `playwright install chromium`).
+
+Run:  uv run --no-sync python examples/04-ui-loop/ui_loop.py
 """
 from __future__ import annotations
 
 import shutil
-import sys
 import tempfile
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "core"))
-
 from watch_skill.config import get_settings
-from watch_skill.errors import VisionError
 from watch_skill.loop import Critique, Issue, loop_iterate, loop_start
 from watch_skill.loop.reportfmt import format_loop_state
 from watch_skill.perceive.types import PerceptionResult
@@ -34,8 +35,8 @@ HERE = Path(__file__).resolve().parent
 def ocr_critic(perception: PerceptionResult, pass_criteria: str) -> Critique:
     """Deterministic fallback critic: reads the rendered total via OCR.
 
-    Fails when any frame's OCR shows a NaN/placeholder total — the same visual
-    defect the vision critic would flag, minus the API call.
+    Fails when any frame's OCR shows a NaN/placeholder total — the same
+    visual defect the vision critic would flag, minus the API call.
     """
     for frame in perception.frames:
         text = frame.ocr_text.lower()
@@ -62,18 +63,18 @@ def ocr_critic(perception: PerceptionResult, pass_criteria: str) -> Critique:
 
 
 def pick_critic():
-    """Real vision critic when a key is configured, OCR fallback otherwise."""
+    """Real vision critic when the provider answers a probe, OCR fallback otherwise."""
     try:
-        get_vision("strong").client._api_key()
+        get_vision("strong").client.generate("Reply with the single word: ok")
         print("critic: strong-tier vision model")
         return None  # runner default = critique_recording
-    except VisionError:
-        print("critic: no vision API key configured -> deterministic OCR critic")
+    except Exception:
+        print("critic: no vision provider reachable -> deterministic OCR critic")
         return ocr_critic
 
 
 def main() -> int:
-    page = Path(tempfile.mkdtemp(prefix="watch-skill-demo-")) / "page.html"
+    page = Path(tempfile.mkdtemp(prefix="watch-skill-loop-")) / "page.html"
     shutil.copy2(HERE / "page_broken.html", page)
     url = page.as_uri()
     criteria = (

@@ -14,7 +14,7 @@ Requires a configured vision provider (any of: OpenRouter/Anthropic/OpenAI/
 Gemini key, or a running Ollama with a vision model). Exits non-zero on the
 first failed stage; prints a PASS table at the end.
 
-Run:  uv run python "examples/golden_path.py" [--skip youtube,tiktok,...]
+Run:  uv run python "scripts/golden_path.py" [--skip youtube,tiktok,...]
 """
 from __future__ import annotations
 
@@ -143,7 +143,7 @@ def loop_real_critic() -> None:
     from watch_skill.loop import loop_iterate, loop_start
     from watch_skill.loop.reportfmt import format_loop_state
 
-    demo = Path(__file__).parent / "loop_demo"
+    demo = Path(__file__).resolve().parents[1] / "examples" / "04-ui-loop"
     page = Path(tempfile.mkdtemp(prefix="gp-loop-")) / "page.html"
     shutil.copy2(demo / "page_broken.html", page)
     criteria = (

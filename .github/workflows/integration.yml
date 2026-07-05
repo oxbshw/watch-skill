@@ -27,4 +27,4 @@ jobs:
         if: ${{ vars.WATCHSKILL_HAS_VISION_KEY == 'true' }}
         env:
           WATCHSKILL_OPENROUTER_API_KEY: ${{ secrets.WATCHSKILL_OPENROUTER_API_KEY }}
-        run: uv run python examples/golden_path.py --skip "${{ inputs.skip_stages }}"
+        run: uv run python scripts/golden_path.py --skip "${{ inputs.skip_stages }}"
