@@ -168,6 +168,20 @@ MIGRATIONS: list[Migration] = [
     _migration_v3_meta,
     # v4 — multilingual FTS rebuild (combining marks + CJK segmentation)
     _migration_v4_fts_multilingual,
+    # v5 — semantic answer cache (token economy: repeat questions are free)
+    """
+    CREATE TABLE answers (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        video_id TEXT NOT NULL REFERENCES videos(id) ON DELETE CASCADE,
+        question TEXT NOT NULL,
+        question_norm TEXT NOT NULL,
+        embedding BLOB,
+        dim INTEGER,
+        answer_json TEXT NOT NULL,
+        created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+    CREATE INDEX idx_answers_video ON answers(video_id);
+    """,
 ]
 
 

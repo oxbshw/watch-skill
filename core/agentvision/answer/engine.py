@@ -1,0 +1,291 @@
+"""answer_question: retrieval → confidence → escalate → verify → honest floor.
+
+The reconciliation of accuracy (spend tokens) and economy (save them):
+model-free steps run first, model calls only on genuine uncertainty, and a
+hard per-question token budget caps the whole ladder. Citation timestamps
+can only come from indexed evidence — model prose never invents one.
+"""
+from __future__ import annotations
+
+import json
+import re
+import sys
+from pathlib import Path
+
+from agentvision.config import get_settings
+from agentvision.errors import IndexError_, VisionError
+from agentvision.index.retrieval import Hit, frames_near, hybrid_search
+from agentvision.index.store import get_video
+from agentvision.perceive.budget import format_time
+
+from agentvision.answer import cache
+from agentvision.answer.confidence import merge_model_certainty, retrieval_confidence
+from agentvision.answer.ladder import (
+    dense_resample,
+    estimate_verify_cost,
+    zoom_crops_reocr,
+)
+from agentvision.answer.types import Answer, Evidence, est_frame_tokens, est_text_tokens
+
+_TS_RE = re.compile(r"\b\d{1,2}:\d{2}(?::\d{2})?\b")
+
+_VERIFY_PROMPT = """You are verifying an answer against video evidence.
+Question: {question}
+
+Indexed evidence (the ONLY citable moments):
+{evidence}
+{lessons}
+The attached frames are the moments about to be cited. Confirm what is
+actually visible/audible. Return ONLY a JSON object:
+{{"supported": true/false, "certainty": <0.0-1.0>, "answer": "<one- or two-sentence answer grounded in the evidence, or an explanation of what is missing>"}}"""
+
+
+def _evidence_from_hits(hits: list[Hit]) -> list[Evidence]:
+    return [Evidence(h.timestamp, h.kind, h.text, round(h.score, 4)) for h in hits]
+
+
+def _legal_timestamps(evidence: list[Evidence]) -> list[float]:
+    return [e.timestamp for e in evidence if e.timestamp is not None]
+
+
+def _sanitize_timestamps(text: str, legal: list[float]) -> str:
+    """Strip timestamp-looking tokens the evidence does not back."""
+
+    def _ok(token: str) -> bool:
+        parts = [int(p) for p in token.split(":")]
+        seconds = parts[-1] + parts[-2] * 60 + (parts[-3] * 3600 if len(parts) == 3 else 0)
+        return any(abs(seconds - ts) <= 2.0 for ts in legal)
+
+    return _TS_RE.sub(lambda m: m.group(0) if _ok(m.group(0)) else "[see evidence]", text)
+
+
+def _evidence_lines(evidence: list[Evidence]) -> str:
+    lines = []
+    for e in evidence[:8]:
+        stamp = format_time(e.timestamp) if e.timestamp is not None else "--:--"
+        lines.append(f"- [{stamp}] ({e.kind}) {e.text}")
+    return "\n".join(lines)
+
+
+def _lesson_lines(question: str, video: dict) -> str:
+    """Learned corrections, when the lessons store has relevant ones."""
+    settings = get_settings()
+    if not settings.lessons_enabled:
+        return ""
+    try:
+        from agentvision.lessons import relevant_guidance  # noqa: PLC0415
+
+        lines = relevant_guidance(question, video)
+    except Exception:  # lessons must never break an answer
+        return ""
+    if not lines:
+        return ""
+    return "Learned corrections (from past mistakes on similar videos):\n" + "\n".join(
+        f"- {line}" for line in lines
+    ) + "\n"
+
+
+def _frames_for_evidence(video_id: str, evidence: list[Evidence], limit: int = 4) -> list[str]:
+    from agentvision.index.db import connect  # noqa: PLC0415
+
+    conn = connect()
+    try:
+        out: list[str] = []
+        seen: set[str] = set()
+        for e in evidence:
+            if e.timestamp is None or len(out) >= limit:
+                continue
+            for frame in frames_near(conn, video_id, e.timestamp, limit=1):
+                path = frame["frame_path"]
+                if path not in seen and Path(path).is_file():
+                    seen.add(path)
+                    out.append(path)
+        return out
+    finally:
+        conn.close()
+
+
+def _try_model_verify(
+    question: str, evidence: list[Evidence], frames: list[str], lessons: str, tier: str
+) -> tuple[bool, float, str] | None:
+    """One structured verify/answer call; None when no model is reachable."""
+    from agentvision.vision import get_vision  # noqa: PLC0415
+
+    prompt = _VERIFY_PROMPT.format(
+        question=question, evidence=_evidence_lines(evidence), lessons=lessons
+    )
+    try:
+        vision = get_vision(tier)
+        raw = vision.client.generate(prompt, [Path(p) for p in frames][:4])
+    except VisionError as exc:
+        print(f"[agentvision] verify pass unavailable ({exc.code})", file=sys.stderr)
+        return None
+    match = re.search(r"\{.*\}", raw, re.DOTALL)
+    if match is None:
+        return None
+    try:
+        data = json.loads(match.group(0))
+        return bool(data["supported"]), float(data["certainty"]), str(data.get("answer", ""))
+    except (KeyError, ValueError, json.JSONDecodeError):
+        return None
+
+
+def _honest_floor_text(question: str, evidence: list[Evidence]) -> str:
+    lines = [
+        f"The video does not clearly show an answer to: {question!r}.",
+        "No guess is being made. The closest indexed moments are:",
+    ]
+    if evidence:
+        lines.append(_evidence_lines(evidence[:5]))
+    else:
+        lines.append("- (nothing relevant found in transcript, OCR, or scene descriptions)")
+    lines.append(
+        "If the answer should be visible, try get_moment on a timestamp above, "
+        "or re-watch with a focused start/end window."
+    )
+    return "\n".join(lines)
+
+
+def _answer_text(question: str, evidence: list[Evidence], model_answer: str | None) -> str:
+    legal = _legal_timestamps(evidence)
+    lines = []
+    if model_answer:
+        lines.append(_sanitize_timestamps(model_answer.strip(), legal))
+        lines.append("")
+    lines.append("Evidence:")
+    lines.append(_evidence_lines(evidence))
+    return "\n".join(lines)
+
+
+def answer_question(
+    video_id_or_source: str,
+    question: str,
+    *,
+    include_frames: bool | None = None,
+    use_cache: bool = True,
+    verify: bool | None = None,
+    k: int = 8,
+) -> Answer:
+    """The self-healing ask: never unverified silently, never invented."""
+    settings = get_settings()
+    video = get_video(video_id_or_source)
+    if video is None:
+        raise IndexError_(
+            f"video not indexed: {video_id_or_source}",
+            code="index.video_not_found",
+            fix="run watch_video on it first, or list_videos()",
+        )
+
+    if use_cache:
+        hit = cache.lookup(video["id"], question)
+        if hit is not None:
+            hit.tokens_saved_estimate += hit.tokens_spent_estimate  # repeat = free
+            cache.record_savings(hit.tokens_spent_estimate)
+            return hit
+
+    lessons = _lesson_lines(question, video)
+    budget = settings.answer_token_budget
+    spent = est_text_tokens(question) + est_text_tokens(lessons)
+    escalations: list[str] = []
+    budget_stopped = False
+
+    hits = hybrid_search(question, video_id=video["id"], k=k)
+    confidence = retrieval_confidence(hits)
+    verified = False
+    model_answer: str | None = None
+
+    # --- escalation ladder: stop as soon as confidence clears the target ----
+    if confidence < settings.answer_confidence_target:
+        new_items, cost = dense_resample(video, hits)
+        escalations.append("dense_resample")
+        spent += cost
+        if new_items:
+            hits = hybrid_search(question, video_id=video["id"], k=k)
+            confidence = retrieval_confidence(hits)
+
+    if confidence < settings.answer_confidence_target:
+        new_items, cost = zoom_crops_reocr(video, hits)
+        escalations.append("zoom_crops_reocr")
+        spent += cost
+        if new_items:
+            hits = hybrid_search(question, video_id=video["id"], k=k)
+            confidence = retrieval_confidence(hits)
+
+    evidence = _evidence_from_hits(hits)
+    frames = _frames_for_evidence(video["id"], evidence)
+
+    # --- verify / model answer (cheap first, strong on low confidence) ------
+    do_verify = verify if verify is not None else settings.answer_verify_enabled
+    model_rejected = False
+    if do_verify and evidence:
+        tiers = ["cheap"] if confidence >= settings.answer_confidence_target else ["cheap", "strong"]
+        for tier in tiers:
+            call_cost = estimate_verify_cost(len(frames), question + lessons)
+            if spent + call_cost > budget:
+                budget_stopped = True
+                break
+            result = _try_model_verify(question, evidence, frames, lessons, tier)
+            if result is None:
+                break  # no provider reachable — degrade gracefully, model-free
+            spent += call_cost
+            if tier == "strong":
+                escalations.append("strong_tier")
+            supported, certainty, answer_text = result
+            confidence = merge_model_certainty(confidence, certainty if supported else certainty * 0.3)
+            if supported:
+                verified = True
+                model_rejected = False
+                model_answer = answer_text
+                break
+            # the model looked at the exact frames and did NOT see the claim —
+            # retrieval strength cannot override an eyewitness rejection
+            model_rejected = True
+            model_answer = None
+
+    # --- compose -------------------------------------------------------------
+    honest_floor = (
+        confidence < settings.answer_confidence_floor or not evidence or model_rejected
+    )
+    if honest_floor:
+        text = _honest_floor_text(question, evidence)
+    else:
+        text = _answer_text(question, evidence, model_answer)
+
+    attach = include_frames if include_frames is not None else (not verified and not honest_floor)
+    frame_tokens = est_frame_tokens() * len(frames)
+    spent += est_text_tokens(text) + (frame_tokens if attach else 0)
+
+    # naive baseline: a claude-video-style tool injects every indexed frame
+    naive = _naive_token_baseline(video["id"]) + est_text_tokens(text)
+    answer = Answer(
+        video_id=video["id"],
+        question=question,
+        text=text,
+        confidence=round(confidence, 3),
+        verified=verified,
+        honest_floor=honest_floor,
+        escalations_used=escalations,
+        evidence=evidence,
+        frames=frames if attach else [],
+        budget_stopped=budget_stopped,
+        tokens_spent_estimate=spent,
+        tokens_saved_estimate=max(0, naive - spent),
+    )
+    cache.put(answer)
+    cache.record_savings(answer.tokens_saved_estimate)
+    return answer
+
+
+def _naive_token_baseline(video_id: str) -> int:
+    """What a raw-frame-injection approach would have cost for this question:
+    every indexed frame of the video, straight into the prompt."""
+    from agentvision.index.db import connect  # noqa: PLC0415
+
+    conn = connect()
+    try:
+        row = conn.execute(
+            "SELECT COUNT(*) AS n FROM scenes WHERE video_id = ?", (video_id,)
+        ).fetchone()
+        return int(row["n"]) * est_frame_tokens()
+    finally:
+        conn.close()

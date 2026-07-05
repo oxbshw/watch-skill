@@ -52,8 +52,9 @@ def _insert_video(conn: sqlite3.Connection, result: WatchResult, video_id: str, 
             result.transcript.source, str(frames_dir),
         ),
     )
-    # re-analysis replaces derived rows
-    for table in ("segments", "scenes", "ocr_blocks", "embeddings"):
+    # re-analysis replaces derived rows (cached answers invalidate too —
+    # they were derived from the old analysis)
+    for table in ("segments", "scenes", "ocr_blocks", "embeddings", "answers"):
         conn.execute(f"DELETE FROM {table} WHERE video_id = ?", (video_id,))
     conn.execute("DELETE FROM fts WHERE video_id = ?", (video_id,))
 
@@ -183,6 +184,45 @@ def index_watch_result(result: WatchResult, describe_scenes: bool = True) -> str
     finally:
         conn.close()
     return video_id
+
+
+def augment_video(video_id: str, perception: Any) -> int:
+    """ADD escalation-pass frames/OCR to an existing video's index rows.
+
+    Unlike :func:`index_watch_result`, nothing is deleted — the self-healing
+    answer ladder re-samples a narrow window densely and this merges what it
+    found (new scene frames, OCR blocks, their FTS + embedding rows) into the
+    already-indexed video. Returns the number of new text items indexed.
+    """
+    conn = connect()
+    try:
+        with conn:
+            to_embed: list[tuple] = []
+            for frame in perception.frames:
+                cur = conn.execute(
+                    """INSERT INTO scenes (video_id, scene_id, timestamp, frame_path, phash, reason)
+                       VALUES (?, ?, ?, ?, ?, ?)""",
+                    (
+                        video_id, frame.scene_id, frame.timestamp_seconds,
+                        str(frame.path), frame.phash, "escalation",
+                    ),
+                )
+                scene_row = cur.lastrowid
+                for block in frame.ocr_blocks:
+                    ocr_cur = conn.execute(
+                        """INSERT INTO ocr_blocks
+                           (video_id, scene_row_id, timestamp, text, x1, y1, x2, y2, confidence)
+                           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                        (
+                            video_id, scene_row, frame.timestamp_seconds, block.text,
+                            *block.bbox, block.confidence,
+                        ),
+                    )
+                    to_embed.append(("ocr", ocr_cur.lastrowid, frame.timestamp_seconds, block.text))
+            _index_texts(conn, video_id, to_embed)
+            return len(to_embed)
+    finally:
+        conn.close()
 
 
 def get_video(video_id_or_source: str) -> dict[str, Any] | None:

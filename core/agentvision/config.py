@@ -106,6 +106,59 @@ class Settings(BaseSettings):
         description="Max frames sent to the loop critic in one call. Lower (4) for local models.",
     )
 
+    # --- self-healing answers (v0.6) ----------------------------------------
+    answer_confidence_floor: float = Field(
+        default=0.35,
+        description="Below this after the full escalation ladder, the answer "
+        "states plainly that the video does not clearly show it (honest floor).",
+    )
+    answer_confidence_target: float = Field(
+        default=0.6,
+        description="Escalation stops as soon as confidence clears this bar.",
+    )
+    answer_verify_enabled: bool = Field(
+        default=True,
+        description="When a vision provider is configured, show the model the "
+        "frames it is about to cite and require confirmation before answering.",
+    )
+    answer_token_budget: int = Field(
+        default=8000,
+        description="Per-question token ceiling; the escalation ladder stops "
+        "(and says so) rather than exceed it.",
+    )
+    answer_resample_width: float = Field(
+        default=8.0,
+        description="Window (seconds) around a candidate timestamp for the "
+        "dense re-sampling escalation step.",
+    )
+    answer_resample_resolution: int = Field(
+        default=1024,
+        description="Frame width (px) for escalation re-sampling — higher than "
+        "the indexing default so zoom crops have pixels to work with.",
+    )
+    answer_cache_enabled: bool = Field(
+        default=True, description="Semantic answer cache (per video)."
+    )
+    answer_cache_similarity: float = Field(
+        default=0.92,
+        description="Cosine similarity above which a cached question counts as "
+        "a repeat and its answer is returned at zero model cost.",
+    )
+    lessons_enabled: bool = Field(
+        default=True,
+        description="Local lessons store: learn from reported mistakes and "
+        "inject relevant guidance into future asks. Never uploaded anywhere.",
+    )
+    lessons_injection_token_cap: int = Field(
+        default=300,
+        description="Max prompt tokens the injected 'learned corrections' "
+        "section may consume.",
+    )
+    lessons_max_count: int = Field(
+        default=500,
+        description="Global cap on stored lessons; least-recently-used pruned.",
+    )
+
     # --- surfaces ----------------------------------------------------------
     response_frame_cap: int = Field(
         default=12, description="Max image blocks per MCP/REST response."
@@ -135,6 +188,14 @@ class Settings(BaseSettings):
     @property
     def health_log_path(self) -> Path:
         return self.data_dir / "health.jsonl"
+
+    @property
+    def lessons_path(self) -> Path:
+        return self.data_dir / "lessons.db"
+
+    @property
+    def evals_dir(self) -> Path:
+        return self.data_dir / "evals"
 
 
 @lru_cache(maxsize=1)
