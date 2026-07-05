@@ -159,22 +159,27 @@ def test_health_log_roundtrip(isolated_settings: Path) -> None:
     assert "ts" in incidents[0]
 
 
-def test_server_command_never_points_into_a_venv(monkeypatch) -> None:
+def test_server_command_never_points_into_a_venv(monkeypatch, tmp_path) -> None:
     """Regression: `agentvision setup` wrote `agentvision serve` into agent
     configs because the venv entry point was on PATH — invisible to every
-    other app. A venv-resolved exe must fall back to `uv --directory`."""
+    other app. A venv-resolved exe must fall back to `uv --directory`.
+
+    Paths are built with the native separator: hardcoded Windows raw strings
+    don't split into parts on POSIX (first Linux CI run caught this)."""
     from agentvision.health import agents_setup as mod
 
+    venv_exe = str(tmp_path / "proj" / ".venv" / "Scripts" / "agentvision.EXE")
     monkeypatch.setattr(
         mod.shutil, "which",
-        lambda name: r"D:\proj\.venv\Scripts\agentvision.EXE" if name == "agentvision" else None,
+        lambda name: venv_exe if name == "agentvision" else None,
     )
     command, args = mod.server_command()
     assert command == "uv"
     assert args[0] == "--directory" and args[-2:] == ["agentvision", "serve"]
 
+    global_exe = str(tmp_path / "tools" / "bin" / "agentvision.exe")
     monkeypatch.setattr(
         mod.shutil, "which",
-        lambda name: r"C:\tools\bin\agentvision.exe" if name == "agentvision" else None,
+        lambda name: global_exe if name == "agentvision" else None,
     )
     assert mod.server_command() == ("agentvision", ["serve"])

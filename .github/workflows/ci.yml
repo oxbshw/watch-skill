@@ -33,9 +33,30 @@ jobs:
         run: choco install ffmpeg -y --no-progress
       - name: Sync dependencies
         run: uv sync --all-extras
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/ms-playwright
+            ~\AppData\Local\ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('uv.lock') }}
+      - name: Cache embedding / whisper models
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/huggingface
+            ci-model-cache
+          key: models-${{ runner.os }}-${{ hashFiles('uv.lock') }}
+      - name: Install Playwright browser + recording ffmpeg (Linux)
+        if: runner.os == 'Linux'
+        run: uv run playwright install --with-deps chromium ffmpeg
+      - name: Install Playwright browser + recording ffmpeg (Windows)
+        if: runner.os == 'Windows'
+        run: uv run playwright install chromium ffmpeg
       - name: Run the offline suite
         run: uv run pytest -q -m "not network" --timeout 300
         env:
           # keep CI hermetic: no live vision backends, no cloud keys
           AGENTVISION_VISION_CHEAP_PROVIDER: anthropic
           AGENTVISION_VISION_STRONG_PROVIDER: anthropic
+          FASTEMBED_CACHE_PATH: ci-model-cache

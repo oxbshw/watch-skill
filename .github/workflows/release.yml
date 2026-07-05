@@ -17,6 +17,8 @@ jobs:
           python-version: "3.11"
       - run: sudo apt-get update && sudo apt-get install -y ffmpeg
       - run: uv sync --all-extras
+      - name: Install Playwright browser + recording ffmpeg
+        run: uv run playwright install --with-deps chromium ffmpeg
       - name: Offline suite must be green
         run: uv run pytest -q -m "not network" --timeout 300
         env:

@@ -16,6 +16,9 @@ def _fake_exe(directory: Path, name: str) -> Path:
     directory.mkdir(parents=True, exist_ok=True)
     path = directory / f"{name}{_EXE}"
     path.write_bytes(b"fake")
+    # shutil.which on POSIX requires the executable bit (first CI run on
+    # Linux caught this — Windows doesn't care)
+    path.chmod(0o755)
     return path
 
 
