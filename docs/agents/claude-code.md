@@ -1,7 +1,11 @@
 # Watch Skill in Claude Code
 
 **Status: machine-tested ✅** (this repo's MCP server runs registered in
-Claude Code on the development machine; all tools exercised end-to-end).
+Claude Code on the development machine; all tools exercised end-to-end.
+Last live run 2026-07-06: the `/watch` skill adapter processed a real
+7-minute YouTube video inside a Claude Code session — doctor green,
+25 scene-aware frames, OCR on 24, captions transcript, indexed for
+follow-ups — with no manual intervention).
 
 ## Install
 
