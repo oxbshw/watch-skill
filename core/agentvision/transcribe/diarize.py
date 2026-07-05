@@ -14,7 +14,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from agentvision.config import get_settings
-from agentvision.errors import TranscriptionError
+from agentvision.errors import DependencyError, TranscriptionError
 from agentvision.transcribe.types import Segment, Transcript
 
 _PIPELINE_MODEL = "pyannote/speaker-diarization-community-1"
@@ -110,7 +110,7 @@ def diarize_transcript(
         if not audio_path.is_file():
             audio_path = extract_audio(video_path, audio_path)
         turns = diarize_audio(audio_path)
-    except TranscriptionError as exc:
+    except (TranscriptionError, DependencyError) as exc:
         print(f"[agentvision] diarization skipped ({exc.code}): {exc.message}", file=sys.stderr)
         return transcript
     return assign_speakers(transcript, turns)
