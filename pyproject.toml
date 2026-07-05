@@ -67,6 +67,10 @@ markers = [
 [tool.ruff]
 line-length = 100
 target-version = "py311"
+src = ["src", "tests", "examples"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["watch_skill"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "UP", "B"]

@@ -4,6 +4,7 @@ from __future__ import annotations
 import time
 
 import pytest
+
 from watch_skill import jobs
 from watch_skill.errors import AcquisitionError, WatchSkillError
 

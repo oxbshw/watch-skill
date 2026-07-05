@@ -11,7 +11,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
-      - run: uvx ruff check .
+      # the project-pinned ruff, not a floating uvx latest: local and CI
+      # must agree on import classification
+      - run: uv run --only-group dev ruff check .
 
   test:
     strategy:
