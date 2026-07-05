@@ -12,12 +12,6 @@ import re
 import sys
 from pathlib import Path
 
-from agentvision.config import get_settings
-from agentvision.errors import IndexError_, VisionError
-from agentvision.index.retrieval import Hit, frames_near, hybrid_search
-from agentvision.index.store import get_video
-from agentvision.perceive.budget import format_time
-
 from agentvision.answer import cache
 from agentvision.answer.confidence import merge_model_certainty, retrieval_confidence
 from agentvision.answer.ladder import (
@@ -26,6 +20,11 @@ from agentvision.answer.ladder import (
     zoom_crops_reocr,
 )
 from agentvision.answer.types import Answer, Evidence, est_frame_tokens, est_text_tokens
+from agentvision.config import get_settings
+from agentvision.errors import IndexError_, VisionError
+from agentvision.index.retrieval import Hit, frames_near, hybrid_search
+from agentvision.index.store import get_video
+from agentvision.perceive.budget import format_time
 
 _TS_RE = re.compile(r"\b\d{1,2}:\d{2}(?::\d{2})?\b")
 

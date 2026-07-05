@@ -10,12 +10,11 @@ from __future__ import annotations
 import json
 import sqlite3
 
+from agentvision.answer.types import Answer
 from agentvision.config import get_settings
 from agentvision.index import embeddings as emb
 from agentvision.index.db import connect, get_meta, set_meta
 from agentvision.index.textnorm import normalize_for_search
-
-from agentvision.answer.types import Answer
 
 
 def lookup(video_id: str, question: str) -> Answer | None:

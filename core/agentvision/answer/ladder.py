@@ -10,12 +10,11 @@ import sys
 import tempfile
 from pathlib import Path
 
+from agentvision.answer.types import est_frame_tokens
 from agentvision.config import get_settings
 from agentvision.errors import AgentVisionError
 from agentvision.index.retrieval import Hit
 from agentvision.index.store import augment_video
-
-from agentvision.answer.types import est_frame_tokens
 
 _MAX_RESAMPLE_WINDOWS = 2
 _RESAMPLE_FRAME_BUDGET = 12
