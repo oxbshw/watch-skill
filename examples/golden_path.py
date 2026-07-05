@@ -25,7 +25,7 @@ import tempfile
 import time
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "core"))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from watch_skill.config import get_settings
 from watch_skill.errors import VisionError, WatchSkillError

@@ -11,6 +11,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
+
 from watch_skill.index.textnorm import normalize_for_search
 
 # (lang, stored segment, query that must find it)

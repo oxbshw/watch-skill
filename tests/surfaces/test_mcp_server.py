@@ -11,7 +11,7 @@ pytest.importorskip("scenedetect", reason="perceive extra not installed")
 
 from fastmcp import Client  # noqa: E402
 
-from surfaces.mcp_server.server import mcp  # noqa: E402
+from watch_skill.surfaces.mcp.server import mcp  # noqa: E402
 
 
 def _call(tool: str, **kwargs):

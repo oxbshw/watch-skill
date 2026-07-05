@@ -12,6 +12,7 @@ from typing import Any
 import anyio
 from fastmcp import Context, FastMCP
 from fastmcp.utilities.types import Image
+
 from watch_skill.config import get_settings
 from watch_skill.errors import WatchSkillError
 from watch_skill.health.binaries import prepend_bin_dir_to_path

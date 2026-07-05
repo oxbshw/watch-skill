@@ -18,7 +18,7 @@ deps (onnxruntime, CTranslate2) publish wheels there first.
 ## Architecture rules (non-negotiable)
 
 1. **`core/` never imports `surfaces/`.** All logic lives in
-   `core/watch_skill/`; surfaces (MCP, CLI, REST) are thin wrappers. If a
+   `src/watch_skill/`; surfaces (MCP, CLI, REST) are thin wrappers. If a
    feature needs surface-specific rendering, put the data in core and the
    rendering in the surface.
 2. **Errors are structured.** Raise `WatchSkillError` subclasses with a
@@ -58,13 +58,13 @@ or index databases (`.gitignore` already covers these — keep it that way).
 ## Adding a vision provider
 
 The registry is data, not code: add an entry to
-`core/watch_skill/vision/registry.py` (endpoint, key setting, cost table) and
+`src/watch_skill/vision/registry.py` (endpoint, key setting, cost table) and
 a request/extract builder pair in `vision/client.py` only if the wire format
 is genuinely new. Update `tests/test_vision.py`.
 
 ## Adding an acquisition source
 
-Extend the fallback chain in `core/watch_skill/acquire/resolver.py`. Each
+Extend the fallback chain in `src/watch_skill/acquire/resolver.py`. Each
 step must log why the previous one failed, and known-breakage patterns belong
 in `health/doctor.py` so self-healing covers them.
 

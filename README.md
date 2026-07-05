@@ -24,11 +24,11 @@ GIF. Reproduce: `uv run python "examples/golden_path.py"`.*
 
 ```powershell
 # Windows
-powershell -ExecutionPolicy Bypass -c "irm https://raw.githubusercontent.com/oxbshw/watch-skill/main/install.ps1 | iex"
+powershell -ExecutionPolicy Bypass -c "irm https://raw.githubusercontent.com/oxbshw/watch-skill/main/scripts/install.ps1 | iex"
 ```
 ```bash
 # macOS / Linux (community-verify wanted — written & linted, not yet machine-tested)
-curl -fsSL https://raw.githubusercontent.com/oxbshw/watch-skill/main/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/oxbshw/watch-skill/main/scripts/install.sh | sh
 ```
 
 The installer gets uv/Python if missing, bootstraps ffmpeg + yt-dlp + deno
@@ -88,7 +88,7 @@ flowchart LR
     subgraph surfaces["surfaces (thin)"]
         MCP[MCP stdio/HTTP] --- CLI[CLI] --- API[REST + OpenAPI]
     end
-    subgraph core["core/watch_skill — all logic"]
+    subgraph core["src/watch_skill — all logic"]
         AC[acquire<br/>yt-dlp→fallbacks<br/>+ LRU cache] --> PE[perceive<br/>scenes · phash dedup · OCR]
         PE --> TR[transcribe<br/>captions → local whisper]
         TR --> IX[(index<br/>SQLite FTS5 + vectors)]
@@ -186,7 +186,7 @@ watch-skill api              # REST on :8748, spec at /openapi.json
 ```
 
 Configuration is env vars / `.env` with the `WATCHSKILL_` prefix — every
-knob documented in [core/watch_skill/config.py](core/watch_skill/config.py).
+knob documented in [src/watch_skill/config.py](src/watch_skill/config.py).
 
 ## Contributing
 

@@ -4,6 +4,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
+
 from watch_skill.acquire import ytdlp
 from watch_skill.errors import AcquisitionError
 

@@ -6,6 +6,7 @@ from datetime import date, datetime, timedelta
 from pathlib import Path
 
 import pytest
+
 from watch_skill.health import doctor
 from watch_skill.health.log import read_incidents, record_incident
 

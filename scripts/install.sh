@@ -1,6 +1,6 @@
 #!/usr/bin/env sh
 # Watch Skill one-command installer for macOS/Linux.
-#   curl -fsSL https://raw.githubusercontent.com/oxbshw/watch-skill/main/install.sh | sh
+#   curl -fsSL https://raw.githubusercontent.com/oxbshw/watch-skill/main/scripts/install.sh | sh
 # Installs uv (and thereby Python) if missing, clones/updates Watch Skill,
 # syncs dependencies, runs the self-healing doctor, and offers to register
 # the MCP server in every AI agent found on the machine.

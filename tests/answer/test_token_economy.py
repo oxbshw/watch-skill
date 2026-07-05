@@ -11,11 +11,11 @@ pytest.importorskip("fastmcp", reason="mcp extra not installed")
 pytest.importorskip("scenedetect", reason="perceive extra not installed")
 
 from fastmcp import Client  # noqa: E402
+
 from watch_skill.index import index_watch_result  # noqa: E402
+from watch_skill.surfaces.mcp.server import mcp  # noqa: E402
 from watch_skill.transcribe.types import Segment, Transcript  # noqa: E402
 from watch_skill.watch import watch  # noqa: E402
-
-from surfaces.mcp_server.server import mcp  # noqa: E402
 
 
 def _call(tool: str, **kwargs):

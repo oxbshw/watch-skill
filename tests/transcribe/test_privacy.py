@@ -11,6 +11,7 @@ import inspect
 from pathlib import Path
 
 import pytest
+
 from watch_skill.errors import TranscriptionError
 from watch_skill.transcribe import cloud
 

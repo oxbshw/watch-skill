@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import pytest
+
 from watch_skill.acquire.sources import SourceKind, classify_source, is_url_kind
 
 

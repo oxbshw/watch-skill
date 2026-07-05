@@ -9,6 +9,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
+
 from watch_skill.acquire import cobalt, resolver
 from watch_skill.acquire.sources import SourceKind
 from watch_skill.errors import AcquisitionError

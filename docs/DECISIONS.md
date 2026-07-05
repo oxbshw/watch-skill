@@ -7,7 +7,7 @@ swaps. Newest entries at the bottom of each section.
 
 - **Monorepo with `core/` never importing `surfaces/`.** Enforced by review
   and a unit test (import-graph check planned). Surfaces are thin wrappers.
-- **Hatchling multi-package wheel**: `core/watch_skill` and `surfaces` both
+- **Hatchling multi-package wheel**: `src/watch_skill` and `surfaces` both
   ship in the `watch-skill` distribution. One install gives the SDK, the CLI,
   the MCP server, and the REST app.
 

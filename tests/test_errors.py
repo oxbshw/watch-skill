@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import pytest
+
 from watch_skill.errors import (
     AcquisitionError,
     DependencyError,

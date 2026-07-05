@@ -4,6 +4,6 @@ The universal adapter: any agent framework that can call HTTP + read an
 OpenAPI spec gets the full engine with zero custom code.
 """
 
-from surfaces.api.app import create_app, serve
+from watch_skill.surfaces.api.app import create_app, serve
 
 __all__ = ["create_app", "serve"]

@@ -5,6 +5,7 @@ import sys
 from pathlib import Path
 
 import pytest
+
 from watch_skill.config import reset_settings
 from watch_skill.errors import DependencyError
 from watch_skill.health import binaries

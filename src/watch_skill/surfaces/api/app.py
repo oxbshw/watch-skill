@@ -8,7 +8,7 @@ and remote callers can opt into inline images.
 
 Auth: when ``WATCHSKILL_API_BEARER_TOKEN`` is set, every request must send
 ``Authorization: Bearer <token>``. Without it the API refuses to bind to
-non-loopback hosts (see :func:`surfaces.api.serve`).
+non-loopback hosts (see :func:`watch_skill.surfaces.api.serve`).
 """
 from __future__ import annotations
 
@@ -20,6 +20,7 @@ from typing import Any
 
 from fastapi import Depends, FastAPI, HTTPException, Query, Request
 from pydantic import BaseModel, Field
+
 from watch_skill import __version__
 from watch_skill.config import get_settings
 from watch_skill.errors import WatchSkillError
@@ -300,6 +301,7 @@ def create_app() -> FastAPI:
 def serve(host: str = "127.0.0.1", port: int = 8748) -> None:
     """Run the REST API with uvicorn. Refuses public binds without a token."""
     import uvicorn
+
     from watch_skill.errors import ConfigError
 
     if host not in ("127.0.0.1", "localhost", "::1") and get_settings().api_bearer_token is None:

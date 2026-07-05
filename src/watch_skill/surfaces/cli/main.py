@@ -143,7 +143,7 @@ def serve(
     port: int = typer.Option(8747, "--port"),
 ) -> None:
     """Run the MCP server (stdio default; --http for streamable HTTP)."""
-    from surfaces.mcp_server.server import main as mcp_main
+    from watch_skill.surfaces.mcp.server import main as mcp_main
 
     mcp_main(http=http, host=host, port=port)
 
@@ -155,8 +155,7 @@ def api(
 ) -> None:
     """Run the REST API (FastAPI; OpenAPI spec at /openapi.json)."""
     from watch_skill.errors import WatchSkillError
-
-    from surfaces.api import serve as api_serve
+    from watch_skill.surfaces.api import serve as api_serve
 
     try:
         api_serve(host=host, port=port)

@@ -9,6 +9,7 @@ import pytest
 pytest.importorskip("PIL", reason="perceive extra not installed")
 
 import httpx  # noqa: E402
+
 from watch_skill.config import reset_settings  # noqa: E402
 from watch_skill.errors import VisionError  # noqa: E402
 from watch_skill.vision import client as client_mod  # noqa: E402

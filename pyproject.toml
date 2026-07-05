@@ -45,7 +45,7 @@ diarize = ["pyannote.audio>=4.0,<5"]
 all = ["watch-skill[perceive,ocr,whisper,index,mcp,api,loop]"]
 
 [project.scripts]
-watch-skill = "surfaces.cli.main:app"
+watch-skill = "watch_skill.surfaces.cli.main:app"
 
 [project.urls]
 Homepage = "https://github.com/oxbshw/watch-skill"
@@ -54,7 +54,7 @@ Homepage = "https://github.com/oxbshw/watch-skill"
 dev = ["pytest>=9.1,<10", "pytest-timeout>=2.4,<3", "ruff>=0.15,<0.16"]
 
 [tool.hatch.build.targets.wheel]
-packages = ["core/watch_skill", "surfaces"]
+packages = ["src/watch_skill"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

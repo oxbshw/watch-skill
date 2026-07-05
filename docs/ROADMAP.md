@@ -5,7 +5,7 @@ way. PRs welcome — each item links to the module you'd touch.
 
 ## Near term
 
-- **More Loop types** (`core/watch_skill/loop/`): game capture loops
+- **More Loop types** (`src/watch_skill/loop/`): game capture loops
   (window: + gamepad scripts), video-generation loops (prompt → generated
   clip → critique → regenerate), long-running monitor loops (watch a
   dashboard, alert on visual regression). The runner/critic/diff machinery
@@ -14,7 +14,7 @@ way. PRs welcome — each item links to the module you'd touch.
   (video, question, expected-evidence) triples measuring retrieval quality
   and frame-budget efficiency across providers. This is the single highest
   -leverage contribution for quality work.
-- **Diarization polish** (`core/watch_skill/transcribe/diarize.py`): the
+- **Diarization polish** (`src/watch_skill/transcribe/diarize.py`): the
   SpeakerTurn contract + pyannote backend exist; wanted: a lighter-weight
   local backend, speaker naming from context ("the interviewer"), and
   diarized rendering in ask_video evidence.
@@ -23,13 +23,13 @@ way. PRs welcome — each item links to the module you'd touch.
 
 ## Medium term
 
-- **sqlite-vec for vector search** (`core/watch_skill/index/`): the numpy
+- **sqlite-vec for vector search** (`src/watch_skill/index/`): the numpy
   batch cosine handles 10k vectors in ~120 ms; past ~100k stored segments a
   real ANN index pays off. sqlite-vec keeps everything in the one SQLite
   file and ships Windows wheels; it's pre-1.0, so adopt once it stabilizes.
   The index meta table (v3) already pins the embedding model per index, so
   the migration is mechanical.
-- **yt-dlp PO-token / impersonation extras** (`core/watch_skill/acquire/`):
+- **yt-dlp PO-token / impersonation extras** (`src/watch_skill/acquire/`):
   some extractors increasingly require PO tokens or TLS-fingerprint
   impersonation. Investigate shipping `yt-dlp`'s bgutil PO-token provider
   and curl_cffi impersonation as an opt-in "hardened acquisition" extra, off

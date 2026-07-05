@@ -10,6 +10,7 @@ import sqlite3
 from pathlib import Path
 
 import pytest
+
 from watch_skill.index.textnorm import normalize_for_search
 
 

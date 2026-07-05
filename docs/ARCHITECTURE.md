@@ -7,7 +7,7 @@
               └───────────────┬────────────────────────────────┘
                               ▼
               ┌────────────────────────────────────────────────┐
-              │  core/watch_skill  (all logic lives here)      │
+              │  src/watch_skill  (all logic lives here)      │
               │                                                │
               │  acquire ──► perceive ──► transcribe ──► index │
               │     │            │             │           ▲   │
