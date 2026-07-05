@@ -1,7 +1,7 @@
 ﻿"""Watch Skill MCP server (FastMCP): stdio by default, streamable HTTP with --http.
 
 Tools return text + image content blocks, capped at ``response_frame_cap``
-images per response â€” retrieval is designed to make more unnecessary.
+images per response — retrieval is designed to make more unnecessary.
 """
 from __future__ import annotations
 
@@ -25,7 +25,7 @@ mcp = FastMCP(
         "source (URL, direct media, HLS/DASH, local file); ask_video answers "
         "follow-ups from the persistent index without re-processing; "
         "get_moment zooms into a timestamp; search_videos spans every video "
-        "ever analyzed. Errors carry {error, message, fix} â€” act on `fix`."
+        "ever analyzed. Errors carry {error, message, fix} — act on `fix`."
     ),
 )
 
@@ -237,7 +237,7 @@ def get_moment(video: str, timestamp: str, window: float = 10.0) -> list[Any]:
         ctx = moment(video, ts, window=window)
     except WatchSkillError as exc:
         return [_error_payload(exc)]
-    lines = [f"# Moment {format_time(ctx.timestamp)} آ±{ctx.window / 2:.0f}s of {ctx.video_id}", ""]
+    lines = [f"# Moment {format_time(ctx.timestamp)} ±{ctx.window / 2:.0f}s of {ctx.video_id}", ""]
     if ctx.segments:
         lines.append("Transcript:")
         lines += [f"- [{format_time(s['start'])}] {s['text']}" for s in ctx.segments]
@@ -282,11 +282,11 @@ def list_videos() -> str:
 
     rows = videos()
     if not rows:
-        return "The index is empty â€” watch_video something first."
+        return "The index is empty — watch_video something first."
     lines = ["# Indexed videos", ""]
     for row in rows:
         lines.append(
-            f"- `{row['id']}` â€” {row['title'] or row['source']} "
+            f"- `{row['id']}` — {row['title'] or row['source']} "
             f"({format_time(row['duration_seconds'])}, transcript: {row['transcript_source']}, "
             f"analyzed {row['last_analyzed_at']})"
         )

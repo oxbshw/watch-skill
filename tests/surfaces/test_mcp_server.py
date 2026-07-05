@@ -69,6 +69,16 @@ def test_ask_unknown_video_returns_structured_error() -> None:
     assert "index.video_not_found" in result.content[0].text
 
 
+def test_server_source_has_no_mojibake() -> None:
+    """Regression: the rebrand rewrite mangled '—'/'±' into mojibake
+    ('â€”', 'آ±') inside the server instructions and tool output strings."""
+    from watch_skill.surfaces.mcp import server as server_mod
+
+    source = Path(server_mod.__file__).read_text(encoding="utf-8")
+    for bad in ("â€", "آ±", "Â±"):
+        assert bad not in source, f"mojibake {bad!r} in server.py"
+
+
 def test_frame_cap_respected(sample_video: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("WATCHSKILL_RESPONSE_FRAME_CAP", "3")
     from watch_skill.config import reset_settings
