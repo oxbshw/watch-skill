@@ -13,7 +13,11 @@ import sys
 from pathlib import Path
 
 from agentvision.answer import cache
-from agentvision.answer.confidence import merge_model_certainty, retrieval_confidence
+from agentvision.answer.confidence import (
+    lexical_anchor,
+    merge_model_certainty,
+    retrieval_confidence,
+)
 from agentvision.answer.ladder import (
     _profile_for,
     dense_resample,
@@ -42,6 +46,17 @@ actually visible/audible. Return ONLY a JSON object:
 
 def _evidence_from_hits(hits: list[Hit]) -> list[Evidence]:
     return [Evidence(h.timestamp, h.kind, h.text, round(h.score, 4)) for h in hits]
+
+
+def _grounded_confidence(hits: list[Hit], question: str, floor: float) -> float:
+    """Retrieval confidence, capped below the floor when the question has
+    ZERO lexical grounding in the evidence — with none of the question's
+    content terms present anywhere, only a model verify (which can still
+    raise the score later) may clear the floor. No grounding, no confidence."""
+    confidence = retrieval_confidence(hits, question)
+    if hits and lexical_anchor(question, hits) == 0.0:
+        confidence = min(confidence, max(0.0, floor - 0.01))
+    return confidence
 
 
 def _legal_timestamps(evidence: list[Evidence]) -> list[float]:
@@ -193,7 +208,7 @@ def answer_question(
     budget_stopped = False
 
     hits = hybrid_search(question, video_id=video["id"], k=k)
-    confidence = retrieval_confidence(hits)
+    confidence = _grounded_confidence(hits, question, floor)
     verified = False
     model_answer: str | None = None
 
@@ -211,7 +226,7 @@ def answer_question(
         spent += cost
         if new_items:
             hits = hybrid_search(question, video_id=video["id"], k=k)
-            confidence = retrieval_confidence(hits)
+            confidence = _grounded_confidence(hits, question, floor)
 
     evidence = _evidence_from_hits(hits)
     frames = _frames_for_evidence(video["id"], evidence)

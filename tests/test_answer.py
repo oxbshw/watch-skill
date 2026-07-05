@@ -66,6 +66,44 @@ def test_confidence_rewards_clear_winner_and_agreement() -> None:
     assert retrieval_confidence(clear_winner) > retrieval_confidence(murky_crowd) + 0.2
 
 
+def test_lexical_anchor_separates_present_from_absent() -> None:
+    """Regression (live find on 'Me at the zoo'): a question whose answer IS
+    in the evidence scored almost like an absent one on embeddings alone.
+    The question's content terms appearing in evidence must separate them —
+    and cross-kind same-moment hits corroborate instead of competing."""
+    trunks_hits = [
+        Hit("v", "segment", 1, 1.2, "here we are in front of the elephants", 0.75),
+        Hit("v", "segment", 2, 8.0, "really really long trunks", 0.73),
+        Hit("v", "segment", 3, 17.0, "that is all there is to say", 0.5),
+    ]
+    giraffe_hits = [
+        Hit("v", "segment", 1, 1.2, "here we are in front of the elephants", 0.58),
+        Hit("v", "segment", 2, 5.3, "the cool thing about these guys", 0.46),
+        Hit("v", "segment", 3, 17.0, "that is all there is to say", 0.2),
+    ]
+    present = retrieval_confidence(trunks_hits, "what does he say about the elephants trunks?")
+    absent = retrieval_confidence(giraffe_hits, "when does the giraffe ride the bicycle?")
+    assert present > absent  # raw signal separates; the engine cap widens it
+
+    # engine-level: zero lexical grounding caps below the floor
+    from agentvision.answer.engine import _grounded_confidence
+
+    assert _grounded_confidence(giraffe_hits, "when does the giraffe ride the bicycle?", 0.35) < 0.35
+    assert _grounded_confidence(trunks_hits, "what about the elephants trunks?", 0.35) >= 0.35
+
+    # a different-kind hit at the same moment corroborates (no margin loss)
+    corroborated = [
+        Hit("v", "segment", 1, 10.0, "the error code is shown", 0.6),
+        Hit("v", "ocr", 2, 10.5, "ERROR 42", 0.5),
+    ]
+    rivaled = [
+        Hit("v", "segment", 1, 10.0, "the error code is shown", 0.6),
+        Hit("v", "segment", 2, 10.5, "a different statement nearby", 0.5),
+    ]
+    q = "what error code is shown?"
+    assert retrieval_confidence(corroborated, q) > retrieval_confidence(rivaled, q)
+
+
 # ---- citation discipline ----------------------------------------------------
 
 def test_sanitize_strips_fabricated_timestamps() -> None:
@@ -113,7 +151,8 @@ def test_ladder_runs_in_order_and_stops_at_target(indexed: str, monkeypatch) -> 
 
     calls: list[str] = []
     strong_hits = [
-        Hit(indexed, "segment", 1, 1.0, "the exact answer text", 0.58),
+        # lexically anchored to the question: the resample "found" the answer
+        Hit(indexed, "segment", 1, 1.0, "the glowing artifact number appears here", 0.58),
         Hit(indexed, "ocr", 2, 1.5, "supporting ocr", 0.2),
     ]
 
@@ -131,7 +170,7 @@ def test_ladder_runs_in_order_and_stops_at_target(indexed: str, monkeypatch) -> 
     monkeypatch.setattr(mod, "zoom_crops_reocr", lambda v, h: calls.append("zoom") or (0, 0))
     monkeypatch.setattr(mod, "hybrid_search", fake_search)
 
-    answer = answer_question(indexed, "completely unrelated nonsense query", use_cache=False)
+    answer = answer_question(indexed, "which glowing artifact number appears?", use_cache=False)
     assert calls == ["dense_resample"], "ladder must stop once confidence clears the bar"
     assert answer.escalations_used == ["dense_resample"]
     assert answer.honest_floor is False

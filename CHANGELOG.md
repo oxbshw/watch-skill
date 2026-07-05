@@ -1,5 +1,62 @@
 # Changelog
 
+## v0.6.0 — 2026-07-05
+
+Three systems around one promise: frame-accurate answers you can trust, at
+a fraction of the tokens.
+
+### Self-healing answers (`answer/`)
+- Every `ask_video` carries a **confidence score** from real retrieval
+  signals (top-hit strength, margin over the runner-up, strength-gated
+  evidence agreement) — calibrated against measured score distributions.
+- **Escalation ladder**, cheapest first, stops the moment confidence clears
+  the bar: dense high-res re-sampling around candidate timestamps → 2× zoom-
+  crop re-OCR (recovers on-screen text the full frame mangled) → model
+  verify pass, cheap tier then strong. Recovered evidence is indexed
+  permanently.
+- **Verify pass**: the model is shown the exact frames about to be cited and
+  must return `{supported, certainty, answer}`; an eyewitness rejection
+  forces the honest floor regardless of retrieval strength.
+- **Honest floor**: below the floor the answer states plainly the video does
+  not clearly show it, with the closest real moments. Citation timestamps
+  can only come from indexed evidence (fabrications are stripped at
+  composition, test-forced).
+- Structured metadata on every answer: `confidence`, `verified`,
+  `escalations_used`, `cached`, `budget_stopped`, evidence timestamps.
+
+### Self-improve loop (`lessons/`) — local, never uploaded
+- `report_mistake` (MCP + `agentvision lessons add`): a wrong answer + its
+  correction becomes a classified lesson (missed-ocr / wrong-timestamp /
+  hallucination / language / sampling-miss) in `~/.agentvision/lessons.db`,
+  shared by every agent on the machine; where the class is mechanical the
+  question is re-asked immediately to confirm the lesson works.
+- Relevant lessons inject into future asks under a hard ~300-token cap.
+- **Every mistake becomes a test**: `lessons export-evals` + `evals run`
+  replay all past mistakes and report the pass-rate over time.
+- **Adaptive profiles**: per-content-type error statistics (screencast,
+  talking-head, vertical, fast-cut — auto-classified from index stats)
+  become data overrides: OCR-first escalation, denser sampling, stricter
+  thresholds. Inspect with `profiles show`, reset any time.
+
+### Token economy
+- **Text-first responses**: timestamps in prose, zero image tokens by
+  default; frames attach only on request or in the genuinely-uncertain band.
+- **Semantic answer cache** (index migration v5): repeat and near-duplicate
+  questions are free and marked `cached: true`; invalidated on re-watch,
+  cleared with `clean --cache-answers`.
+- **Savings meter**: every answer ends with `~N tokens saved vs raw-frame
+  injection`; lifetime meter via `agentvision stats` / the `stats` MCP tool.
+- Telegraphic scene descriptions (≤12 words, names/numbers kept) cut
+  indexing and retrieval token weight.
+- **Per-question token budget** the escalation ladder respects and reports.
+
+### Also
+- `agentvision forget <video_id>` removes one video (rows, cached answers,
+  frames dir) with a structured error on unknown ids (#3).
+- REST: `POST /v1/answer` returns the structured Answer; `/v1/ask` unchanged.
+- No breaking changes: every v0.5 MCP tool name/signature intact; index
+  upgrades v4→v5 forward-only and losslessly (migration-tested).
+
 ## v0.5.0 — 2026-07-05
 
 First public release.

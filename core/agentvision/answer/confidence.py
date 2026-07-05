@@ -49,15 +49,72 @@ def evidence_agreement(hits: list[Hit], window: float = AGREEMENT_WINDOW_SECONDS
     return len(kinds) / 3.0
 
 
-def retrieval_confidence(hits: list[Hit]) -> float:
-    """Blend the three retrieval signals into one 0..1 score."""
+def _competitor_score(hits: list[Hit], window: float = AGREEMENT_WINDOW_SECONDS) -> float:
+    """The strongest RIVAL to the top hit.
+
+    A different-kind hit at the same moment (OCR text under the frame a
+    transcript segment describes) corroborates — it is excluded. A same-kind
+    hit is always a rival, however close in time: two transcript segments
+    are two different statements, and treating adjacent ones as support let
+    an absent answer fake a clear win on short clips (found live).
+    """
+    if len(hits) < 2:
+        return 0.0
+    anchor_ts = hits[0].timestamp
+    rivals = [
+        h.score for h in hits[1:]
+        if h.kind == hits[0].kind
+        or h.timestamp is None
+        or anchor_ts is None
+        or abs(h.timestamp - anchor_ts) > window
+    ]
+    return max(rivals) if rivals else 0.0
+
+
+# question words carry no content; anything else ≥3 chars is a content term
+_STOPWORDS = frozenset(
+    "the a an is are was were does do did what when where who whom which why how "
+    "about with from into over under this that these those there here they them "
+    "and or not any some its his her their our your you say says said show shows "
+    "shown appear appears happen happens video narrator".split()
+)
+
+
+def lexical_anchor(question: str, hits: list[Hit]) -> float:
+    """Fraction of the question's content terms present in the top evidence.
+
+    The discriminator retrieval similarity misses (found live): a fluent
+    question about ABSENT content ('giraffe riding a bicycle') scores almost
+    like a PRESENT one ('elephants trunks') on embeddings — but the present
+    one's terms literally appear in the evidence text and the absent one's
+    never do. Normalization matches Arabic folding and CJK segmentation.
+    """
+    from agentvision.index.textnorm import normalize_for_search  # noqa: PLC0415
+
+    if not hits:
+        return 0.0
+    terms = [
+        normalize_for_search(token)
+        for token in question.split()
+        if token.lower().strip("?!.,؟") not in _STOPWORDS
+    ]
+    terms = [t for t in terms if len(t.replace(" ", "")) >= 3]
+    if not terms:
+        return 0.0
+    blob = " ".join(normalize_for_search(h.text) for h in hits[:5])
+    found = sum(1 for t in terms if t in blob)
+    return found / len(terms)
+
+
+def retrieval_confidence(hits: list[Hit], question: str = "") -> float:
+    """Blend the four retrieval signals into one 0..1 score."""
     if not hits:
         return 0.0
     top = _clamp(hits[0].score / _TOP_SCORE_CEILING)
-    runner_up = hits[1].score if len(hits) > 1 else 0.0
-    margin = _clamp((hits[0].score - runner_up) / _MARGIN_CEILING)
+    margin = _clamp((hits[0].score - _competitor_score(hits)) / _MARGIN_CEILING)
     agreement = _clamp(evidence_agreement(hits))
-    return _clamp(0.3 * top + 0.5 * margin + 0.2 * agreement)
+    anchor = lexical_anchor(question, hits) if question else 0.0
+    return _clamp(0.25 * top + 0.3 * margin + 0.15 * agreement + 0.3 * anchor)
 
 
 def merge_model_certainty(retrieval: float, model_certainty: float) -> float:

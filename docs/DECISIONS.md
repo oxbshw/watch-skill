@@ -167,6 +167,37 @@ unless noted; ranges in pyproject are now `>=tested,<next-major`.
 | MCP server | FastMCP | **kept** (3.4.2, current) | Actively maintained, current major, and built on the official `mcp` SDK (1.28.1) — we get protocol currency from the SDK plus the ergonomics (progress notifications, streamable HTTP) we already use. Dropping to the raw SDK is boilerplate with no capability gain. |
 | Frame dedup | phash (imagehash) | **kept** (4.3.2, current) | pdqhash now has Windows wheels (0.2.8), but our dedup is coarse scene-frame near-duplicate filtering, test-gated and working; no labeled dataset exists to demonstrate a pdq win, so a swap fails the "measurable axis" bar. videohash is unmaintained (last release 2022). |
 
+## v0.6 — confidence calibration (measured, three live iterations)
+
+The confidence score was calibrated against real retrieval distributions,
+and re-calibrated twice after live golden-path runs exposed failure modes:
+
+1. **Margin beats absolute score.** A fluent question about ABSENT content
+   still tops ~0.59 hybrid (stop-word bm25 + generic cosine); a present one
+   tops ~0.94. But the margin over the runner-up collapses to ~0.02 for
+   absent vs ~0.29 for present — margin carries the most weight.
+2. **Same-kind hits are rivals; cross-kind same-moment hits corroborate.**
+   First live failure: 'long trunks' (the answer) lost its margin to its own
+   adjacent corroborating segment → false floor. Counting only temporally
+   distant hits as rivals then let an absent question fake a clear win on a
+   19 s clip (all hits nearby). Final rule: segment-vs-segment always
+   competes; OCR/scene at the same moment corroborates.
+3. **Lexical anchoring separates present from absent.** Embeddings alone
+   scored 'elephants trunks' (present, terms in evidence) nearly equal to
+   'giraffe on a bicycle' (absent, zero term overlap). The anchor signal —
+   fraction of the question's content terms in the top evidence, through
+   the same Arabic/CJK normalization as search — is worth 30% of the blend,
+   and a question with ZERO grounding is capped below the floor: no
+   grounding, no confidence, unless a model verify pass confirms.
+4. **Weak evidence must not corroborate.** Indexed noise (a burned-in
+   timestamp OCR'd at the right moment) inflated agreement; corroboration
+   now requires ≥40% of the top hit's score.
+
+A stale-index side-effect surfaced during calibration: the Arabic demo
+video indexed before the original-language-captions fix carries an English
+auto-translated transcript, and correctly scores LOW confidence on Arabic
+questions — the honest response until a re-watch refreshes it.
+
 ### Launch benchmark (2026-07-05, dev machine: Windows 10, 8 GB RAM, no GPU)
 
 - **Cold CLI start** (`agentvision version`): 1.2–1.3 s.

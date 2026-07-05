@@ -102,6 +102,44 @@ flowchart LR
 Deep dive: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — including "add a
 vision provider in ~20 lines" and "add a new Loop type".
 
+## Answers you can trust
+
+`ask_video` never hands you an unverified guess (v0.6):
+
+- **Confidence you can audit** — every answer carries a score built from
+  real signals: how decisively the top evidence beats the runner-up, and
+  whether transcript, OCR, and scene descriptions independently agree.
+- **It looks again before you have to** — below the confidence bar, an
+  escalation ladder runs cheapest-first: dense high-res re-sampling around
+  candidate moments → 2× zoom-crop re-OCR of on-screen text → a stronger
+  vision model shown the exact frames it is about to cite. Everything it
+  recovers is written back to the index, permanently.
+- **The honest floor** — still not sure? The answer says plainly that the
+  video does not clearly show it, with the closest real moments. Citation
+  timestamps can only come from indexed evidence; a fabricated one cannot
+  survive composition (test-enforced).
+- **It learns from its mistakes** — `report_mistake` turns a correction
+  into a local lesson (classified, stored in `~/.agentvision/lessons.db`,
+  never uploaded) that injects into future similar questions across every
+  agent on your machine. `agentvision evals run` replays all past mistakes
+  and prints the pass-rate — watch it climb.
+
+<img src="docs/assets/lessons_loop.gif" alt="report a wrong answer with its correction; AgentVision classifies the mistake, re-asks the question with the lesson applied, validates it, and every mistake becomes a replayable eval" width="640">
+
+## Spends tokens like they're yours
+
+<img src="docs/assets/savings_meter.png" alt="a real ask: text-first evidence with timestamps, confidence and cache metadata, and the savings meter — ~86k tokens saved lifetime on this machine" width="640">
+
+- **Text-first answers**: timestamps in prose, zero image tokens unless the
+  engine is genuinely unsure (or you ask with `include_frames=true`).
+- **Semantic answer cache**: repeat or near-duplicate questions return
+  instantly at zero model cost (`cached: true`).
+- Every response ends with `~N tokens saved vs raw-frame injection`;
+  `agentvision stats` shows the lifetime meter.
+- **Hard budget**: a per-question token ceiling the escalation ladder
+  respects — accuracy spends, the ceiling caps, and the answer says when it
+  stopped early.
+
 ## Works in your language
 
 The i18n matrix is test-gated across Arabic, Chinese, Japanese, Korean,

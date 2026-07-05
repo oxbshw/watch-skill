@@ -28,6 +28,8 @@ Rule #1: `core/` never imports `surfaces/`. Surfaces render; core computes.
 | `perceive/` | scenes → budgeted frame selection → phash dedup → OCR (per-script models) | `perceive()` → `PerceptionResult` |
 | `transcribe/` | captions (original language first) → local whisper (windowed) → opt-in cloud; diarization contract | `get_transcript()` |
 | `index/` | schema-versioned SQLite; FTS5 (Arabic-normalized) + local embeddings; hybrid retrieval | `index_watch_result()`, `ask_video()`, `search_videos()`, `get_moment()` |
+| `answer/` | self-healing asks: confidence scoring → escalation ladder → verify pass → honest floor; semantic answer cache; savings meter | `answer_question()` → `Answer` |
+| `lessons/` | local self-improve store: mistake reports → classified lessons → prompt injection, evals, adaptive profiles | `report_mistake()`, `relevant_guidance()`, `run_evals()` |
 | `vision/` | one `prompt+images→text` primitive across Anthropic/OpenAI/Gemini/OpenRouter/Ollama; tiers; cost guard | `get_vision(tier)` |
 | `loop/` | capture (Playwright/gdigrab) → JSON critic → phash diff → iteration runner → proof artifact | `loop_start()`, `loop_iterate()` |
 | `health/` | doctor (self-healing deps), managed binaries, agent config writer | `run_doctor()`, `detect_agents()` |
@@ -36,6 +38,27 @@ Rule #1: `core/` never imports `surfaces/`. Surfaces render; core computes.
 
 Errors are structured everywhere: raise `AgentVisionError` subclasses with a
 stable `code`, human `message`, and actionable `fix`.
+
+## The accuracy/economy tension (and how the ladder reconciles it)
+
+System truth: accuracy wants to spend tokens (look again, look closer, ask
+a stronger model) and the token economy wants to save them (text-first,
+cache, tight descriptions). Both live in `answer/engine.py`, reconciled by
+ordering and a hard ceiling:
+
+1. **Free first.** Retrieval + confidence scoring cost no model tokens.
+   A confident answer ships as pure text — the cheapest possible response.
+2. **Compute before tokens.** The first escalation steps (dense high-res
+   re-sampling, zoom-crop re-OCR) burn only local CPU; whatever they recover
+   is indexed permanently, so the spend amortizes across every future ask.
+3. **Tokens only on genuine uncertainty.** The model verify pass runs
+   cheap-tier first, strong-tier only when confidence is still low — and the
+   model must *confirm against the exact frames*, not free-associate.
+4. **A hard ceiling on top.** `answer_token_budget` caps the whole ladder;
+   when the cap vetoes a step the answer says so (`budget_stopped`) instead
+   of silently degrading.
+5. **Refusal is cheaper than fabrication.** The honest floor costs almost
+   nothing and preserves the only budget that never refills: trust.
 
 ## How to add a vision provider (in ~20 lines)
 

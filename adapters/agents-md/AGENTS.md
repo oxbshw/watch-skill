@@ -20,8 +20,14 @@ a persistent, searchable store.
 2. **First look at a video:** `agentvision watch "<source>" [--start T --end T]`.
    Read the frame image paths it prints. The report includes a `video_id`.
 3. **Follow-up questions:** NEVER re-watch. Use
-   `agentvision ask <video_id> "<question>"` — retrieval-based, returns
-   timestamped evidence + the few relevant frame paths.
+   `agentvision ask <video_id> "<question>"` — a self-healing answer with
+   timestamped evidence and a confidence score; it escalates on its own when
+   unsure and says plainly when the video does not clearly show the answer.
+   Trust that refusal — never invent an answer past it. Frame paths appear
+   only when it wants you to look yourself.
+3b. **The user corrected your video answer?** Report it so the system
+   learns locally: `agentvision lessons add <video_id> "<question>"
+   "<wrong answer>" "<correction>"`.
 4. **Cross-video questions:** `agentvision search "<phrase>"`.
 5. **Zooming in:** `agentvision watch` with `--start/--end` samples that
    window densely (up to 2 fps).

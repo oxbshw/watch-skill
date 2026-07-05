@@ -1,6 +1,6 @@
 ---
 name: watch
-version: "0.5.0"
+version: "0.6.0"
 description: Watch any video (URL, stream, or local path) via AgentVision. Downloads, extracts scene-aware deduped frames, OCRs them, transcribes (captions first, then local Whisper — offline by default), indexes everything, and hands the result to the agent. Follow-up questions are answered from the persistent index without re-processing.
 argument-hint: "<video-url-or-path> [question]"
 allowed-tools: Bash, Read, AskUserQuestion
@@ -77,13 +77,24 @@ The video is already indexed. For any follow-up question in this or a LATER
 session:
 
 ```bash
-agentvision ask <video_id> "<question>"      # hybrid retrieval + evidence frames
+agentvision ask <video_id> "<question>"      # self-healing answer + evidence
 agentvision search "<phrase>"                 # across every video ever watched
 ```
 
-`ask` returns timestamped evidence plus the handful of relevant frame paths —
-Read those instead of re-watching. Never re-run `watch` for a follow-up on an
-already-indexed video.
+`ask` (v0.6) answers text-first with timestamped evidence, a confidence
+score, and a `~N tokens saved` line. It escalates on its own when unsure
+(dense re-sampling, zoom-crop re-OCR) and states plainly when the video
+does not clearly show the answer — trust that refusal; do NOT invent an
+answer past it. Frame paths are listed only when the engine wants you to
+look yourself (or pass `--frames`); Read them then. Never re-run `watch`
+for a follow-up on an already-indexed video.
+
+If the user corrects one of your video answers, report it so the system
+learns (locally):
+
+```bash
+agentvision lessons add <video_id> "<question>" "<your wrong answer>" "<the correction>"
+```
 
 ## THE LOOP — iterate on your own output
 
