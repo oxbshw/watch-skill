@@ -12,6 +12,12 @@ import sys
 import typer
 from rich.console import Console
 
+# Legacy Windows consoles (cp1256 etc.) can't encode every indexed title;
+# degrade to '?' instead of crashing `list`/`search` output.
+for _stream in (sys.stdout, sys.stderr):
+    if hasattr(_stream, "reconfigure"):
+        _stream.reconfigure(errors="replace")
+
 app = typer.Typer(
     name="watch-skill",
     help="Give any agent a video input: watch, index, ask, and iterate.",
@@ -237,7 +243,11 @@ def list_cmd() -> None:
     from watch_skill.index import list_videos
 
     for row in list_videos():
-        print(f"{row['id']}  {row['duration_seconds']:8.1f}s  {row['title'] or row['source']}")
+        try:
+            length = f"{float(row['duration_seconds']):8.1f}s"
+        except (TypeError, ValueError):
+            length = "       ?s"
+        print(f"{row['id']}  {length}  {row['title'] or row['source']}")
 
 
 @app.command()
