@@ -36,3 +36,6 @@ AGENTS.local.md
 *_REPORT.md
 *.session.md
 issues_export.local.json
+
+# Internal notes (never tracked)
+notes.local/

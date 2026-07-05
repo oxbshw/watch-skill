@@ -53,7 +53,7 @@ swaps. Newest entries at the bottom of each section.
   (`sentence-transformers/all-MiniLM-L6-v2`) through onnxruntime, which the
   OCR stack already installs. Same vectors, ~50 MB instead of ~2 GB.
 
-## Reference-inherited defaults (see docs/REFERENCE_ANALYSIS.md)
+## Reference-inherited defaults (from a code read of claude-video 0.2.0)
 
 - Frame width 512 px, hard cap 100 frames, 2 fps max, duration-tiered
   budgets, focused-mode denser tiers.
