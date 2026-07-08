@@ -161,15 +161,29 @@ def ollama_models(base_url: str = "http://127.0.0.1:11434") -> list[str]:
     return [m.get("name", "") for m in data.get("models", []) if m.get("name")]
 
 
+def recommend_num_ctx() -> int:
+    """Ollama context window sized to fit the machine's RAM.
+
+    The model's compute buffer scales with num_ctx; on a ~8 GB box the 2048
+    default OOMs during load, while 1536 fits and still covers one image plus
+    the prompt. Roomy machines keep the larger window."""
+    ram = total_ram_gb()
+    if ram is not None and ram < 10:
+        return 1024
+    return 2048
+
+
 def configure_ollama(
     model: str = DEFAULT_OLLAMA_MODEL,
     base_url: str = "http://127.0.0.1:11434",
+    num_ctx: int | None = None,
     path: Path | None = None,
 ) -> tuple[Path, Path | None]:
     """Write the Ollama provider + model into .env (offline, no key).
 
     Small local models can't hold many images in one prompt, so the vision
-    batch size is pinned to 1 — describe one frame per call.
+    batch size is pinned to 1 — describe one frame per call — and num_ctx is
+    sized to the machine so the model loads instead of OOMing.
     """
     return set_env_vars(
         {
@@ -179,6 +193,7 @@ def configure_ollama(
             "WATCHSKILL_VISION_STRONG_MODEL": model,
             "WATCHSKILL_VISION_BATCH_SIZE": "1",
             "WATCHSKILL_OLLAMA_BASE_URL": base_url,
+            "WATCHSKILL_OLLAMA_NUM_CTX": str(num_ctx if num_ctx is not None else recommend_num_ctx()),
         },
         path,
     )

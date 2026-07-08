@@ -90,3 +90,17 @@ def test_recommend_model_defaults_capable_when_ram_unknown(monkeypatch) -> None:
 def test_total_ram_gb_is_plausible_on_this_machine() -> None:
     ram = vs.total_ram_gb()
     assert ram is None or 0.5 < ram < 4096  # sane bound if detected at all
+
+
+def test_recommend_num_ctx_shrinks_on_small_ram(monkeypatch) -> None:
+    monkeypatch.setattr(vs, "total_ram_gb", lambda: 8.0)
+    assert vs.recommend_num_ctx() == 1024  # small window so the model loads
+    monkeypatch.setattr(vs, "total_ram_gb", lambda: 32.0)
+    assert vs.recommend_num_ctx() == 2048
+
+
+def test_configure_ollama_writes_num_ctx(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(vs, "total_ram_gb", lambda: 8.0)
+    env = tmp_path / ".env"
+    vs.configure_ollama(model="moondream", path=env)
+    assert "WATCHSKILL_OLLAMA_NUM_CTX=1024" in env.read_text(encoding="utf-8")

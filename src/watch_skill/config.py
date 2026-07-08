@@ -77,6 +77,16 @@ class Settings(BaseSettings):
     groq_api_key: SecretStr | None = None
     openrouter_api_key: SecretStr | None = None
     ollama_base_url: str = "http://127.0.0.1:11434"
+    ollama_num_ctx: int = Field(
+        default=2048,
+        description="Context window for local Ollama vision calls. The compute "
+        "buffer scales with it — lower (1024-1536) so small models load on a "
+        "low-RAM machine instead of OOMing.",
+    )
+    ollama_num_gpu: int | None = Field(
+        default=None,
+        description="GPU layers for Ollama (None = let Ollama auto-detect; 0 = force CPU).",
+    )
 
     # --- vision tiers ------------------------------------------------------
     vision_cheap_provider: str = Field(

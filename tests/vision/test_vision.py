@@ -112,6 +112,23 @@ def test_describe_frames_parses_numbered_lines(
     assert out == ["red slide", "blue chart"]
 
 
+def test_describe_single_frame_uses_plain_prompt(
+    frame: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A lone frame (how small local models are driven) gets a plain prompt and
+    is returned verbatim — the rigid numbered 'Format:' makes moondream reply
+    with nothing at all."""
+    monkeypatch.setenv("WATCHSKILL_ANTHROPIC_API_KEY", "k")
+    reset_settings()
+    capture: dict = {}
+    _mock_post(monkeypatch, {"content": [{"type": "text", "text": "red banner: BUILD FAILED"}]}, capture)
+    out = ClientVisionModel(VisionClient("anthropic", "m")).describe_frames([frame])
+    assert out == ["red banner: BUILD FAILED"]  # verbatim, not numbered-parsed
+    prompt = capture["body"]["messages"][0]["content"][-1]["text"]
+    assert "Format:" not in prompt and "telegraphic" not in prompt
+    assert "Describe this image" in prompt
+
+
 def test_tier_selection_from_settings(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("WATCHSKILL_VISION_CHEAP_PROVIDER", "ollama")
     monkeypatch.setenv("WATCHSKILL_VISION_CHEAP_MODEL", "llava")

@@ -107,10 +107,17 @@ def _gemini_extract(data: dict) -> str:
 
 
 def _ollama_request(model: str, key: str, prompt: str, images: list[Path]) -> tuple[str, dict, dict]:
-    endpoint = PROVIDERS["ollama"].endpoint.format(base=get_settings().ollama_base_url.rstrip("/"))
+    settings = get_settings()
+    endpoint = PROVIDERS["ollama"].endpoint.format(base=settings.ollama_base_url.rstrip("/"))
+    # num_ctx sizes the compute buffer; a smaller window lets small vision
+    # models load on a low-RAM machine instead of OOMing during startup.
+    options: dict[str, Any] = {"num_ctx": settings.ollama_num_ctx}
+    if settings.ollama_num_gpu is not None:
+        options["num_gpu"] = settings.ollama_num_gpu
     body = {
         "model": model,
         "stream": False,
+        "options": options,
         "messages": [{"role": "user", "content": prompt, "images": [_b64(p) for p in images]}],
     }
     return endpoint, {}, body

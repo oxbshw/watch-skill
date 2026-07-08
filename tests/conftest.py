@@ -27,11 +27,19 @@ def isolated_settings(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
         monkeypatch.delenv(var, raising=False)
     data_dir = tmp_path / "agent vision data"
     monkeypatch.setenv("WATCHSKILL_DATA_DIR", str(data_dir))
-    # Tests must NEVER reach a live vision backend: a developer's .env may
-    # point at a reachable local Ollama (this bit us — the API test sat in
-    # real CPU inference). Keyless cloud providers fail fast and structured.
+    # Tests must NEVER reach a live vision backend, and must not inherit a
+    # developer's .env vision tuning: `watch-skill setup-vision` writes the
+    # chosen model + batch size + num_ctx into the repo .env, which pydantic
+    # reads from CWD and would otherwise leak into tests (a moondream .env set
+    # WATCHSKILL_VISION_BATCH_SIZE=1 and broke the numbered-describe test).
+    # env vars win over .env, so pin every vision knob back to its default.
     monkeypatch.setenv("WATCHSKILL_VISION_CHEAP_PROVIDER", "anthropic")
     monkeypatch.setenv("WATCHSKILL_VISION_STRONG_PROVIDER", "anthropic")
+    monkeypatch.setenv("WATCHSKILL_VISION_CHEAP_MODEL", "claude-haiku-4-5-20251001")
+    monkeypatch.setenv("WATCHSKILL_VISION_STRONG_MODEL", "claude-sonnet-5")
+    monkeypatch.setenv("WATCHSKILL_VISION_BATCH_SIZE", "8")
+    monkeypatch.setenv("WATCHSKILL_OLLAMA_NUM_CTX", "2048")
+    monkeypatch.setenv("WATCHSKILL_OLLAMA_BASE_URL", "http://127.0.0.1:11434")
     reset_settings()
     yield data_dir
     reset_settings()

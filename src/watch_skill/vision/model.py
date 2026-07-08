@@ -96,6 +96,18 @@ class ClientVisionModel:
         return [""] * len(batch)
 
     def _describe_batch(self, frames: list[Path], context: str) -> list[str]:
+        # Single-frame batches (how small local models are driven) get a plain
+        # prompt: the rigid "1: ..." numbered format makes lightweight models
+        # like moondream return nothing at all, though they describe fine when
+        # simply asked.
+        if len(frames) == 1:
+            # Keep this a plain, natural request: small local models (moondream)
+            # return nothing when the prompt piles on constraints or calls the
+            # picture a "video frame" rather than an "image".
+            prompt = "Describe this image and read any text in it."
+            if context:
+                prompt += f" Context: {context}"
+            return [self.client.generate(prompt, frames).strip()]
         example = "\n".join(f"{i + 1}: <description of image {i + 1}>" for i in range(len(frames)))
         prompt = (
             f"You are indexing video frames.{' Context: ' + context if context else ''} "
