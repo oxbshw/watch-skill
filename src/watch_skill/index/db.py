@@ -80,6 +80,31 @@ def _migration_v4_fts_multilingual(conn: sqlite3.Connection) -> None:
         )
 
 
+def _migration_v6_fts_refold(conn: sqlite3.Connection) -> None:
+    """v6 — re-fold text_norm + answer-cache question_norm through the
+    extended normalizer.
+
+    normalize_for_search now segments the scriptless SEA scripts
+    (Thai/Lao/Khmer/Myanmar/Tibetan), unifies Persian/Urdu letter variants
+    with Arabic, folds cross-script digits to ASCII, and folds Hebrew/Greek/
+    German/Cyrillic/Vietnamese forms. Existing rows carry the *old* folding,
+    so we recompute the shadow keys in place from the untouched display text.
+    Forward-only; display text and vectors are not touched.
+    """
+    from watch_skill.index.textnorm import normalize_for_search
+
+    for row in conn.execute("SELECT rowid, text FROM fts").fetchall():
+        conn.execute(
+            "UPDATE fts SET text_norm = ? WHERE rowid = ?",
+            (normalize_for_search(row["text"]), row["rowid"]),
+        )
+    for row in conn.execute("SELECT id, question FROM answers").fetchall():
+        conn.execute(
+            "UPDATE answers SET question_norm = ? WHERE id = ?",
+            (normalize_for_search(row["question"]), row["id"]),
+        )
+
+
 def _migration_v3_meta(conn: sqlite3.Connection) -> None:
     """v3 — key/value meta table; pin the embedding model per index.
 
@@ -182,6 +207,8 @@ MIGRATIONS: list[Migration] = [
     );
     CREATE INDEX idx_answers_video ON answers(video_id);
     """,
+    # v6 — re-fold text_norm + question_norm for the extended normalizer
+    _migration_v6_fts_refold,
 ]
 
 
