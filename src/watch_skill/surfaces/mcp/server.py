@@ -390,6 +390,89 @@ def loop_status(loop_id: str) -> str:
 
 
 @mcp.tool
+def loop_video_gen(
+    spec: str,
+    generator_cmd: str,
+    output: str,
+    pass_criteria: str | None = None,
+    workdir: str | None = None,
+    max_iterations: int = 5,
+    timeout: float = 600.0,
+) -> str:
+    """START A VIDEO-GENERATION LOOP when you are generating a video (Manim,
+    Remotion, ffmpeg, any command) and need to verify the render matches the
+    spec: runs generator_cmd, watches the video it writes at `output`, and
+    critiques it against the spec/pass_criteria. YOU edit the generator
+    (scene code, prompt, args) between iterations, then call loop_iterate —
+    the same iterate/diff/artifact machinery as the UI loop."""
+    from watch_skill.loop import loop_video_gen as start
+
+    try:
+        state = start(
+            spec, generator_cmd, output, pass_criteria=pass_criteria,
+            workdir=workdir, max_iterations=max_iterations, timeout_seconds=timeout,
+        )
+    except WatchSkillError as exc:
+        return _error_payload(exc)
+    return _loop_state_report(state)
+
+
+@mcp.tool
+def loop_game(
+    target: str,
+    pass_criteria: str,
+    run_cmd: str | None = None,
+    script: list[dict[str, Any]] | None = None,
+    duration: float = 10.0,
+    max_iterations: int = 5,
+) -> str:
+    """START A GAME/SIMULATION LOOP to catch visual glitches or state failures
+    in a running game or sim: optionally launches run_cmd, records gameplay
+    from `target` (a canvas game URL, window:<title>, or screen:), and
+    critiques the recording against your criteria (e.g. 'the score counter
+    must never show negative numbers, no black flicker frames'). Fix the
+    game code between iterations, then loop_iterate."""
+    from watch_skill.loop import loop_game as start
+
+    try:
+        state = start(
+            target, pass_criteria, run_cmd=run_cmd, script=script,
+            duration_seconds=duration, max_iterations=max_iterations,
+        )
+    except WatchSkillError as exc:
+        return _error_payload(exc)
+    return _loop_state_report(state)
+
+
+@mcp.tool
+def loop_monitor(
+    source: str,
+    condition: str,
+    interval: float = 10.0,
+    max_checks: int = 10,
+    sample_seconds: float = 5.0,
+) -> str:
+    """WATCH a folder of videos or a live target until a described condition
+    appears (e.g. 'a demo error screen shows'), then return a structured
+    event. Bounded by max_checks — it always terminates. Folder sources
+    consume each video once; live targets (URL / screen: / window:) sample
+    `sample_seconds` every `interval`. Events also land in events.jsonl under
+    the monitor's loop dir so other tools can react."""
+    import json as _json
+
+    from watch_skill.loop import loop_monitor as monitor
+
+    try:
+        result = monitor(
+            source, condition, interval_seconds=interval,
+            max_checks=max_checks, sample_seconds=sample_seconds,
+        )
+    except WatchSkillError as exc:
+        return _error_payload(exc)
+    return _json.dumps(result.to_dict(), ensure_ascii=False, indent=2)
+
+
+@mcp.tool
 def doctor() -> str:
     """Run this when ANY other tool fails with a dependency/download error, or
     on first use. Checks AND self-heals: installs missing ffmpeg/yt-dlp,

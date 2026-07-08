@@ -12,7 +12,6 @@ import pytest
 pytest.importorskip("scenedetect", reason="perceive extra not installed")
 
 from watch_skill.errors import LoopError  # noqa: E402
-from watch_skill.loop import runner as runner_mod  # noqa: E402
 from watch_skill.loop.capture import CaptureResult  # noqa: E402
 from watch_skill.loop.critic import Critique, Issue, parse_critique  # noqa: E402
 from watch_skill.loop.diff import align_frames, compare_issues  # noqa: E402
@@ -141,7 +140,10 @@ def _install_fake_capture(monkeypatch: pytest.MonkeyPatch, sample_video: Path) -
         shutil.copy2(sample_video, dest)
         return CaptureResult(video_path=dest, kind="file", target=str(target), meta={})
 
-    monkeypatch.setattr(runner_mod, "capture", fake_capture)
+    # the ui producer owns capture since the v0.7 pluggable-loop refactor
+    from watch_skill.loop import framework as framework_mod
+
+    monkeypatch.setattr(framework_mod, "capture", fake_capture)
 
 
 def _scripted_critic(verdicts: list[tuple[str, int, list[Issue]]]):

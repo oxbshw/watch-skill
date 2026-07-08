@@ -325,6 +325,79 @@ def loop_start_cmd(
     _print_loop_state(state)
 
 
+@loop_app.command("video-gen")
+def loop_video_gen_cmd(
+    spec: str = typer.Argument(..., help="What the generated video must show."),
+    generator_cmd: str = typer.Argument(..., help="Command that renders the video."),
+    output: str = typer.Option(..., "--output", help="Video file the command writes."),
+    pass_criteria: str | None = typer.Option(None, "--criteria", help="Overrides spec for the critic."),
+    workdir: str | None = typer.Option(None, "--workdir"),
+    max_iterations: int = typer.Option(5, "--max-iterations"),
+    timeout: float = typer.Option(600.0, "--timeout", help="Generator timeout (seconds)."),
+) -> None:
+    """Video-gen loop: run the generator, watch its render, critique vs spec."""
+    from watch_skill.errors import WatchSkillError
+    from watch_skill.loop import loop_video_gen
+
+    try:
+        state = loop_video_gen(
+            spec, generator_cmd, output, pass_criteria=pass_criteria,
+            workdir=workdir, max_iterations=max_iterations, timeout_seconds=timeout,
+        )
+    except WatchSkillError as exc:
+        print(json.dumps(exc.to_dict(), indent=2))
+        raise typer.Exit(code=1) from None
+    _print_loop_state(state)
+
+
+@loop_app.command("game")
+def loop_game_cmd(
+    target: str = typer.Argument(..., help="Canvas game URL, window:<title>, or screen:."),
+    pass_criteria: str = typer.Argument(...),
+    run_cmd: str | None = typer.Option(None, "--run", help="Command that launches the game/sim."),
+    script_json: str | None = typer.Option(None, "--script"),
+    duration: float = typer.Option(10.0, "--duration"),
+    max_iterations: int = typer.Option(5, "--max-iterations"),
+) -> None:
+    """Game/sim loop: record gameplay, critic detects visual glitches."""
+    from watch_skill.errors import WatchSkillError
+    from watch_skill.loop import loop_game
+
+    try:
+        script = json.loads(script_json) if script_json else None
+        state = loop_game(
+            target, pass_criteria, run_cmd=run_cmd, script=script,
+            duration_seconds=duration, max_iterations=max_iterations,
+        )
+    except WatchSkillError as exc:
+        print(json.dumps(exc.to_dict(), indent=2))
+        raise typer.Exit(code=1) from None
+    _print_loop_state(state)
+
+
+@loop_app.command("monitor")
+def loop_monitor_cmd(
+    source: str = typer.Argument(..., help="Folder of videos, or a live capture target."),
+    condition: str = typer.Argument(..., help="What to watch for, in plain language."),
+    interval: float = typer.Option(10.0, "--interval", help="Seconds between live checks."),
+    max_checks: int = typer.Option(10, "--max-checks"),
+    sample_seconds: float = typer.Option(5.0, "--sample-seconds"),
+) -> None:
+    """Watch a source until the condition appears; emits a structured event."""
+    from watch_skill.errors import WatchSkillError
+    from watch_skill.loop import loop_monitor
+
+    try:
+        result = loop_monitor(
+            source, condition, interval_seconds=interval,
+            max_checks=max_checks, sample_seconds=sample_seconds,
+        )
+    except WatchSkillError as exc:
+        print(json.dumps(exc.to_dict(), indent=2))
+        raise typer.Exit(code=1) from None
+    print(json.dumps(result.to_dict(), ensure_ascii=False, indent=2))
+
+
 @loop_app.command("iterate")
 def loop_iterate_cmd(loop_id: str = typer.Argument(...)) -> None:
     """Re-capture + re-critique after you applied fixes; diffs vs previous."""

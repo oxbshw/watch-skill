@@ -17,7 +17,7 @@ from watch_skill.errors import VisionError  # noqa: E402
 from watch_skill.loop import critic as critic_mod  # noqa: E402
 from watch_skill.loop.critic import (  # noqa: E402
     _banned_terms,
-    _exemplar_patterns,
+    _split_exemplars,
     _violates_rules,
     describe_critique,
 )
@@ -86,10 +86,38 @@ def test_violates_rules_is_word_bounded() -> None:
 
 
 def test_exemplar_patterns_generalize_digits() -> None:
-    (pattern,) = _exemplar_patterns("must show a real dollar total (like $29.00)")
+    positive, banned = _split_exemplars("must show a real dollar total (like $29.00)")
+    assert banned == []
+    (pattern,) = positive
     assert pattern.search("total is $348.20")  # same shape, different number
     assert pattern.search("TOTAL: $19.00")
     assert not pattern.search("TOTAL: $NaN")
+
+
+def test_exemplar_inside_negative_clause_becomes_ban() -> None:
+    """'must never show X (like ERROR 502)' — the exemplar is what must NOT
+    appear (the monitor frames conditions this way); treating it as a pass
+    pattern would invert detection."""
+    positive, banned = _split_exemplars(
+        "The recording must never show an error screen (like ERROR 502)"
+    )
+    assert positive == []
+    (pattern,) = banned
+    assert pattern.search("red banner reading ERROR 502")
+    assert pattern.search("shows ERROR 404 page")  # digit-generalized
+    assert pattern.search("OCR text: ERROR502")    # OCR drops spaces — still hits
+
+
+def test_describe_critique_detects_banned_pattern(monkeypatch) -> None:
+    fake = _FakeVision({"frame_0.jpg": "red screen with big text ERROR 502"})
+    monkeypatch.setattr(critic_mod, "get_vision", lambda *a, **k: fake)
+    critique = describe_critique(
+        _perception([""]),
+        "The recording must never show an error screen (like ERROR 502)",
+    )
+    assert critique.verdict == "fail"
+    assert critique.issues[0].severity == "critical"
+    assert fake.judge_prompts == []  # deterministic detection, no judge
 
 
 def test_exemplar_pass_skips_the_judge(monkeypatch) -> None:

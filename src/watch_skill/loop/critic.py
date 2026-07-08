@@ -128,20 +128,33 @@ def _banned_terms(pass_criteria: str) -> list[str]:
     return terms
 
 
-def _exemplar_patterns(pass_criteria: str) -> list[re.Pattern]:
-    """'a real dollar total (like $29.00)' -> a shape pattern for $29.00.
+def _shape_pattern(raw: str) -> re.Pattern:
+    """An exemplar with digit runs generalized and spaces made optional:
+    '$29.00' matches '$348.20'; 'ERROR 502' matches OCR's spaceless
+    'ERROR502' (OCR keeps or drops spaces unpredictably)."""
+    shaped = re.sub(r"\d+", r"\\d+", re.escape(raw))
+    return re.compile(shaped.replace(r"\ ", r"\s*"), re.IGNORECASE)
 
-    Each exemplar becomes a regex with its digit runs generalized, so evidence
-    matching the SAME SHAPE with different numbers counts ($19.00, $348.20 …).
+
+def _split_exemplars(pass_criteria: str) -> tuple[list[re.Pattern], list[re.Pattern]]:
+    """(positive, banned) exemplar shape patterns from the criteria.
+
+    'a real dollar total (like $29.00)' → positive: seeing that shape passes
+    the frame. But the SAME exemplar inside a negative clause — 'must never
+    show an error screen (like ERROR 502)' — is a concrete example of what
+    must NOT appear, so it becomes a banned pattern instead. Getting this
+    backwards would make monitors treat the watched-for condition as a pass.
     """
-    patterns: list[re.Pattern] = []
+    negative_spans = [m.span() for m in _NEGATIVE_RE.finditer(pass_criteria)]
+    positive: list[re.Pattern] = []
+    banned: list[re.Pattern] = []
     for match in _EXEMPLAR_RE.finditer(pass_criteria):
         raw = (match.group(1) or match.group(2) or "").strip().strip("\"'.,")
         if not raw:
             continue
-        shaped = re.sub(r"\d+", r"\\d+", re.escape(raw))
-        patterns.append(re.compile(shaped, re.IGNORECASE))
-    return patterns
+        in_negative = any(lo <= match.start() < hi for lo, hi in negative_spans)
+        (banned if in_negative else positive).append(_shape_pattern(raw))
+    return positive, banned
 
 
 def _violates_rules(evidence: str, banned: list[str]) -> str | None:
@@ -173,7 +186,7 @@ def describe_critique(
     vision = get_vision("strong", provider=provider, model=model)
     frames = _select_frames(perception)
     banned = _banned_terms(pass_criteria)
-    exemplars = _exemplar_patterns(pass_criteria)
+    exemplars, banned_patterns = _split_exemplars(pass_criteria)
     issues: list[Issue] = []
     for frame in frames:
         try:
@@ -184,6 +197,12 @@ def describe_critique(
         if not evidence:
             continue
         hit = _violates_rules(evidence, banned)
+        if hit is None:
+            for pattern in banned_patterns:
+                match = pattern.search(evidence)
+                if match:
+                    hit = match.group(0)
+                    break
         verdict_fail = hit is not None
         if not verdict_fail and any(p.search(evidence) for p in exemplars):
             continue  # deterministically satisfied — no judge needed

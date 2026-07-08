@@ -29,6 +29,9 @@ def test_tools_are_registered() -> None:
 
     names = asyncio.run(_list())
     assert {"watch_video", "ask_video", "get_moment", "search_videos", "list_videos", "doctor"} <= names
+    # the loop family: v0.6 names unchanged (compat contract) + v0.7 loop types
+    assert {"loop_start", "loop_iterate", "loop_status"} <= names
+    assert {"loop_video_gen", "loop_game", "loop_monitor"} <= names
 
 
 def test_list_videos_empty() -> None:

@@ -19,7 +19,6 @@ from typing import Any
 from watch_skill.config import get_settings
 from watch_skill.errors import LoopError
 from watch_skill.loop.artifact import render_before_after
-from watch_skill.loop.capture import capture
 from watch_skill.loop.critic import Critique, Issue, critique_recording
 from watch_skill.loop.diff import diff_iterations
 from watch_skill.perceive import perceive
@@ -41,6 +40,9 @@ class LoopState:
     duration_seconds: float
     status: str = "running"  # running | passed | max_iterations | no_progress
     iterations: list[dict[str, Any]] = field(default_factory=list)
+    # v0.7 pluggable loop types; defaults keep pre-v0.7 state.json loading.
+    loop_type: str = "ui"
+    extra: dict[str, Any] = field(default_factory=dict)
 
     @property
     def dir(self) -> Path:
@@ -90,15 +92,14 @@ def _load_perception(iter_record: dict[str, Any]) -> PerceptionResult:
 
 
 def _run_iteration(state: LoopState, critic_override: Any = None) -> dict[str, Any]:
-    """Capture + perceive + critique one iteration; returns the iteration record."""
+    """Produce + perceive + critique one iteration; returns the iteration record."""
+    from watch_skill.loop.framework import get_loop_type
+
     n = len(state.iterations)
     iter_dir = state.dir / f"iter_{n}"
     iter_dir.mkdir(parents=True, exist_ok=True)
 
-    cap = capture(
-        state.target, iter_dir, script=state.script,
-        duration_seconds=state.duration_seconds,
-    )
+    cap = get_loop_type(state.loop_type).produce(state, iter_dir)
     perception = _perceive_capture(cap.video_path, iter_dir)
     critic = critic_override or critique_recording
     critique: Critique = critic(perception, state.pass_criteria)
@@ -143,23 +144,8 @@ def _render_pass_artifacts(state: LoopState) -> dict[str, str] | None:
     return {k: str(v) for k, v in artifacts.items()}
 
 
-def loop_start(
-    target: str,
-    pass_criteria: str,
-    script: list[dict[str, Any]] | None = None,
-    max_iterations: int = DEFAULT_MAX_ITERATIONS,
-    duration_seconds: float = 8.0,
-    critic_override: Any = None,
-) -> LoopState:
-    """Start a loop: first capture + critique. Returns state with iteration 0."""
-    state = LoopState(
-        loop_id=uuid.uuid4().hex[:12],
-        target=target,
-        pass_criteria=pass_criteria,
-        script=script,
-        max_iterations=max_iterations,
-        duration_seconds=duration_seconds,
-    )
+def _start(state: LoopState, critic_override: Any = None) -> LoopState:
+    """Run iteration 0 for a freshly built state and persist it."""
     record = _run_iteration(state, critic_override)
     state.iterations.append(record)
     _update_status(state)
@@ -168,6 +154,98 @@ def loop_start(
         state.iterations[-1]["artifacts"] = artifacts
     state.save()
     return state
+
+
+def loop_start(
+    target: str,
+    pass_criteria: str,
+    script: list[dict[str, Any]] | None = None,
+    max_iterations: int = DEFAULT_MAX_ITERATIONS,
+    duration_seconds: float = 8.0,
+    critic_override: Any = None,
+) -> LoopState:
+    """Start a UI loop: first capture + critique. Returns state with iteration 0."""
+    return _start(
+        LoopState(
+            loop_id=uuid.uuid4().hex[:12],
+            target=target,
+            pass_criteria=pass_criteria,
+            script=script,
+            max_iterations=max_iterations,
+            duration_seconds=duration_seconds,
+        ),
+        critic_override,
+    )
+
+
+def loop_video_gen(
+    spec: str,
+    generator_cmd: str,
+    output: str,
+    pass_criteria: str | None = None,
+    workdir: str | None = None,
+    max_iterations: int = DEFAULT_MAX_ITERATIONS,
+    timeout_seconds: float = 600.0,
+    critic_override: Any = None,
+) -> LoopState:
+    """Start a video-generation loop: run the generator, watch its render,
+    critique it against the spec, iterate until the render matches.
+
+    The agent edits the generator (scene code, prompt, render args) between
+    iterations; the loop re-runs ``generator_cmd`` and judges the new render.
+    """
+    return _start(
+        LoopState(
+            loop_id=uuid.uuid4().hex[:12],
+            target=generator_cmd,
+            pass_criteria=pass_criteria or spec,
+            script=None,
+            max_iterations=max_iterations,
+            duration_seconds=0.0,  # the generator decides the video length
+            loop_type="video-gen",
+            extra={
+                "spec": spec,
+                "generator_cmd": generator_cmd,
+                "output": output,
+                "workdir": workdir or "",
+                "timeout_seconds": timeout_seconds,
+            },
+        ),
+        critic_override,
+    )
+
+
+def loop_game(
+    target: str,
+    pass_criteria: str,
+    run_cmd: str | None = None,
+    script: list[dict[str, Any]] | None = None,
+    duration_seconds: float = 10.0,
+    warmup_seconds: float = 3.0,
+    viewport: dict[str, int] | None = None,
+    max_iterations: int = DEFAULT_MAX_ITERATIONS,
+    critic_override: Any = None,
+) -> LoopState:
+    """Start a game/simulation loop: (optionally) launch the game, record
+    gameplay from ``target`` (URL canvas / window:<title> / screen:), and
+    critique the recording for visual glitches or state failures."""
+    return _start(
+        LoopState(
+            loop_id=uuid.uuid4().hex[:12],
+            target=target,
+            pass_criteria=pass_criteria,
+            script=script,
+            max_iterations=max_iterations,
+            duration_seconds=duration_seconds,
+            loop_type="game",
+            extra={
+                "run_cmd": run_cmd or "",
+                "warmup_seconds": warmup_seconds,
+                "viewport": viewport or {},
+            },
+        ),
+        critic_override,
+    )
 
 
 def loop_iterate(loop_id: str, critic_override: Any = None) -> LoopState:
