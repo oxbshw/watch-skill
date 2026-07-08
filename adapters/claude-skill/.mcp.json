@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "watch-skill": {
+      "command": "watch-skill",
+      "args": ["serve"],
+      "env": {}
+    }
+  }
+}

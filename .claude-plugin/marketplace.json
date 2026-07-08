@@ -1,0 +1,35 @@
+{
+  "name": "watch-skill",
+  "owner": {
+    "name": "oxbshw",
+    "url": "https://github.com/oxbshw"
+  },
+  "metadata": {
+    "description": "Give any AI agent the ability to actually watch video.",
+    "version": "0.7.0"
+  },
+  "plugins": [
+    {
+      "name": "watch-skill",
+      "source": "./adapters/claude-skill",
+      "description": "Watch, index, ask, and iterate on video (THE LOOP). Persistent index, self-healing answers, and a local lessons store — Windows/Linux/macOS.",
+      "version": "0.7.0",
+      "author": {
+        "name": "Watch Skill contributors",
+        "url": "https://github.com/oxbshw/watch-skill"
+      },
+      "homepage": "https://github.com/oxbshw/watch-skill",
+      "license": "MIT",
+      "keywords": [
+        "video",
+        "vision",
+        "mcp",
+        "skill",
+        "transcription",
+        "ocr",
+        "the-loop",
+        "youtube"
+      ]
+    }
+  ]
+}

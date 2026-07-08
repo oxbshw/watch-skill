@@ -1,6 +1,6 @@
 ---
 name: watch
-version: "0.6.0"
+version: "0.7.0"
 description: Watch any video (URL, stream, or local path) via Watch Skill. Downloads, extracts scene-aware deduped frames, OCRs them, transcribes (captions first, then local Whisper — offline by default), indexes everything, and hands the result to the agent. Follow-up questions are answered from the persistent index without re-processing.
 argument-hint: "<video-url-or-path> [question]"
 allowed-tools: Bash, Read, AskUserQuestion

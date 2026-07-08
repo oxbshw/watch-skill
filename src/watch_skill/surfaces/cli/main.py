@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import sys
+from pathlib import Path
 
 import typer
 from rich.console import Console
@@ -387,6 +388,124 @@ def setup(
         changed, message = configure_agent(t)
         _console.print(("[green]+[/green] " if changed else "[yellow]=[/yellow] ") + message)
     print("\nDone. Restart each agent, then try: \"watch this video ...\" in its chat.")
+
+
+def _make_probe_frame() -> Path:
+    """A tiny labelled frame for the live vision check."""
+    import tempfile
+
+    out = Path(tempfile.gettempdir()) / "watch_skill_vision_probe.png"
+    try:
+        from PIL import Image, ImageDraw
+
+        img = Image.new("RGB", (360, 140), (200, 30, 30))
+        ImageDraw.Draw(img).text((20, 55), "WATCH SKILL 2026", fill=(255, 255, 255))
+        img.save(out)
+        return out
+    except Exception:  # noqa: BLE001 — PIL absent: fall back to an ffmpeg color frame
+        import shutil
+        import subprocess
+
+        from watch_skill.config import get_settings
+
+        ff = shutil.which("ffmpeg") or str(get_settings().bin_dir / "ffmpeg.exe")
+        subprocess.run(
+            [ff, "-y", "-f", "lavfi", "-i", "color=c=red:s=360x140:d=1", "-frames:v", "1", str(out)],
+            capture_output=True,
+        )
+        return out
+
+
+def _verify_vision_live() -> None:
+    """Run ONE live describe call so setup proves vision actually works."""
+    from watch_skill.errors import WatchSkillError
+    from watch_skill.vision.model import get_vision
+
+    img = _make_probe_frame()
+    _console.print("Running a live vision check (this can take a minute on a local model)...")
+    try:
+        descriptions = get_vision("cheap").describe_frames([img])
+    except WatchSkillError as exc:
+        print(json.dumps(exc.to_dict(), indent=2))
+        raise typer.Exit(code=1) from None
+    text = (descriptions[0] if descriptions else "").strip()
+    if not text:
+        print("Vision call returned empty output — check the provider/model config.")
+        raise typer.Exit(code=1)
+    _console.print(f"[green]Vision OK[/green] — the model described the probe frame as:\n  {text}")
+
+
+@app.command("setup-vision")
+def setup_vision(
+    provider: str = typer.Option(..., "--provider", help="gemini | ollama"),
+    api_key: str | None = typer.Option(
+        None, "--api-key", help="Gemini API key (provider=gemini). Free key: aistudio.google.com/apikey"
+    ),
+    model: str | None = typer.Option(None, "--model", help="Model tag; the provider default if omitted."),
+    pull: bool = typer.Option(True, "--pull/--no-pull", help="For Ollama: pull the model if it is missing."),
+    verify: bool = typer.Option(False, "--verify", help="Run one live vision call to confirm it works."),
+) -> None:
+    """Configure a vision backend: Gemini (free tier, recommended) or offline Ollama.
+
+    Writes the WATCHSKILL_VISION_* settings into .env (backing it up first).
+    Transcription + search already work with no vision backend at all.
+    """
+    from watch_skill.config import reset_settings
+    from watch_skill.errors import WatchSkillError
+    from watch_skill.health import vision_setup as vs
+
+    provider = provider.lower().strip()
+    if provider == "gemini":
+        try:
+            env, backup = vs.configure_gemini(
+                api_key or "",
+                cheap_model=model or vs.DEFAULT_GEMINI_CHEAP,
+                strong_model=model or vs.DEFAULT_GEMINI_STRONG,
+            )
+        except WatchSkillError as exc:
+            print(json.dumps(exc.to_dict(), indent=2))
+            raise typer.Exit(code=1) from None
+        note = f" (backup: {backup.name})" if backup else ""
+        _console.print(f"[green]+[/green] Gemini configured -> {env}{note}")
+    elif provider == "ollama":
+        import shutil
+        import subprocess
+
+        chosen = model or vs.DEFAULT_OLLAMA_MODEL
+        if not vs.ollama_running():
+            print(
+                "Ollama is not running. Install it from https://ollama.com, start it, "
+                "then re-run this command."
+            )
+            raise typer.Exit(code=1)
+        present = vs.ollama_models()
+        base = chosen.split(":")[0]
+        if chosen not in present and not any(m.split(":")[0] == base for m in present):
+            if not pull:
+                print(f"Model {chosen} is not pulled. Run:  ollama pull {chosen}")
+                raise typer.Exit(code=1)
+            ollama = shutil.which("ollama")
+            if not ollama:
+                print(f"`ollama` CLI not on PATH; pull manually:  ollama pull {chosen}")
+                raise typer.Exit(code=1)
+            _console.print(f"Pulling {chosen} (first time only; this can be a large download)...")
+            if subprocess.run([ollama, "pull", chosen]).returncode != 0:
+                print(f"`ollama pull {chosen}` failed.")
+                raise typer.Exit(code=1)
+        env, backup = vs.configure_ollama(model=chosen)
+        note = f" (backup: {backup.name})" if backup else ""
+        _console.print(f"[green]+[/green] Ollama configured ({chosen}) -> {env}{note}")
+    else:
+        print(f"Unknown provider: {provider!r} (expected 'gemini' or 'ollama').")
+        raise typer.Exit(code=1)
+
+    reset_settings()  # pick up the freshly written .env
+    if verify:
+        _verify_vision_live()
+    else:
+        _console.print(
+            f"Verify anytime with:  watch-skill setup-vision --provider {provider} --verify"
+        )
 
 
 @app.command()
