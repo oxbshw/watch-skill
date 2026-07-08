@@ -120,6 +120,9 @@ def _ollama_request(model: str, key: str, prompt: str, images: list[Path]) -> tu
         "model": model,
         "stream": False,
         "options": options,
+        # A tight-RAM box may not manage to RELOAD the model mid-pipeline
+        # (indexing makes dozens of calls minutes apart); keep it resident.
+        "keep_alive": "30m",
         "messages": [{"role": "user", "content": prompt, "images": [_b64(p) for p in images]}],
     }
     return endpoint, {}, body

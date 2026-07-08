@@ -165,11 +165,13 @@ def recommend_num_ctx() -> int:
     """Ollama context window sized to fit the machine's RAM.
 
     The model's compute buffer scales with num_ctx; on a ~8 GB box the 2048
-    default OOMs during load, while 1536 fits and still covers one image plus
-    the prompt. Roomy machines keep the larger window."""
+    default OOMs during load — measured on the dev box: 768 loads reliably
+    even under heavy memory pressure, 1024+ only when the box is quiet. 768
+    still covers one image plus the prompt. Roomy machines keep the larger
+    window."""
     ram = total_ram_gb()
     if ram is not None and ram < 10:
-        return 1024
+        return 768
     return 2048
 
 

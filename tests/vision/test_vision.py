@@ -272,3 +272,19 @@ def test_describe_batch_config_error_still_raises(
 
     with pytest.raises(VisionError):
         ClientVisionModel(KeylessClient()).describe_frames([frame])
+
+
+def test_ollama_request_pins_memory_and_determinism_options(
+    frame: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The local request carries num_ctx (RAM ceiling), temperature 0
+    (reproducible loop verdicts), and keep_alive (no mid-pipeline reloads)."""
+    from watch_skill.vision.client import _ollama_request
+
+    monkeypatch.setenv("WATCHSKILL_OLLAMA_NUM_CTX", "768")
+    reset_settings()
+    endpoint, headers, body = _ollama_request("moondream", "", "hi", [frame])
+    assert endpoint.endswith("/api/chat")
+    assert body["options"]["num_ctx"] == 768
+    assert body["options"]["temperature"] == 0
+    assert body["keep_alive"] == "30m"
