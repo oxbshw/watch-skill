@@ -44,6 +44,8 @@ PASS CRITERIA (the recording must satisfy ALL of these):
 
 Frame timestamps, in order: {timeline}
 {ocr_section}
+{directive} (the JSON keys stay in English; only the human-readable
+"summary", "description", and "suggested_fix" values use that language.)
 Return ONLY a JSON object, no prose, matching exactly:
 {{
   "verdict": "pass" | "fail",
@@ -79,8 +81,13 @@ def _build_prompt(perception: PerceptionResult, pass_criteria: str) -> tuple[str
     ocr_section = (
         "On-screen text (OCR):\n" + "\n".join(ocr_lines) + "\n" if ocr_lines else ""
     )
+    from watch_skill.answer.localize import answer_language_directive, detect_lang
+
     prompt = _PROMPT_TEMPLATE.format(
-        criteria=pass_criteria.strip(), timeline=timeline, ocr_section=ocr_section
+        criteria=pass_criteria.strip(),
+        timeline=timeline,
+        ocr_section=ocr_section,
+        directive=answer_language_directive(detect_lang(pass_criteria)),
     )
     return prompt, [f.path for f in frames]
 

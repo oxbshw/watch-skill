@@ -24,6 +24,13 @@ from watch_skill.answer.ladder import (
     estimate_verify_cost,
     zoom_crops_reocr,
 )
+from watch_skill.answer.localize import (
+    answer_language_directive,
+    detect_lang,
+    is_rtl,
+    isolate,
+    messages,
+)
 from watch_skill.answer.types import Answer, Evidence, est_frame_tokens, est_text_tokens
 from watch_skill.config import get_settings
 from watch_skill.errors import IndexError_, VisionError
@@ -40,7 +47,7 @@ Indexed evidence (the ONLY citable moments):
 {evidence}
 {lessons}
 The attached frames are the moments about to be cited. Confirm what is
-actually visible/audible. Return ONLY a JSON object:
+actually visible/audible. {directive} Return ONLY a JSON object:
 {{"supported": true/false, "certainty": <0.0-1.0>, "answer": "<one- or two-sentence answer grounded in the evidence, or an explanation of what is missing>"}}"""
 
 
@@ -74,11 +81,15 @@ def _sanitize_timestamps(text: str, legal: list[float]) -> str:
     return _TS_RE.sub(lambda m: m.group(0) if _ok(m.group(0)) else "[see evidence]", text)
 
 
-def _evidence_lines(evidence: list[Evidence]) -> str:
+def _evidence_lines(evidence: list[Evidence], lang: str = "en") -> str:
+    """Evidence bullets. In RTL languages the timestamp is isolated so the
+    bidi algorithm cannot reorder it or reverse its digits."""
+    rtl = is_rtl(lang)
     lines = []
     for e in evidence[:8]:
         stamp = format_time(e.timestamp) if e.timestamp is not None else "--:--"
-        lines.append(f"- [{stamp}] ({e.kind}) {e.text}")
+        stamp = isolate(f"[{stamp}]") if rtl else f"[{stamp}]"
+        lines.append(f"- {stamp} ({e.kind}) {e.text}")
     return "\n".join(lines)
 
 
@@ -121,13 +132,25 @@ def _frames_for_evidence(video_id: str, evidence: list[Evidence], limit: int = 4
 
 
 def _try_model_verify(
-    question: str, evidence: list[Evidence], frames: list[str], lessons: str, tier: str
+    question: str,
+    evidence: list[Evidence],
+    frames: list[str],
+    lessons: str,
+    tier: str,
+    lang: str = "en",
 ) -> tuple[bool, float, str] | None:
-    """One structured verify/answer call; None when no model is reachable."""
+    """One structured verify/answer call; None when no model is reachable.
+
+    The model is told to answer in the QUESTION's language, so a Spanish
+    question about a Japanese video comes back in Spanish (cross-lingual by
+    contract, not by luck)."""
     from watch_skill.vision import get_vision  # noqa: PLC0415
 
     prompt = _VERIFY_PROMPT.format(
-        question=question, evidence=_evidence_lines(evidence), lessons=lessons
+        question=question,
+        evidence=_evidence_lines(evidence),
+        lessons=lessons,
+        directive=answer_language_directive(lang),
     )
     try:
         vision = get_vision(tier)
@@ -145,30 +168,33 @@ def _try_model_verify(
         return None
 
 
-def _honest_floor_text(question: str, evidence: list[Evidence]) -> str:
+def _honest_floor_text(question: str, evidence: list[Evidence], lang: str = "en") -> str:
+    msg = messages(lang)
+    # English keeps the exact repr()-quoted wording the trust-contract tests
+    # assert; other languages supply their own punctuation in the template.
+    q = repr(question) if lang == "en" else question
     lines = [
-        f"The video does not clearly show an answer to: {question!r}.",
-        "No guess is being made. The closest indexed moments are:",
+        msg["floor_headline"].format(q=q),
+        msg["floor_noguess"],
     ]
     if evidence:
-        lines.append(_evidence_lines(evidence[:5]))
+        lines.append(_evidence_lines(evidence[:5], lang))
     else:
-        lines.append("- (nothing relevant found in transcript, OCR, or scene descriptions)")
-    lines.append(
-        "If the answer should be visible, try get_moment on a timestamp above, "
-        "or re-watch with a focused start/end window."
-    )
+        lines.append(msg["floor_nothing"])
+    lines.append(msg["floor_hint"])
     return "\n".join(lines)
 
 
-def _answer_text(question: str, evidence: list[Evidence], model_answer: str | None) -> str:
+def _answer_text(
+    question: str, evidence: list[Evidence], model_answer: str | None, lang: str = "en"
+) -> str:
     legal = _legal_timestamps(evidence)
     lines = []
     if model_answer:
         lines.append(_sanitize_timestamps(model_answer.strip(), legal))
         lines.append("")
-    lines.append("Evidence:")
-    lines.append(_evidence_lines(evidence))
+    lines.append(messages(lang)["evidence_label"])
+    lines.append(_evidence_lines(evidence, lang))
     return "\n".join(lines)
 
 
@@ -198,6 +224,7 @@ def answer_question(
             cache.record_savings(hit.tokens_spent_estimate)
             return hit
 
+    lang = detect_lang(question)
     lessons = _lesson_lines(question, video)
     profile = _profile_for(video)
     target = min(0.95, settings.answer_confidence_target + profile.get("confidence_target_bump", 0.0))
@@ -241,7 +268,7 @@ def answer_question(
             if spent + call_cost > budget:
                 budget_stopped = True
                 break
-            result = _try_model_verify(question, evidence, frames, lessons, tier)
+            result = _try_model_verify(question, evidence, frames, lessons, tier, lang)
             if result is None:
                 break  # no provider reachable — degrade gracefully, model-free
             spent += call_cost
@@ -262,9 +289,9 @@ def answer_question(
     # --- compose -------------------------------------------------------------
     honest_floor = confidence < floor or not evidence or model_rejected
     if honest_floor:
-        text = _honest_floor_text(question, evidence)
+        text = _honest_floor_text(question, evidence, lang)
     else:
-        text = _answer_text(question, evidence, model_answer)
+        text = _answer_text(question, evidence, model_answer, lang)
 
     # auto frame policy: attach only in the uncertain band — confident answers
     # (verified or high-retrieval) stay text-only, floor answers point at
