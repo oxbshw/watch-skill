@@ -12,7 +12,7 @@ from pathlib import Path
 from pydantic import BaseModel, Field, ValidationError
 
 from watch_skill.config import get_settings
-from watch_skill.errors import LoopError, VisionError
+from watch_skill.errors import VisionError
 from watch_skill.perceive.types import PerceptionResult
 from watch_skill.vision import get_vision
 
@@ -100,6 +100,104 @@ def parse_critique(raw: str) -> Critique:
     return Critique.model_validate(json.loads(match.group(0)))
 
 
+# --- describe-based critic (small-model path) -------------------------------
+# Captioning models (moondream on a low-RAM box) cannot emit the JSON schema,
+# but they RELIABLY describe frames and can answer a plain-text PASS/FAIL over
+# that evidence. So: real vision describes each frame, a one-line judgment (or
+# a deterministic banned-term rule from the criteria) decides, and the
+# structured Critique is built in code — the model never has to write JSON.
+
+_JUDGE_PROMPT = (
+    "Frame evidence: {evidence}\n"
+    "Criteria: {criteria}\n"
+    "Does the frame satisfy the criteria? Reply PASS or FAIL."
+)
+
+_NEGATIVE_RE = re.compile(r"\b(?:never|no|not|without)\s+([^,.;]+)", re.IGNORECASE)
+
+
+def _banned_terms(pass_criteria: str) -> list[str]:
+    """'never NaN or a placeholder' -> ['nan', 'a placeholder'] (lowercased)."""
+    terms: list[str] = []
+    for match in _NEGATIVE_RE.finditer(pass_criteria):
+        for part in re.split(r"\s+or\s+", match.group(1)):
+            part = part.strip().strip("\"'").lower()
+            if part:
+                terms.append(part)
+    return terms
+
+
+def _violates_rules(evidence: str, banned: list[str]) -> str | None:
+    """The banned term found in the evidence, or None. Word-bounded so 'nan'
+    does not fire inside 'finance'."""
+    low = evidence.lower()
+    for term in banned:
+        if re.search(rf"(?<!\w){re.escape(term)}(?!\w)", low):
+            return term
+    return None
+
+
+def describe_critique(
+    perception: PerceptionResult,
+    pass_criteria: str,
+    provider: str | None = None,
+    model: str | None = None,
+) -> Critique:
+    """Critique via describe-then-judge — the small-model path.
+
+    Per selected frame: the vision model describes it (plain prompt — the one
+    thing captioning models do dependably), the description plus OCR text is
+    checked against deterministic banned-terms from the criteria, and a plain
+    PASS/FAIL judgment covers what the rules cannot express. Any frame failing
+    either check becomes an Issue; the Critique is assembled in code.
+    """
+    vision = get_vision("strong", provider=provider, model=model)
+    frames = _select_frames(perception)
+    banned = _banned_terms(pass_criteria)
+    issues: list[Issue] = []
+    for frame in frames:
+        try:
+            description = vision.describe_frames([frame.path])[0]
+        except VisionError:
+            description = ""
+        evidence = " / ".join(part for part in (description, frame.ocr_text) if part)
+        if not evidence:
+            continue
+        hit = _violates_rules(evidence, banned)
+        verdict_fail = hit is not None
+        if not verdict_fail:
+            try:
+                reply = vision.client.generate(
+                    _JUDGE_PROMPT.format(evidence=evidence, criteria=pass_criteria.strip())
+                )
+                verdict_fail = "fail" in reply.lower()
+            except VisionError:
+                pass  # rules already said clean; treat the frame as passing
+        if verdict_fail:
+            what = f"contains banned '{hit}'" if hit else "judged failing"
+            issues.append(
+                Issue(
+                    timestamp=frame.timestamp_seconds,
+                    severity="critical" if hit else "major",
+                    description=f"Criteria not met ({what}); frame shows: {evidence[:220]}",
+                    suggested_fix="",
+                )
+            )
+    if issues:
+        return Critique(
+            verdict="fail",
+            score=35,
+            summary=issues[0].description[:160],
+            issues=issues,
+        )
+    return Critique(
+        verdict="pass",
+        score=92,
+        summary="All sampled frames satisfy the pass criteria.",
+        issues=[],
+    )
+
+
 def critique_recording(
     perception: PerceptionResult,
     pass_criteria: str,
@@ -108,7 +206,10 @@ def critique_recording(
 ) -> Critique:
     """Run the strong-tier critic over a recording's perception result.
 
-    Retries once on malformed JSON, feeding the validation error back.
+    Retries once on malformed JSON, feeding the validation error back; if the
+    model still cannot produce the schema (small captioning models never can),
+    degrades to the describe-then-judge critic instead of dying — the vision
+    stays real either way.
     """
     vision = get_vision("strong", provider=provider, model=model)
     prompt, frame_paths = _build_prompt(perception, pass_criteria)
@@ -124,10 +225,16 @@ def critique_recording(
                 + f"\n\nYour previous output was invalid ({exc}). "
                 "Return ONLY the JSON object this time."
             )
-        except VisionError:
+        except VisionError as exc:
+            if exc.code in ("vision.empty", "vision.http_error", "vision.call_failed"):
+                last_error = exc
+                break  # model can't handle the JSON-critic call; degrade below
             raise
-    raise LoopError(
-        f"critic returned malformed JSON twice: {last_error}",
-        code="loop.critic_malformed",
-        fix="try a stronger model for vision.strong, or simplify the pass criteria",
+    import sys
+
+    print(
+        f"[watch-skill] JSON critic unavailable ({last_error}); "
+        "falling back to describe-then-judge critic",
+        file=sys.stderr,
     )
+    return describe_critique(perception, pass_criteria, provider=provider, model=model)

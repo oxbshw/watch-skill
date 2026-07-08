@@ -63,11 +63,22 @@ def ocr_critic(perception: PerceptionResult, pass_criteria: str) -> Critique:
 
 
 def pick_critic():
-    """Real vision critic when the provider answers a probe, OCR fallback otherwise."""
+    """Real vision critic when the provider answers a probe, OCR fallback otherwise.
+
+    The probe attaches an image: captioning models (moondream) reply to a
+    describe-an-image request but return nothing for text-only prompts, so a
+    text probe would wrongly send a working vision setup to the OCR fallback.
+    """
+    import tempfile
+
     try:
-        get_vision("strong").client.generate("Reply with the single word: ok")
+        from PIL import Image
+
+        probe = Path(tempfile.mkdtemp(prefix="watch-skill-probe-")) / "probe.png"
+        Image.new("RGB", (64, 64), (200, 30, 30)).save(probe)
+        get_vision("strong").describe_frames([probe])
         print("critic: strong-tier vision model")
-        return None  # runner default = critique_recording
+        return None  # runner default = critique_recording (degrades internally)
     except Exception:
         print("critic: no vision provider reachable -> deterministic OCR critic")
         return ocr_critic

@@ -12,7 +12,13 @@ from watch_skill.loop.capture import (
     capture_screen,
     capture_url,
 )
-from watch_skill.loop.critic import Critique, Issue, critique_recording, parse_critique
+from watch_skill.loop.critic import (
+    Critique,
+    Issue,
+    critique_recording,
+    describe_critique,
+    parse_critique,
+)
 from watch_skill.loop.diff import IterationDiff, align_frames, compare_issues, diff_iterations
 from watch_skill.loop.runner import LoopState, loop_iterate, loop_start, loop_status
 
@@ -29,6 +35,7 @@ __all__ = [
     "capture_url",
     "compare_issues",
     "critique_recording",
+    "describe_critique",
     "diff_iterations",
     "loop_iterate",
     "loop_start",

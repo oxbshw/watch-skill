@@ -192,6 +192,7 @@ def configure_ollama(
             "WATCHSKILL_VISION_STRONG_PROVIDER": "ollama",
             "WATCHSKILL_VISION_STRONG_MODEL": model,
             "WATCHSKILL_VISION_BATCH_SIZE": "1",
+            "WATCHSKILL_CRITIC_FRAME_CAP": "4",  # fewer frames per critique on CPU
             "WATCHSKILL_OLLAMA_BASE_URL": base_url,
             "WATCHSKILL_OLLAMA_NUM_CTX": str(num_ctx if num_ctx is not None else recommend_num_ctx()),
         },

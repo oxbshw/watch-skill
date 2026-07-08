@@ -103,4 +103,6 @@ def test_configure_ollama_writes_num_ctx(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setattr(vs, "total_ram_gb", lambda: 8.0)
     env = tmp_path / ".env"
     vs.configure_ollama(model="moondream", path=env)
-    assert "WATCHSKILL_OLLAMA_NUM_CTX=1024" in env.read_text(encoding="utf-8")
+    text = env.read_text(encoding="utf-8")
+    assert "WATCHSKILL_OLLAMA_NUM_CTX=1024" in text
+    assert "WATCHSKILL_CRITIC_FRAME_CAP=4" in text  # CPU-friendly critique size
