@@ -27,10 +27,53 @@ from watch_skill.errors import ConfigError
 DEFAULT_GEMINI_CHEAP = "gemini-2.0-flash"
 DEFAULT_GEMINI_STRONG = "gemini-2.0-flash"
 
-# Default local vision model. llava:7b is multi-image + instruction-following
-# capable and universally available in the Ollama registry; moondream is a
-# faster, lighter (lower-quality) alternative for slow CPUs.
-DEFAULT_OLLAMA_MODEL = "llava:7b"
+# Local vision models by machine size. qwen2.5vl:3b reads on-screen text well
+# (crucial for the OCR-like describe + critic tasks), handles multiple images,
+# and emits clean JSON — but its weights + vision projector need ~5 GB resident,
+# which OOMs an 8 GB box. moondream (~1.7 GB) fits everywhere, at lower quality.
+CAPABLE_OLLAMA_MODEL = "qwen2.5vl:3b"
+LIGHT_OLLAMA_MODEL = "moondream"
+DEFAULT_OLLAMA_MODEL = CAPABLE_OLLAMA_MODEL  # overridden by RAM on small machines
+
+
+def total_ram_gb() -> float | None:
+    """Total physical RAM in GiB, or None if it can't be determined."""
+    import os
+
+    try:
+        if hasattr(os, "sysconf") and "SC_PHYS_PAGES" in os.sysconf_names:
+            return os.sysconf("SC_PHYS_PAGES") * os.sysconf("SC_PAGE_SIZE") / 1024**3
+    except (ValueError, OSError):
+        pass
+    try:  # Windows
+        import ctypes
+
+        class _MemStatus(ctypes.Structure):
+            _fields_ = [("dwLength", ctypes.c_ulong), ("dwMemoryLoad", ctypes.c_ulong)] + [
+                (f, ctypes.c_ulonglong) for f in (
+                    "ullTotalPhys", "ullAvailPhys", "ullTotalPageFile", "ullAvailPageFile",
+                    "ullTotalVirtual", "ullAvailVirtual", "ullAvailExtendedVirtual",
+                )
+            ]
+
+        stat = _MemStatus()
+        stat.dwLength = ctypes.sizeof(stat)
+        if ctypes.windll.kernel32.GlobalMemoryStatusEx(ctypes.byref(stat)):  # type: ignore[attr-defined]
+            return stat.ullTotalPhys / 1024**3
+    except (AttributeError, OSError):
+        pass
+    return None
+
+
+def recommend_ollama_model() -> str:
+    """The capable model on a roomy machine, the light one on a small box.
+
+    qwen2.5vl:3b needs ~5 GB resident; below ~12 GB total RAM we fall back to
+    moondream so setup never hands the user a model that OOMs on first call."""
+    ram = total_ram_gb()
+    if ram is not None and ram < 12:
+        return LIGHT_OLLAMA_MODEL
+    return CAPABLE_OLLAMA_MODEL
 
 
 # --- .env editing ----------------------------------------------------------

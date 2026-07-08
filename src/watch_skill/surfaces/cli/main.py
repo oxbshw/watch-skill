@@ -471,7 +471,7 @@ def setup_vision(
         import shutil
         import subprocess
 
-        chosen = model or vs.DEFAULT_OLLAMA_MODEL
+        chosen = model or vs.recommend_ollama_model()
         if not vs.ollama_running():
             print(
                 "Ollama is not running. Install it from https://ollama.com, start it, "

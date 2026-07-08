@@ -70,3 +70,23 @@ def test_configure_gemini_does_not_leak_key_into_backup_on_first_write(tmp_path:
     env = tmp_path / ".env"
     _, backup = vs.configure_gemini("TOPSECRET", path=env)
     assert backup is None
+
+
+def test_recommend_model_falls_back_to_light_on_small_ram(monkeypatch) -> None:
+    monkeypatch.setattr(vs, "total_ram_gb", lambda: 8.0)
+    assert vs.recommend_ollama_model() == vs.LIGHT_OLLAMA_MODEL
+
+
+def test_recommend_model_uses_capable_on_roomy_ram(monkeypatch) -> None:
+    monkeypatch.setattr(vs, "total_ram_gb", lambda: 32.0)
+    assert vs.recommend_ollama_model() == vs.CAPABLE_OLLAMA_MODEL
+
+
+def test_recommend_model_defaults_capable_when_ram_unknown(monkeypatch) -> None:
+    monkeypatch.setattr(vs, "total_ram_gb", lambda: None)
+    assert vs.recommend_ollama_model() == vs.CAPABLE_OLLAMA_MODEL
+
+
+def test_total_ram_gb_is_plausible_on_this_machine() -> None:
+    ram = vs.total_ram_gb()
+    assert ram is None or 0.5 < ram < 4096  # sane bound if detected at all
