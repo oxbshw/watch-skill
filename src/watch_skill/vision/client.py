@@ -111,7 +111,9 @@ def _ollama_request(model: str, key: str, prompt: str, images: list[Path]) -> tu
     endpoint = PROVIDERS["ollama"].endpoint.format(base=settings.ollama_base_url.rstrip("/"))
     # num_ctx sizes the compute buffer; a smaller window lets small vision
     # models load on a low-RAM machine instead of OOMing during startup.
-    options: dict[str, Any] = {"num_ctx": settings.ollama_num_ctx}
+    # temperature 0: describe/judge calls must be reproducible — a sampled
+    # PASS/FAIL flipping between loop iterations is worse than useless.
+    options: dict[str, Any] = {"num_ctx": settings.ollama_num_ctx, "temperature": 0}
     if settings.ollama_num_gpu is not None:
         options["num_gpu"] = settings.ollama_num_gpu
     body = {

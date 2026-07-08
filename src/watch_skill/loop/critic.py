@@ -114,6 +114,7 @@ _JUDGE_PROMPT = (
 )
 
 _NEGATIVE_RE = re.compile(r"\b(?:never|no|not|without)\s+([^,.;]+)", re.IGNORECASE)
+_EXEMPLAR_RE = re.compile(r"\((?:like|e\.g\.?|such as)\s+([^)]+)\)|\b(?:like|such as)\s+(\S+)", re.IGNORECASE)
 
 
 def _banned_terms(pass_criteria: str) -> list[str]:
@@ -125,6 +126,22 @@ def _banned_terms(pass_criteria: str) -> list[str]:
             if part:
                 terms.append(part)
     return terms
+
+
+def _exemplar_patterns(pass_criteria: str) -> list[re.Pattern]:
+    """'a real dollar total (like $29.00)' -> a shape pattern for $29.00.
+
+    Each exemplar becomes a regex with its digit runs generalized, so evidence
+    matching the SAME SHAPE with different numbers counts ($19.00, $348.20 …).
+    """
+    patterns: list[re.Pattern] = []
+    for match in _EXEMPLAR_RE.finditer(pass_criteria):
+        raw = (match.group(1) or match.group(2) or "").strip().strip("\"'.,")
+        if not raw:
+            continue
+        shaped = re.sub(r"\d+", r"\\d+", re.escape(raw))
+        patterns.append(re.compile(shaped, re.IGNORECASE))
+    return patterns
 
 
 def _violates_rules(evidence: str, banned: list[str]) -> str | None:
@@ -146,14 +163,17 @@ def describe_critique(
     """Critique via describe-then-judge — the small-model path.
 
     Per selected frame: the vision model describes it (plain prompt — the one
-    thing captioning models do dependably), the description plus OCR text is
-    checked against deterministic banned-terms from the criteria, and a plain
-    PASS/FAIL judgment covers what the rules cannot express. Any frame failing
-    either check becomes an Issue; the Critique is assembled in code.
+    thing captioning models do dependably), then deterministic rules decide
+    wherever the criteria let them: banned-terms from 'never/no X' fail a
+    frame, exemplar shapes from '(like $29.00)' pass one. Only when neither
+    rule speaks does the plain PASS/FAIL text judgment decide — small models'
+    text reasoning is the least reliable link, so it gets the smallest role.
+    Any failing frame becomes an Issue; the Critique is assembled in code.
     """
     vision = get_vision("strong", provider=provider, model=model)
     frames = _select_frames(perception)
     banned = _banned_terms(pass_criteria)
+    exemplars = _exemplar_patterns(pass_criteria)
     issues: list[Issue] = []
     for frame in frames:
         try:
@@ -165,6 +185,8 @@ def describe_critique(
             continue
         hit = _violates_rules(evidence, banned)
         verdict_fail = hit is not None
+        if not verdict_fail and any(p.search(evidence) for p in exemplars):
+            continue  # deterministically satisfied — no judge needed
         if not verdict_fail:
             try:
                 reply = vision.client.generate(

@@ -17,6 +17,7 @@ from watch_skill.errors import VisionError  # noqa: E402
 from watch_skill.loop import critic as critic_mod  # noqa: E402
 from watch_skill.loop.critic import (  # noqa: E402
     _banned_terms,
+    _exemplar_patterns,
     _violates_rules,
     describe_critique,
 )
@@ -82,6 +83,40 @@ def test_banned_terms_parse_never_no_or() -> None:
 def test_violates_rules_is_word_bounded() -> None:
     assert _violates_rules("total: $nan shown", ["nan"]) == "nan"
     assert _violates_rules("finance dashboard", ["nan"]) is None  # no hit inside a word
+
+
+def test_exemplar_patterns_generalize_digits() -> None:
+    (pattern,) = _exemplar_patterns("must show a real dollar total (like $29.00)")
+    assert pattern.search("total is $348.20")  # same shape, different number
+    assert pattern.search("TOTAL: $19.00")
+    assert not pattern.search("TOTAL: $NaN")
+
+
+def test_exemplar_pass_skips_the_judge(monkeypatch) -> None:
+    """Evidence matching the criteria's exemplar passes deterministically —
+    the unreliable text judge is never consulted (a moondream false-FAIL on a
+    genuinely fixed page blocked the loop from ever passing)."""
+    fake = _FakeVision(
+        {"frame_0.jpg": "checkout page, total reads $29.00"}, judge_reply="FAIL"
+    )
+    monkeypatch.setattr(critic_mod, "get_vision", lambda *a, **k: fake)
+    critique = describe_critique(
+        _perception([""]), "must show a real dollar total (like $29.00), never NaN"
+    )
+    assert critique.verdict == "pass"
+    assert fake.judge_prompts == []  # judge never called
+
+
+def test_banned_term_beats_exemplar(monkeypatch) -> None:
+    """A frame showing both $19.00 and $NaN must still fail: negative rules
+    outrank exemplar matches."""
+    fake = _FakeVision({"frame_0.jpg": "items $19.00 and $10.00, total reads $NaN"})
+    monkeypatch.setattr(critic_mod, "get_vision", lambda *a, **k: fake)
+    critique = describe_critique(
+        _perception([""]), "must show a real dollar total (like $29.00), never NaN"
+    )
+    assert critique.verdict == "fail"
+    assert critique.issues[0].severity == "critical"
 
 
 # --- describe critic ---------------------------------------------------------
