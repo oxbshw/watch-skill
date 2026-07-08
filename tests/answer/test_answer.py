@@ -198,7 +198,7 @@ def test_verify_pass_confirms_and_marks_verified(indexed: str, monkeypatch) -> N
 
     monkeypatch.setattr(
         mod, "_try_model_verify",
-        lambda q, e, f, lessons, tier: (True, 0.9, "The warning screen appears at 0:01."),
+        lambda q, e, f, lessons, tier, lang="en": (True, 0.9, "The warning screen appears at 0:01."),
     )
     answer = answer_question(indexed, "when does the red warning screen appear?", use_cache=False)
     assert answer.verified is True
@@ -213,7 +213,7 @@ def test_verify_pass_rejection_forces_floor(indexed: str, monkeypatch) -> None:
     from watch_skill.answer import engine as mod
 
     monkeypatch.setattr(
-        mod, "_try_model_verify", lambda q, e, f, lessons, tier: (False, 0.1, "not visible")
+        mod, "_try_model_verify", lambda q, e, f, lessons, tier, lang="en": (False, 0.1, "not visible")
     )
     answer = answer_question(indexed, "when does the red warning screen appear?", use_cache=False)
     assert answer.verified is False
