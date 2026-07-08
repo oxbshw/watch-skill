@@ -59,10 +59,43 @@ def loop_type_names() -> list[str]:
     return sorted(_REGISTRY)
 
 
+def _release_local_vision() -> None:
+    """Best-effort: unload the local vision model before a browser capture.
+
+    On a low-RAM machine the resident Ollama model (~2 GB) and a recording
+    browser cannot coexist — the browser driver dies mid-capture. The critic
+    reloads the model right after the browser is gone, so this only trades a
+    one-off reload (~30 s on CPU) for a capture that survives.
+    """
+    from watch_skill.config import get_settings
+    from watch_skill.health.vision_setup import total_ram_gb
+
+    settings = get_settings()
+    if "ollama" not in (settings.vision_strong_provider, settings.vision_cheap_provider):
+        return
+    ram = total_ram_gb()
+    if ram is not None and ram >= 10:
+        return
+    import json
+    import urllib.request
+
+    for model in {settings.vision_strong_model, settings.vision_cheap_model}:
+        body = json.dumps({"model": model, "keep_alive": 0}).encode()
+        request = urllib.request.Request(
+            settings.ollama_base_url.rstrip("/") + "/api/generate",
+            data=body, headers={"Content-Type": "application/json"},
+        )
+        try:
+            urllib.request.urlopen(request, timeout=15).read()  # noqa: S310
+        except OSError:
+            return  # server down/busy — capture proceeds and takes its chances
+
+
 # --- ui (the original loop) --------------------------------------------------
 
 def _produce_ui(state: LoopState, iter_dir: Path) -> CaptureResult:
     """Record the target (URL / screen: / window: / file) as before."""
+    _release_local_vision()
     return capture(
         state.target, iter_dir, script=state.script,
         duration_seconds=state.duration_seconds,
@@ -129,6 +162,7 @@ def _produce_game(state: LoopState, iter_dir: Path) -> CaptureResult:
     window:<title> / screen:). ``run_cmd`` starts the game first and is
     terminated after the recording.
     """
+    _release_local_vision()
     run_cmd = state.extra.get("run_cmd")
     process: subprocess.Popen | None = None
     if run_cmd:

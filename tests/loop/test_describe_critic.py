@@ -135,6 +135,23 @@ def test_exemplar_pass_skips_the_judge(monkeypatch) -> None:
     assert fake.judge_prompts == []  # judge never called
 
 
+def test_exemplar_is_recording_level(monkeypatch) -> None:
+    """An animated capture has frames where OCR misses the HUD; the exemplar
+    seen in ANY frame satisfies the requirement — no judge on the others."""
+    fake = _FakeVision(
+        {"frame_0.jpg": "ball mid-bounce, HUD unreadable",
+         "frame_1.jpg": "game screen, HUD reads SCORE: 7"},
+        judge_reply="FAIL",  # would false-fail frame_0 if consulted
+    )
+    monkeypatch.setattr(critic_mod, "get_vision", lambda *a, **k: fake)
+    critique = describe_critique(
+        _perception(["", ""]),
+        "The SCORE counter must show a number (like SCORE: 12), never NaN",
+    )
+    assert critique.verdict == "pass"
+    assert fake.judge_prompts == []
+
+
 def test_banned_term_beats_exemplar(monkeypatch) -> None:
     """A frame showing both $19.00 and $NaN must still fail: negative rules
     outrank exemplar matches."""

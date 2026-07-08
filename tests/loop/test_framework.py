@@ -139,6 +139,50 @@ def test_game_producer_fails_fast_when_cmd_dies(tmp_path: Path) -> None:
     assert exc.value.code == "loop.game_start_failed"
 
 
+def test_release_local_vision_noop_for_cloud_providers(monkeypatch) -> None:
+    """conftest pins the vision provider to anthropic — no unload request may
+    fire (it would hang a keyless test run on a urllib timeout)."""
+    calls: list = []
+    import urllib.request
+
+    monkeypatch.setattr(urllib.request, "urlopen", lambda *a, **k: calls.append(a))
+    fw._release_local_vision()
+    assert calls == []
+
+
+def test_release_local_vision_unloads_on_low_ram_ollama(monkeypatch) -> None:
+    import urllib.request
+
+    from watch_skill.health import vision_setup as vs
+
+    monkeypatch.setenv("WATCHSKILL_VISION_STRONG_PROVIDER", "ollama")
+    monkeypatch.setenv("WATCHSKILL_VISION_STRONG_MODEL", "moondream")
+    monkeypatch.setenv("WATCHSKILL_VISION_CHEAP_PROVIDER", "ollama")
+    monkeypatch.setenv("WATCHSKILL_VISION_CHEAP_MODEL", "moondream")
+    from watch_skill.config import reset_settings
+
+    reset_settings()
+    monkeypatch.setattr(vs, "total_ram_gb", lambda: 8.0)
+
+    sent: list = []
+
+    class _Resp:
+        def read(self):
+            return b"{}"
+
+    def fake_urlopen(request, timeout=0):
+        sent.append(request.data)
+        return _Resp()
+
+    monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
+    try:
+        fw._release_local_vision()
+    finally:
+        reset_settings()
+    assert len(sent) == 1  # one unload for the single distinct model
+    assert b'"keep_alive": 0' in sent[0]
+
+
 # --- typed starters end-to-end through the runner ------------------------------
 
 def _fail_then_pass_critic():

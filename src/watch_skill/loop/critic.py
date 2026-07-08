@@ -8,6 +8,7 @@ from __future__ import annotations
 import json
 import re
 from pathlib import Path
+from typing import Any
 
 from pydantic import BaseModel, Field, ValidationError
 
@@ -175,27 +176,38 @@ def describe_critique(
 ) -> Critique:
     """Critique via describe-then-judge — the small-model path.
 
-    Per selected frame: the vision model describes it (plain prompt — the one
-    thing captioning models do dependably), then deterministic rules decide
-    wherever the criteria let them: banned-terms from 'never/no X' fail a
-    frame, exemplar shapes from '(like $29.00)' pass one. Only when neither
-    rule speaks does the plain PASS/FAIL text judgment decide — small models'
-    text reasoning is the least reliable link, so it gets the smallest role.
+    The vision model describes every selected frame (plain prompt — the one
+    thing captioning models do dependably); deterministic rules then decide
+    wherever the criteria let them, at the right granularity:
+
+    - banned terms/patterns ('never NaN', 'never … (like ERROR 502)') are
+      FRAME-level: appearing anywhere fails the recording;
+    - positive exemplars ('(like SCORE: 12)') are RECORDING-level: success
+      visible in ANY frame satisfies them — an animated capture legitimately
+      has frames where the HUD is missed by OCR;
+    - only when no rule speaks does the plain PASS/FAIL text judgment run —
+      small models' text reasoning is the least reliable link, so it gets
+      the smallest role.
+
     Any failing frame becomes an Issue; the Critique is assembled in code.
     """
     vision = get_vision("strong", provider=provider, model=model)
     frames = _select_frames(perception)
     banned = _banned_terms(pass_criteria)
     exemplars, banned_patterns = _split_exemplars(pass_criteria)
-    issues: list[Issue] = []
+
+    evidence_by_frame: list[tuple[Any, str]] = []
     for frame in frames:
         try:
             description = vision.describe_frames([frame.path])[0]
         except VisionError:
             description = ""
         evidence = " / ".join(part for part in (description, frame.ocr_text) if part)
-        if not evidence:
-            continue
+        if evidence:
+            evidence_by_frame.append((frame, evidence))
+
+    issues: list[Issue] = []
+    for frame, evidence in evidence_by_frame:
         hit = _violates_rules(evidence, banned)
         if hit is None:
             for pattern in banned_patterns:
@@ -203,27 +215,39 @@ def describe_critique(
                 if match:
                     hit = match.group(0)
                     break
-        verdict_fail = hit is not None
-        if not verdict_fail and any(p.search(evidence) for p in exemplars):
-            continue  # deterministically satisfied — no judge needed
-        if not verdict_fail:
+        if hit is not None:
+            issues.append(
+                Issue(
+                    timestamp=frame.timestamp_seconds,
+                    severity="critical",
+                    description=f"Criteria not met (contains banned '{hit}'); "
+                    f"frame shows: {evidence[:220]}",
+                    suggested_fix="",
+                )
+            )
+
+    exemplar_satisfied = bool(exemplars) and any(
+        p.search(evidence) for _, evidence in evidence_by_frame for p in exemplars
+    )
+    if not issues and not exemplar_satisfied:
+        # no rule decided anything — fall back to the per-frame text judge
+        for frame, evidence in evidence_by_frame:
             try:
                 reply = vision.client.generate(
                     _JUDGE_PROMPT.format(evidence=evidence, criteria=pass_criteria.strip())
                 )
-                verdict_fail = "fail" in reply.lower()
             except VisionError:
-                pass  # rules already said clean; treat the frame as passing
-        if verdict_fail:
-            what = f"contains banned '{hit}'" if hit else "judged failing"
-            issues.append(
-                Issue(
-                    timestamp=frame.timestamp_seconds,
-                    severity="critical" if hit else "major",
-                    description=f"Criteria not met ({what}); frame shows: {evidence[:220]}",
-                    suggested_fix="",
+                continue  # judge unavailable; treat the frame as passing
+            if "fail" in reply.lower():
+                issues.append(
+                    Issue(
+                        timestamp=frame.timestamp_seconds,
+                        severity="major",
+                        description=f"Criteria not met (judged failing); "
+                        f"frame shows: {evidence[:220]}",
+                        suggested_fix="",
+                    )
                 )
-            )
     if issues:
         return Critique(
             verdict="fail",

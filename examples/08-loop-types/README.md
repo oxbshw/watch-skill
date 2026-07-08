@@ -78,14 +78,21 @@ verified:
 
 ```
 === iteration 0: record the GLITCHED game ===
-status: running  (iteration 0, verdict fail)  — SCORE: NaN flagged
+status: running  (iteration 0, score 35, verdict fail)
+summary: Criteria not met (contains banned 'nan'); frame shows: The image shows
+a square-shaped game screen with the word "Score" ... followed by "NaN" ...
 
 === agent fixes the game state bug ===
 
 === iteration 1: re-record + verify ===
-status: passed — diff reports the NaN issue FIXED
+status: passed  (iteration 1, score 92, verdict pass)
+vs previous iteration: 2 fixed, 0 unchanged, 0 new, 6/6 aligned frames changed
 DEMO PASSED
 ```
+
+On low-RAM machines the producers unload the local vision model before a
+browser capture (a resident model and a recording browser can't coexist in
+8 GB); the critic reloads it once the browser is gone.
 
 ## Notes
 
