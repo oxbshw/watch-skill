@@ -182,7 +182,12 @@ def test_v05_index_upgrades_losslessly(tmp_path: Path) -> None:
 
 
 def test_describe_prompt_is_telegraphic() -> None:
-    """The indexing prompt demands compact descriptions (token economy)."""
+    """Batched indexing prompts demand compact descriptions (token economy).
+
+    Applies to multi-frame batches (the cloud path). A single frame — how
+    small local models are driven — deliberately gets a plain prompt instead:
+    the rigid numbered format makes captioning models return nothing at all.
+    """
     from watch_skill.vision.model import ClientVisionModel
 
     captured = {}
@@ -190,10 +195,26 @@ def test_describe_prompt_is_telegraphic() -> None:
     class FakeClient:
         def generate(self, prompt, frames):
             captured["prompt"] = prompt
-            return "1: terminal, red error banner"
+            return "1: terminal, red error banner\n2: blue dashboard"
 
     model = ClientVisionModel(FakeClient())
-    out = model.describe_frames([Path("a.jpg")])
-    assert out == ["terminal, red error banner"]
+    out = model.describe_frames([Path("a.jpg"), Path("b.jpg")])
+    assert out == ["terminal, red error banner", "blue dashboard"]
     assert "max 12 words" in captured["prompt"]
     assert "telegraphic" in captured["prompt"]
+
+
+def test_single_frame_describe_returns_verbatim() -> None:
+    """One frame -> plain prompt, output passed through untouched."""
+    from watch_skill.vision.model import ClientVisionModel
+
+    captured = {}
+
+    class FakeClient:
+        def generate(self, prompt, frames):
+            captured["prompt"] = prompt
+            return "a checkout page showing TOTAL: $NaN"
+
+    out = ClientVisionModel(FakeClient()).describe_frames([Path("a.jpg")])
+    assert out == ["a checkout page showing TOTAL: $NaN"]
+    assert "telegraphic" not in captured["prompt"]  # plain, small-model-safe
