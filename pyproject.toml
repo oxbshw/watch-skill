@@ -24,7 +24,8 @@ dependencies = [
     "pydantic>=2.13,<3",
     "pydantic-settings>=2.14,<3",
     "typer>=0.26,<1",
-    "rich>=15.0,<16",
+    # >=13.7 (not 15): crewai pins rich<15, and the whole suite runs on 14.x
+    "rich>=13.7,<16",
     "httpx>=0.28,<1",
 ]
 
