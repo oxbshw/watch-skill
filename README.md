@@ -213,27 +213,32 @@ Watch Skill began as an attempt to surpass
 [claude-video](https://github.com/bradautomates/claude-video) — the skill
 that first gave Claude a video input, and the source of ideas we kept
 (token-aware frame budgets, captions-first transcription, focused mode).
-A newer wave of perception-layer skills wraps a vision model around the
-screen or a video with one-command installs and free Gemini vision — great
-at *seeing*, but each frame is forgotten as soon as it's described. Credit
-where due on both counts: claude-video is simpler for Claude-only workflows,
-and the perception-layer tools nailed install ease first. What's different:
+The strongest of the newer wave is
+[claude-video-vision](https://github.com/jordanrendric/claude-video-vision),
+which nailed the install story — two `/plugin` commands and a setup wizard
+that finds ffmpeg for you — and describes itself, accurately, as "a
+perception layer, not an interpretation layer". Credit where due on both
+counts: claude-video is simpler for Claude-only workflows, and
+claude-video-vision is the smoothest way to put frames in front of Claude
+today. Watch Skill is the layer they both stop short of: what was seen gets
+indexed, stays searchable across videos and sessions, and feeds back into
+better answers. What's different:
 
-| | claude-video | perception-layer skills | Watch Skill |
+| | claude-video | claude-video-vision | Watch Skill |
 |---|---|---|---|
-| Core idea | frames into context | describe what's on screen | **interpret + remember + self-improve** |
-| Platforms | where Claude runs | macOS-only | Windows + Linux + macOS |
-| Install | plugin | one command | one command (`/plugin marketplace add oxbshw/watch-skill` or a shell one-liner) |
-| Memory | re-process per session | index off by default; frames forgotten | persistent index on by default — hybrid FTS5+vector retrieval, ask forever, cross-video search, `watch_batch` for whole playlists |
-| Free vision path | — (Claude reads frames) | Gemini free tier | Gemini free tier **or fully-offline Ollama** (RAM-aware model pick) + a token-savings meter (~86,647 tokens saved / 9 answers measured) |
+| Core idea | frames into context | frames + timestamped audio into context | **interpret + remember + self-improve** |
+| Platforms | where Claude runs | macOS-tested (needs Node 20+) | Windows + Linux + macOS |
+| Install | plugin | two `/plugin` commands + setup wizard | one command (`/plugin marketplace add oxbshw/watch-skill` or a shell one-liner) |
+| Memory | re-process per session | opt-in `enable_index`; sessions expire (7-day default) | persistent index on by default — hybrid FTS5+vector retrieval, ask forever, cross-video search, `watch_batch` for whole playlists |
+| Free vision path | — (Claude reads frames) | — (Claude reads frames); free-tier Gemini for audio | Gemini free tier **or fully-offline Ollama** (RAM-aware model pick) + a token-savings meter (~86,647 tokens saved / 9 answers measured) |
 | Answer integrity | model prose | model prose | calibrated confidence, escalation ladder, verify pass, honest refusal floor; fabricated timestamps test-blocked |
 | Self-verification | — | — | THE LOOP with proof GIFs — plus video-gen, game, and monitor loop types |
 | Learning | — | — | mistake reports → local lessons → replayable evals |
 | Structured outputs | — | — | chapters, bug reports, hook analysis, shareable offline viewer |
-| Agents | Claude (skill) | one agent each | any MCP agent + CLI + REST/OpenAPI + LangChain/CrewAI/Agents-SDK/LlamaIndex/AutoGen adapters |
+| Agents | Claude (skill) | Claude Code (plugin) | any MCP agent + CLI + REST/OpenAPI + LangChain/CrewAI/Agents-SDK/LlamaIndex/AutoGen adapters |
 | Languages | — | model-dependent | per-script OCR + normalization for 20+ scripts, cross-lingual ask, answers in the question's language — test-gated |
-| Sampling | uniform/keyframe fps | screenshot cadence | scene detection + perceptual-hash dedup; budget on distinct content |
-| Dependency healing | prints install commands | — | `doctor` installs/updates ffmpeg, yt-dlp; auto-recovers extractor breakage |
+| Sampling | uniform/keyframe fps | adaptive extraction (Claude picks fps/range) | scene detection + perceptual-hash dedup; budget on distinct content |
+| Dependency healing | prints install commands | setup wizard auto-detects ffmpeg | `doctor` installs/updates ffmpeg, yt-dlp; auto-recovers extractor breakage |
 
 ## Docs
 
