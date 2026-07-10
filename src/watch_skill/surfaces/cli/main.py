@@ -628,6 +628,25 @@ def clean(
     print(f"total {'reclaimable' if dry_run else 'reclaimed'}: {total / 1024**2:.1f} MiB")
 
 
+@app.command()
+def batch(
+    sources: list[str] = typer.Argument(..., help="Video URLs/paths, folders, or playlist URLs."),
+    limit: int = typer.Option(20, "--limit", help="Max videos to process."),
+) -> None:
+    """Watch + index a whole playlist/folder/list into one searchable memory."""
+    from watch_skill.batch import watch_batch
+    from watch_skill.errors import WatchSkillError
+
+    try:
+        result = watch_batch(list(sources), limit=limit)
+    except WatchSkillError as exc:
+        print(json.dumps(exc.to_dict(), indent=2))
+        raise typer.Exit(code=1) from None
+    print(result.report())
+    if result.failed and not result.indexed:
+        raise typer.Exit(code=1)
+
+
 extract_app = typer.Typer(help="Structured extraction from the persistent index.")
 app.add_typer(extract_app, name="extract")
 

@@ -473,6 +473,22 @@ def loop_monitor(
 
 
 @mcp.tool
+def watch_batch(sources: list[str], limit: int = 20) -> str:
+    """Watch + index a WHOLE SET of videos in one call: a playlist/channel
+    URL (auto-expanded), a folder of video files, or an explicit list of
+    URLs/paths. Every video lands in the same persistent index, so one
+    search_videos/ask_video afterwards spans the entire batch — cross-video
+    questions become possible. One failing video never stops the rest."""
+    from watch_skill.batch import watch_batch as run
+
+    try:
+        result = run(sources, limit=limit)
+    except WatchSkillError as exc:
+        return _error_payload(exc)
+    return result.report()
+
+
+@mcp.tool
 def extract_chapters(video: str) -> str:
     """Segment an already-watched video into titled chapters with start/end
     timestamps (from scene changes + transcript topic shifts). Use for
