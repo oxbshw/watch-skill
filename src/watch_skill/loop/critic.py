@@ -150,7 +150,9 @@ def _split_exemplars(pass_criteria: str) -> tuple[list[re.Pattern], list[re.Patt
     positive: list[re.Pattern] = []
     banned: list[re.Pattern] = []
     for match in _EXEMPLAR_RE.finditer(pass_criteria):
-        raw = (match.group(1) or match.group(2) or "").strip().strip("\"'.,")
+        # bare-word exemplars ('like $29.00),') drag along closing brackets
+        # and clause punctuation — strip them or the shape demands a literal ')'
+        raw = (match.group(1) or match.group(2) or "").strip().strip("\"'.,;:()[]")
         if not raw:
             continue
         in_negative = any(lo <= match.start() < hi for lo, hi in negative_spans)

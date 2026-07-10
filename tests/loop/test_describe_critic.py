@@ -94,6 +94,23 @@ def test_exemplar_patterns_generalize_digits() -> None:
     assert not pattern.search("TOTAL: $NaN")
 
 
+def test_exemplar_with_leadin_words_sheds_clause_punctuation() -> None:
+    """'(a number like $29.00), never NaN' — the paren doesn't start with
+    'like', so the bare-word branch captures '$29.00),' and the shape must
+    not keep the ')' (it made the golden-path critic judge a fixed page)."""
+    positive, banned = _split_exemplars(
+        "The checkout page must show a real dollar total (a number like $29.00), "
+        "never NaN, and the BUY NOW button label must be clearly readable."
+    )
+    (pattern,) = positive
+    assert pattern.search("the total cost of an item as $29.00 and change")
+    assert pattern.search("Total: $348.20")  # no trailing ')' required
+    assert banned == []  # 'NaN' is a banned TERM, not an exemplar pattern
+    assert "nan" in _banned_terms(
+        "must show a real dollar total (a number like $29.00), never NaN, and more"
+    )
+
+
 def test_exemplar_inside_negative_clause_becomes_ban() -> None:
     """'must never show X (like ERROR 502)' — the exemplar is what must NOT
     appear (the monitor frames conditions this way); treating it as a pass
