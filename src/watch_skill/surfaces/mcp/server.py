@@ -473,6 +473,22 @@ def loop_monitor(
 
 
 @mcp.tool
+def generate_viewer(video: str, out_path: str | None = None) -> str:
+    """Render a SHAREABLE, self-contained HTML page for an analyzed video:
+    timeline + key frames (inlined — works offline, zero external requests),
+    the transcript, on-screen text, and every cached answer with the exact
+    evidence the engine cited. Give the user the returned path; the file can
+    be opened directly in any browser or sent to anyone as-is."""
+    from watch_skill.viewer import generate_viewer as run
+
+    try:
+        path = run(video, out_path=out_path)
+    except WatchSkillError as exc:
+        return _error_payload(exc)
+    return f"viewer written: {path}"
+
+
+@mcp.tool
 def watch_batch(sources: list[str], limit: int = 20) -> str:
     """Watch + index a WHOLE SET of videos in one call: a playlist/channel
     URL (auto-expanded), a folder of video files, or an explicit list of

@@ -629,6 +629,23 @@ def clean(
 
 
 @app.command()
+def viewer(
+    video: str = typer.Argument(..., help="video_id or original source."),
+    out: str | None = typer.Option(None, "--out", "-o", help="Output HTML path."),
+) -> None:
+    """Render a shareable, self-contained HTML viewer for an analyzed video."""
+    from watch_skill.errors import WatchSkillError
+    from watch_skill.viewer import generate_viewer
+
+    try:
+        path = generate_viewer(video, out_path=out)
+    except WatchSkillError as exc:
+        print(json.dumps(exc.to_dict(), indent=2))
+        raise typer.Exit(code=1) from None
+    print(f"viewer written: {path}")
+
+
+@app.command()
 def batch(
     sources: list[str] = typer.Argument(..., help="Video URLs/paths, folders, or playlist URLs."),
     limit: int = typer.Option(20, "--limit", help="Max videos to process."),
