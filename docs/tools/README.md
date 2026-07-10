@@ -1,6 +1,6 @@
 # MCP tool reference
 
-All 13 tools exposed by the `watch-skill` MCP server
+All 21 tools exposed by the `watch-skill` MCP server
 (`src/watch_skill/surfaces/mcp/server.py`), with parameters, defaults, and
 what comes back. Every tool has a REST twin — the mapping table is at the
 bottom.
@@ -187,6 +187,114 @@ artifact paths).
 |---|---|---|---|
 | `loop_id` | str | required | From `loop_start` |
 
+### `loop_video_gen`
+
+Start a **video-generation loop**: run any generator command
+(Manim/Remotion/ffmpeg/AI-gen), watch the video it writes, critique it
+against the spec, and iterate until the render matches. You edit the
+generator between iterations; `loop_iterate` re-runs and re-judges it.
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `spec` | str | required | What the generated video must show |
+| `generator_cmd` | str | required | Shell command that renders the video |
+| `output` | str | required | The video file the command writes (stale renders are deleted first) |
+| `pass_criteria` | str | spec | Overrides the spec for the critic |
+| `workdir` | str | — | Working directory for the command |
+| `max_iterations` | int | `5` | Stop condition |
+| `timeout` | float | `600` | Generator timeout in seconds |
+
+### `loop_game`
+
+Start a **game/simulation loop**: optionally launch the game, record
+gameplay from a canvas URL / `window:<title>` / `screen:`, and critique the
+recording for visual glitches and state failures (a `NaN` score counter,
+black flicker frames, missing sprites).
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `target` | str | required | Canvas game URL, `window:<title>`, or `screen:` |
+| `pass_criteria` | str | required | e.g. "the SCORE counter must show a number (like SCORE: 12), never NaN" |
+| `run_cmd` | str | — | Command that launches the game (terminated after recording) |
+| `script` | list[dict] | — | Browser interaction steps for canvas games |
+| `duration` | float | `10.0` | Recording length per iteration |
+| `max_iterations` | int | `5` | Stop condition |
+
+### `loop_monitor`
+
+Watch a **folder of videos or a live target** until a described condition
+appears, then return a structured event (also appended to `events.jsonl`
+under the monitor's loop dir). Bounded by `max_checks` — it always
+terminates. Folder sources consume each video once; live targets sample
+`sample_seconds` every `interval`.
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `source` | str | required | Folder path, URL, `screen:`, or `window:<title>` |
+| `condition` | str | required | Plain language, e.g. "an error screen (like ERROR 502)" |
+| `interval` | float | `10.0` | Seconds between live checks |
+| `max_checks` | int | `10` | Hard bound on checks |
+| `sample_seconds` | float | `5.0` | Live sample length per check |
+
+## Structured extraction
+
+### `extract_chapters`
+
+Segment an already-watched video into titled chapters with start/end
+timestamps, from scene changes + transcript topic shifts. Deterministic —
+answers straight from the index, no extra model calls.
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `video` | str | required | `video_id` or original source |
+
+### `extract_bug_report`
+
+QA mode: pinpoint where an error appears in a watched screen recording —
+timestamp, frame, exact on-screen error text (OCR), and the steps that led
+up to it. Returns `found: false` when no error signal exists.
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `video` | str | required | `video_id` or original source |
+
+### `analyze_hook`
+
+Creator mode: score the first N seconds as a hook — attention trigger in
+the opening line, speech pacing, visual change rate, on-screen text — each
+with an actionable critique, plus a combined 0-100 score and verdict.
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `video` | str | required | `video_id` or original source |
+| `seconds` | float | `15.0` | Opening window to score |
+
+## Batch & sharing
+
+### `watch_batch`
+
+Watch + index a whole set in one call: a playlist/channel URL
+(auto-expanded), a folder of video files, or an explicit list. Everything
+lands in the same persistent index, so one `search_videos`/`ask_video`
+afterwards spans the entire batch. One failing video never stops the rest.
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `sources` | list[str] | required | URLs/paths, folders, or playlist URLs |
+| `limit` | int | `20` | Max videos to process |
+
+### `generate_viewer`
+
+Render a shareable, self-contained HTML page for an analyzed video:
+timeline + key frames (inlined — works offline, zero external requests),
+transcript, on-screen text, and every cached answer with the exact evidence
+cited. The file opens directly in any browser and can be sent to anyone.
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `video` | str | required | `video_id` or original source |
+| `out_path` | str | cwd | Where to write the HTML file |
+
 ## Health
 
 ### `doctor`
@@ -216,7 +324,10 @@ every tool for non-MCP agents:
 
 (`get_status`, `report_mistake`, and `stats` are MCP/CLI-side:
 backgrounding is an MCP transport concern, and lessons/stats have CLI
-surfaces — `watch-skill lessons add`, `watch-skill stats`.)
+surfaces — `watch-skill lessons add`, `watch-skill stats`. The v0.7 tools
+have CLI twins instead of REST ones for now: `watch-skill loop
+video-gen|game|monitor`, `watch-skill extract chapters|bug-report|hook`,
+`watch-skill batch`, and `watch-skill viewer`.)
 
 REST-only details: frames come back as filesystem paths plus optional
 base64 (`inline_frames`), and when `WATCHSKILL_API_BEARER_TOKEN` is set

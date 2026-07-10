@@ -1,5 +1,97 @@
 # Changelog
 
+## v0.7.0 — 2026-07-10
+
+The Loop goes real — proven end-to-end with live vision, then multiplied
+into new loop types no comparable tool has — and installation drops to one
+command.
+
+### One-command install (`adapters/claude-skill/`, `.claude-plugin/`)
+- **Claude Code plugin marketplace**: `/plugin marketplace add oxbshw/watch-skill`
+  → `/plugin install watch-skill@watch-skill` → a working `/watch`, zero
+  manual venv steps. The bundled MCP config launches the on-PATH engine.
+- New **`/setup-watch-skill`** command: installs the engine (uv bootstraps
+  its own Python), runs the self-healing doctor, registers the MCP server in
+  every detected agent (Claude Code/Desktop, Cursor, Codex, Windsurf, Gemini
+  CLI — each with a config backup), then offers a vision backend.
+
+### Vision backends (`health/vision_setup.py`, `vision/`)
+- **`watch-skill setup-vision`**: Gemini (free tier, the recommended
+  zero-cost default; `WATCHSKILL_GEMINI_API_KEY`) or **Ollama** fully
+  offline. `--verify` runs a live probe-frame describe.
+- Low-RAM machines are first-class: RAM-aware model pick (moondream under
+  12 GB), context window sized to fit (`WATCHSKILL_OLLAMA_NUM_CTX`),
+  temperature-0 reproducible calls, keep-alive pinning, and the loop
+  producers unload the local model before browser captures (a resident
+  model and a recording browser cannot coexist in 8 GB).
+
+### THE LOOP, multiplied (`loop/`)
+- The UI loop is now **proven with real vision**: broken page flagged from
+  actual model reads, fix verified, before/after GIF+MP4 rendered.
+- **Pluggable loop framework**: a loop type is a registry entry deciding how
+  the recording is produced; `loop_start`/`loop_iterate` are unchanged.
+- Three new loop types, each an MCP tool + CLI + runnable example:
+  **`loop_video_gen`** (run any generator — Manim/Remotion/ffmpeg — watch
+  the render, iterate until it matches the spec), **`loop_game`** (launch a
+  game/sim, record gameplay, catch visual/state glitches like a NaN HUD),
+  **`loop_monitor`** (bounded watch over a folder/stream; a described
+  condition becomes a structured event in `events.jsonl` + callback — the
+  v0.8 webhook seam).
+- **Describe-then-judge critic**: small captioning models (moondream) can't
+  emit the critic's JSON, but they describe frames dependably — so
+  deterministic rules parsed from your criteria decide (banned terms from
+  "never X" fail a frame; exemplar shapes from "(like $29.00)" pass the
+  recording; digit-generalized and whitespace-tolerant, so a misread
+  "ERROR 5082" still matches), with a plain PASS/FAIL judgment only where
+  no rule speaks. `critique_recording` degrades automatically; capable
+  models keep the full JSON critic.
+
+### For every agent framework (`integrations/`, `docs/agents/frameworks.md`)
+- Thin native adapters — **LangChain, CrewAI, OpenAI Agents SDK, LlamaIndex,
+  AutoGen** — all wrapping the same three core calls; install via extras
+  (`pip install "watch-skill[langchain]"`). Vercel AI SDK via the REST
+  surface; an n8n community-node spec; REST/OpenAPI as the universal
+  fallback.
+
+### Structured extraction (`extract/`)
+- **`extract_chapters`**: titled chapters from scene cuts + transcript
+  pauses, minimum length scaled to duration.
+- **`extract_bug_report`**: the first on-screen error — timestamp, frame,
+  exact OCR text, and repro steps from the preceding narration; returns
+  `found: false` instead of guessing.
+- **`analyze_hook`**: the first N seconds scored on attention trigger,
+  pacing, visual change, and on-screen text — each with an actionable
+  critique.
+
+### Batch + the shareable viewer (`batch.py`, `viewer.py`)
+- **`watch_batch`**: one call indexes a playlist/channel URL, a folder, or a
+  list; one broken video never kills the batch; afterwards a single
+  `search_videos`/`ask_video` spans the whole set.
+- **`generate_viewer`**: a self-contained offline HTML page per analysis —
+  timeline, inlined key frames, transcript, OCR, and every cached answer
+  with the exact evidence cited. Zero network requests; share the file as-is.
+
+### Search that actually works across scripts (`index/textnorm.py`)
+- Thai/Lao/Khmer/Myanmar/Tibetan are now segmented (search was fully broken
+  for unspaced scripts); Persian/Urdu letter variants unify with Arabic;
+  Arabic-Indic/Persian/Devanagari/Bengali/Thai/Lao/Tibetan/Myanmar/Khmer
+  digits fold to ASCII ("٢٠٢٦" matches "2026"); Hebrew niqqud + final
+  forms, Greek final sigma + tonos, German ß/umlauts, Cyrillic ё, and
+  Vietnamese diacritics fold too. Forward migration v6 re-folds existing
+  indexes in place — nothing is lost, nothing re-processed.
+
+### The engine answers in your language (`answer/localize.py`)
+- The honest-floor refusal, evidence labels, and the model-answer directive
+  follow the question's language (13 languages); the loop critic follows the
+  pass criteria's language. Cross-lingual answers are a tested contract, not
+  luck. RTL text can't mangle timestamps: they're wrapped in Unicode
+  isolates.
+
+### Compatibility
+- No breaking changes: every v0.6 MCP tool name/signature is unchanged
+  (pinned by test); pre-v0.7 loop `state.json` files load as UI loops; the
+  index migration chain continues (v6) and existing data is preserved.
+
 ## v0.6.0 — 2026-07-05
 
 Three systems around one promise: frame-accurate answers you can trust, at

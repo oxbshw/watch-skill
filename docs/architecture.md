@@ -176,6 +176,23 @@ pass, `max_iterations`, or two iterations without score progress. On pass
 with ≥2 iterations it renders a before/after MP4+GIF proof artifact. Every
 iteration persists under `<data_dir>/loops/<loop_id>/`.
 
+Since v0.7 the runner is a **pluggable framework** (`loop/framework.py`): a
+loop type is a registry entry deciding only how the recording for an
+iteration is produced. Built-ins: `ui` (the original), `video-gen` (run a
+generator command, adopt the video it writes), and `game` (optionally launch
+a process, record its window/canvas). `loop/monitor.py` adds the
+differently-shaped **monitor loop**: a bounded watch over a folder or live
+target that emits a structured event (`events.jsonl` + `on_event` callback —
+the v0.8 webhook seam) when a described condition appears.
+
+The critic itself degrades gracefully (`loop/critic.py`): capable models get
+the strict-JSON critique; small captioning models (a low-RAM box running
+moondream) automatically fall back to **describe-then-judge** — the model
+describes each frame, deterministic rules parsed from the criteria decide
+("never X" terms fail a frame; "(like $29.00)" exemplar shapes pass the
+recording; digit-generalized, whitespace-tolerant, negation-aware), and a
+plain PASS/FAIL text judgment covers only what no rule can express.
+
 ## Module map
 
 | Module | Job | Key entry points |
@@ -187,8 +204,12 @@ iteration persists under `<data_dir>/loops/<loop_id>/`.
 | `answer/` | self-healing asks: confidence → escalation ladder → verify → honest floor; semantic answer cache; savings meter | `answer_question()` → `Answer` |
 | `lessons/` | mistake reports → classified lessons → prompt injection, evals, adaptive profiles | `report_mistake()`, `relevant_guidance()`, `run_evals()` |
 | `vision/` | one `prompt+images→text` primitive across Anthropic/OpenAI/Gemini/OpenRouter/Ollama; cheap/strong tiers; pre-call cost guard | `get_vision(tier)` |
-| `loop/` | capture (Playwright/gdigrab) → JSON critic → phash diff → iteration runner → proof artifact | `loop_start()`, `loop_iterate()` |
-| `health/` | doctor (self-healing deps), managed binaries, agent config writer, disk cleanup | `run_doctor()`, `detect_agents()` |
+| `loop/` | pluggable loop framework: producers (ui/video-gen/game) → critic (JSON or describe-then-judge) → phash diff → runner → proof artifact; bounded monitor loop w/ events | `loop_start()`, `loop_iterate()`, `loop_video_gen()`, `loop_game()`, `loop_monitor()` |
+| `health/` | doctor (self-healing deps), managed binaries, agent config writer, vision-backend setup (RAM-aware), disk cleanup | `run_doctor()`, `detect_agents()`, `configure_gemini()`, `configure_ollama()` |
+| `integrations/` | thin framework adapters (LangChain/CrewAI/Agents SDK/LlamaIndex/AutoGen) over three shared core calls | `get_watch_tools()` per module |
+| `extract/` | deterministic structured extraction over the index: chapters, bug reports, hook analysis | `extract_chapters()`, `extract_bug_report()`, `analyze_hook()` |
+| `batch.py` | playlist/folder/list → one indexed, cross-searchable memory; per-source resilience | `watch_batch()` |
+| `viewer.py` | one self-contained offline HTML page per analysis (frames inlined, evidence cited) | `generate_viewer()` |
 | `jobs.py` | thread-backed background jobs for long operations (MCP `background=true`) | `start_job()`, `get_job()` |
 | `watch.py` | the front door: acquire → perceive → transcribe with progress callbacks | `watch()` |
 | `config.py` | one typed settings object; `WATCHSKILL_*` env / `.env` / defaults | `get_settings()` |
@@ -209,19 +230,20 @@ now use it via config alone.
 
 ## How to add a new Loop type
 
-A loop type is: a **capture recipe** + a **criteria preset** + (optionally)
-a custom differ.
+A loop type is a **producer** — one function deciding how the recording for
+an iteration is made. Everything else is inherited.
 
-1. Capture: add a `capture_<kind>()` to `loop/capture.py` returning a
-   `CaptureResult`, and teach the `capture()` dispatcher its target prefix
-   (e.g. `game:`, `gen:`).
-2. Criteria: nothing to code — pass criteria are natural language. Ship a
-   preset prompt in your surface/docs if the domain needs one.
-3. Diff: `loop/diff.py` aligns same-script recordings by phash. If your
-   domain needs a different alignment (e.g. semantic scene matching), add a
-   strategy function and select it from `runner._run_iteration`.
-4. The runner, persistence, stop conditions, and proof artifacts are
-   inherited for free.
+1. Producer: write `def _produce_<kind>(state, iter_dir) -> CaptureResult`
+   in `loop/framework.py` (see `_produce_video_gen` for a ~40-line example)
+   and register it: `register_loop_type(LoopType("<kind>", _produce_<kind>,
+   "one-line description"))`. Per-type parameters travel in `state.extra`.
+2. Starter: add a `loop_<kind>(...)` wrapper in `loop/runner.py` that builds
+   the `LoopState` (loop_type + extra) and calls `_start()` — then expose it
+   as an MCP tool/CLI command.
+3. Criteria: nothing to code — pass criteria are natural language, and the
+   describe-then-judge rules (`never X`, `(like Y)` exemplars) come free.
+4. The runner, `loop_iterate`, persistence, stop conditions, diffing, and
+   proof artifacts all work unchanged for the new type.
 
 ## Data on disk
 
