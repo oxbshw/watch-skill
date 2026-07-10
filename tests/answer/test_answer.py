@@ -221,6 +221,22 @@ def test_verify_pass_rejection_forces_floor(indexed: str, monkeypatch) -> None:
     assert "not visible" not in answer.text  # rejected prose is not the answer
 
 
+def test_escalation_step_crash_never_kills_the_answer(indexed: str, monkeypatch) -> None:
+    """A ladder step dying (OCR model OOM on a loaded machine) must degrade
+    to 'no new evidence' — the answer still forms. Regression: an
+    ONNXRuntime 'bad allocation' inside zoom_crops_reocr killed ask entirely."""
+    from watch_skill.answer import engine as mod
+
+    def boom(video, hits):
+        raise MemoryError("bad allocation")
+
+    monkeypatch.setattr(mod, "dense_resample", boom)
+    monkeypatch.setattr(mod, "zoom_crops_reocr", boom)
+    answer = answer_question(indexed, "what color is the unicorn's hat?", use_cache=False)
+    assert answer.honest_floor is True  # refused honestly instead of crashing
+    assert any(e.endswith("(failed)") for e in answer.escalations_used)
+
+
 def test_no_provider_degrades_gracefully(indexed: str) -> None:
     """Keyless machine: verify returns None internally, answer still forms."""
     answer = answer_question(indexed, "when do the calibration bars show up?", use_cache=False)

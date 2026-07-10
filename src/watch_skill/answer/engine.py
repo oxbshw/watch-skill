@@ -248,7 +248,14 @@ def answer_question(
     for step_name, step in steps:
         if confidence >= target:
             break
-        new_items, cost = step(video, hits)
+        try:
+            new_items, cost = step(video, hits)
+        except Exception as exc:  # noqa: BLE001 — escalation is best-effort:
+            # a step dying (OCR model OOM on a loaded machine, missing frame)
+            # must degrade to "no new evidence", never kill the answer
+            print(f"[watch-skill] escalation {step_name} failed ({exc})", file=sys.stderr)
+            escalations.append(f"{step_name}(failed)")
+            continue
         escalations.append(step_name)
         spent += cost
         if new_items:
