@@ -473,6 +473,57 @@ def loop_monitor(
 
 
 @mcp.tool
+def extract_chapters(video: str) -> str:
+    """Segment an already-watched video into titled chapters with start/end
+    timestamps (from scene changes + transcript topic shifts). Use for
+    navigation, summaries per section, or building a table of contents.
+    Deterministic — no extra model calls, answers straight from the index."""
+    import json as _json
+
+    from watch_skill.extract import extract_chapters as run
+
+    try:
+        chapters = run(video)
+    except WatchSkillError as exc:
+        return _error_payload(exc)
+    return _json.dumps([c.to_dict() for c in chapters], ensure_ascii=False, indent=2)
+
+
+@mcp.tool
+def extract_bug_report(video: str) -> str:
+    """QA mode: pinpoint WHERE an error appears in a watched screen recording —
+    the timestamp, the frame, the exact on-screen error text (OCR), and the
+    steps/narration that led up to it. Returns found=false when no error
+    signal exists rather than guessing."""
+    import json as _json
+
+    from watch_skill.extract import extract_bug_report as run
+
+    try:
+        report = run(video)
+    except WatchSkillError as exc:
+        return _error_payload(exc)
+    return _json.dumps(report.to_dict(), ensure_ascii=False, indent=2)
+
+
+@mcp.tool
+def analyze_hook(video: str, seconds: float = 15.0) -> str:
+    """Creator mode: score the first N seconds of a watched video as a hook —
+    attention trigger in the opening line, speech pacing, visual change rate,
+    on-screen text — each with an actionable critique plus a combined 0-100
+    score and verdict (strong/promising/weak)."""
+    import json as _json
+
+    from watch_skill.extract import analyze_hook as run
+
+    try:
+        analysis = run(video, window_seconds=seconds)
+    except WatchSkillError as exc:
+        return _error_payload(exc)
+    return _json.dumps(analysis.to_dict(), ensure_ascii=False, indent=2)
+
+
+@mcp.tool
 def doctor() -> str:
     """Run this when ANY other tool fails with a dependency/download error, or
     on first use. Checks AND self-heals: installs missing ffmpeg/yt-dlp,

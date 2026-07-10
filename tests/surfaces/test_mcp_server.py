@@ -32,6 +32,7 @@ def test_tools_are_registered() -> None:
     # the loop family: v0.6 names unchanged (compat contract) + v0.7 loop types
     assert {"loop_start", "loop_iterate", "loop_status"} <= names
     assert {"loop_video_gen", "loop_game", "loop_monitor"} <= names
+    assert {"extract_chapters", "extract_bug_report", "analyze_hook"} <= names
 
 
 def test_list_videos_empty() -> None:

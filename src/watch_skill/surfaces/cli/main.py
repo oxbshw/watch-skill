@@ -628,6 +628,52 @@ def clean(
     print(f"total {'reclaimable' if dry_run else 'reclaimed'}: {total / 1024**2:.1f} MiB")
 
 
+extract_app = typer.Typer(help="Structured extraction from the persistent index.")
+app.add_typer(extract_app, name="extract")
+
+
+def _run_extract(fn, *args, **kwargs) -> None:
+    from watch_skill.errors import WatchSkillError
+
+    try:
+        result = fn(*args, **kwargs)
+    except WatchSkillError as exc:
+        print(json.dumps(exc.to_dict(), indent=2))
+        raise typer.Exit(code=1) from None
+    if isinstance(result, list):
+        payload = [item.to_dict() for item in result]
+    else:
+        payload = result.to_dict()
+    print(json.dumps(payload, ensure_ascii=False, indent=2))
+
+
+@extract_app.command("chapters")
+def extract_chapters_cmd(video: str = typer.Argument(..., help="video_id or source.")) -> None:
+    """Titled chapters with timestamps (scene changes + transcript shifts)."""
+    from watch_skill.extract import extract_chapters
+
+    _run_extract(extract_chapters, video)
+
+
+@extract_app.command("bug-report")
+def extract_bug_report_cmd(video: str = typer.Argument(...)) -> None:
+    """Locate the first on-screen error: timestamp, frame, text, repro steps."""
+    from watch_skill.extract import extract_bug_report
+
+    _run_extract(extract_bug_report, video)
+
+
+@extract_app.command("hook")
+def analyze_hook_cmd(
+    video: str = typer.Argument(...),
+    seconds: float = typer.Option(15.0, "--seconds", help="Opening window to score."),
+) -> None:
+    """Score the first N seconds as a hook (pacing, trigger, visuals, text)."""
+    from watch_skill.extract import analyze_hook
+
+    _run_extract(analyze_hook, video, window_seconds=seconds)
+
+
 lessons_app = typer.Typer(help="The local lessons store: learn from reported mistakes.")
 app.add_typer(lessons_app, name="lessons")
 
