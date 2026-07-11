@@ -4,6 +4,14 @@ Copy this file (or its relevant section) into a project's `AGENTS.md` /
 `.cursorrules` / rules file to teach any coding agent to use Watch Skill.
 Everything is a plain CLI call — no harness-specific features required.
 
+This file IS the integration for agents without an MCP client or plugin
+format — Pi, Hermes Agent, aider-style tools, homegrown harnesses: if it
+reads repo instructions and can run a shell command, this is the whole
+setup. Agents with richer surfaces have native configs in
+[`docs/agents/`](../../docs/agents/README.md); agents with a skills
+directory can load
+[`adapters/claude-skill/skills/`](../claude-skill/skills/) directly.
+
 ## What it gives you
 
 You cannot see videos. The `watch-skill` CLI can: it downloads any source
@@ -37,6 +45,14 @@ a persistent, searchable store.
    `watch-skill loop iterate <loop_id>` until it passes. The loop never edits
    code — you do.
 7. **Recording without critique:** `watch-skill capture "<target>" --duration 10`.
+8. **Structure from an indexed video:** `watch-skill extract chapters <video>`
+   (titled chapters), `watch-skill extract bug-report <video>` (where the
+   error appears: timestamp + frame + OCR text), `watch-skill extract hook
+   <video>` (opening-seconds score for creators).
+9. **Many videos at once:** `watch-skill batch "<playlist-or-folder>"` —
+   one persistent index for the whole set; then `search`/`ask` span it.
+10. **Hand-off:** `watch-skill viewer <video>` renders a single offline
+    HTML page — frames, transcript, every cached answer with evidence.
 
 ## Error handling
 
@@ -54,8 +70,7 @@ retry the same command verbatim.
 ## Machine-to-machine surfaces
 
 - MCP server: `watch-skill serve` (stdio) or `watch-skill serve --http`
-  (streamable HTTP on :8747) — tools: watch_video, ask_video, get_moment,
-  search_videos, capture, loop_start, loop_iterate, loop_status, list_videos,
-  doctor.
+  (streamable HTTP on :8747) — 21 tools; the full reference is
+  [`docs/tools/README.md`](../../docs/tools/README.md).
 - REST API: `watch-skill api` (OpenAPI spec at `http://127.0.0.1:8748/openapi.json`).
 - Python: `from watch_skill.watch import watch`.

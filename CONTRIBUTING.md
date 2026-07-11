@@ -3,6 +3,17 @@
 Thanks for helping agents see. This document is short on ceremony and long on
 the rules that actually keep the codebase healthy.
 
+## Add your agent
+
+The single most useful contribution right now: get your agent into
+[the matrix](docs/agents/README.md). It takes about 20 minutes — one
+config block, one doc page, one validation run — and there is a full
+walkthrough plus skeletons in
+[`templates/agent-adapter/`](templates/agent-adapter/README.md). No
+engine code involved; you don't need to understand the pipeline. If you
+actually run the 3-step smoke test in your agent, paste the transcript
+in the PR and your row gets the machine-tested grade.
+
 ## Setup
 
 ```powershell
