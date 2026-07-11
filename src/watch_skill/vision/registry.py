@@ -5,7 +5,11 @@ Prices are per million input tokens (USD) and deliberately conservative
 """
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
+from functools import lru_cache
+from pathlib import Path
+from typing import Any
 
 
 @dataclass(frozen=True)
@@ -51,20 +55,24 @@ PROVIDERS: dict[str, ProviderSpec] = {
     ),
 }
 
-# Model-specific price overrides (USD per million input tokens).
-MODEL_PRICES: dict[str, float] = {
-    "claude-haiku-4-5-20251001": 1.0,
-    "claude-sonnet-5": 3.0,
-    "claude-fable-5": 15.0,
-    "gpt-4o-mini": 0.15,
-    "gemini-2.0-flash": 0.10,
-    # OpenRouter routes many models; ":free" variants cost nothing.
-    "qwen/qwen2.5-vl-72b-instruct:free": 0.0,
-    "google/gemini-2.0-flash-exp:free": 0.0,
-    "anthropic/claude-sonnet-4.5": 3.0,
-}
+# Model-specific price overrides live in prices.json next to this file —
+# a dated, auditable data file (edit it, not code, when a provider
+# reprices; move its as_of date with every edit).
+_PRICES_PATH = Path(__file__).with_name("prices.json")
+
+
+@lru_cache(maxsize=1)
+def price_table() -> dict[str, Any]:
+    """The dated price data file: {as_of, unit, usd_per_mtok: {model: price}}."""
+    return json.loads(_PRICES_PATH.read_text(encoding="utf-8"))
 
 
 def price_for(provider: str, model: str) -> float:
     spec = PROVIDERS[provider]
-    return MODEL_PRICES.get(model, spec.default_price_per_mtok)
+    prices: dict[str, float] = price_table()["usd_per_mtok"]
+    return prices.get(model, spec.default_price_per_mtok)
+
+
+# Compatibility alias (same object the loader returns, so edits to it are
+# seen by price_for): the pre-v1.0 name for the overrides table.
+MODEL_PRICES: dict[str, float] = price_table()["usd_per_mtok"]

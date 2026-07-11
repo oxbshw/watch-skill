@@ -229,7 +229,9 @@ def forget(
 
 
 @app.command()
-def stats() -> None:
+def stats(
+    cost: bool = typer.Option(False, "--cost", help="Lifetime spend split by source + estimated $."),
+) -> None:
     """Lifetime token savings and answer counts."""
     from watch_skill.answer.cache import lifetime_stats
 
@@ -239,6 +241,19 @@ def stats() -> None:
     if data.get("library_answers_count"):
         print(f"library syntheses    : {data['library_answers_count']}")
         print(f"library tokens saved : ~{data['library_tokens_saved']:,}")
+    if cost:
+        from watch_skill.answer.cache import spend_stats
+        from watch_skill.vision.registry import price_table
+
+        spend = spend_stats()
+        print("\nlifetime spend by source (estimated tokens):")
+        print(f"  cache hits (free)  : {spend['cache_hits']}")
+        print(f"  text-first         : ~{spend['text_first']:,}")
+        print(f"  local escalation   : ~{spend['local_escalation']:,}")
+        print(f"  vision calls       : ~{spend['vision_call']:,}")
+        print(f"  response frames    : ~{spend['response_frames']:,}")
+        print(f"  cloud spend        : ~${spend['usd_spent_total']:.4f}")
+        print(f"  (prices as of {price_table()['as_of']} — src/watch_skill/vision/prices.json)")
 
 
 library_app = typer.Typer(help="Cross-video memory: notes, synthesis, overview.")

@@ -35,6 +35,10 @@ class Answer:
     budget_stopped: bool = False
     tokens_spent_estimate: int = 0
     tokens_saved_estimate: int = 0
+    # cost meter v2: where the spend went, per source. Keys: text_first /
+    # local_escalation / vision_call (cache shows as cached=True + zero spend).
+    cost_breakdown: dict[str, int] = field(default_factory=dict)
+    cost_usd_estimate: float = 0.0  # cloud calls only; local work is $0
 
     def to_dict(self) -> dict[str, Any]:
         data = asdict(self)
@@ -44,6 +48,7 @@ class Answer:
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> Answer:
         evidence = [Evidence(**e) for e in data.pop("evidence", [])]
+        # answers cached before the cost meter existed revive with defaults
         return cls(evidence=evidence, **data)
 
 

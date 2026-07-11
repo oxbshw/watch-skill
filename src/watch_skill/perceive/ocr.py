@@ -114,8 +114,21 @@ def ocr_frame(
     ``lang`` selects a script-specific recognition model when one is
     available (Arabic, Cyrillic, Devanagari, Korean, and more); anything
     else — including Latin scripts, Chinese, and Japanese — uses the bundled
-    multilingual model.
+    multilingual model. Scripts RapidOCR has no recognizer for (Lao, Khmer,
+    Myanmar, Tibetan) route to the tesseract backend automatically; see
+    ``ocr_backends.py`` for the registry and the ``ocr_backend`` setting.
     """
+    from watch_skill.perceive.ocr_backends import (  # noqa: PLC0415
+        ocr_frame_surya,
+        ocr_frame_tesseract,
+        resolve_backend,
+    )
+
+    backend = resolve_backend(lang)
+    if backend == "tesseract":
+        return ocr_frame_tesseract(image_path, lang or "en", min_confidence)
+    if backend == "surya":
+        return ocr_frame_surya(image_path, min_confidence)
     engine = _get_engine(resolve_ocr_lang(lang))
     result = engine(str(image_path))
     if result is None or not getattr(result, "txts", None):

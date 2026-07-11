@@ -222,6 +222,7 @@ def answer_question(
         if hit is not None:
             hit.tokens_saved_estimate += hit.tokens_spent_estimate  # repeat = free
             cache.record_savings(hit.tokens_spent_estimate)
+            cache.record_spend({"cache": 0}, 0.0)  # served from cache: count it, spend nothing
             return hit
 
     lang = detect_lang(question)
@@ -231,6 +232,9 @@ def answer_question(
     floor = min(target, settings.answer_confidence_floor + profile.get("confidence_floor_bump", 0.0))
     budget = settings.answer_token_budget
     spent = est_text_tokens(question) + est_text_tokens(lessons)
+    breakdown = {"text_first": spent, "local_escalation": 0, "vision_call": 0,
+                 "response_frames": 0}
+    usd_spent = 0.0
     escalations: list[str] = []
     budget_stopped = False
 
@@ -258,6 +262,7 @@ def answer_question(
             continue
         escalations.append(step_name)
         spent += cost
+        breakdown["local_escalation"] += cost
         if new_items:
             hits = hybrid_search(question, video_id=video["id"], k=k)
             confidence = _grounded_confidence(hits, question, floor)
@@ -265,11 +270,11 @@ def answer_question(
     evidence = _evidence_from_hits(hits)
     frames = _frames_for_evidence(video["id"], evidence)
 
-    # --- verify / model answer (cheap first, strong on low confidence) ------
+    # --- verify / model answer, per the cost policy -------------------------
     do_verify = verify if verify is not None else settings.answer_verify_enabled
     model_rejected = False
     if do_verify and evidence:
-        tiers = ["cheap"] if confidence >= target else ["cheap", "strong"]
+        tiers = _tiers_for_policy(settings, confidence, target)
         for tier in tiers:
             call_cost = estimate_verify_cost(len(frames), question + lessons)
             if spent + call_cost > budget:
@@ -279,6 +284,8 @@ def answer_question(
             if result is None:
                 break  # no provider reachable — degrade gracefully, model-free
             spent += call_cost
+            breakdown["vision_call"] += call_cost
+            usd_spent += _call_usd(settings, tier, call_cost)
             if tier == "strong":
                 escalations.append("strong_tier")
             supported, certainty, answer_text = result
@@ -307,6 +314,9 @@ def answer_question(
     attach = include_frames if include_frames is not None else (uncertain and not honest_floor)
     frame_tokens = est_frame_tokens() * len(frames)
     spent += est_text_tokens(text) + (frame_tokens if attach else 0)
+    breakdown["text_first"] += est_text_tokens(text)
+    if attach:
+        breakdown["response_frames"] += frame_tokens
 
     # naive baseline: a claude-video-style tool injects every indexed frame
     naive = _naive_token_baseline(video["id"]) + est_text_tokens(text)
@@ -323,10 +333,53 @@ def answer_question(
         budget_stopped=budget_stopped,
         tokens_spent_estimate=spent,
         tokens_saved_estimate=max(0, naive - spent),
+        cost_breakdown={k: v for k, v in breakdown.items() if v},
+        cost_usd_estimate=round(usd_spent, 6),
     )
     cache.put(answer)
     cache.record_savings(answer.tokens_saved_estimate)
+    cache.record_spend(breakdown, usd_spent)
     return answer
+
+
+def _tiers_for_policy(settings, confidence: float, target: float) -> list[str]:
+    """THE COST POLICY: which model tiers a verify pass may touch.
+
+    - ``cheapest`` (default): cheapest path that clears confidence wins —
+      cheap tier first, strong only when retrieval stayed unsure.
+    - ``quality_first``: straight to the strong tier, every time.
+    - ``offline_only``: only tiers whose provider is keyless/local (price 0);
+      cloud never sees a frame, even when confidence is low.
+    """
+    from watch_skill.vision.registry import PROVIDERS
+
+    policy = settings.cost_policy
+    if policy == "quality_first":
+        tiers = ["strong"]
+    else:
+        tiers = ["cheap"] if confidence >= target else ["cheap", "strong"]
+    if policy == "offline_only":
+        def local(tier: str) -> bool:
+            provider = (settings.vision_cheap_provider if tier == "cheap"
+                        else settings.vision_strong_provider)
+            spec = PROVIDERS.get(provider)
+            return spec is not None and spec.key_setting is None
+        tiers = [t for t in tiers if local(t)]
+    return tiers
+
+
+def _call_usd(settings, tier: str, call_tokens: int) -> float:
+    """Estimated USD for one verify call at this tier's configured model."""
+    from watch_skill.vision.registry import PROVIDERS, price_for
+
+    provider, model = (
+        (settings.vision_cheap_provider, settings.vision_cheap_model)
+        if tier == "cheap"
+        else (settings.vision_strong_provider, settings.vision_strong_model)
+    )
+    if provider not in PROVIDERS:
+        return 0.0
+    return call_tokens / 1_000_000 * price_for(provider, model)
 
 
 def _naive_token_baseline(video_id: str) -> int:

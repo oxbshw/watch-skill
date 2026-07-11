@@ -100,6 +100,19 @@ class Settings(BaseSettings):
     cost_ceiling_usd: float = Field(
         default=1.0, description="Warn/abort ceiling for a single cloud vision call."
     )
+    cost_policy: str = Field(
+        default="cheapest",
+        description="THE COST POLICY for answer verify passes: 'cheapest' "
+        "(cheapest path that clears confidence wins), 'quality_first' "
+        "(straight to the strong tier), or 'offline_only' (only keyless/"
+        "local providers — cloud never sees a frame).",
+    )
+    ocr_backend: str = Field(
+        default="auto",
+        description="OCR backend policy: 'auto' (RapidOCR, with tesseract "
+        "auto-routed only for scripts RapidOCR cannot read — Lao/Khmer/"
+        "Myanmar/Tibetan), or force 'rapidocr' / 'tesseract' / 'surya'.",
+    )
     vision_batch_size: int = Field(
         default=8,
         description="Frames per describe_frames call. Lower (2-4) for small local models.",

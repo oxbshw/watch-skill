@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
+from typing import Any
 
 from watch_skill.answer.types import Answer
 from watch_skill.config import get_settings
@@ -115,6 +116,45 @@ def record_savings(tokens_saved: int) -> None:
             count = int(get_meta(conn, "answers_count") or 0) + 1
             set_meta(conn, "tokens_saved_total", str(total))
             set_meta(conn, "answers_count", str(count))
+    finally:
+        conn.close()
+
+
+def record_spend(breakdown: dict[str, int], usd: float) -> None:
+    """Cost meter v2: accumulate lifetime spend per source.
+
+    Sources: cache (served free), text_first, local_escalation, vision_call,
+    response_frames. USD accrues only from cloud vision calls."""
+    conn = connect()
+    try:
+        with conn:
+            if "cache" in breakdown:
+                hits = int(get_meta(conn, "spend_cache_hits") or 0) + 1
+                set_meta(conn, "spend_cache_hits", str(hits))
+            for source, tokens in breakdown.items():
+                if source == "cache" or tokens <= 0:
+                    continue
+                key = f"spend_{source}"
+                set_meta(conn, key, str(int(get_meta(conn, key) or 0) + tokens))
+            if usd > 0:
+                total = float(get_meta(conn, "usd_spent_total") or 0.0) + usd
+                set_meta(conn, "usd_spent_total", f"{total:.6f}")
+    finally:
+        conn.close()
+
+
+def spend_stats() -> dict[str, Any]:
+    """Lifetime spend split by source, plus the cloud USD estimate."""
+    conn = connect()
+    try:
+        return {
+            "cache_hits": int(get_meta(conn, "spend_cache_hits") or 0),
+            "text_first": int(get_meta(conn, "spend_text_first") or 0),
+            "local_escalation": int(get_meta(conn, "spend_local_escalation") or 0),
+            "vision_call": int(get_meta(conn, "spend_vision_call") or 0),
+            "response_frames": int(get_meta(conn, "spend_response_frames") or 0),
+            "usd_spent_total": float(get_meta(conn, "usd_spent_total") or 0.0),
+        }
     finally:
         conn.close()
 

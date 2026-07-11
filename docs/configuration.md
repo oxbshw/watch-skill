@@ -82,6 +82,7 @@ provider — cloud or a local Ollama.
 | `WATCHSKILL_VISION_STRONG_PROVIDER` | str | `anthropic` | Provider for final answers, low-confidence verification, and the loop critic. |
 | `WATCHSKILL_VISION_STRONG_MODEL` | str | `claude-sonnet-5` | Model for the strong tier. |
 | `WATCHSKILL_COST_CEILING_USD` | float | `1.0` | Pre-call cost guard: a single cloud vision call whose estimated cost exceeds this raises `vision.cost_ceiling` instead of running. |
+| `WATCHSKILL_COST_POLICY` | str | `cheapest` | Which model tiers a verify pass may touch: `cheapest` (cheapest path that clears confidence), `quality_first` (straight to the strong tier), `offline_only` (keyless/local providers only — cloud never sees a frame). See [cost.md](cost.md). |
 | `WATCHSKILL_VISION_BATCH_SIZE` | int | `8` | Frames per `describe_frames` call. Use 2–4 for small local models — large image batches overflow their context. |
 | `WATCHSKILL_VISION_TIMEOUT_SECONDS` | float | `180.0` | HTTP timeout for cloud vision calls. |
 | `WATCHSKILL_VISION_LOCAL_TIMEOUT_SECONDS` | float | `900.0` | Timeout for local (Ollama) vision calls — CPU model loads can take minutes. |
