@@ -75,8 +75,8 @@ def classify_error(question: str, wrong_answer: str, correction: str) -> str:
     if corr_ts and not wrong_ts:
         return "wrong-timestamp"
     if any(k in corr for k in ("not in the video", "doesn't show", "does not show",
-                               "never happens", "made up", "isn't there", "is not there",
-                               "no such")):
+                               "never happens", "never shows", "made up", "isn't there",
+                               "is not there", "no such", "refuse")):
         return "hallucination"
     if any(k in corr for k in ("look closer", "zoom", "frame", "moment", "briefly",
                                "for a second", "missed the scene")):

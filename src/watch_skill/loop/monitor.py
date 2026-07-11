@@ -116,6 +116,11 @@ def loop_monitor(
             code="loop.bad_config",
             fix="pass max_checks >= 1 — the bound exists so monitors always terminate",
         )
+    # WATCHSKILL_WEBHOOK_URL turns every event into a signed POST as well —
+    # events.jsonl and any explicit callback keep working unchanged
+    from watch_skill.loop.webhook import webhook_on_event  # noqa: PLC0415
+
+    on_event = webhook_on_event(on_event)
     critic = critic_override or critique_recording
     monitor_id = uuid.uuid4().hex[:12]
     monitor_dir = get_settings().loops_dir / f"monitor_{monitor_id}"

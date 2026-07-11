@@ -121,6 +121,17 @@ class Settings(BaseSettings):
         "two models never mix. The big models want ~2 GB+ RAM: not for the "
         "8 GB reference machine.",
     )
+    webhook_url: str | None = Field(
+        default=None,
+        description="POST every monitor event here as JSON (n8n/Zapier/your "
+        "endpoint). At-least-once, 3 attempts with backoff; events.jsonl is "
+        "written regardless.",
+    )
+    webhook_secret: SecretStr | None = Field(
+        default=None,
+        description="When set, events carry X-WatchSkill-Signature: "
+        "sha256=<HMAC-SHA256 of the body> for receiver-side verification.",
+    )
     vision_batch_size: int = Field(
         default=8,
         description="Frames per describe_frames call. Lower (2-4) for small local models.",

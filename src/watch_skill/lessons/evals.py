@@ -18,11 +18,18 @@ from watch_skill.lessons import store
 
 _WORD_RE = re.compile(r"[\w؀-ۿ一-鿿]{3,}", re.UNICODE)
 
+# function words make must_surface trivially satisfiable — "the" appears in
+# every answer, so a case carrying it can never fail (which made regressed
+# lessons classify as prunable; the self-improvement demo caught it live)
+_STOPWORDS = frozenset(
+    "the and for that this with was are were any not has have had its".split()
+)
+
 
 def _key_terms(text: str, cap: int = 6) -> list[str]:
     seen: list[str] = []
     for term in _WORD_RE.findall(text.lower()):
-        if term not in seen:
+        if term not in seen and term not in _STOPWORDS:
             seen.append(term)
         if len(seen) >= cap:
             break
@@ -76,13 +83,7 @@ def run_evals() -> dict[str, Any]:
         except Exception as exc:  # an eval crash is a failure, not an abort
             failures.append({"lesson_id": case["lesson_id"], "error": str(exc)})
             continue
-        if case.get("expect_honest_floor"):
-            ok = answer.honest_floor
-        else:
-            blob = (answer.text + " " + " ".join(e.text for e in answer.evidence)).lower()
-            terms = case.get("must_surface", [])
-            hits = [t for t in terms if t in blob]
-            ok = bool(terms) and len(hits) >= max(1, len(terms) // 3)
+        ok = _case_passes(case, answer)
         if ok:
             passed += 1
         else:
@@ -105,10 +106,14 @@ def run_evals() -> dict[str, Any]:
 
 
 def _case_passes(case: dict[str, Any], answer: Any) -> bool:
-    """The same pass rule run_evals applies, extracted for the report."""
+    """One pass rule for run_evals and the report alike.
+
+    Terms must surface in the EVIDENCE, not the answer prose: the honest
+    floor's text quotes the question, which would leak question words into
+    a prose match and pass corrections the system never actually found."""
     if case.get("expect_honest_floor"):
         return bool(answer.honest_floor)
-    blob = (answer.text + " " + " ".join(e.text for e in answer.evidence)).lower()
+    blob = " ".join(e.text for e in answer.evidence).lower()
     terms = case.get("must_surface", [])
     hits = [t for t in terms if t in blob]
     return bool(terms) and len(hits) >= max(1, len(terms) // 3)

@@ -865,6 +865,34 @@ def lessons_export_evals() -> None:
     print(f"eval cases written to {export_evals()}")
 
 
+@lessons_app.command("eval")
+def lessons_eval(
+    report: bool = typer.Option(True, "--report/--no-report", help="Print per-lesson classification."),
+    prune: bool = typer.Option(False, "--prune", help="Delete the lessons classified prunable."),
+) -> None:
+    """Replay every lesson against the CURRENT pipeline and classify each:
+    still-effective (load-bearing), prunable (pipeline answers correctly
+    without it), or regressed (the lesson no longer protects)."""
+    from watch_skill.lessons.evals import eval_report, prune_lessons
+
+    outcome = eval_report()
+    counts = outcome["counts"]
+    print(
+        f"lessons: {counts['still_effective']} still effective, "
+        f"{counts['prunable']} prunable, {counts['regressed']} regressed, "
+        f"{counts['skipped']} skipped (source video gone)"
+    )
+    if report:
+        for entry in outcome["lessons"]:
+            marker = {"still_effective": "KEEP ", "prunable": "PRUNE",
+                      "regressed": "LOOK ", "skipped": "SKIP "}[entry["state"]]
+            detail = entry.get("question") or entry.get("reason") or entry.get("error", "")
+            print(f"  {marker} #{entry['lesson_id']}  {detail}")
+    if prune:
+        removed = prune_lessons(outcome)
+        print(f"pruned {removed} lesson(s)")
+
+
 evals_app = typer.Typer(help="Replay lesson-derived evals against the current system.")
 app.add_typer(evals_app, name="evals")
 
