@@ -86,6 +86,8 @@ def expand_playlist(url: str, limit: int = _MAX_BATCH) -> list[str]:
         raise AcquisitionError(
             f"could not expand playlist: {url}",
             code="acquire.playlist_failed",
+            fix="check the playlist is public; `watch-skill doctor` updates a "
+            "stale yt-dlp, which is the usual cause",
             details={"stderr": result.stderr[-500:]},
         )
     data = json.loads(result.stdout)

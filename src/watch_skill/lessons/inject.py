@@ -18,6 +18,23 @@ _TOP_K = 5
 _MIN_SIMILARITY = 0.25
 _CONTENT_TYPE_BONUS = 0.15
 
+# lessons excluded from injection right now — the eval report uses this to
+# ask "does this answer still pass WITHOUT the lesson?" (prunable check)
+_EXCLUDED_LESSON_IDS: set[int] = set()
+
+
+class excluding:
+    """Context manager: suppress specific lessons during injection."""
+
+    def __init__(self, lesson_ids: list[int]) -> None:
+        self.lesson_ids = set(lesson_ids)
+
+    def __enter__(self) -> None:
+        _EXCLUDED_LESSON_IDS.update(self.lesson_ids)
+
+    def __exit__(self, *exc_info: object) -> None:
+        _EXCLUDED_LESSON_IDS.difference_update(self.lesson_ids)
+
 
 def relevant_guidance(question: str, video: dict[str, Any]) -> list[str]:
     """Guidance lines for this question/video, budget-capped, LRU-touched."""
@@ -40,7 +57,7 @@ def relevant_guidance(question: str, video: dict[str, Any]) -> list[str]:
 
     scored: list[tuple[float, int, str]] = []
     for row in rows:
-        if row["embedding"] is None:
+        if row["embedding"] is None or row["id"] in _EXCLUDED_LESSON_IDS:
             continue
         sim = emb.cosine_similarity(query, emb.unpack_vector(row["embedding"], row["dim"]))
         if row["content_type"] == content_type:

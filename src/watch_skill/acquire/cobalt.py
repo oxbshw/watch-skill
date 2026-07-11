@@ -90,6 +90,7 @@ def download(url: str, dest: Path, timeout: float = 1800.0) -> Path:
         raise AcquisitionError(
             "cobalt returned an empty file",
             code="acquire.cobalt_empty",
+            fix="the resolver continues down the fallback chain on its own",
             details={"url": url},
         )
     return dest

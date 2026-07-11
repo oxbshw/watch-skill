@@ -26,6 +26,8 @@ def probe(video_path: Path) -> VideoMetadata:
         raise PerceptionError(
             f"ffprobe failed on {video_path.name}",
             code="perceive.probe_failed",
+            fix="the file may be truncated or not a video — re-acquire it; "
+            "`ffprobe <path>` by hand shows the same story",
             details={"path": str(video_path), "stderr": result.stderr[-1000:]},
         )
     data = json.loads(result.stdout or "{}")

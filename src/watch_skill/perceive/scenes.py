@@ -46,12 +46,16 @@ def detect_scenes(
             raise PerceptionError(
                 f"scene detection failed: {exc}",
                 code="perceive.scene_detection_failed",
+                fix="the media may be corrupt or zero-length — re-acquire it, "
+                "or watch with --transcript-only",
                 details={"path": str(video_path)},
             ) from exc
     except Exception as exc:  # scenedetect raises plain Exceptions on bad media
         raise PerceptionError(
             f"scene detection failed: {exc}",
             code="perceive.scene_detection_failed",
+            fix="the media may be corrupt or zero-length — re-acquire it, "
+            "or watch with --transcript-only",
             details={"path": str(video_path)},
         ) from exc
     def _seconds(timecode) -> float:

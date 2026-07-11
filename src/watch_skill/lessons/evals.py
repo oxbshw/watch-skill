@@ -102,3 +102,86 @@ def run_evals() -> dict[str, Any]:
         fh.write(json.dumps({k: v for k, v in result.items() if k != "failures"},
                             ensure_ascii=False) + "\n")
     return result
+
+
+def _case_passes(case: dict[str, Any], answer: Any) -> bool:
+    """The same pass rule run_evals applies, extracted for the report."""
+    if case.get("expect_honest_floor"):
+        return bool(answer.honest_floor)
+    blob = (answer.text + " " + " ".join(e.text for e in answer.evidence)).lower()
+    terms = case.get("must_surface", [])
+    hits = [t for t in terms if t in blob]
+    return bool(terms) and len(hits) >= max(1, len(terms) // 3)
+
+
+def eval_report() -> dict[str, Any]:
+    """Replay every stored lesson against the CURRENT pipeline and classify:
+
+    - ``still_effective`` — passes with the lesson injected, fails without
+      it: the lesson is load-bearing, keep it.
+    - ``prunable`` — passes even with the lesson suppressed: the pipeline
+      answers correctly on its own now (root cause fixed); the lesson only
+      costs injection budget.
+    - ``regressed`` — fails even with the lesson: the lesson no longer
+      protects against its own mistake; it needs a human look.
+
+    Verification is off during replay: the report measures the retrieval +
+    lesson mechanics deterministically, not a vision model's mood.
+    """
+    from watch_skill.answer import answer_question  # noqa: PLC0415
+    from watch_skill.index.store import get_video  # noqa: PLC0415
+    from watch_skill.lessons import inject  # noqa: PLC0415
+
+    export_evals()  # classifications must reflect the CURRENT lesson set
+    cases_file = get_settings().evals_dir / "lessons_evals.jsonl"
+    classifications: list[dict[str, Any]] = []
+    counts = {"still_effective": 0, "prunable": 0, "regressed": 0, "skipped": 0}
+
+    for line in cases_file.read_text(encoding="utf-8").splitlines():
+        if not line.strip():
+            continue
+        case = json.loads(line)
+        if not case.get("video_id") or get_video(case["video_id"]) is None:
+            counts["skipped"] += 1
+            classifications.append({"lesson_id": case["lesson_id"], "state": "skipped",
+                                    "reason": "source video no longer indexed"})
+            continue
+        try:
+            with_lesson = answer_question(
+                case["video_id"], case["question"], use_cache=False, verify=False
+            )
+            passes_with = _case_passes(case, with_lesson)
+            if not passes_with:
+                state = "regressed"
+            else:
+                with inject.excluding([case["lesson_id"]]):
+                    without_lesson = answer_question(
+                        case["video_id"], case["question"], use_cache=False, verify=False
+                    )
+                state = "prunable" if _case_passes(case, without_lesson) else "still_effective"
+        except Exception as exc:  # a crashed replay is a regression, not an abort
+            state = "regressed"
+            classifications.append({"lesson_id": case["lesson_id"], "state": state,
+                                    "error": str(exc)[:200]})
+            counts[state] += 1
+            continue
+        counts[state] += 1
+        classifications.append({
+            "lesson_id": case["lesson_id"], "state": state,
+            "question": case["question"], "error_class": case.get("error_class"),
+        })
+    return {"counts": counts, "lessons": classifications,
+            "at": datetime.now(UTC).isoformat(timespec="seconds")}
+
+
+def prune_lessons(report: dict[str, Any] | None = None) -> int:
+    """Delete the lessons the report marked prunable; returns how many."""
+    from watch_skill.lessons import store as lessons_store  # noqa: PLC0415
+
+    report = report or eval_report()
+    prunable = [
+        entry["lesson_id"] for entry in report["lessons"] if entry["state"] == "prunable"
+    ]
+    if not prunable:
+        return 0
+    return lessons_store.remove_lessons(ids=prunable)

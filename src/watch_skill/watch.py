@@ -39,13 +39,20 @@ def _validate_window(
     start: float | None, end: float | None, duration: float
 ) -> None:
     if start is not None and start < 0:
-        raise PerceptionError("start must be non-negative", code="perceive.bad_window")
+        raise PerceptionError(
+            "start must be non-negative", code="perceive.bad_window",
+            fix="pass start as SS, MM:SS, or HH:MM:SS from the video's own timeline",
+        )
     if start is not None and end is not None and end <= start:
-        raise PerceptionError("end must be greater than start", code="perceive.bad_window")
+        raise PerceptionError(
+            "end must be greater than start", code="perceive.bad_window",
+            fix="swap the values or drop end to sample from start to the video's end",
+        )
     if duration > 0 and start is not None and start >= duration:
         raise PerceptionError(
             f"start {start:.1f}s is past the end of the video ({duration:.1f}s)",
             code="perceive.bad_window",
+            fix=f"use a start below {duration:.0f}s, or drop the window to watch the whole video",
         )
 
 

@@ -256,6 +256,32 @@ def stats(
         print(f"  (prices as of {price_table()['as_of']} — src/watch_skill/vision/prices.json)")
 
 
+bench_app = typer.Typer(help="Benchmarks with receipts (measured on THIS machine).")
+app.add_typer(bench_app, name="bench")
+
+
+@bench_app.command("perception")
+def bench_perception_cmd(
+    fixtures: Path = typer.Option(
+        Path("benchmarks/perception/fixtures"), "--fixtures",
+        help="Committed fixture directory (images + fixtures.json).",
+    ),
+    vision: bool = typer.Option(False, "--vision", help="Also bench the cheap-tier vision provider."),
+    write: Path | None = typer.Option(None, "--write", help="Write the markdown report here."),
+) -> None:
+    """Char-hit rate, latency, peak RSS per OCR backend over the fixture set."""
+    from watch_skill.bench import bench_perception
+
+    if not (fixtures / "fixtures.json").is_file():
+        print(f"no fixtures at {fixtures} — run benchmarks/perception/make_fixtures.py first")
+        raise typer.Exit(code=1)
+    report, _ = bench_perception(fixtures, include_vision=vision)
+    print(report)
+    if write is not None:
+        write.write_text(report + "\n", encoding="utf-8")
+        print(f"\nwritten: {write}")
+
+
 library_app = typer.Typer(help="Cross-video memory: notes, synthesis, overview.")
 app.add_typer(library_app, name="library")
 

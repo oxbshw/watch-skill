@@ -111,7 +111,11 @@ def loop_monitor(
     event: appended to events.jsonl, handed to ``on_event``.
     """
     if max_checks < 1:
-        raise LoopError("max_checks must be >= 1", code="loop.bad_config")
+        raise LoopError(
+            "max_checks must be >= 1",
+            code="loop.bad_config",
+            fix="pass max_checks >= 1 — the bound exists so monitors always terminate",
+        )
     critic = critic_override or critique_recording
     monitor_id = uuid.uuid4().hex[:12]
     monitor_dir = get_settings().loops_dir / f"monitor_{monitor_id}"

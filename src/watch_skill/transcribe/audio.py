@@ -50,6 +50,8 @@ def extract_audio(
         raise TranscriptionError(
             "audio extraction failed — the video may have no audio track",
             code="transcribe.no_audio",
+            fix="a silent video is fine — OCR and vision still index it; if "
+            "audio should exist, re-download the source",
             details={"stderr": result.stderr[-1000:]},
         )
     return out_path
@@ -66,7 +68,12 @@ def audio_duration(audio_path: Path) -> float:
         capture_output=True, text=True, encoding="utf-8", errors="replace",
     )
     if result.returncode != 0:
-        raise TranscriptionError(f"ffprobe failed: {result.stderr[-500:]}")
+        raise TranscriptionError(
+            f"ffprobe failed: {result.stderr[-500:]}",
+            code="transcribe.probe_failed",
+            fix="the audio stream may be corrupt — re-acquire the source; "
+            "`watch-skill doctor` verifies ffmpeg/ffprobe",
+        )
     fmt = json.loads(result.stdout or "{}").get("format", {})
     return float(fmt.get("duration") or 0.0)
 
@@ -116,6 +123,8 @@ def split_audio(
             raise TranscriptionError(
                 f"failed to split audio chunk {index + 1}",
                 code="transcribe.chunk_split_failed",
+                fix="usually disk space — `watch-skill doctor` checks it; "
+                "details.stderr has the ffmpeg log",
                 details={"stderr": result.stderr[-500:]},
             )
         chunks.append((out_path, offset))

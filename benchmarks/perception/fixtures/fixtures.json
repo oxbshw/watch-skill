@@ -1,0 +1,26 @@
+{
+  "screen_text": {
+    "truth": "def cache_get(key: str) -> str | None: return _store.get(key) # TTL 300s",
+    "note": "code on a dark editor background"
+  },
+  "subtitles": {
+    "truth": "The deploy finished at 9:15 PM.",
+    "note": "subtitle-style line"
+  },
+  "arabic_rtl": {
+    "truth": "خطأ في الخادم رقم 502",
+    "note": "shaped + bidi-reordered render (arabic_reshaper + python-bidi)"
+  },
+  "cjk": {
+    "truth": "缓存配置教程 キャッシュ設定",
+    "note": "Simplified Chinese + Japanese kana"
+  },
+  "sea_lao": {
+    "truth": "ສະບາຍດີ ໂລກ",
+    "note": "Lao — RapidOCR has no recognizer for it (the reading gap)"
+  },
+  "mixed_script": {
+    "truth": "watch_skill.serve(port=8747) خطأ في الخادم 缓存配置",
+    "note": "one frame mixing code + Arabic UI + CJK slide"
+  }
+}

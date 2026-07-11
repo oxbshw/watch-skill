@@ -97,8 +97,44 @@ def tesseract_langs(binary: str | None = None) -> set[str]:
     return {line.strip() for line in out.stdout.splitlines() if line.strip() and ":" not in line}
 
 
-_RETRY_BELOW = 0.80  # a region the default engine read this weakly gets re-tried
-_CROP_PAD = 6  # px of context around a region crop
+_IOU_SAME_REGION = 0.5  # boxes overlapping this much are one region, competing
+
+
+def _iou(a: tuple[float, float, float, float], b: tuple[float, float, float, float]) -> float:
+    ix1, iy1 = max(a[0], b[0]), max(a[1], b[1])
+    ix2, iy2 = min(a[2], b[2]), min(a[3], b[3])
+    inter = max(0.0, ix2 - ix1) * max(0.0, iy2 - iy1)
+    if inter <= 0.0:
+        return 0.0
+    area_a = (a[2] - a[0]) * (a[3] - a[1])
+    area_b = (b[2] - b[0]) * (b[3] - b[1])
+    return inter / (area_a + area_b - inter)
+
+
+def _script_share(text: str, script: str) -> float:
+    """Fraction of the text's letters belonging to the engine's script —
+    the calibration bridge between engines whose confidences don't
+    compare. An Arabic engine's read of a code line is high-confidence
+    garbage; its share of Arabic letters says so."""
+    import unicodedata
+
+    ranges = {
+        "arabic": lambda ch: "؀" <= ch <= "ۿ" or "ݐ" <= ch <= "ݿ",
+        "eslav": lambda ch: "Ѐ" <= ch <= "ӿ",
+        "cyrillic": lambda ch: "Ѐ" <= ch <= "ӿ",
+        "devanagari": lambda ch: "ऀ" <= ch <= "ॿ",
+        "korean": lambda ch: "가" <= ch <= "힯" or "ᄀ" <= ch <= "ᇿ",
+        "th": lambda ch: "฀" <= ch <= "๿",
+        "el": lambda ch: "Ͱ" <= ch <= "Ͽ",
+        "ta": lambda ch: "஀" <= ch <= "௿",
+        "te": lambda ch: "ఀ" <= ch <= "౿",
+        "ka": lambda ch: "Ⴀ" <= ch <= "ჿ",
+    }
+    check = ranges.get(script)
+    letters = [ch for ch in text if unicodedata.category(ch).startswith("L")]
+    if not letters or check is None:
+        return 0.0
+    return sum(1 for ch in letters if check(ch)) / len(letters)
 
 
 def ocr_frame_multiscript(
@@ -109,28 +145,27 @@ def ocr_frame_multiscript(
     """Per-REGION script routing for frames that mix writing systems.
 
     One frame can hold code, an Arabic UI, and a CJK slide at once; a
-    single recognizer reads only its own script well. This runs the
-    default engine first, then re-recognizes each weak region (empty or
-    low-confidence) through every candidate script engine named in
-    ``langs`` — keeping whichever reading scored best. Deterministic:
-    same frame, same langs, same result.
+    single recognizer reads only its own script well. Each candidate
+    script engine reads the FULL frame (detection needs context — crop
+    re-reads measured worse), then regions merge by overlap: a script
+    engine's read replaces the default's only when it actually produced
+    its own script there (confidences across engines don't compare;
+    script share does). Deterministic: same frame, same langs, same
+    result.
     """
-    import tempfile
-
-    from PIL import Image  # noqa: PLC0415
-
     from watch_skill.perceive.ocr import _get_engine, resolve_ocr_lang  # noqa: PLC0415
 
-    engine = _get_engine("default")
-    result = engine(str(image_path))
-    if result is None or not getattr(result, "txts", None):
-        regions: list[tuple[tuple[float, float, float, float], str, float]] = []
-    else:
-        regions = []
+    def read(engine_key: str) -> list[tuple[tuple[float, float, float, float], str, float]]:
+        result = _get_engine(engine_key)(str(image_path))
+        if result is None or not getattr(result, "txts", None):
+            return []
+        out = []
         for box, text, score in zip(result.boxes, result.txts, result.scores, strict=False):
             xs = [float(p[0]) for p in box]
             ys = [float(p[1]) for p in box]
-            regions.append(((min(xs), min(ys), max(xs), max(ys)), str(text), float(score)))
+            if str(text).strip():
+                out.append(((min(xs), min(ys), max(xs), max(ys)), str(text).strip(), float(score)))
+        return out
 
     candidate_scripts: list[str] = []
     gap_langs: list[str] = []
@@ -138,47 +173,53 @@ def ocr_frame_multiscript(
         key = lang.split("-")[0].lower()
         if key in RAPIDOCR_GAP:
             gap_langs.append(key)
-            continue
-        script = resolve_ocr_lang(key)
-        if script != "default" and script not in candidate_scripts:
-            candidate_scripts.append(script)
+        else:
+            script = resolve_ocr_lang(key)
+            if script != "default" and script not in candidate_scripts:
+                candidate_scripts.append(script)
 
-    blocks: list[OcrBlock] = []
-    with Image.open(image_path) as img:
-        img = img.convert("RGB")
-        for bbox, text, score in regions:
-            best_text, best_score = text.strip(), score
-            if best_score < _RETRY_BELOW or not best_text:
-                x1, y1, x2, y2 = bbox
-                crop = img.crop((
-                    max(0, int(x1) - _CROP_PAD), max(0, int(y1) - _CROP_PAD),
-                    min(img.width, int(x2) + _CROP_PAD), min(img.height, int(y2) + _CROP_PAD),
-                ))
-                with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
-                    crop_path = Path(tmp.name)
-                crop.save(crop_path)
-                try:
-                    for script in candidate_scripts:
-                        candidate = _get_engine(script)(str(crop_path))
-                        if candidate is None or not getattr(candidate, "txts", None):
-                            continue
-                        joined = " ".join(str(t).strip() for t in candidate.txts if str(t).strip())
-                        cand_score = max((float(s) for s in candidate.scores), default=0.0)
-                        if joined and cand_score > best_score:
-                            best_text, best_score = joined, cand_score
-                    for gap in gap_langs:
-                        try:
-                            gap_blocks = ocr_frame_tesseract(crop_path, gap, min_confidence=0.0)
-                        except PerceptionError:
-                            continue  # binary/language data missing — next candidate
-                        for gap_block in gap_blocks:
-                            if gap_block.confidence > best_score:
-                                best_text, best_score = gap_block.text, gap_block.confidence
-                finally:
-                    crop_path.unlink(missing_ok=True)
-            if best_text and best_score >= min_confidence:
-                blocks.append(OcrBlock(text=best_text, bbox=bbox, confidence=round(best_score, 3)))
-    return blocks
+    merged = [
+        {"bbox": bbox, "text": text, "score": score}
+        for bbox, text, score in read("default")
+    ]
+    for script in candidate_scripts:
+        for bbox, text, score in read(script):
+            share = _script_share(text, script)
+            if share < 0.5:
+                continue  # the engine did not find its own script here
+            for region in merged:
+                if _iou(region["bbox"], bbox) >= _IOU_SAME_REGION:
+                    # same region: the script engine read actual script text
+                    # where the default engine, by construction, could not
+                    if _script_share(region["text"], script) < share:
+                        region.update(text=text, score=score)
+                    break
+            else:
+                merged.append({"bbox": bbox, "text": text, "score": score})
+
+    for gap in gap_langs:
+        try:
+            gap_blocks = ocr_frame_tesseract(image_path, gap, min_confidence=0.0)
+        except PerceptionError:
+            continue  # binary/language data missing — the gap stays unread
+        for gap_block in gap_blocks:
+            for region in merged:
+                if _iou(region["bbox"], gap_block.bbox) >= _IOU_SAME_REGION:
+                    if not region["text"] or region["score"] < gap_block.confidence:
+                        region.update(text=gap_block.text, score=gap_block.confidence)
+                    break
+            else:
+                merged.append({
+                    "bbox": gap_block.bbox, "text": gap_block.text,
+                    "score": gap_block.confidence,
+                })
+
+    merged.sort(key=lambda r: (r["bbox"][1], r["bbox"][0]))
+    return [
+        OcrBlock(text=r["text"], bbox=r["bbox"], confidence=round(r["score"], 3))
+        for r in merged
+        if r["text"] and r["score"] >= min_confidence
+    ]
 
 
 def ocr_frame_surya(image_path: Path, min_confidence: float = 0.5) -> list[OcrBlock]:

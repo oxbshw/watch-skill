@@ -120,7 +120,13 @@ def _index_texts(conn: sqlite3.Connection, video_id: str, items: list[tuple]) ->
             "VALUES (?, ?, ?, ?, ?, ?)",
             (text, normalize_for_search(text), video_id, kind, ref_id, timestamp),
         )
-    model_name = get_meta(conn, "embedding_model") or emb.MODEL_NAME
+    # precedence: the model this index is PINNED to > the opt-in override
+    # (new indexes only) > the default. Vectors from two models never mix.
+    model_name = (
+        get_meta(conn, "embedding_model")
+        or get_settings().embedding_model
+        or emb.MODEL_NAME
+    )
     vectors = emb.embed_texts([text for _, _, _, text in items], model_name=model_name)
     if vectors:
         set_meta(conn, "embedding_model", model_name)

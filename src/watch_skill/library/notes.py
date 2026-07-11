@@ -142,7 +142,13 @@ def _chapter_notes(video_id: str) -> list[tuple[str, float, float]]:
 def _index_notes(conn: sqlite3.Connection, video_id: str, rows: list[tuple]) -> None:
     """Insert note rows + their notes_fts entries + vectors (own tables —
     the main fts/embeddings read paths never see notes)."""
-    model_name = get_meta(conn, "embedding_model") or emb.MODEL_NAME
+    from watch_skill.config import get_settings
+
+    model_name = (
+        get_meta(conn, "embedding_model")
+        or get_settings().embedding_model
+        or emb.MODEL_NAME
+    )
     vectors = emb.embed_texts([text for _, text, _, _, _ in rows], model_name=model_name)
     padded = vectors if vectors else [None] * len(rows)
     for (kind, text, timestamp, end_timestamp, weight), vector in zip(rows, padded, strict=False):

@@ -171,6 +171,10 @@ class VisionClient:
             )
         images = images or []
         guard_cost(self.provider, self.model, images)
+        if self.provider == "ollama":
+            from watch_skill.vision.local_health import ensure_ollama  # noqa: PLC0415
+
+            ensure_ollama(get_settings().ollama_base_url)
         build, extract = _BUILDERS[self.provider]
         endpoint, headers, body = build(self.model, self._api_key(), prompt, images)
         try:
@@ -183,14 +187,61 @@ class VisionClient:
             raise VisionError(
                 f"{self.provider} returned HTTP {exc.response.status_code}",
                 code="vision.http_error",
+                fix="401/403: check the API key setting; 404: check the model "
+                "name against the provider's list; 429: wait or switch tier "
+                "(WATCHSKILL_VISION_CHEAP_MODEL); 5xx: retry later",
                 details={"body": exc.response.text[:500], "model": self.model},
             ) from exc
+        except httpx.ConnectError as exc:
+            if self.provider == "ollama":
+                # it answered the health check, then died mid-call: one retry
+                # after a restart, then a loud structured failure
+                from watch_skill.vision.local_health import (  # noqa: PLC0415
+                    ensure_ollama,
+                    forget_liveness,
+                )
+
+                forget_liveness()
+                ensure_ollama(get_settings().ollama_base_url)  # raises server_down if dead
+                try:
+                    response = httpx.post(
+                        endpoint, headers=headers, json=body,
+                        timeout=_timeout_for(self.provider),
+                    )
+                    response.raise_for_status()
+                    text = extract(response.json())
+                except httpx.HTTPError as retry_exc:
+                    raise VisionError(
+                        "the local vision server died mid-call and did not "
+                        "recover after a restart",
+                        code="vision.server_down",
+                        fix="check RAM headroom (`watch-skill doctor`) — the "
+                        "model may not fit right now; close something or use "
+                        "a smaller num_ctx",
+                        details={"model": self.model},
+                    ) from retry_exc
+            else:
+                raise VisionError(
+                    f"{self.provider} call failed: {exc}",
+                    code="vision.call_failed",
+                    fix=f"check network reachability of {self.provider}'s endpoint, "
+                    "then retry; `watch-skill doctor` verifies keys and connectivity",
+                    details={"model": self.model},
+                ) from exc
         except (httpx.HTTPError, KeyError, IndexError, ValueError) as exc:
             raise VisionError(
                 f"{self.provider} call failed: {exc}",
                 code="vision.call_failed",
+                fix="usually transient (timeout or malformed response) — retry once; "
+                "persistent failures: `watch-skill doctor` and check the provider status page",
                 details={"model": self.model},
             ) from exc
         if not text.strip():
-            raise VisionError(f"{self.provider} returned empty output", code="vision.empty")
+            raise VisionError(
+                f"{self.provider} returned empty output",
+                code="vision.empty",
+                fix="local models return empty under RAM pressure or over-constrained "
+                "prompts: check headroom (`watch-skill doctor`), lower "
+                "WATCHSKILL_VISION_BATCH_SIZE to 1-4, or simplify the prompt",
+            )
         return text.strip()

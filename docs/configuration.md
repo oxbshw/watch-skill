@@ -83,6 +83,8 @@ provider — cloud or a local Ollama.
 | `WATCHSKILL_VISION_STRONG_MODEL` | str | `claude-sonnet-5` | Model for the strong tier. |
 | `WATCHSKILL_COST_CEILING_USD` | float | `1.0` | Pre-call cost guard: a single cloud vision call whose estimated cost exceeds this raises `vision.cost_ceiling` instead of running. |
 | `WATCHSKILL_COST_POLICY` | str | `cheapest` | Which model tiers a verify pass may touch: `cheapest` (cheapest path that clears confidence), `quality_first` (straight to the strong tier), `offline_only` (keyless/local providers only — cloud never sees a frame). See [cost.md](cost.md). |
+| `WATCHSKILL_OCR_BACKEND` | str | `auto` | `auto` = RapidOCR, with tesseract auto-routed ONLY for scripts RapidOCR cannot read (Lao/Khmer/Myanmar/Tibetan). Force `rapidocr`/`tesseract`/`surya` to override; surya is opt-in only — its models want more RAM than an 8 GB box has. |
+| `WATCHSKILL_EMBEDDING_MODEL` | str | unset | Opt-in retrieval upgrade for NEW indexes: any fastembed model, e.g. `BAAI/bge-m3` or `intfloat/multilingual-e5-large`. Existing indexes keep the model pinned in their meta (vectors from two models never mix). The big models cost ~2 GB+ RAM at query time — skip this on 8 GB machines. |
 | `WATCHSKILL_VISION_BATCH_SIZE` | int | `8` | Frames per `describe_frames` call. Use 2–4 for small local models — large image batches overflow their context. |
 | `WATCHSKILL_VISION_TIMEOUT_SECONDS` | float | `180.0` | HTTP timeout for cloud vision calls. |
 | `WATCHSKILL_VISION_LOCAL_TIMEOUT_SECONDS` | float | `900.0` | Timeout for local (Ollama) vision calls — CPU model loads can take minutes. |

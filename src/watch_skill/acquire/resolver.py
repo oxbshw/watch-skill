@@ -155,6 +155,8 @@ def fetch_captions_only(source: str) -> AcquireResult:
         raise AcquisitionError(
             "captions probe only applies to URLs",
             code="acquire.not_a_url",
+            fix="local files have no platform captions; transcription falls "
+            "back to local whisper automatically",
             details={"source": source},
         )
     out_dir = cache.entry_dir(source, create=True)

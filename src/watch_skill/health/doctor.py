@@ -8,6 +8,7 @@ binaries downloaded into a managed bin dir.
 """
 from __future__ import annotations
 
+import os
 import re
 import shutil
 import subprocess
@@ -296,6 +297,200 @@ def check_ocr_models() -> CheckResult:
     return CheckResult("ocr-models", "ok", f"cached script models: {', '.join(scripts)}")
 
 
+def check_memory_headroom() -> CheckResult:
+    """RAM + commit headroom, with a local-vision model recommendation.
+
+    Local vision dies in exactly one way on small machines: the model (or
+    its num_ctx-sized compute buffer) does not fit the commit limit at
+    load time. Saying so BEFORE a pipeline fails beats an empty response
+    mid-run. Thresholds come from measurements on the 8 GB reference
+    machine: moondream needs ~2.5 GB of commit headroom at num_ctx 768;
+    qwen2.5vl:3b needs ~5 GB resident."""
+    total_gb, avail_gb, commit_free_gb = _memory_status()
+    if total_gb <= 0:
+        return CheckResult("memory", "warn", "could not probe system memory")
+    recommended = "moondream (num_ctx 768)" if total_gb < 12 else "qwen2.5vl:3b"
+    message = (
+        f"{avail_gb:.1f} GiB RAM free of {total_gb:.0f}, "
+        f"~{commit_free_gb:.1f} GiB commit headroom — recommended local vision: {recommended}"
+    )
+    if commit_free_gb < 1.0:
+        return CheckResult(
+            "memory", "warn",
+            message + " — headroom is too tight to LOAD a local vision model "
+            "right now; close something or let keep_alive reuse a resident one",
+        )
+    return CheckResult("memory", "ok", message)
+
+
+def _memory_status() -> tuple[float, float, float]:
+    """(total_ram_gb, available_ram_gb, commit_headroom_gb) — 0s on failure."""
+    if sys.platform == "win32":
+        import ctypes
+
+        class MEMORYSTATUSEX(ctypes.Structure):
+            _fields_ = [
+                ("dwLength", ctypes.c_uint32), ("dwMemoryLoad", ctypes.c_uint32),
+                ("ullTotalPhys", ctypes.c_uint64), ("ullAvailPhys", ctypes.c_uint64),
+                ("ullTotalPageFile", ctypes.c_uint64), ("ullAvailPageFile", ctypes.c_uint64),
+                ("ullTotalVirtual", ctypes.c_uint64), ("ullAvailVirtual", ctypes.c_uint64),
+                ("ullAvailExtendedVirtual", ctypes.c_uint64),
+            ]
+
+        status = MEMORYSTATUSEX()
+        status.dwLength = ctypes.sizeof(MEMORYSTATUSEX)
+        if not ctypes.windll.kernel32.GlobalMemoryStatusEx(ctypes.byref(status)):
+            return (0.0, 0.0, 0.0)
+        gib = 1024 ** 3
+        return (
+            status.ullTotalPhys / gib,
+            status.ullAvailPhys / gib,
+            status.ullAvailPageFile / gib,  # commit limit minus current commit
+        )
+    try:
+        page = os.sysconf("SC_PAGE_SIZE")
+        total = os.sysconf("SC_PHYS_PAGES") * page
+        avail = os.sysconf("SC_AV_PHYS_PAGES") * page
+        gib = 1024 ** 3
+        return (total / gib, avail / gib, avail / gib)
+    except (ValueError, OSError, AttributeError):
+        return (0.0, 0.0, 0.0)
+
+
+def check_local_vision(fix: bool = True) -> CheckResult:
+    """Local vision server liveness; with ``fix``, a dead server gets ONE
+    detached restart (never `ollama stop` — that killed it once)."""
+    from watch_skill.vision.local_health import (
+        _ollama_binary,
+        forget_liveness,
+        ollama_alive,
+        restart_ollama_detached,
+    )
+
+    base = get_settings().ollama_base_url
+    if _ollama_binary() is None:
+        return CheckResult(
+            "local-vision", "ok",
+            "ollama not installed — local vision is optional (cloud providers "
+            "or `watch-skill setup-vision --provider ollama` to add it)",
+        )
+    forget_liveness(base)
+    if ollama_alive(base):
+        return CheckResult("local-vision", "ok", f"ollama answering at {base}")
+    if not fix:
+        return CheckResult(
+            "local-vision", "warn",
+            f"ollama installed but not answering at {base} — start it: `ollama serve`",
+        )
+    if restart_ollama_detached():
+        import time as _time
+
+        deadline = _time.monotonic() + 20.0
+        while _time.monotonic() < deadline:
+            forget_liveness(base)
+            if ollama_alive(base):
+                return CheckResult(
+                    "local-vision", "ok", f"ollama was down — restarted, answering at {base}",
+                    fix_applied="restart-detached",
+                )
+            _time.sleep(1.0)
+    return CheckResult(
+        "local-vision", "warn",
+        f"ollama would not come up at {base} — check RAM headroom (see the "
+        "memory check) and start it yourself: `ollama serve`",
+    )
+
+
+def check_index_integrity(fix: bool = True) -> CheckResult:
+    """Index self-repair for the failure classes this project has hit:
+    stale WAL sidecar files, corrupted cached-answer rows (quarantined),
+    and indexed videos whose frames directory vanished (reindex hint)."""
+    import json as _json
+    import sqlite3
+
+    from watch_skill.index.db import connect
+
+    settings = get_settings()
+    if not settings.index_path.is_file():
+        return CheckResult("index", "ok", "no index yet — nothing to repair")
+    repairs: list[str] = []
+    problems: list[str] = []
+    try:
+        conn = connect()
+    except sqlite3.OperationalError as exc:
+        return CheckResult(
+            "index", "fail",
+            f"index locked or unreadable ({exc}) — another watch-skill process "
+            "(often a running MCP server) may hold it; close it and re-run",
+        )
+    try:
+        # corrupted answer-cache rows: quarantine (delete — they are pure cache)
+        bad_rows = [
+            row["id"]
+            for row in conn.execute("SELECT id, answer_json FROM answers").fetchall()
+            if not _is_valid_json(row["answer_json"], _json)
+        ]
+        if bad_rows:
+            if fix:
+                with conn:
+                    conn.executemany(
+                        "DELETE FROM answers WHERE id = ?", [(i,) for i in bad_rows]
+                    )
+                repairs.append(f"quarantined {len(bad_rows)} corrupt cached answer(s)")
+            else:
+                problems.append(f"{len(bad_rows)} corrupt cached answer row(s)")
+        # vanished frames dirs: the answer path degrades, but say so + the fix
+        missing = [
+            row["id"]
+            for row in conn.execute("SELECT id, frames_dir FROM videos").fetchall()
+            if row["frames_dir"] and not Path(row["frames_dir"]).is_dir()
+        ]
+        if missing:
+            problems.append(
+                f"{len(missing)} video(s) lost their frames dir — re-run "
+                f"watch_video on them to restore frames (text answers still work)"
+            )
+        if fix:
+            conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")  # shrink stale WAL
+    finally:
+        conn.close()
+    if problems:
+        return CheckResult("index", "warn", "; ".join(problems + repairs))
+    message = "; ".join(repairs) if repairs else "index healthy"
+    return CheckResult("index", "ok", message, fix_applied="repairs" if repairs else None)
+
+
+def _is_valid_json(blob: str, json_mod) -> bool:
+    try:
+        json_mod.loads(blob)
+        return True
+    except (ValueError, TypeError):
+        return False
+
+
+def check_model_files(fix: bool = True) -> CheckResult:
+    """Zero-byte / truncated ONNX model files (a killed download leaves
+    them behind) — deleting them is the repair; they re-download on use."""
+    models_dir = get_settings().data_dir / "models"
+    if not models_dir.is_dir():
+        return CheckResult("model-files", "ok", "no local model cache yet")
+    corrupt = [p for p in models_dir.rglob("*.onnx") if p.stat().st_size < 1024]
+    if not corrupt:
+        return CheckResult("model-files", "ok", "cached model files look intact")
+    if fix:
+        for path in corrupt:
+            path.unlink(missing_ok=True)
+        return CheckResult(
+            "model-files", "ok",
+            f"deleted {len(corrupt)} truncated model file(s) — they re-download on next use",
+            fix_applied="delete-truncated",
+        )
+    return CheckResult(
+        "model-files", "warn",
+        f"{len(corrupt)} truncated model file(s): delete them and they re-download",
+    )
+
+
 def check_api_keys() -> CheckResult:
     """Report which provider keys are configured (informational, never values)."""
     settings = get_settings()
@@ -327,7 +522,11 @@ def run_doctor(fix: bool = True) -> DoctorReport:
     report.checks.append(check_yt_dlp_freshness(fix=fix))
     report.checks.append(check_js_runtime(fix=fix))
     report.checks.append(check_disk_space())
+    report.checks.append(check_memory_headroom())
     report.checks.append(check_gpu())
     report.checks.append(check_ocr_models())
+    report.checks.append(check_model_files(fix=fix))
+    report.checks.append(check_index_integrity(fix=fix))
+    report.checks.append(check_local_vision(fix=fix))
     report.checks.append(check_api_keys())
     return report

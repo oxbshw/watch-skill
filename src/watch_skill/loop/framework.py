@@ -129,6 +129,8 @@ def _produce_video_gen(state: LoopState, iter_dir: Path) -> CaptureResult:
         raise LoopError(
             f"generator timed out after {exc.timeout:.0f}s",
             code="loop.generator_timeout",
+            fix="raise timeout= or run the generator by hand to see where it "
+            "hangs; the loop only re-runs what you give it",
             details={"cmd": cmd},
         ) from exc
     if result.returncode != 0:

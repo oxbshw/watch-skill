@@ -113,6 +113,14 @@ class Settings(BaseSettings):
         "auto-routed only for scripts RapidOCR cannot read — Lao/Khmer/"
         "Myanmar/Tibetan), or force 'rapidocr' / 'tesseract' / 'surya'.",
     )
+    embedding_model: str | None = Field(
+        default=None,
+        description="Opt-in retrieval upgrade for NEW indexes: a fastembed "
+        "model name (e.g. 'BAAI/bge-m3' or 'intfloat/multilingual-e5-large'). "
+        "Existing indexes keep the model pinned in their meta — vectors from "
+        "two models never mix. The big models want ~2 GB+ RAM: not for the "
+        "8 GB reference machine.",
+    )
     vision_batch_size: int = Field(
         default=8,
         description="Frames per describe_frames call. Lower (2-4) for small local models.",

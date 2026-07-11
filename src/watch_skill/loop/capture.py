@@ -118,7 +118,12 @@ def capture_url(
             raw_path = Path(video.path()) if video else None
             browser.close()
     if raw_path is None or not raw_path.is_file():
-        raise LoopError("Playwright produced no recording", code="loop.capture_failed")
+        raise LoopError(
+            "Playwright produced no recording",
+            code="loop.capture_failed",
+            fix="re-run once; persistent: `playwright install chromium` to "
+            "refresh the browser build",
+        )
     dest = out_dir / "capture.webm"
     raw_path.replace(dest)
     return CaptureResult(
@@ -178,7 +183,11 @@ def capture_file(path: str | Path, out_dir: Path) -> CaptureResult:
     """Adopt an existing rendered/generated video as a capture."""
     source = Path(path).expanduser().resolve()
     if not source.is_file():
-        raise LoopError(f"file not found: {source}", code="loop.file_not_found")
+        raise LoopError(
+            f"file not found: {source}",
+            code="loop.file_not_found",
+            fix="check the path; quote paths containing spaces",
+        )
     out_dir.mkdir(parents=True, exist_ok=True)
     dest = out_dir / f"capture{source.suffix.lower()}"
     import shutil

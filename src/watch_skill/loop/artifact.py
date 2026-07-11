@@ -18,6 +18,8 @@ def _run_ffmpeg(args: list[str], dest: Path, timeout: float = 600.0) -> None:
         raise LoopError(
             "artifact rendering failed",
             code="loop.artifact_failed",
+            fix="check ffmpeg health with `watch-skill doctor`; details.stderr "
+            "carries the render log",
             details={"stderr": result.stderr[-800:], "dest": str(dest)},
         )
 

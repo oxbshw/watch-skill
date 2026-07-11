@@ -83,6 +83,8 @@ def _post_with_retry(endpoint: str, api_key: str, model: str, audio_path: Path) 
                 raise TranscriptionError(
                     f"cloud STT rejected the request (HTTP {code})",
                     code="transcribe.cloud_rejected",
+                    fix="401/403: check the STT API key; 413: the chunk is too "
+                    "large (lower chunk length); details.body has the reason",
                     details={"status": code, "body": exc.response.text[:400]},
                 ) from exc
             retry_after = exc.response.headers.get("Retry-After")
@@ -97,6 +99,7 @@ def _post_with_retry(endpoint: str, api_key: str, model: str, audio_path: Path) 
     raise TranscriptionError(
         f"cloud STT failed after {MAX_ATTEMPTS} attempts: {last_error}",
         code="transcribe.cloud_failed",
+        fix="retry later or drop --cloud-stt — local whisper handles it offline",
     )
 
 
@@ -171,10 +174,17 @@ def transcribe_cloud(
                 print(f"[watch-skill] chunk {i + 1}/{len(plan)} failed: {exc.code}", file=sys.stderr)
         if failures == len(plan):
             raise TranscriptionError(
-                "cloud STT failed on every chunk", code="transcribe.cloud_failed"
+                "cloud STT failed on every chunk",
+                code="transcribe.cloud_failed",
+                fix="retry later or drop --cloud-stt — local whisper handles it offline",
             )
         segments = merge_overlapping(pieces)
 
     if not segments:
-        raise TranscriptionError("cloud STT returned no segments", code="transcribe.empty")
+        raise TranscriptionError(
+            "cloud STT returned no segments",
+            code="transcribe.empty",
+            fix="the audio may be silence or music only — that is a valid "
+            "result; OCR and vision still index the video",
+        )
     return Transcript(segments=segments, source=f"whisper-{backend}")
