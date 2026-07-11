@@ -14,9 +14,10 @@ import platform
 import sys
 import time
 from collections import Counter
+from collections.abc import Callable
 from datetime import date
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 from watch_skill.index.textnorm import normalize_for_search
 

@@ -21,7 +21,6 @@ from watch_skill.perceive.ocr_backends import (
     resolve_backend,
 )
 
-
 # ---- registry + routing -----------------------------------------------------
 
 def test_registry_grades_backends_honestly() -> None:
