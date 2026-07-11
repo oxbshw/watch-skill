@@ -184,6 +184,39 @@ class VisionClient:
             response.raise_for_status()
             text = extract(response.json())
         except httpx.HTTPStatusError as exc:
+            if self.provider == "ollama" and exc.response.status_code >= 500:
+                # a just-(re)started local server can 500 while the model
+                # loads under RAM pressure — give it one settled retry
+                import time as _time  # noqa: PLC0415
+
+                _time.sleep(5.0)
+                try:
+                    response = httpx.post(
+                        endpoint, headers=headers, json=body,
+                        timeout=_timeout_for(self.provider),
+                    )
+                    response.raise_for_status()
+                    text = extract(response.json())
+                except httpx.HTTPError as retry_exc:
+                    raise VisionError(
+                        f"ollama kept failing after a retry (HTTP 5xx): the "
+                        f"model likely does not fit in RAM right now",
+                        code="vision.server_down",
+                        fix="check headroom with `watch-skill doctor`; close "
+                        "something, or lower WATCHSKILL_OLLAMA_NUM_CTX",
+                        details={"model": self.model,
+                                 "body": exc.response.text[:300]},
+                    ) from retry_exc
+                else:
+                    if not text.strip():
+                        raise VisionError(
+                            f"{self.provider} returned empty output",
+                            code="vision.empty",
+                            fix="local models return empty under RAM pressure — "
+                            "check headroom (`watch-skill doctor`), lower "
+                            "WATCHSKILL_VISION_BATCH_SIZE to 1-4",
+                        ) from None
+                    return text.strip()
             raise VisionError(
                 f"{self.provider} returned HTTP {exc.response.status_code}",
                 code="vision.http_error",
