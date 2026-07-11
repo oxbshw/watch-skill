@@ -41,11 +41,22 @@ watch-skill moment <video_id> <timestamp>
 
 ## Questions that span videos
 
-"Which of the tutorials showed the 502 error?" — search first, then ask
-the hit video. "What did we decide about the pricing page across those
-meetings?" — search the decision phrase, then ask each hit video and
-combine the answers, citing video + timestamp for each piece. Never
-present a cross-video synthesis without per-video citations.
+"What did we decide about the pricing page across those meetings?" —
+questions no single video answers go to the library synthesizer:
+
+```bash
+watch-skill library ask "<the question>"
+```
+
+It answers from distilled notes across every indexed video, drills into
+real evidence, and cites video + timestamp for each finding. When it
+says the library does not clearly answer, trust that — do not stitch a
+guess together from weak search hits. `watch-skill library overview`
+shows what the library knows (videos, note counts, entities recurring
+across videos).
+
+For "which video showed X" (locate, not synthesize), plain `search` is
+the right tool; then `ask` the hit video.
 
 ## Batches build memory fast
 

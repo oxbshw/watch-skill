@@ -125,6 +125,8 @@ def lifetime_stats() -> dict[str, int]:
         return {
             "tokens_saved_total": int(get_meta(conn, "tokens_saved_total") or 0),
             "answers_count": int(get_meta(conn, "answers_count") or 0),
+            "library_answers_count": int(get_meta(conn, "library_answers_count") or 0),
+            "library_tokens_saved": int(get_meta(conn, "library_tokens_saved") or 0),
         }
     finally:
         conn.close()

@@ -95,6 +95,13 @@ class AskRequest(BaseModel):
     inline_frames: int = Field(default=0, ge=0, le=12)
 
 
+class LibraryAskRequest(BaseModel):
+    """POST /v1/library/synthesize body."""
+
+    question: str = Field(description="A question no single video answers.")
+    k_videos: int = Field(default=5, ge=1, le=20, description="How many videos to consult.")
+
+
 class CaptureRequest(BaseModel):
     """POST /v1/capture body."""
 
@@ -241,6 +248,23 @@ def create_app() -> FastAPI:
         from watch_skill.index import list_videos as videos
 
         return videos()
+
+    @app.post("/v1/library/synthesize", tags=["library"])
+    def library_synthesize(req: LibraryAskRequest) -> dict[str, Any]:
+        """Cross-video synthesis from distilled notes, per-video citations."""
+        from watch_skill.library import library_synthesize as run
+
+        try:
+            return run(req.question, k_videos=req.k_videos).to_dict()
+        except WatchSkillError as exc:
+            raise _http_error(exc) from exc
+
+    @app.get("/v1/library/overview", tags=["library"])
+    def library_overview() -> dict[str, Any]:
+        """What the library knows: sizes, note counts, cross-video entities."""
+        from watch_skill.library import library_overview as run
+
+        return run()
 
     @app.post("/v1/capture", tags=["loop"])
     def capture(req: CaptureRequest) -> dict[str, Any]:

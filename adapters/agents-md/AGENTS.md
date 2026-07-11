@@ -36,7 +36,10 @@ a persistent, searchable store.
 3b. **The user corrected your video answer?** Report it so the system
    learns locally: `watch-skill lessons add <video_id> "<question>"
    "<wrong answer>" "<correction>"`.
-4. **Cross-video questions:** `watch-skill search "<phrase>"`.
+4. **Cross-video questions:** `watch-skill search "<phrase>"` to LOCATE
+   something; `watch-skill library ask "<question>"` to SYNTHESIZE an
+   answer no single video holds (per-video timestamp citations included;
+   its refusal is as trustworthy as `ask`'s).
 5. **Zooming in:** `watch-skill watch` with `--start/--end` samples that
    window densely (up to 2 fps).
 6. **Verifying your own UI/visual work (THE LOOP):**

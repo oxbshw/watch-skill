@@ -183,7 +183,22 @@ def index_watch_result(result: WatchResult, describe_scenes: bool = True) -> str
                 _maybe_describe_scenes(conn, video_id)
     finally:
         conn.close()
+    _distill_notes_safely(video_id)
     return video_id
+
+
+def _distill_notes_safely(video_id: str) -> None:
+    """Distill library notes for the just-indexed video (incremental: only
+    this video's notes are re-derived). Notes are derived data — failure
+    must never sink the watch."""
+    try:
+        from watch_skill.library.notes import distill_notes
+
+        distill_notes(video_id)
+    except Exception as exc:  # noqa: BLE001
+        import sys
+
+        print(f"[watch-skill] note distillation skipped ({exc})", file=sys.stderr)
 
 
 def augment_video(video_id: str, perception: Any) -> int:

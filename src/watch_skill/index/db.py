@@ -209,6 +209,47 @@ MIGRATIONS: list[Migration] = [
     """,
     # v6 — re-fold text_norm + question_norm for the extended normalizer
     _migration_v6_fts_refold,
+    # v7 — library notes layer (new tables only; nothing existing is touched).
+    # notes: distilled per-video items (entity | claim | chapter) with
+    # (video_id, timestamp) provenance, re-derived per video — video N never
+    # reprocesses 1..N-1. Their FTS + vectors live in their OWN tables so the
+    # main fts/embeddings read paths (search_videos, ask_video) are unchanged.
+    # library_answers: the cross-video synthesis cache; library_stamp records
+    # the note-set state an answer was computed against, so growing the
+    # library invalidates stale syntheses instead of serving them.
+    """
+    CREATE TABLE notes (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        video_id TEXT NOT NULL REFERENCES videos(id) ON DELETE CASCADE,
+        kind TEXT NOT NULL,
+        text TEXT NOT NULL,
+        timestamp REAL,
+        end_timestamp REAL,
+        weight REAL NOT NULL DEFAULT 1.0,
+        vector BLOB,
+        dim INTEGER,
+        created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+    CREATE INDEX idx_notes_video ON notes(video_id, kind);
+
+    CREATE VIRTUAL TABLE notes_fts USING fts5(
+        text UNINDEXED, text_norm,
+        video_id UNINDEXED, note_id UNINDEXED, kind UNINDEXED, timestamp UNINDEXED,
+        tokenize = "unicode61 remove_diacritics 2 categories 'L* N* Co Mn Mc'"
+    );
+
+    CREATE TABLE library_answers (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        question TEXT NOT NULL,
+        question_norm TEXT NOT NULL,
+        embedding BLOB,
+        dim INTEGER,
+        answer_json TEXT NOT NULL,
+        library_stamp TEXT NOT NULL,
+        created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+    CREATE INDEX idx_library_answers_norm ON library_answers(question_norm);
+    """,
 ]
 
 

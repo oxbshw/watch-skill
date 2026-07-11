@@ -217,10 +217,16 @@ def stats() -> str:
     from watch_skill.answer.cache import lifetime_stats
 
     data = lifetime_stats()
-    return (
-        f"answers served: {data['answers_count']}\n"
-        f"tokens saved: ~{data['tokens_saved_total']:,} vs raw-frame injection"
-    )
+    lines = [
+        f"answers served: {data['answers_count']}",
+        f"tokens saved: ~{data['tokens_saved_total']:,} vs raw-frame injection",
+    ]
+    if data.get("library_answers_count"):
+        lines += [
+            f"library syntheses: {data['library_answers_count']}",
+            f"library tokens saved: ~{data['library_tokens_saved']:,}",
+        ]
+    return "\n".join(lines)
 
 
 @mcp.tool(output_schema=None)
@@ -553,6 +559,40 @@ def analyze_hook(video: str, seconds: float = 15.0) -> str:
     except WatchSkillError as exc:
         return _error_payload(exc)
     return _json.dumps(analysis.to_dict(), ensure_ascii=False, indent=2)
+
+
+@mcp.tool
+def library_synthesize(question: str, k_videos: int = 5) -> str:
+    """Answer a question from the WHOLE video library at once — use when no
+    single video answers it ("what did the meetings decide about X?",
+    "which tutorials cover Y and do they agree?"). Retrieves distilled notes
+    across every indexed video, drills into real indexed evidence, and
+    returns a synthesis where every finding carries a per-video timestamp
+    citation. Says plainly when the library does not clearly know. For a
+    question about ONE known video, use ask_video instead."""
+    from watch_skill.library import library_synthesize as run
+
+    try:
+        answer = run(question, k_videos=k_videos)
+    except WatchSkillError as exc:
+        return _error_payload(exc)
+    meta = (
+        f"\n---\nconfidence: {answer.confidence} | videos consulted: "
+        f"{answer.videos_consulted} | corroborated: {answer.corroborated} | "
+        f"cached: {answer.cached} | ~{answer.tokens_saved_estimate:,} tokens saved"
+    )
+    return answer.text + meta
+
+
+@mcp.tool
+def library_overview() -> str:
+    """What the video library knows: how many videos and hours are indexed,
+    the note counts (entities/claims/chapters), the entities that recur
+    across multiple videos, and the most recent additions. Use it to orient
+    before library_synthesize, or when the user asks what has been watched."""
+    from watch_skill.library import library_overview as run
+
+    return json.dumps(run(), ensure_ascii=False, indent=2)
 
 
 @mcp.tool

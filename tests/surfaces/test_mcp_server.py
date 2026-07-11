@@ -33,6 +33,8 @@ def test_tools_are_registered() -> None:
     assert {"loop_start", "loop_iterate", "loop_status"} <= names
     assert {"loop_video_gen", "loop_game", "loop_monitor"} <= names
     assert {"extract_chapters", "extract_bug_report", "analyze_hook"} <= names
+    # v1.0 library layer
+    assert {"library_synthesize", "library_overview"} <= names
 
 
 def test_list_videos_empty() -> None:

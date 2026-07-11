@@ -236,6 +236,59 @@ def stats() -> None:
     data = lifetime_stats()
     print(f"answers served : {data['answers_count']}")
     print(f"tokens saved   : ~{data['tokens_saved_total']:,} vs raw-frame injection")
+    if data.get("library_answers_count"):
+        print(f"library syntheses    : {data['library_answers_count']}")
+        print(f"library tokens saved : ~{data['library_tokens_saved']:,}")
+
+
+library_app = typer.Typer(help="Cross-video memory: notes, synthesis, overview.")
+app.add_typer(library_app, name="library")
+
+
+@library_app.command("ask")
+def library_ask(
+    question: str = typer.Argument(..., help="A question no single video answers."),
+    k_videos: int = typer.Option(5, "--videos", help="How many videos to consult."),
+) -> None:
+    """Synthesize an answer across ALL indexed videos, with per-video citations."""
+    from watch_skill.errors import WatchSkillError
+    from watch_skill.library import library_synthesize
+
+    try:
+        answer = library_synthesize(question, k_videos=k_videos)
+    except WatchSkillError as exc:
+        print(json.dumps(exc.to_dict(), indent=2))
+        raise typer.Exit(code=1) from None
+    print(answer.text)
+    print(
+        f"\nconfidence: {answer.confidence} | videos consulted: {answer.videos_consulted}"
+        f" | corroborated: {answer.corroborated} | cached: {answer.cached}"
+        f" | ~{answer.tokens_saved_estimate:,} tokens saved"
+    )
+
+
+@library_app.command("overview")
+def library_overview_cmd() -> None:
+    """What the library knows: sizes, note counts, cross-video entities."""
+    from watch_skill.library import library_overview
+
+    print(json.dumps(library_overview(), ensure_ascii=False, indent=2))
+
+
+@library_app.command("rebuild-notes")
+def library_rebuild_notes() -> None:
+    """Distill notes for every already-indexed video (one-time upgrade path
+    for indexes built before the notes layer; new watches distill on their
+    own)."""
+    from watch_skill.index import list_videos
+    from watch_skill.library import distill_notes
+
+    total = 0
+    for row in list_videos():
+        count = distill_notes(row["id"])
+        total += count
+        print(f"{row['id']}  {count:4d} notes  {row['title'] or row['source']}")
+    print(f"\n{total} notes across {len(list_videos())} videos")
 
 
 @app.command("list")

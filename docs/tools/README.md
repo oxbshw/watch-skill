@@ -1,6 +1,6 @@
 # MCP tool reference
 
-All 21 tools exposed by the `watch-skill` MCP server
+All 23 tools exposed by the `watch-skill` MCP server
 (`src/watch_skill/surfaces/mcp/server.py`), with parameters, defaults, and
 what comes back. Every tool has a REST twin — the mapping table is at the
 bottom.
@@ -295,6 +295,35 @@ cited. The file opens directly in any browser and can be sent to anyone.
 | `video` | str | required | `video_id` or original source |
 | `out_path` | str | cwd | Where to write the HTML file |
 
+## The library (cross-video memory)
+
+Every watch distills structured notes — entities, claims, chapters, each
+with (video_id, timestamp) provenance — incrementally: indexing video N
+never reprocesses the others. These two tools read that layer.
+
+### `library_synthesize`
+
+Answer a question from the WHOLE library at once, when no single video
+answers it ("what did the meetings decide about X?"). Retrieves notes
+across every indexed video, drills the top matches into real indexed
+evidence, and synthesizes extractively — per-video timestamp citations
+on every finding, corroboration across videos raises confidence, and the
+honest floor applies: a library that does not clearly know says so.
+Deterministic and offline; repeats come from the library answer cache
+(invalidated automatically when the library grows).
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `question` | str | required | Natural language, any language |
+| `k_videos` | int | `5` | How many videos to consult |
+
+### `library_overview`
+
+What the library knows: videos and hours indexed, note counts by kind,
+the entities recurring across multiple videos, recent additions, and the
+library-level savings meter. No parameters. Orient here before
+`library_synthesize`, or when the user asks what has been watched.
+
 ## Health
 
 ### `doctor`
@@ -320,14 +349,18 @@ every tool for non-MCP agents:
 | `loop_start` | `POST /v1/loops` |
 | `loop_iterate` | `POST /v1/loops/{loop_id}/iterate` |
 | `loop_status` | `GET /v1/loops/{loop_id}` |
+| `library_synthesize` | `POST /v1/library/synthesize` |
+| `library_overview` | `GET /v1/library/overview` |
 | `doctor` | `POST /v1/doctor` |
 
 (`get_status`, `report_mistake`, and `stats` are MCP/CLI-side:
 backgrounding is an MCP transport concern, and lessons/stats have CLI
-surfaces — `watch-skill lessons add`, `watch-skill stats`. The v0.7 tools
+surfaces — `watch-skill lessons add`, `watch-skill stats`. Some tools
 have CLI twins instead of REST ones for now: `watch-skill loop
 video-gen|game|monitor`, `watch-skill extract chapters|bug-report|hook`,
-`watch-skill batch`, and `watch-skill viewer`.)
+`watch-skill batch`, and `watch-skill viewer`. The library layer has all
+three surfaces plus a CLI-only upgrade path for pre-notes indexes:
+`watch-skill library ask|overview|rebuild-notes`.)
 
 REST-only details: frames come back as filesystem paths plus optional
 base64 (`inline_frames`), and when `WATCHSKILL_API_BEARER_TOKEN` is set
