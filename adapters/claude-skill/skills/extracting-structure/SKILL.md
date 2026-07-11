@@ -1,6 +1,6 @@
 ---
 name: extracting-structure
-version: "0.7.0"
+version: "1.0.0"
 description: The user wants structure pulled out of a watched video — "make chapters for this video", "where does the bug appear in this recording", "turn this screen recording into a bug report", "how strong is my intro/hook". Use this for deterministic extraction from the index — chapters with timestamps, a fileable bug report with the exact frame, or a scored hook analysis.
 license: MIT
 user-invocable: true

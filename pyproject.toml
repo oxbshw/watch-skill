@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "watch-skill"
-version = "0.7.0"
+version = "1.0.0"
 description = "Give any agent a video input: watch, index, ask, and iterate on video via MCP, CLI, REST, and Python."
 readme = "README.md"
 requires-python = ">=3.11"

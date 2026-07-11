@@ -1,6 +1,6 @@
 ---
 name: learning-from-mistakes
-version: "0.7.0"
+version: "1.0.0"
 description: The user corrected an answer about a video — "no, it actually says X", "that's the wrong timestamp", "you misread the error code" — or asks why a video answer was wrong. Use this to record the correction as a lesson so future answers on similar questions improve, and to show what the system has learned and saved.
 license: MIT
 user-invocable: true

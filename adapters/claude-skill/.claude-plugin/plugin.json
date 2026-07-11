@@ -2,7 +2,7 @@
   "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
   "name": "watch-skill",
   "displayName": "Watch Skill",
-  "version": "0.7.0",
+  "version": "1.0.0",
   "description": "Give the agent a video input via Watch Skill: watch, index, ask, and iterate (THE LOOP).",
   "author": {
     "name": "Watch Skill contributors",

@@ -1,4 +1,5 @@
-"""Webhook delivery for monitor events — the n8n/Zapier unlock.
+"""Webhook delivery for monitor events — what opens the monitor to
+n8n/Zapier builders.
 
 Set ``WATCHSKILL_WEBHOOK_URL`` and every monitor event POSTs there as
 JSON, signed with HMAC-SHA256 when ``WATCHSKILL_WEBHOOK_SECRET`` is set:

@@ -1,6 +1,6 @@
 ---
 name: the-loop
-version: "0.7.0"
+version: "1.0.0"
 description: The user built or changed something visual — a UI, an animation, a game, a generated video — and wants it verified, or asks "why does my UI look wrong", "check that the fix actually worked", "does the animation glitch". Use this to record the running thing, critique the recording against plain-language pass criteria, and iterate until it passes with before/after proof.
 license: MIT
 user-invocable: true

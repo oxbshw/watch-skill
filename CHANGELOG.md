@@ -112,7 +112,7 @@ the README all come from real runs there.
 - **Monitoring/ops**: monitor events now deliver to
   `WATCHSKILL_WEBHOOK_URL` — HMAC-SHA256-signed, retried with backoff,
   never fatal, `events.jsonl` regardless — tested against a live local
-  receiver. The n8n/Zapier unlock.
+  receiver. This is the piece n8n/Zapier builders were missing.
 - QA/bug hunting, content creators, learning/research,
   meetings/lectures, agent self-verification: recipes over existing
   tools, each pointing at a runnable example with recorded output.

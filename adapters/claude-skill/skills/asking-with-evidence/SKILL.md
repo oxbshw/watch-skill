@@ -1,6 +1,6 @@
 ---
 name: asking-with-evidence
-version: "0.7.0"
+version: "1.0.0"
 description: The user asks a question about a video that was already watched or indexed — "what did they say about X", "what error code appears", "what happens at 2:30", "does the video show Y". Use this to answer from the persistent index with timestamped evidence and a confidence score instead of re-watching or guessing.
 license: MIT
 user-invocable: true

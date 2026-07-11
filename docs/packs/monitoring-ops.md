@@ -18,7 +18,7 @@ watch-skill loop monitor "D:\camera drops" "a person at the door" --max-checks 5
 - Every detection appends to `events.jsonl` under the monitor's
   directory — that file is the source of truth.
 
-## Webhook delivery (the n8n/Zapier unlock)
+## Webhook delivery (for n8n/Zapier builders)
 
 ```powershell
 $env:WATCHSKILL_WEBHOOK_URL = "https://your-n8n/webhook/watch-skill"

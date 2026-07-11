@@ -51,11 +51,16 @@ is the test that proved both.
 
 ## Real output
 
-(from the reference machine — 8 GB CPU-only Windows, moondream critic;
-see the run log committed alongside the golden-path records)
+From the reference machine (8 GB CPU-only Windows, moondream critic,
+2026-07-11):
 
 ```
-iteration 0: fail — banned 'nan' at the mid-flow frame, timestamp cited
+iteration 0: fail (score 35)
+  transient NaN caught by the recording: True
 fix applied (checkout_fixed.html)
-iteration 1: pass — before/after proof rendered (GIF + MP4)
+iteration 1: pass (score 92)
+  proof (mp4): ~/.watch-skill/loops/<id>/artifacts/before_after.mp4 (20 KB)
+  proof (gif): ~/.watch-skill/loops/<id>/artifacts/before_after.gif (93 KB)
+
+BROWSER VERIFICATION DEMO: PASSED
 ```

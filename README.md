@@ -175,7 +175,7 @@ verification (the flagship: a checkout total that reads $NaN for 1.5
 seconds mid-flow and looks perfect in the end-state screenshot —
 [examples/14](examples/14-browser-verification/)), QA bug hunting,
 content creators, learning/research, meetings, monitoring/ops with
-HMAC-signed webhooks (the n8n/Zapier unlock), and agent
+HMAC-signed webhooks built for n8n/Zapier wiring, and agent
 self-verification.
 
 ## Examples

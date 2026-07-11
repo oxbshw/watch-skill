@@ -1,6 +1,6 @@
 ---
 name: sharing-results
-version: "0.7.0"
+version: "1.0.0"
 description: The user wants to share or hand off what was found in a video — "send this analysis to my team", "make a page I can share", "export the findings", "give me something I can attach to the ticket". Use this to render a self-contained offline HTML viewer page with the frames, transcript, and every cached answer with its evidence.
 license: MIT
 user-invocable: true

@@ -1,6 +1,6 @@
 ---
 name: watching-videos
-version: "0.7.0"
+version: "1.0.0"
 description: The user shared a video URL, a YouTube/TikTok/stream link, a local video file, a screen recording, a meeting recording, or a playlist/folder of videos — "watch this", "summarize this video", "what's in this recording". Use this to actually watch the video — download, extract frames, OCR, transcribe, and index it — instead of guessing from the title or asking the user to describe it.
 license: MIT
 user-invocable: true
