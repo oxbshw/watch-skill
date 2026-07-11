@@ -199,8 +199,8 @@ class VisionClient:
                     text = extract(response.json())
                 except httpx.HTTPError as retry_exc:
                     raise VisionError(
-                        f"ollama kept failing after a retry (HTTP 5xx): the "
-                        f"model likely does not fit in RAM right now",
+                        "ollama kept failing after a retry (HTTP 5xx): the "
+                        "model likely does not fit in RAM right now",
                         code="vision.server_down",
                         fix="check headroom with `watch-skill doctor`; close "
                         "something, or lower WATCHSKILL_OLLAMA_NUM_CTX",
