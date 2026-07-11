@@ -158,12 +158,19 @@ def test_migration_v6_refolds_sea_and_digits(tmp_path: Path) -> None:
     conn = sqlite3.connect(str(db))
     conn.row_factory = sqlite3.Row
     try:
-        # Build a v5 database by hand, then insert rows carrying the OLD folding.
-        conn.executescript(MIGRATIONS[0])  # v1 base schema
+        # Build a TRUE v5 database (apply exactly v1..v5), insert rows
+        # carrying the OLD folding, then upgrade through the real chain —
+        # the path an actual pre-v6 index takes, exercising every later
+        # migration (v6 refold, v7 notes tables) exactly once. The old
+        # roll-the-version-back trick replayed table-creating migrations
+        # and broke the moment v7 added one.
         conn.execute("CREATE TABLE schema_version (version INTEGER NOT NULL)")
-        conn.execute("INSERT INTO schema_version VALUES (1)")
-        # Apply v2..v5 so fts (with text_norm/tokenizer) and answers exist.
-        assert migrate(conn) == len(MIGRATIONS)  # v6 included: full chain
+        for version, migration in enumerate(MIGRATIONS[:5], start=1):
+            if callable(migration):
+                migration(conn)
+            else:
+                conn.executescript(migration)
+            conn.execute("INSERT INTO schema_version VALUES (?)", (version,))
 
         stored = "ยินดีต้อนรับกรุงเทพ"
         conn.execute(
@@ -179,9 +186,6 @@ def test_migration_v6_refolds_sea_and_digits(tmp_path: Path) -> None:
             "VALUES ('v1', ?, ?, '{}')",
             ("سنة ٢٠٢٦", "سنة ٢٠٢٦"),  # unfolded digits
         )
-        # Re-run just the v6 transform (idempotent) by rolling the version back.
-        conn.execute("DELETE FROM schema_version")
-        conn.execute("INSERT INTO schema_version VALUES (5)")
         assert migrate(conn) == len(MIGRATIONS)
 
         from watch_skill.index.retrieval import _fts_query
