@@ -75,8 +75,16 @@ def _check_recording(
     The critic's contract is pass criteria, so the condition is framed as
     'must never show <condition>' — a FAIL verdict with issues IS the event.
     """
+    from watch_skill.perceive import media  # noqa: PLC0415
+    from watch_skill.perceive.budget import flow_cues  # noqa: PLC0415
+
+    meta = media.probe(video_path)
     perception = perceive(
-        video_path, work_dir / "frames", source_label=str(video_path), max_frames=12
+        video_path, work_dir / "frames", source_label=str(video_path), max_frames=12,
+        # pinned flow cues — see runner._perceive_capture: hue-only events
+        # must survive grayscale dedup to reach the condition check
+        cue_timestamps=flow_cues(meta.duration_seconds, cap=10),
+        metadata=meta,
     )
     criteria = f"The recording must never show: {condition}"
     critique = critic(perception, criteria)

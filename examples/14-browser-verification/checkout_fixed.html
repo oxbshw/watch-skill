@@ -1,0 +1,46 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Checkout</title>
+<style>
+  body { font-family: system-ui, sans-serif; background: #181a21; color: #ebebeb;
+         display: flex; justify-content: center; padding-top: 30px; }
+  .card { background: #23262f; border-radius: 12px; padding: 40px 56px; width: 640px; }
+  h1 { font-size: 36px; margin: 0 0 24px; }
+  .row { display: flex; justify-content: space-between; margin: 16px 0; font-size: 26px; }
+  .total { font-size: 44px; font-weight: 700; margin-top: 26px; }
+  button { margin-top: 30px; width: 100%; padding: 20px; font-size: 26px; border: 0;
+           border-radius: 10px; background: #4c8bf5; color: white; cursor: pointer; }
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>Your order</h1>
+  <div class="row"><span>Laptop stand</span><span>$29.00</span></div>
+  <div class="row"><span>Shipping</span><span>$5.50</span></div>
+  <div class="row total"><span>Total</span><span id="total">$34.50</span></div>
+  <button id="checkout">Checkout</button>
+</div>
+<script>
+  // THE FIX: the total only re-renders once every input is a number — the
+  // processing state keeps the last VALID total instead of painting from
+  // half-loaded state.
+  document.getElementById("checkout").addEventListener("click", () => {
+    const subtotal = 34.50;
+    const button = document.getElementById("checkout");
+    const total = document.getElementById("total");
+    button.textContent = "Processing…";
+    button.style.background = "#6b7280";
+    setTimeout(() => {
+      const tax = 2.76;
+      if (Number.isFinite(subtotal + tax)) {
+        total.textContent = "$" + (subtotal + tax).toFixed(2);
+      }
+      button.textContent = "Order placed";
+      button.style.background = "#34d399";
+    }, 1500);
+  });
+</script>
+</body>
+</html>

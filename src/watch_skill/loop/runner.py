@@ -69,8 +69,17 @@ class LoopState:
 
 
 def _perceive_capture(video_path: Path, iter_dir: Path) -> PerceptionResult:
+    from watch_skill.perceive import media  # noqa: PLC0415
+    from watch_skill.perceive.budget import flow_cues  # noqa: PLC0415
+
+    meta = media.probe(video_path)
     return perceive(
-        video_path, iter_dir / "frames", source_label=str(video_path), max_frames=24
+        video_path, iter_dir / "frames", source_label=str(video_path), max_frames=24,
+        # pinned flow cues: hue-only state changes (a button turning gray, a
+        # total turning red) are invisible to grayscale phash dedup — the
+        # critic must still see the in-between frames it recorded
+        cue_timestamps=flow_cues(meta.duration_seconds),
+        metadata=meta,
     )
 
 

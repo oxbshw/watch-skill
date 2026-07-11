@@ -198,14 +198,16 @@ plain PASS/FAIL text judgment covers only what no rule can express.
 | Module | Job | Key entry points |
 |--------|-----|------------------|
 | `acquire/` | any source → local file; self-healing fallback chain; LRU cache | `acquire()`, `fetch_captions_only()` |
-| `perceive/` | scenes → budgeted frame selection → phash dedup → OCR (per-script models) | `perceive()` → `PerceptionResult` |
+| `perceive/` | scenes → budgeted frame selection → phash dedup → OCR: backend registry (rapidocr default, tesseract for its reading gap, surya opt-in) + per-region multi-script router | `perceive()`, `ocr_frame()`, `ocr_frame_multiscript()` |
 | `transcribe/` | captions (original language first) → local whisper → opt-in cloud; diarization contract | `get_transcript()` |
-| `index/` | schema-versioned SQLite; FTS5 (normalization-folded) + local embeddings; hybrid retrieval | `index_watch_result()`, `search_videos()`, `get_moment()` |
-| `answer/` | self-healing asks: confidence → escalation ladder → verify → honest floor; semantic answer cache; savings meter | `answer_question()` → `Answer` |
-| `lessons/` | mistake reports → classified lessons → prompt injection, evals, adaptive profiles | `report_mistake()`, `relevant_guidance()`, `run_evals()` |
-| `vision/` | one `prompt+images→text` primitive across Anthropic/OpenAI/Gemini/OpenRouter/Ollama; cheap/strong tiers; pre-call cost guard | `get_vision(tier)` |
-| `loop/` | pluggable loop framework: producers (ui/video-gen/game) → critic (JSON or describe-then-judge) → phash diff → runner → proof artifact; bounded monitor loop w/ events | `loop_start()`, `loop_iterate()`, `loop_video_gen()`, `loop_game()`, `loop_monitor()` |
-| `health/` | doctor (self-healing deps), managed binaries, agent config writer, vision-backend setup (RAM-aware), disk cleanup | `run_doctor()`, `detect_agents()`, `configure_gemini()`, `configure_ollama()` |
+| `index/` | schema-versioned SQLite (v7); FTS5 (normalization-folded) + local embeddings (opt-in model upgrade, pinned per index); hybrid retrieval | `index_watch_result()`, `search_videos()`, `get_moment()` |
+| `library/` | notes layer: per-video distillation (entities/claims/chapters w/ provenance, incremental) → cross-video synthesis with citations, honest floor, stamped cache | `distill_notes()`, `library_synthesize()`, `library_overview()` |
+| `answer/` | self-healing asks: confidence → escalation ladder → verify (per THE COST POLICY) → honest floor; semantic answer cache; cost meter v2 (spend by source + $) | `answer_question()` → `Answer` |
+| `lessons/` | mistake reports → classified lessons → prompt injection, adaptive profiles; eval replay + classification (still-effective/prunable/regressed) + prune | `report_mistake()`, `relevant_guidance()`, `eval_report()`, `prune_lessons()` |
+| `vision/` | one `prompt+images→text` primitive across Anthropic/OpenAI/Gemini/OpenRouter/Ollama; cheap/strong tiers; pre-call cost guard (dated prices.json); local-server health: liveness cache, detached restart, structured `vision.server_down` | `get_vision(tier)`, `ensure_ollama()` |
+| `loop/` | pluggable loop framework: producers (ui/video-gen/game) → critic (JSON or describe-then-judge) → phash diff → runner → proof artifact; bounded monitor loop w/ events.jsonl + signed webhooks | `loop_start()`, `loop_iterate()`, `loop_monitor()`, `deliver_event()` |
+| `bench/` | benchmarks with receipts: perception char-hit/latency/RSS over committed fixtures | `bench_perception()` |
+| `health/` | doctor --fix (deps, memory headroom, index integrity, model files, local vision), managed binaries, agent config writer, vision-backend setup | `run_doctor()`, `detect_agents()`, `configure_ollama()` |
 | `integrations/` | thin framework adapters (LangChain/CrewAI/Agents SDK/LlamaIndex/AutoGen) over three shared core calls | `get_watch_tools()` per module |
 | `extract/` | deterministic structured extraction over the index: chapters, bug reports, hook analysis | `extract_chapters()`, `extract_bug_report()`, `analyze_hook()` |
 | `batch.py` | playlist/folder/list → one indexed, cross-searchable memory; per-source resilience | `watch_batch()` |
@@ -214,10 +216,16 @@ plain PASS/FAIL text judgment covers only what no rule can express.
 | `watch.py` | the front door: acquire → perceive → transcribe with progress callbacks | `watch()` |
 | `config.py` | one typed settings object; `WATCHSKILL_*` env / `.env` / defaults | `get_settings()` |
 
+The agent-facing layer above all of this is `adapters/claude-skill/skills/`
+— eight SKILL.md trigger surfaces (watch + the seven-skill library) that
+wrap the CLI only, so they ride into any harness that reads skills; the
+engine never knows which agent is calling.
+
 ## How to add a vision provider (in ~20 lines)
 
 1. `vision/registry.py` — add a `ProviderSpec` (endpoint, key setting name,
-   price) to `PROVIDERS`, plus any model prices to `MODEL_PRICES`.
+   price) to `PROVIDERS`, plus any model prices to `vision/prices.json`
+   (a dated data file — move its `as_of` with every edit).
 2. `config.py` — add the `<name>_api_key: SecretStr | None` field.
 3. `vision/client.py` — if the wire format is OpenAI-compatible, reuse
    `_openai_request` like OpenRouter does (3 lines); otherwise write a
@@ -254,10 +262,12 @@ an iteration is made. Everything else is inherited.
 ├── frames/       indexed videos' kept frames (persist across sessions)
 │   └── <id>/escalation/   high-res frames recovered by the answer ladder
 ├── index.db      SQLite: videos, segments, scenes, ocr_blocks, embeddings,
-│                 fts, answers (the semantic answer cache)
+│                 fts, answers (semantic answer cache), notes + notes_fts
+│                 (the library layer), library_answers (synthesis cache)
 ├── lessons.db    lessons and adaptive profiles
 ├── evals/        replayable eval cases exported from lessons
 ├── loops/<id>/   every loop iteration: video, frames, critique, diff, proof
+│   └── monitor_<id>/events.jsonl   structured monitor events (webhook twin)
 ├── models/ocr/   per-script OCR recognition models
 └── health.jsonl  incident log (breakages, self-heals, bootstraps)
 ```

@@ -85,6 +85,8 @@ provider — cloud or a local Ollama.
 | `WATCHSKILL_COST_POLICY` | str | `cheapest` | Which model tiers a verify pass may touch: `cheapest` (cheapest path that clears confidence), `quality_first` (straight to the strong tier), `offline_only` (keyless/local providers only — cloud never sees a frame). See [cost.md](cost.md). |
 | `WATCHSKILL_OCR_BACKEND` | str | `auto` | `auto` = RapidOCR, with tesseract auto-routed ONLY for scripts RapidOCR cannot read (Lao/Khmer/Myanmar/Tibetan). Force `rapidocr`/`tesseract`/`surya` to override; surya is opt-in only — its models want more RAM than an 8 GB box has. |
 | `WATCHSKILL_EMBEDDING_MODEL` | str | unset | Opt-in retrieval upgrade for NEW indexes: any fastembed model, e.g. `BAAI/bge-m3` or `intfloat/multilingual-e5-large`. Existing indexes keep the model pinned in their meta (vectors from two models never mix). The big models cost ~2 GB+ RAM at query time — skip this on 8 GB machines. |
+| `WATCHSKILL_WEBHOOK_URL` | str | unset | POST every monitor event here as JSON (n8n/Zapier/your endpoint). At-least-once, 3 attempts with backoff; `events.jsonl` is written regardless. Schema in [docs/packs/monitoring-ops.md](packs/monitoring-ops.md). |
+| `WATCHSKILL_WEBHOOK_SECRET` | secret | unset | When set, events carry `X-WatchSkill-Signature: sha256=<HMAC-SHA256 of the body>` for receiver-side verification. |
 | `WATCHSKILL_VISION_BATCH_SIZE` | int | `8` | Frames per `describe_frames` call. Use 2–4 for small local models — large image batches overflow their context. |
 | `WATCHSKILL_VISION_TIMEOUT_SECONDS` | float | `180.0` | HTTP timeout for cloud vision calls. |
 | `WATCHSKILL_VISION_LOCAL_TIMEOUT_SECONDS` | float | `900.0` | Timeout for local (Ollama) vision calls — CPU model loads can take minutes. |

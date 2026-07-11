@@ -118,13 +118,37 @@ _NEGATIVE_RE = re.compile(r"\b(?:never|no|not|without)\s+([^,.;]+)", re.IGNORECA
 _EXEMPLAR_RE = re.compile(r"\((?:like|e\.g\.?|such as)\s+([^)]+)\)|\b(?:like|such as)\s+(\S+)", re.IGNORECASE)
 
 
+# light verbs people put between the negation and the thing itself:
+# "never SHOWS nan", "no error toast EVER APPEARS" — the banned term is the
+# thing, not the verb phrase (the flagship browser demo shipped a $NaN past
+# the rule because the extracted term was 'shows nan')
+_LIGHT_VERBS = (
+    "shows", "show", "showing", "displays", "display", "displaying",
+    "renders", "render", "rendering", "contains", "contain", "containing",
+    "says", "say", "reads", "read", "ever", "appears", "appear", "appearing",
+    "is", "are", "be", "being", "visible", "present", "shown", "displayed",
+)
+
+
+def _strip_light_verbs(phrase: str) -> str:
+    words = phrase.split()
+    while words and words[0] in _LIGHT_VERBS:
+        words.pop(0)
+    while words and words[-1] in _LIGHT_VERBS:
+        words.pop()
+    return " ".join(words)
+
+
 def _banned_terms(pass_criteria: str) -> list[str]:
-    """'never NaN or a placeholder' -> ['nan', 'a placeholder'] (lowercased)."""
+    """'never shows NaN or a placeholder' -> ['nan', 'a placeholder']."""
     terms: list[str] = []
     for match in _NEGATIVE_RE.finditer(pass_criteria):
         for part in re.split(r"\s+or\s+", match.group(1)):
             part = part.strip().strip("\"'").lower()
-            if part:
+            core = _strip_light_verbs(part)
+            if core:
+                terms.append(core)
+            elif part:
                 terms.append(part)
     return terms
 

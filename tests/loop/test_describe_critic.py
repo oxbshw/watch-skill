@@ -85,6 +85,17 @@ def test_violates_rules_is_word_bounded() -> None:
     assert _violates_rules("finance dashboard", ["nan"]) is None  # no hit inside a word
 
 
+def test_banned_terms_shed_light_verbs() -> None:
+    """'never shows nan' must ban 'nan', not the unmatchable 'shows nan' —
+    the flagship browser demo shipped a $NaN past the rule this way."""
+    assert "nan" in _banned_terms("the total updates and never shows nan")
+    assert "error toast" in _banned_terms("no error toast ever appears")
+    assert "nan" in _banned_terms(
+        "after checkout is clicked, the order total always shows a real "
+        "dollar amount (like $29.00) and never shows nan"
+    )
+
+
 def test_exemplar_patterns_generalize_digits() -> None:
     positive, banned = _split_exemplars("must show a real dollar total (like $29.00)")
     assert banned == []

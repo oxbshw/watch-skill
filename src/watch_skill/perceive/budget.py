@@ -15,6 +15,20 @@ def _clamp(target: float, duration_seconds: float, max_frames: int) -> tuple[flo
     return fps, frames
 
 
+def flow_cues(duration_seconds: float, cap: int = 20) -> list[float]:
+    """Evenly pinned timestamps across a SHORT recording (loop iterations,
+    monitor samples). Cue frames are reserved against the cap and never
+    deduped — which matters because phash is grayscale: a blue button
+    turning gray or a total turning red is luminance-invisible, and dedup
+    would collapse the whole flow to one frame (the flagship browser demo
+    caught exactly that). Watching a flow means keeping the in-between."""
+    if duration_seconds <= 0:
+        return []
+    count = min(cap, max(4, int(round(duration_seconds * 2))))  # ≤2 fps
+    step = duration_seconds / count
+    return [round(step * (i + 0.5), 2) for i in range(count)]
+
+
 def full_budget(duration_seconds: float, max_frames: int | None = None) -> tuple[float, int]:
     """(fps, target_frames) for a full-video scan."""
     cap = max_frames if max_frames is not None else get_settings().frame_cap

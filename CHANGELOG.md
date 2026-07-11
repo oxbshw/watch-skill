@@ -1,12 +1,134 @@
 # Changelog
 
-## v0.7.0 — 2026-07-10
+## v1.0.0 — 2026-07-11
 
-The Loop goes real — proven end-to-end with live vision, then multiplied
-into new loop types no comparable tool has — and installation drops to one
-command.
+Video skills for every AI agent, with memory. One release, seven claims,
+each shipped with a measured receipt from the reference machine (8 GB
+RAM, CPU-only Windows) — the benchmark tables and demo logs quoted in
+the README all come from real runs there.
 
-### One-command install (`adapters/claude-skill/`, `.claude-plugin/`)
+### Everywhere — the skills library and the agent matrix
+- **Seven-skill library** (`adapters/claude-skill/skills/`):
+  `watching-videos`, `asking-with-evidence`, `the-loop`,
+  `learning-from-mistakes`, `extracting-structure`, `video-memory`,
+  `sharing-results`. Each SKILL.md description is a trigger surface with
+  real user phrasings; each body wraps the CLI only, so the set rides
+  into any harness that reads skills. Loaded from a local plugin install,
+  the whole library costs ~805 always-on tokens (measured via
+  `claude plugin details`). `/watch` and `/setup-watch-skill` unchanged.
+- **20+ agents in the matrix** (`docs/agents/`): twelve new pages —
+  GitHub Copilot CLI, Kimi Code, Qwen Code, OpenCode, Goose, OpenHands,
+  Kilo Code, Qodo, Agent Zero, OpenClaw, Pi, Hermes-style — each written
+  against the agent's CURRENT official docs and graded honestly
+  (machine-tested / machine-configured / doc-verified). Every fenced
+  config block in every page is parsed by
+  `templates/agent-adapter/validate.py`, wired into the suite.
+- **Add-your-agent funnel**: `templates/agent-adapter/` (walkthrough +
+  skeleton + validator) — one config block, one doc page, ~20 minutes.
+
+### Remembers — the library layer (index migration v7, new tables only)
+- Every watch distills **notes** — entities, claims, chapters, each with
+  (video_id, timestamp) provenance — incrementally: video N never
+  reprocesses the others. Works transcript+OCR-only; vision adds
+  material.
+- **`library_synthesize(question)`** (MCP + CLI `library ask` + REST):
+  answers questions no single video holds, extractively and offline —
+  per-video timestamp citations, corroboration across videos raises
+  confidence, honest floor when the library does not clearly know.
+  Cached with automatic invalidation when the library grows.
+  **`library_overview()`**: what the library knows.
+- Live receipt: a 4-clip incident story answered across all four clips
+  (confidence 0.566, corroborated, repeat served from cache, ~784 tokens
+  saved on the meter). `library rebuild-notes` upgrades pre-v7 indexes.
+
+### Nearly free — the cost meter and THE COST POLICY
+- **Cost meter v2**: every answer carries `cost_breakdown` (tokens by
+  source: text-first / local escalation / vision call / response frames)
+  and a USD estimate; lifetime split behind `watch-skill stats --cost`.
+  Prices live in a dated data file (`vision/prices.json`).
+- **`WATCHSKILL_COST_POLICY`**: `cheapest` (default — cheapest path that
+  clears confidence wins), `quality_first`, or `offline_only` (cloud
+  never sees a frame).
+- **`benchmarks/cost/`**, committed from a real run: ~5,868 tokens fully
+  offline vs ~18,890 computed for raw-frames-into-context on the same
+  15-frame index — $0.00 measured, before the cache makes repeats free.
+
+### High-quality vision anywhere — perception with receipts
+- **OCR backend registry** (`perceive/ocr_backends.py`): rapidocr
+  default; tesseract auto-routed ONLY for the scripts rapidocr 3.9.1
+  genuinely lacks (Lao/Khmer/Myanmar/Tibetan — audited against its
+  LangRec enum); surya opt-in, never auto-routed on small machines.
+- **Multi-script-per-frame router**: each candidate script engine reads
+  the full frame; regions merge by overlap, gated on the engine finding
+  its own script there. On the committed mixed code+Arabic+CJK fixture:
+  **98% char-hit vs 81%** for the best single engine. (The first design
+  re-read cropped regions and measured WORSE than no routing — the bench
+  is why it was rebuilt.)
+- **`watch-skill bench perception`** + committed fixtures and results:
+  char-hit, latency, peak RSS per backend — including the vision rows
+  that show why a captioning model cannot replace OCR (moondream: 18%
+  on Arabic, 0% on CJK; OCR: 94–100%).
+- **Local vision robustness**: liveness-cached health check, ONE
+  detached restart of a dead Ollama (never `ollama stop`), one settled
+  retry on a 5xx from a fresh server, and a structured
+  `vision.server_down` (with a fix) instead of empty strings — the
+  kill-the-server scenario is a recorded live demo, both branches.
+- Opt-in retrieval upgrade: `WATCHSKILL_EMBEDDING_MODEL` (bge-m3,
+  multilingual-e5) seeds NEW indexes; existing indexes keep their pinned
+  model. Big models want ~2 GB+ RAM — documented, not defaulted.
+
+### Heals itself
+- **`doctor --fix` repairs every failure class this project has hit**:
+  dead local vision server (detached restart), corrupt cached answers
+  (quarantined), truncated model files (deleted; they re-download),
+  vanished frame directories (reindex hint), stale WAL, tight commit
+  headroom (with a local-model recommendation for the machine).
+- **Structured-errors audit**: every raise site in `src/` carries an
+  actionable `fix` — enforced forever by an AST-walking test; ten real
+  error paths asserted to return executable advice. 25 sites were
+  patched to get there.
+
+### Improves itself
+- **`lessons eval --report`** replays every stored lesson against the
+  CURRENT pipeline — once normally, once with the lesson suppressed —
+  and classifies it: still-effective (load-bearing), prunable (the
+  pipeline absorbed the fix), regressed (needs a human).
+  **`--prune`** retires exactly the prunable ones.
+- The mechanics in one page: `docs/guides/how-it-improves-itself.md`.
+  Building the live demo caught three real eval bugs (stopword terms
+  passed everything; the floor text leaked question words; hallucination
+  phrasing misclassified) — fixed and regression-tested.
+
+### Useful to everyone — the packs (`docs/packs/`)
+- **Browser-agent verification (the flagship)**: agents can drive real
+  browsers now; a screenshot shows a moment, not a flow. The pack
+  records the session and verdicts the RECORDING —
+  `examples/14-browser-verification/` catches a checkout total that
+  reads $NaN for 1.5 s mid-flow and looks perfect afterwards. Building
+  it exposed and fixed two real defects: grayscale phash dedup collapsed
+  hue-only flows to one frame (loop/monitor critiques now pin undedupable
+  **flow cues**), and "never shows nan" banned an unmatchable verb
+  phrase (the parser now sheds light verbs).
+- **Monitoring/ops**: monitor events now deliver to
+  `WATCHSKILL_WEBHOOK_URL` — HMAC-SHA256-signed, retried with backoff,
+  never fatal, `events.jsonl` regardless — tested against a live local
+  receiver. The n8n/Zapier unlock.
+- QA/bug hunting, content creators, learning/research,
+  meetings/lectures, agent self-verification: recipes over existing
+  tools, each pointing at a runnable example with recorded output.
+
+### Compatibility
+- No breaking changes across the whole span: every v0.6 MCP tool
+  name/signature unchanged (pinned by test), CLI intact, index
+  migrations forward-only v5→v6→v7, `~/.watch-skill/` loses nothing.
+  v0.6 users upgrade straight to v1.0.
+
+### Foundation (built en route, first released here)
+
+Everything below was completed and live-proven after v0.6.0 and ships
+for the first time in this release.
+
+#### One-command install (`adapters/claude-skill/`, `.claude-plugin/`)
 - **Claude Code plugin marketplace**: `/plugin marketplace add oxbshw/watch-skill`
   → `/plugin install watch-skill@watch-skill` → a working `/watch`, zero
   manual venv steps. The bundled MCP config launches the on-PATH engine.
@@ -15,7 +137,7 @@ command.
   every detected agent (Claude Code/Desktop, Cursor, Codex, Windsurf, Gemini
   CLI — each with a config backup), then offers a vision backend.
 
-### Vision backends (`health/vision_setup.py`, `vision/`)
+#### Vision backends (`health/vision_setup.py`, `vision/`)
 - **`watch-skill setup-vision`**: Gemini (free tier, the recommended
   zero-cost default; `WATCHSKILL_GEMINI_API_KEY`) or **Ollama** fully
   offline. `--verify` runs a live probe-frame describe.
@@ -25,7 +147,7 @@ command.
   producers unload the local model before browser captures (a resident
   model and a recording browser cannot coexist in 8 GB).
 
-### THE LOOP, multiplied (`loop/`)
+#### THE LOOP, multiplied (`loop/`)
 - The UI loop is now **proven with real vision**: broken page flagged from
   actual model reads, fix verified, before/after GIF+MP4 rendered.
 - **Pluggable loop framework**: a loop type is a registry entry deciding how
@@ -46,14 +168,14 @@ command.
   no rule speaks. `critique_recording` degrades automatically; capable
   models keep the full JSON critic.
 
-### For every agent framework (`integrations/`, `docs/agents/frameworks.md`)
+#### For every agent framework (`integrations/`, `docs/agents/frameworks.md`)
 - Thin native adapters — **LangChain, CrewAI, OpenAI Agents SDK, LlamaIndex,
   AutoGen** — all wrapping the same three core calls; install via extras
   (`pip install "watch-skill[langchain]"`). Vercel AI SDK via the REST
   surface; an n8n community-node spec; REST/OpenAPI as the universal
   fallback.
 
-### Structured extraction (`extract/`)
+#### Structured extraction (`extract/`)
 - **`extract_chapters`**: titled chapters from scene cuts + transcript
   pauses, minimum length scaled to duration.
 - **`extract_bug_report`**: the first on-screen error — timestamp, frame,
@@ -63,7 +185,7 @@ command.
   pacing, visual change, and on-screen text — each with an actionable
   critique.
 
-### Batch + the shareable viewer (`batch.py`, `viewer.py`)
+#### Batch + the shareable viewer (`batch.py`, `viewer.py`)
 - **`watch_batch`**: one call indexes a playlist/channel URL, a folder, or a
   list; one broken video never kills the batch; afterwards a single
   `search_videos`/`ask_video` spans the whole set.
@@ -71,7 +193,7 @@ command.
   timeline, inlined key frames, transcript, OCR, and every cached answer
   with the exact evidence cited. Zero network requests; share the file as-is.
 
-### Search that actually works across scripts (`index/textnorm.py`)
+#### Search that actually works across scripts (`index/textnorm.py`)
 - Thai/Lao/Khmer/Myanmar/Tibetan are now segmented (search was fully broken
   for unspaced scripts); Persian/Urdu letter variants unify with Arabic;
   Arabic-Indic/Persian/Devanagari/Bengali/Thai/Lao/Tibetan/Myanmar/Khmer
@@ -80,17 +202,12 @@ command.
   Vietnamese diacritics fold too. Forward migration v6 re-folds existing
   indexes in place — nothing is lost, nothing re-processed.
 
-### The engine answers in your language (`answer/localize.py`)
+#### The engine answers in your language (`answer/localize.py`)
 - The honest-floor refusal, evidence labels, and the model-answer directive
   follow the question's language (13 languages); the loop critic follows the
   pass criteria's language. Cross-lingual answers are a tested contract, not
   luck. RTL text can't mangle timestamps: they're wrapped in Unicode
   isolates.
-
-### Compatibility
-- No breaking changes: every v0.6 MCP tool name/signature is unchanged
-  (pinned by test); pre-v0.7 loop `state.json` files load as UI loops; the
-  index migration chain continues (v6) and existing data is preserved.
 
 ## v0.6.0 — 2026-07-05
 
