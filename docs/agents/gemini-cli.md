@@ -1,5 +1,7 @@
 # Watch Skill in Gemini CLI
 
+<img src="../assets/agents/gemini-cli.webp" alt="Gemini CLI avatar comparing two projected film frames" width="360">
+
 **Status: config verified against official docs, not machine-tested ☑**
 (Gemini CLI is not installed on the development machine — please report issues.)
 

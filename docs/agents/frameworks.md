@@ -1,5 +1,7 @@
 # Framework adapters
 
+<img src="../assets/agents/frameworks.webp" alt="Framework mascots collaborating around one video-analysis engine" width="360">
+
 MCP already covers Claude Code/Desktop, Cursor, Cline, Windsurf, Codex,
 Gemini CLI, and VS Code (see the per-agent guides in this directory). For
 agent *frameworks*, Watch Skill ships thin native adapters — three tools

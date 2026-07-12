@@ -85,7 +85,9 @@ def dense_resample(video: dict, hits: list[Hit]) -> tuple[int, int]:
                 end_seconds=center + half,
                 max_frames=_RESAMPLE_FRAME_BUDGET,
                 frame_width=resolution,
-                run_ocr=True,
+                # An explicit OCR opt-out also applies to escalation. Do not
+                # surprise a private/offline workflow with a model download.
+                run_ocr=settings.ocr_enabled,
             )
         except WatchSkillError as exc:
             print(f"[watch-skill] escalation resample failed ({exc.code})", file=sys.stderr)
@@ -98,6 +100,9 @@ def zoom_crops_reocr(video: dict, hits: list[Hit]) -> tuple[int, int]:
     """Steps (b)+(c): crop the regions OCR found on the escalation frames,
     upscale, and re-OCR the crops — small on-screen text that the full-frame
     pass mangled often reads cleanly at 2x. Model-free."""
+    if not get_settings().ocr_enabled:
+        return 0, 0
+
     from watch_skill.answer import crops  # noqa: PLC0415
 
     frames = _recent_escalation_frames(video["id"], hits)

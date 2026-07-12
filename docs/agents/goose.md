@@ -1,5 +1,7 @@
 # Watch Skill in Goose
 
+<img src="../assets/agents/goose.webp" alt="Goose avatar carrying and stamping video evidence" width="360">
+
 **Status: doc-verified ☑** — config matches Block's official Goose docs;
 not executed here.
 

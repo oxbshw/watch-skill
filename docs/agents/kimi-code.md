@@ -1,5 +1,7 @@
 # Watch Skill in Kimi Code CLI
 
+<img src="../assets/agents/kimi-code.webp" alt="Kimi Code archivist avatar opening film canisters" width="360">
+
 **Status: doc-verified ☑** — config matches Moonshot's official Kimi Code
 CLI docs; not executed here.
 

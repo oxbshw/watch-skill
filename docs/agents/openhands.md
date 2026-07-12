@@ -1,5 +1,7 @@
 # Watch Skill in OpenHands
 
+<img src="../assets/agents/openhands.webp" alt="OpenHands avatars inspecting a frame under a desk lamp" width="360">
+
 **Status: doc-verified ☑** — config matches the official OpenHands MCP
 docs; not executed here.
 

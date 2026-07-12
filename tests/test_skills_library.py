@@ -1,4 +1,4 @@
-"""The skills library ships seven agent-facing skills, each a valid
+"""The skills library ships nine agent-facing skills, each a valid
 trigger surface: parseable frontmatter, a description an agent can route
 on without being told a tool name, and a version that agrees with
 pyproject.
@@ -19,7 +19,7 @@ ROOT = Path(__file__).resolve().parents[1]
 SKILLS_DIR = ROOT / "adapters" / "claude-skill" / "skills"
 
 # The library: every skill the plugin promises. `watch` is the original
-# user-invocable command-style skill; the other seven are the v1.0
+# user-invocable command-style skill; the other nine are the v1.0
 # auto-trigger library.
 LIBRARY = [
     "watching-videos",
@@ -29,6 +29,8 @@ LIBRARY = [
     "extracting-structure",
     "video-memory",
     "sharing-results",
+    "configuring-vision",
+    "recovering-from-errors",
 ]
 ALL_SKILLS = ["watch", *LIBRARY]
 

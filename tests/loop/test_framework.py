@@ -22,6 +22,17 @@ from watch_skill.loop.critic import Critique, Issue  # noqa: E402
 from watch_skill.loop.monitor import loop_monitor  # noqa: E402
 from watch_skill.loop.runner import LoopState  # noqa: E402
 
+
+@pytest.fixture(autouse=True)
+def disable_real_ocr_for_framework_unit_tests(
+    isolated_settings: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Scripted framework tests must not load or download OCR models."""
+    monkeypatch.setenv("WATCHSKILL_OCR_ENABLED", "false")
+    from watch_skill.config import reset_settings
+
+    reset_settings()
+
 # --- registry ----------------------------------------------------------------
 
 def test_builtin_loop_types_registered() -> None:

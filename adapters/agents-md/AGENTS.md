@@ -56,6 +56,11 @@ a persistent, searchable store.
    one persistent index for the whole set; then `search`/`ask` span it.
 10. **Hand-off:** `watch-skill viewer <video>` renders a single offline
     HTML page — frames, transcript, every cached answer with evidence.
+11. **Vision provider:** the agent and model vendor are independent. If visual
+    synthesis or verification is needed, use `watch-skill setup-vision` with
+    the provider the user already has: `anthropic`, `openai`, `gemini`,
+    `openrouter`, or the optional local `ollama`. Never request a secret in
+    chat or silently switch providers.
 
 ## Error handling
 

@@ -12,7 +12,7 @@ license = { text = "MIT" }
 authors = [{ name = "oxbshw" }]
 keywords = ["video", "agents", "mcp", "vision", "transcription", "ffmpeg", "yt-dlp"]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
@@ -56,6 +56,9 @@ watch-skill = "watch_skill.surfaces.cli.main:app"
 
 [project.urls]
 Homepage = "https://github.com/oxbshw/watch-skill"
+Documentation = "https://github.com/oxbshw/watch-skill/tree/main/docs"
+Changelog = "https://github.com/oxbshw/watch-skill/blob/main/CHANGELOG.md"
+Issues = "https://github.com/oxbshw/watch-skill/issues"
 
 [dependency-groups]
 dev = ["pytest>=9.1,<10", "pytest-timeout>=2.4,<3", "ruff>=0.15,<0.16"]

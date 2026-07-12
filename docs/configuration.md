@@ -69,6 +69,22 @@ local Whisper, local OCR, local embeddings. Vision-dependent features (scene
 descriptions, the answer verify pass, THE LOOP's critic) need at least one
 provider — cloud or a local Ollama.
 
+The agent client and model provider are independent. Configure the provider
+whose key you already use; all skills, MCP clients, framework adapters, and
+REST callers share the same engine settings:
+
+```bash
+watch-skill setup-vision --provider anthropic --api-key <KEY>
+watch-skill setup-vision --provider openai --api-key <KEY>
+watch-skill setup-vision --provider gemini --api-key <KEY>
+watch-skill setup-vision --provider openrouter --api-key <KEY>
+watch-skill setup-vision --provider ollama
+```
+
+Use `--model` for one model at both tiers, or `--cheap-model` and
+`--strong-model` for separate routing. Add `--verify` to run a live probe.
+Keys are written to the local `.env`, whose previous version is backed up.
+
 | Variable | Type | Default | Effect |
 |---|---|---|---|
 | `WATCHSKILL_ANTHROPIC_API_KEY` | secret | unset | Anthropic API key (vision tiers). |

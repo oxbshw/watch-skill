@@ -75,3 +75,6 @@ No guess is being made. The closest indexed moments are:
 With a vision/LLM provider configured (any `WATCHSKILL_*` cloud key, or a
 running Ollama with a vision model), the same command produces a verified
 natural-language answer instead of the evidence list.
+
+Next: use [02 — Focused moment](../02-focused-moment/) to inspect a narrow
+window, or return to the [example catalog](../README.md).

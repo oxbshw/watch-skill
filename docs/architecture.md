@@ -207,7 +207,7 @@ plain PASS/FAIL text judgment covers only what no rule can express.
 | `vision/` | one `prompt+images→text` primitive across Anthropic/OpenAI/Gemini/OpenRouter/Ollama; cheap/strong tiers; pre-call cost guard (dated prices.json); local-server health: liveness cache, detached restart, structured `vision.server_down` | `get_vision(tier)`, `ensure_ollama()` |
 | `loop/` | pluggable loop framework: producers (ui/video-gen/game) → critic (JSON or describe-then-judge) → phash diff → runner → proof artifact; bounded monitor loop w/ events.jsonl + signed webhooks | `loop_start()`, `loop_iterate()`, `loop_monitor()`, `deliver_event()` |
 | `bench/` | benchmarks with receipts: perception char-hit/latency/RSS over committed fixtures | `bench_perception()` |
-| `health/` | doctor --fix (deps, memory headroom, index integrity, model files, local vision), managed binaries, agent config writer, vision-backend setup | `run_doctor()`, `detect_agents()`, `configure_ollama()` |
+| `health/` | doctor --fix (deps, browser recording, memory headroom, index integrity, model files, local vision), managed binaries, agent config writer, provider-neutral vision setup | `run_doctor()`, `detect_agents()`, `configure_cloud()`, `configure_ollama()` |
 | `integrations/` | thin framework adapters (LangChain/CrewAI/Agents SDK/LlamaIndex/AutoGen) over three shared core calls | `get_watch_tools()` per module |
 | `extract/` | deterministic structured extraction over the index: chapters, bug reports, hook analysis | `extract_chapters()`, `extract_bug_report()`, `analyze_hook()` |
 | `batch.py` | playlist/folder/list → one indexed, cross-searchable memory; per-source resilience | `watch_batch()` |
@@ -217,7 +217,7 @@ plain PASS/FAIL text judgment covers only what no rule can express.
 | `config.py` | one typed settings object; `WATCHSKILL_*` env / `.env` / defaults | `get_settings()` |
 
 The agent-facing layer above all of this is `adapters/claude-skill/skills/`
-— eight SKILL.md trigger surfaces (watch + the seven-skill library) that
+— ten portable `SKILL.md` trigger surfaces (`watch` plus nine task skills) that
 wrap the CLI only, so they ride into any harness that reads skills; the
 engine never knows which agent is calling.
 

@@ -1,26 +1,24 @@
+<p align="center">
+  <img src="docs/assets/watch-skill-repositories.webp" alt="Watch Skill tracks repositories and skills from an AI agent's workspace" width="100%">
+</p>
+
+<p align="center">
+  <img src="docs/assets/watch-skill-repositories-alt.webp" alt="Watch Skill repository and skill tracking shown in a warm pixel-art workspace" width="100%">
+</p>
+
 <div align="center">
 
 # Watch Skill
 
-**Video skills for every AI agent, with memory.**
+**Video understanding and memory for AI agents.**
 
-Agents can act on screens now — they browse, click, type, and screenshot.
-A screenshot shows a moment; it cannot show a flow. Watch Skill is the
-independent eye: it turns any video — a URL from 1800+ sites, a live
-stream, a local file, a meeting recording, or the browser session an
-agent just drove — into a persistent, searchable memory of frames,
-on-screen text, and transcript, then answers with auditable confidence
-and timestamp citations, verifies flows against plain-language criteria,
-and gets measurably better with every video it watches. One engine,
-every surface: skills, MCP (23 tools), CLI, REST, and native framework
-adapters.
+Watch Skill turns video into evidence an agent can search, cite, and revisit. It accepts
+URLs from 1,800+ sites, live HLS/DASH streams, local files, meeting recordings, and an
+agent's own browser or desktop capture. Each watch produces a persistent index of scenes,
+on-screen text, and transcript—available through skills, 23 MCP tools, a CLI, REST, and
+native framework adapters.
 
-<img src="docs/assets/loop_before_after.gif" alt="THE LOOP: an agent detects TOTAL: $NaN on its own checkout page, gets a structured critique with a suggested fix, and after fixing, verifies the bug is gone — before/after proof rendered automatically" width="720">
-
-*THE LOOP, live: iteration 0 flags `TOTAL: $NaN` as critical with a
-suggested fix → the agent fixes the code → iteration 1 verifies FIXED and
-renders this GIF. The same machinery verifies browser-agent sessions,
-video generators, gameplay, and monitored streams.*
+**Watch. Remember. Verify.**
 
 [![CI](https://github.com/oxbshw/watch-skill/actions/workflows/ci.yml/badge.svg)](https://github.com/oxbshw/watch-skill/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
@@ -28,288 +26,206 @@ video generators, gameplay, and monitored streams.*
 
 </div>
 
----
+## Start in 60 seconds
 
-## 60-second quickstart
+### Claude Code
 
-**Claude Code (one command):**
-
-```
+```text
 /plugin marketplace add oxbshw/watch-skill
 /plugin install watch-skill@watch-skill
 ```
 
-That installs the seven-skill library (`watching-videos`,
-`asking-with-evidence`, `the-loop`, `video-memory`, and friends — they
-trigger on their own when a video URL or a "why does my UI look wrong"
-shows up) plus the MCP server, for ~805 always-on tokens measured. Then
-run `/watch-skill:setup-watch-skill` once — it installs the engine,
-self-heals the binary deps, registers the MCP server in **every** agent
-on your machine (each with a config backup), and offers a vision backend.
+Run `/watch-skill:setup-watch-skill` once after installation. It installs the engine,
+checks the binary dependencies, registers the MCP server, and offers to configure a
+vision provider.
 
-**Everywhere else (one-liner installers):**
+### macOS and Linux
 
 ```bash
-# macOS / Linux
 curl -fsSL https://raw.githubusercontent.com/oxbshw/watch-skill/main/scripts/install.sh | sh
 ```
 
+### Windows
+
 ```powershell
-# Windows
 powershell -ExecutionPolicy Bypass -c "irm https://raw.githubusercontent.com/oxbshw/watch-skill/main/scripts/install.ps1 | iex"
 ```
 
-Both bootstrap uv/Python if missing and run the same doctor + multi-agent
-setup. Then:
+Then watch a video and ask a follow-up:
 
 ```bash
-watch-skill watch "https://youtu.be/..." "what happens in this video?"
-watch-skill ask <video_id> "when exactly does the demo crash?"
-watch-skill library ask "what did the meetings decide about the pricing page?"
-watch-skill serve            # MCP stdio (--http for streamable HTTP)
+watch-skill watch "https://youtu.be/..." "Summarize the important moments."
+watch-skill ask <video_id> "When does the demo first fail?"
+watch-skill search "pricing decision"       # search every indexed video
+watch-skill serve                           # MCP over stdio
 ```
 
-**Vision is effectively free.** Transcription and search need no key at
-all (local Whisper, offline). For scene descriptions and visual Q&A,
-`watch-skill setup-vision --provider gemini --api-key <key>` uses
-Gemini's free tier, or `--provider ollama` runs fully offline with a
-model sized to your RAM. The cost pages below carry the measured
-numbers.
+Transcription, OCR, and search can run locally without an API key. For visual Q&A, use
+Gemini, Anthropic, OpenAI, OpenRouter, or a local Ollama model. See
+[Getting started](docs/getting-started.md) for manual installation and
+[Configuration](docs/configuration.md) for provider and privacy settings.
+
+## Why use it
+
+- **Evidence instead of frame dumps.** Scene detection and perceptual deduplication spend
+  the frame budget on distinct moments. Answers include timestamps, confidence, and the
+  evidence used to support them.
+- **Persistent video memory.** Analyze once, ask again without downloading or transcribing
+  the same video. Hybrid full-text and vector retrieval works within one video or across
+  the entire library.
+- **Local-first processing.** Original-language captions are preferred, local Whisper is
+  the default fallback, and cloud speech-to-text is opt-in. An Ollama configuration keeps
+  the complete pipeline on the machine.
+- **Flow verification.** THE LOOP records an agent's browser, screen, or window; checks the
+  result against plain-language criteria; and produces before/after proof after a fix.
+- **Corrections that persist.** `report_mistake` stores a local lesson, applies it to related
+  questions, and turns it into a replayable evaluation.
+- **Measured cost controls.** Text-first answers, semantic caching, configurable token
+  budgets, and explicit `cheapest`, `quality_first`, and `offline_only` policies keep the
+  trade-offs visible.
+- **Multilingual retrieval.** Script-aware OCR routing, Arabic normalization, CJK substring
+  matching, and multilingual embeddings support questions across languages.
+
+The repository includes reproducible [cost](benchmarks/cost/RESULTS.md) and
+[perception](benchmarks/perception/RESULTS.md) benchmarks. Product claims in this README
+link to the relevant implementation notes or testable example rather than relying on
+unqualified marketing numbers.
 
 ## Works with your agent
 
-Statuses are honestly graded — **machine-tested ✅** (full end-to-end
-run), **machine-configured ◐** (config written + MCP initialize answered
-on a real machine), **doc-verified ☑** (matches current official docs,
-not executed here; every config block is machine-parsed in CI).
+The setup command detects supported clients and updates their configuration with a backup.
+Manual guides are available for every entry below.
 
-| Agent | Surface | Status |
-|-------|---------|--------|
-| [Claude Code](docs/agents/claude-code.md) | plugin (skills + MCP) | machine-tested ✅ |
-| [Claude Desktop](docs/agents/claude-desktop.md) | MCP (stdio) | machine-configured ◐ |
-| [Cursor](docs/agents/cursor.md) | MCP (stdio) | machine-configured ◐ |
-| [Codex CLI](docs/agents/codex-cli.md) | MCP (stdio) | machine-configured ◐ |
-| [Cline](docs/agents/cline.md) · [Windsurf](docs/agents/windsurf.md) · [Gemini CLI](docs/agents/gemini-cli.md) · [VS Code Copilot](docs/agents/vscode.md) | MCP (stdio) | doc-verified ☑ |
-| [GitHub Copilot CLI](docs/agents/github-copilot-cli.md) · [Kimi Code](docs/agents/kimi-code.md) · [Qwen Code](docs/agents/qwen-code.md) · [OpenCode](docs/agents/opencode.md) | MCP (stdio) | doc-verified ☑ |
-| [Goose](docs/agents/goose.md) · [OpenHands](docs/agents/openhands.md) · [Kilo Code](docs/agents/kilocode.md) · [Qodo](docs/agents/qodo.md) · [Agent Zero](docs/agents/agent-zero.md) | MCP (stdio) | doc-verified ☑ |
-| [OpenClaw](docs/agents/openclaw.md) · [Pi](docs/agents/pi.md) · [Hermes-style](docs/agents/hermes.md) | skills / `AGENTS.md` | doc-verified ☑ |
-| **LangChain / LangGraph** · **CrewAI** · **OpenAI Agents SDK** | [native tools](docs/agents/frameworks.md) | machine-tested ✅ |
-| LlamaIndex · AutoGen (v0.4+) | [native tools](docs/agents/frameworks.md) | unit-tested ◐ |
-| Anything with HTTP | REST + OpenAPI (`watch-skill api`) | machine-tested ✅ |
+| | | | |
+|:---:|:---:|:---:|:---:|
+| [<img src="docs/assets/agents/claude-code.webp" width="150" alt="Claude Code avatar">](docs/agents/claude-code.md)<br>[Claude Code](docs/agents/claude-code.md) | [<img src="docs/assets/agents/claude-desktop.webp" width="150" alt="Claude Desktop avatar">](docs/agents/claude-desktop.md)<br>[Claude Desktop](docs/agents/claude-desktop.md) | [<img src="docs/assets/agents/cursor.webp" width="150" alt="Cursor avatar">](docs/agents/cursor.md)<br>[Cursor](docs/agents/cursor.md) | [<img src="docs/assets/agents/codex-cli.webp" width="150" alt="Codex CLI avatar">](docs/agents/codex-cli.md)<br>[Codex CLI](docs/agents/codex-cli.md) |
+| [<img src="docs/assets/agents/cline.webp" width="150" alt="Cline avatar">](docs/agents/cline.md)<br>[Cline](docs/agents/cline.md) | [<img src="docs/assets/agents/windsurf.webp" width="150" alt="Windsurf avatar">](docs/agents/windsurf.md)<br>[Windsurf](docs/agents/windsurf.md) | [<img src="docs/assets/agents/gemini-cli.webp" width="150" alt="Gemini CLI avatar">](docs/agents/gemini-cli.md)<br>[Gemini CLI](docs/agents/gemini-cli.md) | [<img src="docs/assets/agents/vscode.webp" width="150" alt="VS Code avatar">](docs/agents/vscode.md)<br>[VS Code](docs/agents/vscode.md) |
+| [<img src="docs/assets/agents/github-copilot-cli.webp" width="150" alt="GitHub Copilot CLI avatar">](docs/agents/github-copilot-cli.md)<br>[GitHub Copilot CLI](docs/agents/github-copilot-cli.md) | [<img src="docs/assets/agents/kimi-code.webp" width="150" alt="Kimi Code avatar">](docs/agents/kimi-code.md)<br>[Kimi Code](docs/agents/kimi-code.md) | [<img src="docs/assets/agents/qwen-code.webp" width="150" alt="Qwen Code avatar">](docs/agents/qwen-code.md)<br>[Qwen Code](docs/agents/qwen-code.md) | [<img src="docs/assets/agents/opencode.webp" width="150" alt="OpenCode avatar">](docs/agents/opencode.md)<br>[OpenCode](docs/agents/opencode.md) |
+| [<img src="docs/assets/agents/goose.webp" width="150" alt="Goose avatar">](docs/agents/goose.md)<br>[Goose](docs/agents/goose.md) | [<img src="docs/assets/agents/openhands.webp" width="150" alt="OpenHands avatar">](docs/agents/openhands.md)<br>[OpenHands](docs/agents/openhands.md) | [<img src="docs/assets/agents/kilocode.webp" width="150" alt="Kilo Code avatar">](docs/agents/kilocode.md)<br>[Kilo Code](docs/agents/kilocode.md) | [<img src="docs/assets/agents/qodo.webp" width="150" alt="Qodo avatar">](docs/agents/qodo.md)<br>[Qodo](docs/agents/qodo.md) |
+| [<img src="docs/assets/agents/agent-zero.webp" width="150" alt="Agent Zero avatar">](docs/agents/agent-zero.md)<br>[Agent Zero](docs/agents/agent-zero.md) | [<img src="docs/assets/agents/openclaw.webp" width="150" alt="OpenClaw avatar">](docs/agents/openclaw.md)<br>[OpenClaw](docs/agents/openclaw.md) | [<img src="docs/assets/agents/pi.webp" width="150" alt="Pi avatar">](docs/agents/pi.md)<br>[Pi](docs/agents/pi.md) | [<img src="docs/assets/agents/hermes.webp" width="150" alt="Hermes avatar">](docs/agents/hermes.md)<br>[Hermes](docs/agents/hermes.md) |
 
-Full matrix — 24 rows with per-agent install, config, and smoke tests:
-[docs/agents/README.md](docs/agents/README.md). Yours missing?
-[Add it in ~20 minutes](templates/agent-adapter/README.md).
+[<img src="docs/assets/agents/frameworks.webp" width="360" alt="Framework agent avatars collaborating around a shared video engine">](docs/agents/frameworks.md)
 
-## The seven claims (each with a receipt)
+Native tools are also available for [LangChain/LangGraph, CrewAI, OpenAI Agents SDK,
+LlamaIndex, and AutoGen](docs/agents/frameworks.md); any other framework can use REST or
+MCP.
 
-**Everywhere.** The skills library above installs superpowers-style into
-Claude Code today and rides into any harness that reads SKILL.md
-directories; MCP config covers most of the rest, `AGENTS.md` covers
-agents with nothing but instructions and a shell, REST covers everything
-else. The matrix is graded, validated, and open to contributions.
+| Connection | Supported agents and frameworks |
+|---|---|
+| Plugin and skills | [Claude Code](docs/agents/claude-code.md), [OpenClaw](docs/agents/openclaw.md), [Pi](docs/agents/pi.md), [Hermes-style agents](docs/agents/hermes.md) |
+| MCP | [Claude Desktop](docs/agents/claude-desktop.md), [Cursor](docs/agents/cursor.md), [Codex CLI](docs/agents/codex-cli.md), [Cline](docs/agents/cline.md), [Windsurf](docs/agents/windsurf.md), [Gemini CLI](docs/agents/gemini-cli.md), [VS Code](docs/agents/vscode.md), [GitHub Copilot CLI](docs/agents/github-copilot-cli.md), [Kimi Code](docs/agents/kimi-code.md), [Qwen Code](docs/agents/qwen-code.md), [OpenCode](docs/agents/opencode.md), [Goose](docs/agents/goose.md), [OpenHands](docs/agents/openhands.md), [Kilo Code](docs/agents/kilocode.md), [Qodo](docs/agents/qodo.md), [Agent Zero](docs/agents/agent-zero.md) |
+| Native Python tools | [LangChain/LangGraph, CrewAI, OpenAI Agents SDK, LlamaIndex, and AutoGen](docs/agents/frameworks.md) |
+| HTTP | Vercel AI SDK, n8n, and any client that can call REST/OpenAPI |
 
-**Remembers.** Every watch distills notes — entities, claims, chapters,
-each carrying (video, timestamp) provenance — into the same persistent
-index, incrementally. `library_synthesize` answers questions no single
-video holds, with per-video citations: in the
-[live example](examples/12-library-memory/), a four-clip incident story
-("what caused the ERROR 502 and is it fixed?") comes back cited across
-all four clips, corroborated, and the repeat is served from cache. No
-session expiry, no re-processing; the library you build this month still
-answers next month.
+The [full compatibility matrix](docs/agents/README.md) separates machine-tested,
+machine-configured, and documentation-verified integrations. If your agent is missing,
+the [adapter template](templates/agent-adapter/README.md) provides a short contribution
+path.
 
-**Nearly free.** Every answer accounts for itself (`cost_breakdown` by
-source, `stats --cost` lifetime, a dated price file), and the routing is
-an explicit policy — `cheapest` (default), `quality_first`, or
-`offline_only` where cloud never sees a frame. The committed
-[cost benchmark](benchmarks/cost/RESULTS.md), measured on the 8 GB
-CPU-only reference machine:
+## Common workflows
 
-| approach | est. tokens | est. $ |
-|---|---|---|
-| watch-skill, fully offline | ~5,868 (measured; 5 cache hits) | $0.00 |
-| raw frames into context | ~18,890 (computed, same index) | $0.0019 at the cheapest paid model |
+### Build a searchable video library
 
-~3× fewer tokens on a 15-frame toy corpus — the gap grows with every
-frame a real video adds, and repeats are free.
+```bash
+watch-skill batch ./recordings --limit 50
+watch-skill library overview
+watch-skill library ask "What did the team decide about authentication?"
+```
 
-**High-quality vision anywhere.** OCR backends form a registry
-(rapidocr default, tesseract auto-routed only for the
-Lao/Khmer/Myanmar/Tibetan gap rapidocr genuinely has, surya opt-in), and
-a per-region router reads frames that mix writing systems. From the
-committed [perception benchmark](benchmarks/perception/RESULTS.md):
+`library ask` synthesizes evidence across videos and retains per-video timestamp
+provenance. The [library example](examples/12-library-memory/) demonstrates a question
+whose answer is distributed across four clips.
 
-| backend | mixed code+Arabic+CJK frame | Arabic RTL | CJK |
-|---|---|---|---|
-| best single OCR engine | 81% | 94% | 100% |
-| **multi-script router** | **98%** | 88% | 100% |
-| moondream (vision model) | 58% | 18% | 0% |
+### Verify an agent's browser work
 
-That last row is why perception is layered: a captioning model is a
-useful witness and a terrible stenographer. The local vision server is
-babysat — health-checked, restarted detached when dead, one settled
-retry, and a structured `vision.server_down` with a fix instead of an
-empty string (the kill-the-server drill is a recorded demo).
+```bash
+watch-skill loop start \
+  --source "browser:http://127.0.0.1:3000" \
+  --criteria "Checkout completes and the total is always a valid currency amount"
+```
 
-**Heals itself.** `watch-skill doctor --fix` repairs every failure class
-this project has actually hit: dead local vision server, corrupt cached
-answers (quarantined), truncated model files, vanished frame
-directories, stale locks, and it warns with a model recommendation when
-commit headroom is too tight to load local vision. Every structured
-error in the engine carries an actionable `fix` — enforced by an
-AST-walking test, not by review vigilance.
+The loop captures the full interaction, critiques failures, and records proof after the
+agent applies a fix. [Example 14](examples/14-browser-verification/) includes a transient
+`$NaN` bug that an end-state screenshot misses.
 
-**Improves itself.** Corrections become classified lessons; lessons
-steer future answers (verify-prompt injection + adaptive profiles);
-recovered evidence lands permanently in the index; and
-`lessons eval --report` replays every lesson against the current
-pipeline — classifying each still-effective, prunable, or regressed —
-with `--prune` retiring what the pipeline outgrew. Mechanics, no
-mysticism: [how it improves itself](docs/guides/how-it-improves-itself.md),
-demo in [examples/13](examples/13-self-improvement/).
+<p align="center">
+  <img src="docs/assets/loop_before_after.gif" alt="A checkout flow fails with a NaN total, is fixed, and passes verification" width="720">
+</p>
 
-**Useful to everyone.** Seven [use-case packs](docs/packs/README.md) —
-recipes over existing tools with runnable examples: browser-agent
-verification (the flagship: a checkout total that reads $NaN for 1.5
-seconds mid-flow and looks perfect in the end-state screenshot —
-[examples/14](examples/14-browser-verification/)), QA bug hunting,
-content creators, learning/research, meetings, monitoring/ops with
-HMAC-signed webhooks built for n8n/Zapier wiring, and agent
-self-verification.
+### Export an offline report
+
+```bash
+watch-skill viewer <video_id> --out video-report.html
+```
+
+The generated page contains its frames, transcript, OCR, cached answers, and cited
+evidence. It has no external runtime dependencies and can be opened without a server.
 
 ## Examples
 
-| Example | What it shows |
-|---------|---------------|
-| [01-watch-and-ask](examples/01-watch-and-ask) | Watch a URL, ask follow-ups from the index — the core loop |
-| [02-focused-moment](examples/02-focused-moment) | Dense sampling of a `--start/--end` window, `get_moment` around a timestamp |
-| [03-cross-video-search](examples/03-cross-video-search) | One query across every video ever watched |
-| [04-ui-loop](examples/04-ui-loop) | THE LOOP: capture your own UI → critique → fix → re-verify with proof |
-| [05-multilingual-arabic](examples/05-multilingual-arabic) | Arabic in, Arabic out: script-aware OCR, folded search, cross-lingual ask |
-| [06-agent-integration](examples/06-agent-integration) | Wiring the MCP server / REST API into an agent |
-| [07-lessons-and-stats](examples/07-lessons-and-stats) | report_mistake → lesson → replayable eval; the savings meter |
-| [08-loop-types](examples/08-loop-types) | Video-gen, game, and monitor loops — each run live with a real vision critic |
-| [09-framework-adapters](examples/09-framework-adapters) | Real watch+ask through LangChain, CrewAI, and the OpenAI Agents SDK |
-| [10-structured-extraction](examples/10-structured-extraction) | Chapters, bug report, and hook analysis on one clip |
-| [11-batch-mode](examples/11-batch-mode) | Index a small library in one call, answer a cross-video question |
-| [12-library-memory](examples/12-library-memory) | A question no single video answers, synthesized with per-video citations |
-| [13-self-improvement](examples/13-self-improvement) | Lessons classified against the live pipeline; prune what it outgrew |
-| [14-browser-verification](examples/14-browser-verification) | The flagship: a flow bug no screenshot can catch, caught |
+The examples progress from a first watch to agent integration, cross-video memory, and
+self-verification.
+
+| Track | Examples |
+|---|---|
+| Learn the core | [01 Watch and ask](examples/01-watch-and-ask), [02 Focused moment](examples/02-focused-moment), [03 Cross-video search](examples/03-cross-video-search) |
+| Build with agents | [06 MCP and REST](examples/06-agent-integration), [09 Framework adapters](examples/09-framework-adapters), [15 Private offline workflow](examples/15-private-offline-workflow) |
+| Understand and organize | [05 Multilingual Arabic](examples/05-multilingual-arabic), [10 Structured extraction](examples/10-structured-extraction), [11 Batch mode](examples/11-batch-mode), [12 Library memory](examples/12-library-memory) |
+| Verify and improve | [04 UI loop](examples/04-ui-loop), [07 Lessons and stats](examples/07-lessons-and-stats), [08 Loop types](examples/08-loop-types), [13 Self-improvement](examples/13-self-improvement), [14 Browser verification](examples/14-browser-verification) |
+| Share results | [16 Export a self-contained viewer](examples/16-shareable-viewer) |
+
+See the [example catalog](examples/README.md) for prerequisites, expected output, and a
+recommended path through all 16 examples.
 
 ## Architecture
 
-Thin surfaces, one core. `src/watch_skill` holds all logic; skills, MCP,
-CLI, REST, and the framework adapters are wrappers that never diverge.
+All interfaces call the same Python core. Skills and agent adapters decide *when* to use
+Watch Skill; acquisition, perception, transcription, indexing, answering, and verification
+remain in `src/watch_skill`.
 
 ```mermaid
 flowchart LR
-    subgraph agents["any agent / framework"]
-        CC[Claude Code] & CU[Cursor] & LC[LangChain · CrewAI · Agents SDK] & GA["...via REST"]
-    end
-    subgraph surfaces["surfaces (thin)"]
-        SK["skills (SKILL.md)"] --- MCP["MCP stdio/HTTP<br/>23 tools"] --- CLI[CLI] --- API[REST + OpenAPI]
-    end
-    subgraph core["src/watch_skill — all logic"]
-        AC[acquire<br/>yt-dlp→fallbacks<br/>+ LRU cache] --> PE[perceive<br/>scenes · phash dedup · OCR registry + router]
-        PE --> TR[transcribe<br/>captions → local whisper]
-        TR --> IX[(index<br/>SQLite FTS5 + vectors<br/>+ notes + caches)]
-        PE --> VI[vision<br/>cheap/strong tiers<br/>5 providers · server babysitter]
-        VI --> IX
-        IX --> AN[answer<br/>confidence · escalation<br/>honest floor · cost meter]
-        IX --> LB[library<br/>cross-video synthesis]
-        LS[(lessons<br/>local learning + evals)] --> AN
-        IX --> EX[extract<br/>chapters · bug report · hook]
-        IX --> VW[viewer<br/>shareable offline HTML]
-        LP[loop framework<br/>ui · video-gen · game · monitor → webhooks] --> VI
-    end
-    agents --> surfaces --> core
+    A["Agents and frameworks"] --> S["Skills · MCP · CLI · REST"]
+    S --> AC["Acquire"]
+    AC --> P["Scenes · OCR · transcript"]
+    P --> I[("Persistent index")]
+    I --> Q["Answers · extraction · library"]
+    I --> L["Lessons and evaluations"]
+    V["Browser · screen · stream capture"] --> C["Loop critic"]
+    C --> I
 ```
 
-Deep dive: [docs/architecture.md](docs/architecture.md) — including "add
-a vision provider in ~20 lines" and "add a new Loop type" (a producer
-function + a registry entry).
+Read [Architecture](docs/architecture.md) for the data model, provider boundaries, and
+extension points.
 
-## What makes it different
+## Documentation
 
-Watch Skill began as an attempt to surpass
-[claude-video](https://github.com/bradautomates/claude-video) — the skill
-that first gave Claude a video input, and the source of ideas we kept
-(token-aware frame budgets, captions-first transcription, focused mode).
-The strongest install story belongs to
-[claude-video-vision](https://github.com/jordanrendric/claude-video-vision)
-— two `/plugin` commands and a setup wizard that finds ffmpeg for you —
-which describes itself, accurately, as "a perception layer, not an
-interpretation layer". The closest cousin to our library layer is
-[mcptube](https://github.com/0xchamin/mcptube), whose Karpathy-style wiki
-genuinely compounds knowledge across YouTube videos — the right idea,
-scoped to one site. And
-[video-research-mcp](https://github.com/Galbaz1/video-research-mcp) is an
-impressively broad Gemini-powered research suite whose evidence tiers
-(Confirmed / Strong Indicator / Inference / Speculation) take answer
-integrity seriously. Each of them holds one of the seven claims. None
-holds two. The cells below come from each project's current README
-(fetched 2026-07-11):
+| Guide | Use it for |
+|---|---|
+| [Documentation index](docs/README.md) | Choose a guide by task or audience |
+| [Getting started](docs/getting-started.md) | Installation, first watch, and first agent connection |
+| [Tool reference](docs/tools/README.md) | All 23 MCP tools and their REST/CLI counterparts |
+| [Configuration](docs/configuration.md) | Storage, privacy, models, limits, and environment variables |
+| [Agent matrix](docs/agents/README.md) | Per-client setup and verification status |
+| [Use-case packs](docs/packs/README.md) | Recipes for research, meetings, QA, content, and operations |
+| [THE LOOP](docs/guides/the-loop.md) | Capture, critique, iteration, and proof artifacts |
+| [Cost policy](docs/cost.md) | Routing, budgets, caching, and benchmark method |
+| [Troubleshooting](docs/troubleshooting.md) | Dependency repair and common runtime errors |
+| [Engineering decisions](docs/DECISIONS.md) | The reasoning behind non-obvious design choices |
+| [Roadmap](docs/ROADMAP.md) | Planned work and contribution opportunities |
 
-| | claude-video | claude-video-vision | mcptube | video-research-mcp | Watch Skill |
-|---|---|---|---|---|---|
-| Core idea | frames into context | frames + timestamped audio into context | YouTube → compounding wiki | Gemini research + media suite | **interpret + remember + verify + self-improve** |
-| Sources | video URLs, local files | video URLs, local files | YouTube only | local files, YouTube, URLs/PDFs | 1800+ sites, streams, local files, screen/window/browser capture |
-| Install | plugin | two `/plugin` commands + wizard | pipx/pip (Python 3.12–3.13) | `npx` one-liner + key | one `/plugin marketplace add` or a shell one-liner |
-| Memory | re-process per session | opt-in `enable_index`; sessions expire (7-day default) | SQLite + ChromaDB wiki, persistent | optional Weaviate instance (13 collections); keyword grep without it | persistent index on by default + notes layer; cross-video synthesis with per-video citations; no expiry, no extra services |
-| Offline path | — (Claude reads frames) | — (Claude reads frames) | — (cloud LLM or client passthrough) | — (Gemini mandatory) | **fully offline**: local whisper + Ollama vision + local OCR/embeddings |
-| Answer integrity | model prose | model prose | model prose | evidence tiers on research findings | calibrated confidence, escalation ladder, verify pass, honest refusal floor; fabricated timestamps test-blocked |
-| Verifies recordings | — | — | — | — | THE LOOP with proof GIFs — UI, browser flows, video-gen, game, monitor (+ signed webhooks) |
-| Learning | — | — | — | — | mistake reports → local lessons → replayed evals with prune |
-| Agents | Claude (skill) | Claude Code (plugin) | Claude Code/Desktop, Copilot, Cursor | Claude Code/Desktop, MCP clients | 20+ agent matrix + skills library + CLI + REST/OpenAPI + 5 framework adapters |
-| Languages | — | model-dependent | not specified | multilingual TTS; no OCR mention | per-script OCR registry + multi-script router + normalization for 20+ scripts — benchmarked, test-gated |
-| Cost accounting | — | — | passthrough mode = no server keys | optional MLflow traces | per-answer breakdown + lifetime meter + committed benchmark |
-| Platforms | where Claude runs | macOS-tested (needs Node 20+) | Linux/macOS | Node+Python stack | Windows + Linux + macOS (Windows is the reference machine) |
-
-## Docs
-
-- [Getting started](docs/getting-started.md)
-- [Configuration](docs/configuration.md) — every knob is an env var / `.env`
-  entry with the `WATCHSKILL_` prefix
-- [The cost policy](docs/cost.md) — the ladder, the meter, the benchmark
-- [Tool reference](docs/tools/) — all 23 MCP tools with schemas
-- [Use-case packs](docs/packs/README.md)
-- [Framework adapters](docs/agents/frameworks.md) — LangChain, CrewAI,
-  Agents SDK, LlamaIndex, AutoGen, Vercel AI SDK, n8n
-- [Guides](docs/guides/) — loops, lessons, capture, multilingual,
-  how it improves itself
-- [Architecture](docs/architecture.md)
-- [Troubleshooting](docs/troubleshooting.md)
-- [Agent matrix](docs/agents/README.md)
-- [Engineering decision log](docs/DECISIONS.md) — the non-obvious choices,
-  with numbers
-
-Prefer a manual install?
+## Development
 
 ```bash
-git clone https://github.com/oxbshw/watch-skill && cd watch-skill
-uv sync --extra all          # or: pip install -e ".[all]"
-uv run watch-skill doctor    # self-heals dependencies
-uv run watch-skill setup     # writes MCP config into your agents (with backups)
+git clone https://github.com/oxbshw/watch-skill
+cd watch-skill
+uv sync --extra all
+uv run pytest
+uv run ruff check .
 ```
 
-## Roadmap
+See [CONTRIBUTING.md](CONTRIBUTING.md) for test tiers, documentation standards, and the
+agent-adapter checklist. Security and privacy reports are covered by
+[SECURITY.md](SECURITY.md).
 
-Highlights from [docs/ROADMAP.md](docs/ROADMAP.md) (v1.1 candidates):
-
-- **Team-shared video memory** — the remote MCP recipe graduated into a
-  documented deployment; the notes layer was designed for it.
-- **A/B hook comparison and visual diff between two videos** — regression
-  monitoring for video.
-- **More machine-tested agent rows** — every ☑ in the matrix is one
-  community smoke test away from ✅.
-
-## Contributing, security, license
-
-- [CONTRIBUTING.md](CONTRIBUTING.md) — dev setup, the offline test suite,
-  what makes a PR land — and the ~20-minute add-your-agent funnel.
-- [SECURITY.md](SECURITY.md) — privacy invariants (no cookies, no logins,
-  the video file never leaves the machine) and how to report issues.
-- MIT — see [LICENSE](LICENSE). Built on the shoulders of yt-dlp, ffmpeg,
-  PySceneDetect, RapidOCR, faster-whisper, fastembed, FastMCP, and the
-  claude-video idea.
+Watch Skill is available under the [MIT License](LICENSE).

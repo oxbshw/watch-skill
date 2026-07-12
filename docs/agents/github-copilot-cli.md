@@ -1,5 +1,7 @@
 # Watch Skill in GitHub Copilot CLI
 
+<img src="../assets/agents/github-copilot-cli.webp" alt="GitHub Copilot CLI avatar winding a film reel beside a terminal" width="360">
+
 **Status: doc-verified ☑** — config matches the official Copilot CLI docs;
 not executed here.
 

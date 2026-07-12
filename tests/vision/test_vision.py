@@ -67,6 +67,9 @@ def test_openai_wire_format(frame: Path, monkeypatch: pytest.MonkeyPatch) -> Non
 
 
 def test_ollama_needs_no_key(frame: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    from watch_skill.vision import local_health
+
+    monkeypatch.setattr(local_health, "ensure_ollama", lambda base_url: None)
     capture: dict = {}
     _mock_post(monkeypatch, {"message": {"content": "local answer"}}, capture)
     out = VisionClient("ollama", "qwen2.5-vl").generate("describe", [frame])

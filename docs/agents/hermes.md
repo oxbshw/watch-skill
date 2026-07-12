@@ -1,5 +1,7 @@
 # Watch Skill in Hermes Agent (and Hermes-style harnesses)
 
+<img src="../assets/agents/hermes.webp" alt="Hermes messenger avatar delivering a cited frame from memory" width="360">
+
 **Status: doc-verified ☑** — matches the hermes-agent docs; not executed
 here.
 

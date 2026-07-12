@@ -1,5 +1,7 @@
 # Watch Skill in Agent Zero
 
+<img src="../assets/agents/agent-zero.webp" alt="Agent Zero avatar mapping a branching video timeline" width="360">
+
 **Status: doc-verified ☑** — config matches the official Agent Zero MCP
 docs; not executed here.
 

@@ -42,3 +42,7 @@ LANGCHAIN ADAPTER: PASSED
 
 All three examples were run live on this machine (CrewAI and the OpenAI
 Agents SDK produce the same flow through their own tool objects).
+
+For MCP clients and REST consumers, continue with
+[06 — Agent integration](../06-agent-integration/). The
+[example catalog](../README.md) lists every integration path.

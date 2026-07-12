@@ -1,5 +1,7 @@
 # Watch Skill in Cursor
 
+<img src="../assets/agents/cursor.webp" alt="Cursor avatar scrubbing a physical video timeline" width="360">
+
 **Status: machine-configured ◐** — `watch-skill setup` wrote this config on
 a real machine and the server command answered MCP `initialize`; a full
 in-Cursor chat session was not run.

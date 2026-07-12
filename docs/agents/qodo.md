@@ -1,5 +1,7 @@
 # Watch Skill in Qodo Command
 
+<img src="../assets/agents/qodo.webp" alt="Qodo detective avatar inspecting video evidence" width="360">
+
 **Status: doc-verified ☑** — config matches docs.qodo.ai; not executed
 here.
 

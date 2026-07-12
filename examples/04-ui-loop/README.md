@@ -24,7 +24,7 @@ Files:
 
 ## Run
 
-```
+```bash
 uv run --no-sync python examples/04-ui-loop/ui_loop.py
 ```
 
@@ -61,3 +61,7 @@ before/after proof: C:\Users\hp\.watch-skill\loops\f2b6acda6cd1\artifacts\before
 
 DEMO PASSED
 ```
+
+Next: [14 — Browser-agent verification](../14-browser-verification/) applies
+the same loop to a transient interaction bug. See the
+[example catalog](../README.md) for the complete sequence.

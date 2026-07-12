@@ -54,3 +54,27 @@ def test_template_skeleton_validates_too() -> None:
     validate = _load_validator()
     skeleton = ROOT / "templates" / "agent-adapter" / "docs-skeleton.md"
     assert not validate.check_file(skeleton)
+
+
+def test_every_agent_guide_has_its_avatar() -> None:
+    assets = ROOT / "docs" / "assets" / "agents"
+    missing: list[str] = []
+    for page in AGENTS_DIR.glob("*.md"):
+        if page.name == "README.md":
+            continue
+        expected = f'../assets/agents/{page.stem}.webp'
+        if expected not in page.read_text(encoding="utf-8"):
+            missing.append(page.name)
+        assert (assets / f"{page.stem}.webp").is_file(), f"avatar missing for {page.name}"
+    assert not missing, f"agent guides without avatar markup: {missing}"
+
+
+def test_readme_agent_gallery_covers_every_named_agent() -> None:
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    missing = [
+        page.stem
+        for page in AGENTS_DIR.glob("*.md")
+        if page.name not in {"README.md", "frameworks.md"}
+        and f"docs/assets/agents/{page.stem}.webp" not in readme
+    ]
+    assert not missing, f"README gallery missing agents: {missing}"

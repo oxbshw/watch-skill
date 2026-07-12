@@ -1,7 +1,7 @@
 ---
 name: setup-watch-skill
-description: One-shot setup for Watch Skill — installs the engine, bootstraps ffmpeg/yt-dlp, registers the MCP server in every AI agent on this machine (with backups), and offers a free local vision backend. Run once after installing the plugin.
-argument-hint: "[--gemini-key <KEY> | --ollama | --skip-vision]"
+description: One-shot setup for Watch Skill — installs the engine, bootstraps ffmpeg/yt-dlp, registers the MCP server in every detected AI agent (with backups), and configures the user's preferred vision provider. Run once after installing the plugin.
+argument-hint: "[--provider <anthropic|openai|gemini|openrouter|ollama> | --skip-vision]"
 allowed-tools: Bash, Read, AskUserQuestion
 license: MIT
 user-invocable: true
@@ -59,25 +59,31 @@ CLI, backs up each config it touches, and writes the `watch-skill` MCP server
 into all of them with a surgical merge (no existing keys are dropped). It
 prints exactly which files it changed and where the backups are.
 
-## Step 4 — Offer a vision backend (recommended)
+## Step 4 — Configure a vision backend (recommended)
 
-Scene descriptions and visual Q&A need a vision model. Transcription and search
-already work with **zero** setup (local Whisper, offline). For visual
-understanding, configure ONE backend — respect any argument the user passed:
+Scene descriptions, visual verification, and the loop critic need a vision-capable
+model. This choice is independent of the agent: every skill, MCP client, framework
+adapter, and REST caller uses the same configured backend.
 
-- `--gemini-key <KEY>` (or no arg → ask): free tier ~1500 requests/day, strong
-  quality, zero local compute. Wire it with:
-  ```bash
-  watch-skill setup-vision --provider gemini --api-key <KEY>
-  ```
-- `--ollama`: fully offline, no key, larger download and slower on CPU:
-  ```bash
-  watch-skill setup-vision --provider ollama
-  ```
-- `--skip-vision`: leave vision unconfigured; transcription + search still work.
+Respect an explicit provider choice. Cloud providers accept their own API key;
+Ollama is the optional local path:
 
-If no argument was given, use AskUserQuestion to let the user pick Gemini
-(recommended), Ollama, or skip, then run the matching command above.
+```bash
+watch-skill setup-vision --provider anthropic --api-key <KEY>
+watch-skill setup-vision --provider openai --api-key <KEY>
+watch-skill setup-vision --provider gemini --api-key <KEY>
+watch-skill setup-vision --provider openrouter --api-key <KEY>
+watch-skill setup-vision --provider ollama
+```
+
+Use `--model <name>` when the user wants the same vision model for both tiers, or
+`--cheap-model` and `--strong-model` to route bulk perception and final verification
+separately. Never ask the user to paste a key into chat when it can be read from a
+local environment variable or entered directly in their terminal.
+
+If no choice was given, ask which supported provider they already use; do not steer
+them toward Ollama or any one vendor. `--skip-vision` remains valid because
+transcription, OCR, indexing, and search work without a model provider.
 
 ## Step 5 — Report
 

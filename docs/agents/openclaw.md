@@ -1,5 +1,7 @@
 # Watch Skill in OpenClaw
 
+<img src="../assets/agents/openclaw.webp" alt="OpenClaw lobster avatar cutting and splicing film" width="360">
+
 **Status: doc-verified ☑** — matches the openclaw.ai skills docs; not
 executed here.
 
@@ -34,7 +36,8 @@ config, under `skills.load`:
 
 That picks up all of them: `watching-videos`, `asking-with-evidence`,
 `the-loop`, `learning-from-mistakes`, `extracting-structure`,
-`video-memory`, `sharing-results`, plus `/watch`.
+`video-memory`, `sharing-results`, `configuring-vision`,
+`recovering-from-errors`, plus `/watch`.
 
 ## Smoke test (3 steps)
 

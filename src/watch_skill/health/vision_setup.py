@@ -1,16 +1,11 @@
-"""Configure a vision backend by writing provider settings into the project .env.
+"""Configure any supported vision backend in the project ``.env``.
 
-Two first-class backends:
+Cloud providers (Anthropic, OpenAI, Gemini, and OpenRouter) share one setup
+path: provider key + cheap/strong model names. Ollama is the optional local,
+keyless path. Agent integrations do not depend on this choice.
 
-- **Gemini** — free tier (~1500 requests/day), strong quality, zero local
-  compute. The recommended zero-cost default. Needs an API key
-  (``WATCHSKILL_GEMINI_API_KEY``).
-- **Ollama** — fully offline, local, no key. Larger download, slower on CPU.
-  The privacy/air-gapped option.
-
-Both write the ``WATCHSKILL_VISION_*`` settings (and, for Gemini, the key) so
-the engine picks them up on the next run. The existing ``.env`` is backed up
-before any change, and unrelated keys are preserved.
+The existing ``.env`` is backed up before any change and unrelated values are
+preserved.
 """
 from __future__ import annotations
 
@@ -24,8 +19,28 @@ from pathlib import Path
 from watch_skill.errors import ConfigError
 
 # Recommended free-tier Gemini model (covers both tiers; see registry prices).
-DEFAULT_GEMINI_CHEAP = "gemini-2.0-flash"
-DEFAULT_GEMINI_STRONG = "gemini-2.0-flash"
+DEFAULT_GEMINI_CHEAP = "gemini-3.5-flash"
+DEFAULT_GEMINI_STRONG = "gemini-3.5-flash"
+
+CLOUD_PROVIDER_DEFAULTS: dict[str, tuple[str, str, str]] = {
+    # provider: (settings key, cheap model, strong model)
+    "anthropic": (
+        "WATCHSKILL_ANTHROPIC_API_KEY",
+        "claude-haiku-4-5-20251001",
+        "claude-sonnet-5",
+    ),
+    "openai": ("WATCHSKILL_OPENAI_API_KEY", "gpt-4o-mini", "gpt-4o"),
+    "gemini": (
+        "WATCHSKILL_GEMINI_API_KEY",
+        DEFAULT_GEMINI_CHEAP,
+        DEFAULT_GEMINI_STRONG,
+    ),
+    "openrouter": (
+        "WATCHSKILL_OPENROUTER_API_KEY",
+        "google/gemini-3.5-flash",
+        "anthropic/claude-sonnet-5",
+    ),
+}
 
 # Local vision models by machine size. qwen2.5vl:3b reads on-screen text well
 # (crucial for the OCR-like describe + critic tasks), handles multiple images,
@@ -110,7 +125,45 @@ def set_env_vars(updates: dict[str, str], path: Path | None = None) -> tuple[Pat
     return path, backup
 
 
-# --- Gemini ----------------------------------------------------------------
+# --- Cloud providers --------------------------------------------------------
+
+def configure_cloud(
+    provider: str,
+    api_key: str,
+    cheap_model: str | None = None,
+    strong_model: str | None = None,
+    path: Path | None = None,
+) -> tuple[Path, Path | None]:
+    """Write one supported cloud provider, its key, and model tiers."""
+    provider = provider.lower().strip()
+    defaults = CLOUD_PROVIDER_DEFAULTS.get(provider)
+    if defaults is None:
+        supported = ", ".join(CLOUD_PROVIDER_DEFAULTS)
+        raise ConfigError(
+            f"unsupported cloud vision provider: {provider or '(empty)'}",
+            code="config.vision_unknown_provider",
+            fix=f"choose one of: {supported}; use configure_ollama for local vision",
+        )
+    if not api_key or not api_key.strip():
+        raise ConfigError(
+            f"an API key is required for {provider}",
+            code="config.vision_no_key",
+            fix=f"set {defaults[0]} or pass --api-key",
+        )
+    key_name, default_cheap, default_strong = defaults
+    return set_env_vars(
+        {
+            key_name: api_key.strip(),
+            "WATCHSKILL_VISION_CHEAP_PROVIDER": provider,
+            "WATCHSKILL_VISION_CHEAP_MODEL": cheap_model or default_cheap,
+            "WATCHSKILL_VISION_STRONG_PROVIDER": provider,
+            "WATCHSKILL_VISION_STRONG_MODEL": strong_model or default_strong,
+        },
+        path,
+    )
+
+
+# Compatibility helper retained for callers that already use it directly.
 
 def configure_gemini(
     api_key: str,
@@ -118,22 +171,13 @@ def configure_gemini(
     strong_model: str = DEFAULT_GEMINI_STRONG,
     path: Path | None = None,
 ) -> tuple[Path, Path | None]:
-    """Write the Gemini provider + key into .env (recommended zero-cost default)."""
-    if not api_key or not api_key.strip():
-        raise ConfigError(
-            "a Gemini API key is required",
-            code="config.vision_no_key",
-            fix="get a free key at https://aistudio.google.com/apikey and pass --api-key",
-        )
-    return set_env_vars(
-        {
-            "WATCHSKILL_GEMINI_API_KEY": api_key.strip(),
-            "WATCHSKILL_VISION_CHEAP_PROVIDER": "gemini",
-            "WATCHSKILL_VISION_CHEAP_MODEL": cheap_model,
-            "WATCHSKILL_VISION_STRONG_PROVIDER": "gemini",
-            "WATCHSKILL_VISION_STRONG_MODEL": strong_model,
-        },
-        path,
+    """Write Gemini settings (compatibility wrapper around configure_cloud)."""
+    return configure_cloud(
+        "gemini",
+        api_key,
+        cheap_model=cheap_model,
+        strong_model=strong_model,
+        path=path,
     )
 
 

@@ -1,4 +1,4 @@
-"""Model-agnostic vision layer: Anthropic / OpenAI / Gemini / Ollama.
+"""Model-agnostic vision layer: Anthropic / OpenAI / Gemini / OpenRouter / Ollama.
 
 Provider + model are config (a data registry), not code. Two tiers: cheap
 (bulk scene descriptions) and strong (answers, critiques). Every cloud call

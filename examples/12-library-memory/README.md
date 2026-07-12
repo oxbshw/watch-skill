@@ -1,15 +1,19 @@
 # 12 — Library memory: answers no single video holds
 
-Four clips tell one incident story in pieces: the monitor feed shows
-`ERROR 502`, the standup names the root cause, the tutorial shows the
-config fix, the release clip confirms it shipped. No clip has the whole
-answer. `library ask` does.
+Four clips contain different parts of one incident: a monitor shows
+`ERROR 502`, a stand-up identifies the cause, a tutorial records the
+configuration change, and a release update confirms deployment. No single
+clip contains the complete answer. This example uses `library ask` to
+assemble it while preserving the source and timestamp of each claim.
+
+Requires Pillow, ffmpeg, and the standard indexing extras. A vision provider
+is optional; OCR carries the important text in the generated clips.
 
 ```powershell
 uv run --no-sync python examples/12-library-memory/library_demo.py
 ```
 
-What it does:
+## What it does
 
 1. Builds the four clips (content lives in pixels — OCR carries it; a
    local vision backend adds scene descriptions when one is running).
@@ -48,11 +52,11 @@ meter: 2 library syntheses, ~784 library tokens saved
 LIBRARY DEMO: PASSED
 ```
 
-Worth noticing in the real run: the vision model's scene descriptions
-misread "502" as "522" on two frames — and the synthesis still cites the
-right code, because OCR read the exact digits and both layers carry
-provenance. Layered perception is not a slogan; it is why the answer
-survives a sloppy eyewitness.
+In this run, the vision model misread `502` as `522` in two scene
+descriptions. OCR retained the correct digits, and synthesis selected the
+better-supported evidence because both perception layers preserve their
+provenance. This is the practical reason the engine does not treat a scene
+caption as a transcript.
 
 ## Upgrading an older index
 

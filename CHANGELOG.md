@@ -8,14 +8,19 @@ RAM, CPU-only Windows) — the benchmark tables and demo logs quoted in
 the README all come from real runs there.
 
 ### Everywhere — the skills library and the agent matrix
-- **Seven-skill library** (`adapters/claude-skill/skills/`):
+- **Nine-skill library** (`adapters/claude-skill/skills/`):
   `watching-videos`, `asking-with-evidence`, `the-loop`,
   `learning-from-mistakes`, `extracting-structure`, `video-memory`,
-  `sharing-results`. Each SKILL.md description is a trigger surface with
+  `sharing-results`, `configuring-vision`, and `recovering-from-errors`.
+  Each SKILL.md description is a trigger surface with
   real user phrasings; each body wraps the CLI only, so the set rides
-  into any harness that reads skills. Loaded from a local plugin install,
-  the whole library costs ~805 always-on tokens (measured via
-  `claude plugin details`). `/watch` and `/setup-watch-skill` unchanged.
+  into any harness that reads skills. `/watch` remains the direct
+  user-invocable entry point.
+- **Provider-neutral setup**: `setup-vision` now configures Anthropic,
+  OpenAI, Gemini, OpenRouter, or the optional local Ollama path. One model
+  can serve both tiers, or `--cheap-model` / `--strong-model` can route
+  perception and verification separately. The agent client and model
+  vendor are independent choices.
 - **20+ agents in the matrix** (`docs/agents/`): twelve new pages —
   GitHub Copilot CLI, Kimi Code, Qwen Code, OpenCode, Goose, OpenHands,
   Kilo Code, Qodo, Agent Zero, OpenClaw, Pi, Hermes-style — each written
@@ -25,6 +30,12 @@ the README all come from real runs there.
   `templates/agent-adapter/validate.py`, wired into the suite.
 - **Add-your-agent funnel**: `templates/agent-adapter/` (walkthrough +
   skeleton + validator) — one config block, one doc page, ~20 minutes.
+- **Agent visual system**: every named client guide has a logo-derived
+  pixel-art avatar, the README gallery covers all supported agents, and
+  tests prevent guide/gallery/assets from drifting apart.
+- **Sixteen examples**: a task-oriented catalog now includes a private,
+  offline workflow and self-contained viewer export alongside the original
+  fourteen demonstrations.
 
 ### Remembers — the library layer (index migration v7, new tables only)
 - Every watch distills **notes** — entities, claims, chapters, each with
@@ -82,7 +93,11 @@ the README all come from real runs there.
   dead local vision server (detached restart), corrupt cached answers
   (quarantined), truncated model files (deleted; they re-download),
   vanished frame directories (reindex hint), stale WAL, tight commit
-  headroom (with a local-model recommendation for the machine).
+  headroom (with a local-model recommendation for the machine), and a
+  missing Playwright recording runtime (installed automatically).
+- **Privacy controls now hold during escalation**: disabling OCR also
+  disables dense-resample and zoom-crop OCR, so an offline or deliberately
+  OCR-free run never downloads a model behind the user's back.
 - **Structured-errors audit**: every raise site in `src/` carries an
   actionable `fix` — enforced forever by an AST-walking test; ten real
   error paths asserted to return executable advice. 25 sites were
@@ -138,9 +153,9 @@ for the first time in this release.
   CLI — each with a config backup), then offers a vision backend.
 
 #### Vision backends (`health/vision_setup.py`, `vision/`)
-- **`watch-skill setup-vision`**: Gemini (free tier, the recommended
-  zero-cost default; `WATCHSKILL_GEMINI_API_KEY`) or **Ollama** fully
-  offline. `--verify` runs a live probe-frame describe.
+- **`watch-skill setup-vision`**: Anthropic, OpenAI, Gemini, OpenRouter,
+  or **Ollama** fully offline. Cloud setup accepts an existing provider
+  key and optional model names; `--verify` runs a live probe-frame describe.
 - Low-RAM machines are first-class: RAM-aware model pick (moondream under
   12 GB), context window sized to fit (`WATCHSKILL_OLLAMA_NUM_CTX`),
   temperature-0 reproducible calls, keep-alive pinning, and the loop

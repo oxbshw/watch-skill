@@ -1,5 +1,7 @@
 # Watch Skill in Qwen Code
 
+<img src="../assets/agents/qwen-code.webp" alt="Qwen Code avatar assembling frames into a timeline" width="360">
+
 **Status: doc-verified ☑** — config matches the official Qwen Code docs;
 not executed here.
 

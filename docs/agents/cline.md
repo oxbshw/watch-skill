@@ -1,5 +1,7 @@
 # Watch Skill in Cline (VS Code extension)
 
+<img src="../assets/agents/cline.webp" alt="Cline explorer avatar pinning video evidence to a board" width="360">
+
 **Status: config verified against official docs, not machine-tested ☑**
 (Cline is not installed on the development machine — please report issues.)
 

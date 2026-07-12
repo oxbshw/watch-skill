@@ -1,5 +1,7 @@
 # Watch Skill in Pi
 
+<img src="../assets/agents/pi.webp" alt="Pi avatar measuring exact intervals on a filmstrip" width="360">
+
 **Status: doc-verified ☑** — matches the pi-coding-agent docs; not
 executed here.
 

@@ -26,7 +26,12 @@ _TS = re.compile(r"\b\d{1,2}:\d{2}(?::\d{2})?\b")
 
 
 @pytest.fixture()
-def indexed(sample_video: Path, tmp_path: Path) -> str:
+def indexed(sample_video: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> str:
+    # Retrieval/answer tests must not download OCR model weights.
+    monkeypatch.setenv("WATCHSKILL_OCR_ENABLED", "false")
+    from watch_skill.config import reset_settings
+
+    reset_settings()
     result = watch(
         str(sample_video), out_dir=tmp_path / "ans work",
         run_ocr=False, allow_local_whisper=False, allow_cloud_stt=False,

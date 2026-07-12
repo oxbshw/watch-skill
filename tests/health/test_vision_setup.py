@@ -49,6 +49,28 @@ def test_configure_gemini_rejects_empty_key(tmp_path: Path) -> None:
         vs.configure_gemini("   ", path=tmp_path / ".env")
 
 
+def test_every_cloud_provider_writes_its_key_and_tiers(tmp_path: Path) -> None:
+    for provider, (key_name, cheap, strong) in vs.CLOUD_PROVIDER_DEFAULTS.items():
+        env = tmp_path / f"{provider}.env"
+        vs.configure_cloud(provider, f"{provider}-secret", path=env)
+        text = env.read_text(encoding="utf-8")
+        assert f"{key_name}={provider}-secret" in text
+        assert f"WATCHSKILL_VISION_CHEAP_PROVIDER={provider}" in text
+        assert f"WATCHSKILL_VISION_CHEAP_MODEL={cheap}" in text
+        assert f"WATCHSKILL_VISION_STRONG_PROVIDER={provider}" in text
+        assert f"WATCHSKILL_VISION_STRONG_MODEL={strong}" in text
+
+
+def test_configure_cloud_accepts_separate_model_tiers(tmp_path: Path) -> None:
+    env = tmp_path / ".env"
+    vs.configure_cloud(
+        "openai", "secret", cheap_model="cheap-vision", strong_model="strong-vision", path=env
+    )
+    text = env.read_text(encoding="utf-8")
+    assert "WATCHSKILL_VISION_CHEAP_MODEL=cheap-vision" in text
+    assert "WATCHSKILL_VISION_STRONG_MODEL=strong-vision" in text
+
+
 def test_configure_ollama_pins_batch_size_one(tmp_path: Path) -> None:
     env = tmp_path / ".env"
     vs.configure_ollama(model="llava:7b", path=env)

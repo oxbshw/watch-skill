@@ -1,5 +1,7 @@
 # Watch Skill in Claude Code
 
+<img src="../assets/agents/claude-code.webp" alt="Claude Code avatar inspecting film frames beside a terminal" width="360">
+
 **Status: machine-tested ✅** (this repo's MCP server runs registered in
 Claude Code on the development machine; all tools exercised end-to-end.
 Last live run 2026-07-06: the `/watch` skill adapter processed a real

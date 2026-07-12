@@ -1,5 +1,7 @@
 # Watch Skill in Codex CLI (OpenAI)
 
+<img src="../assets/agents/codex-cli.webp" alt="Codex CLI avatar feeding film through a command-line terminal" width="360">
+
 **Status: machine-configured ◐** — config written by `watch-skill setup` on
 a real machine; `codex mcp list` shows watch-skill enabled and the server
 command answers MCP `initialize`. A full codex chat session was not run.

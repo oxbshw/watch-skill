@@ -134,6 +134,65 @@ def check_ffmpeg(fix: bool = True) -> CheckResult:
         return CheckResult("ffmpeg", "fail", str(exc))
 
 
+def _playwright_cache_root() -> Path:
+    """Default/custom Playwright browser cache for the current platform."""
+    configured = os.environ.get("PLAYWRIGHT_BROWSERS_PATH")
+    if configured and configured != "0":
+        return Path(configured).expanduser()
+    if configured == "0":
+        import playwright
+
+        return Path(playwright.__file__).parent / "driver" / "package" / ".local-browsers"
+    if sys.platform == "win32":
+        return Path(os.environ.get("LOCALAPPDATA", Path.home() / "AppData/Local")) / "ms-playwright"
+    if sys.platform == "darwin":
+        return Path.home() / "Library" / "Caches" / "ms-playwright"
+    return Path.home() / ".cache" / "ms-playwright"
+
+
+def _playwright_ffmpeg_installed() -> bool:
+    root = _playwright_cache_root()
+    return any(
+        path.is_file()
+        for folder in root.glob("ffmpeg-*")
+        for path in folder.rglob("ffmpeg*")
+    )
+
+
+def check_playwright_recording(fix: bool = True) -> CheckResult:
+    """Playwright's own recording ffmpeg is required even with system ffmpeg."""
+    try:
+        import playwright  # noqa: F401, PLC0415
+    except ImportError:
+        return CheckResult(
+            "playwright-recording", "ok", "Playwright not installed — browser capture is optional"
+        )
+    if _playwright_ffmpeg_installed():
+        return CheckResult("playwright-recording", "ok", "Playwright recording ffmpeg installed")
+    if not fix:
+        return CheckResult(
+            "playwright-recording",
+            "warn",
+            "Playwright recording ffmpeg missing — browser capture cannot record video",
+        )
+    try:
+        result = _run([sys.executable, "-m", "playwright", "install", "ffmpeg"], timeout=600.0)
+    except (subprocess.TimeoutExpired, OSError) as exc:
+        return CheckResult("playwright-recording", "warn", f"install failed: {exc}")
+    if result.returncode == 0 and _playwright_ffmpeg_installed():
+        return CheckResult(
+            "playwright-recording",
+            "ok",
+            "installed Playwright recording ffmpeg",
+            fix_applied="playwright-install-ffmpeg",
+        )
+    detail = (result.stderr or result.stdout or "unknown error").strip()[-300:]
+    return CheckResult(
+        "playwright-recording",
+        "warn",
+        f"Playwright recording ffmpeg missing ({detail}); run `playwright install ffmpeg`",
+    )
+
 def check_yt_dlp(fix: bool = True) -> CheckResult:
     """yt-dlp present; bootstrap the standalone binary when missing."""
     found = binaries.find_binary("yt-dlp")
@@ -518,6 +577,7 @@ def run_doctor(fix: bool = True) -> DoctorReport:
     report = DoctorReport()
     report.checks.append(check_python())
     report.checks.append(check_ffmpeg(fix=fix))
+    report.checks.append(check_playwright_recording(fix=fix))
     report.checks.append(check_yt_dlp(fix=fix))
     report.checks.append(check_yt_dlp_freshness(fix=fix))
     report.checks.append(check_js_runtime(fix=fix))

@@ -1,5 +1,7 @@
 # Watch Skill in Windsurf
 
+<img src="../assets/agents/windsurf.webp" alt="Windsurf avatar riding a filmstrip with a timestamp compass" width="360">
+
 **Status: config verified against official docs, not machine-tested ☑**
 (Windsurf is not installed on the development machine — please report issues.)
 

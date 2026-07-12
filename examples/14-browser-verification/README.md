@@ -1,14 +1,17 @@
-# 14 — Browser-agent verification (the flagship)
+# 14 — Browser-agent verification
 
 A checkout page updates its total when the button is clicked — and for
 about 1.5 seconds mid-flow the total renders **$NaN** before the second
 pass fixes it. The end state is correct: any screenshot taken after the
 flow finishes looks perfect. Only the recording shows the defect.
 
-That is the whole argument. Browser agents browse, click, and
-screenshot; a screenshot shows a moment, and moments lie. watch-skill is
-the independent eye that watches the recording of the session and
-verdicts the FLOW.
+The example demonstrates why end-state screenshots are insufficient for
+flow verification. Watch Skill records the interaction and evaluates the
+sequence, including intermediate states.
+
+Requires Playwright with a Chromium-compatible browser. It can use a
+configured vision critic; a deterministic OCR critic keeps the demonstration
+runnable without cloud access.
 
 ```powershell
 uv run --no-sync python examples/14-browser-verification/browser_verification_demo.py
@@ -27,7 +30,7 @@ What it does:
    `checkout_fixed.html`).
 4. Iteration 1 passes and renders the before/after MP4 + GIF proof.
 
-## What building this caught (a story about receipts)
+## Regressions this example covers
 
 The demo failed three times before it passed, and each failure was a
 real defect this repo has now fixed and regression-tested:
@@ -45,9 +48,9 @@ real defect this repo has now fixed and regression-tested:
   appears" ban X and Y (`loop/critic.py::_strip_light_verbs`, tests in
   `tests/loop/test_describe_critic.py`).
 
-A verification tool that cannot see what it recorded, or cannot parse
-how people actually phrase criteria, verifies nothing. The flagship demo
-is the test that proved both.
+Both fixes have focused regression tests. Keeping the complete demonstration
+runnable ensures the frame-selection and criteria-parsing paths continue to
+work together, not only in isolation.
 
 ## Real output
 

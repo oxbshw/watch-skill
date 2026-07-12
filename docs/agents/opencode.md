@@ -1,5 +1,7 @@
 # Watch Skill in OpenCode
 
+<img src="../assets/agents/opencode.webp" alt="OpenCode modular avatar rearranging video frames" width="360">
+
 **Status: doc-verified ☑** — config matches the official opencode.ai MCP
 docs; not executed here.
 

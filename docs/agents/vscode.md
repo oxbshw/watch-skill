@@ -1,5 +1,7 @@
 # Watch Skill in VS Code (native MCP / Copilot agent mode)
 
+<img src="../assets/agents/vscode.webp" alt="VS Code avatar pinning a video frame beside code" width="360">
+
 **Status: config verified against official docs, not machine-tested ☑**
 (VS Code with Copilot agent mode is not set up on the development machine.)
 

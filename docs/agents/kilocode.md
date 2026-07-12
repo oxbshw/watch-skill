@@ -1,5 +1,7 @@
 # Watch Skill in Kilo Code
 
+<img src="../assets/agents/kilocode.webp" alt="Kilo Code mechanic avatar repairing a filmstrip" width="360">
+
 **Status: doc-verified ☑** — config matches the current kilo.ai docs;
 not executed here.
 

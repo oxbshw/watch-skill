@@ -1,5 +1,7 @@
 # Watch Skill in Claude Desktop
 
+<img src="../assets/agents/claude-desktop.webp" alt="Claude Desktop avatar presenting timestamped film frames from a CRT" width="360">
+
 **Status: machine-configured ◐** — `watch-skill setup` wrote this config on
 a real machine (existing keys preserved, backup taken) and the server
 command answered MCP `initialize`; a full in-app session was not run.

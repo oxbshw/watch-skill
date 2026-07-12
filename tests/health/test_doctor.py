@@ -34,6 +34,24 @@ def test_check_ffmpeg_ok_when_present(monkeypatch: pytest.MonkeyPatch, tmp_path:
     assert result.status == "ok"
 
 
+def test_playwright_recording_check_is_optional_without_package(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(doctor, "_playwright_ffmpeg_installed", lambda: True)
+    result = doctor.check_playwright_recording(fix=False)
+    assert result.status == "ok"
+
+
+def test_playwright_recording_installs_missing_ffmpeg(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    states = iter([False, True])
+    monkeypatch.setattr(doctor, "_playwright_ffmpeg_installed", lambda: next(states))
+    monkeypatch.setattr(doctor, "_run", lambda cmd, timeout=600.0: _completed())
+    result = doctor.check_playwright_recording(fix=True)
+    assert result.status == "ok"
+    assert result.fix_applied == "playwright-install-ffmpeg"
+
 def test_check_yt_dlp_bootstraps_when_missing(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:

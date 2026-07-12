@@ -34,9 +34,13 @@ watch-skill doctor --json
 - If `watch-skill` itself is not on PATH: `pip install watch-skill` (or
   `uv tool install watch-skill`), then re-run the doctor.
 
-No API key is ever required: transcription falls back to LOCAL faster-whisper.
-Cloud STT is opt-in (`--cloud-stt`) and only ever uploads extracted mono
-audio — the video file never leaves the machine.
+No API key is required for acquisition, transcription, OCR, indexing, or
+search: transcription falls back to local faster-whisper. Visual synthesis
+and verification can use the user's existing Anthropic, OpenAI, Gemini, or
+OpenRouter key, or an optional local Ollama model. The agent and provider are
+independent; see the `configuring-vision` skill. Cloud STT is opt-in
+(`--cloud-stt`) and only ever uploads extracted mono audio — the video file
+never leaves the machine.
 
 ## Step 1 — Watch
 

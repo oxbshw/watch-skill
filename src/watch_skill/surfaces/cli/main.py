@@ -604,15 +604,31 @@ def _verify_vision_live() -> None:
 
 @app.command("setup-vision")
 def setup_vision(
-    provider: str = typer.Option(..., "--provider", help="gemini | ollama"),
-    api_key: str | None = typer.Option(
-        None, "--api-key", help="Gemini API key (provider=gemini). Free key: aistudio.google.com/apikey"
+    provider: str = typer.Option(
+        ...,
+        "--provider",
+        help="anthropic | openai | gemini | openrouter | ollama",
     ),
-    model: str | None = typer.Option(None, "--model", help="Model tag; the provider default if omitted."),
+    api_key: str | None = typer.Option(
+        None,
+        "--api-key",
+        help="API key for a cloud provider. Prefer the matching WATCHSKILL_* env var in shared shells.",
+    ),
+    model: str | None = typer.Option(
+        None,
+        "--model",
+        help="Use one model for both tiers; provider defaults if omitted.",
+    ),
+    cheap_model: str | None = typer.Option(
+        None, "--cheap-model", help="Override the bulk/first-pass model."
+    ),
+    strong_model: str | None = typer.Option(
+        None, "--strong-model", help="Override the verification/critic model."
+    ),
     pull: bool = typer.Option(True, "--pull/--no-pull", help="For Ollama: pull the model if it is missing."),
     verify: bool = typer.Option(False, "--verify", help="Run one live vision call to confirm it works."),
 ) -> None:
-    """Configure a vision backend: Gemini (free tier, recommended) or offline Ollama.
+    """Configure a supported cloud provider or the optional local Ollama path.
 
     Writes the WATCHSKILL_VISION_* settings into .env (backing it up first).
     Transcription + search already work with no vision backend at all.
@@ -622,18 +638,19 @@ def setup_vision(
     from watch_skill.health import vision_setup as vs
 
     provider = provider.lower().strip()
-    if provider == "gemini":
+    if provider in vs.CLOUD_PROVIDER_DEFAULTS:
         try:
-            env, backup = vs.configure_gemini(
+            env, backup = vs.configure_cloud(
+                provider,
                 api_key or "",
-                cheap_model=model or vs.DEFAULT_GEMINI_CHEAP,
-                strong_model=model or vs.DEFAULT_GEMINI_STRONG,
+                cheap_model=cheap_model or model,
+                strong_model=strong_model or model,
             )
         except WatchSkillError as exc:
             print(json.dumps(exc.to_dict(), indent=2))
             raise typer.Exit(code=1) from None
         note = f" (backup: {backup.name})" if backup else ""
-        _console.print(f"[green]+[/green] Gemini configured -> {env}{note}")
+        _console.print(f"[green]+[/green] {provider} configured -> {env}{note}")
     elif provider == "ollama":
         import shutil
         import subprocess
@@ -663,7 +680,8 @@ def setup_vision(
         note = f" (backup: {backup.name})" if backup else ""
         _console.print(f"[green]+[/green] Ollama configured ({chosen}) -> {env}{note}")
     else:
-        print(f"Unknown provider: {provider!r} (expected 'gemini' or 'ollama').")
+        supported = " | ".join([*vs.CLOUD_PROVIDER_DEFAULTS, "ollama"])
+        print(f"Unknown provider: {provider!r} (expected {supported}).")
         raise typer.Exit(code=1)
 
     reset_settings()  # pick up the freshly written .env

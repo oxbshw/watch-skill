@@ -18,6 +18,17 @@ from watch_skill.loop.diff import align_frames, compare_issues  # noqa: E402
 from watch_skill.loop.runner import loop_iterate, loop_start, loop_status  # noqa: E402
 from watch_skill.perceive.types import Frame, PerceptionResult, VideoMetadata  # noqa: E402
 
+
+@pytest.fixture(autouse=True)
+def disable_real_ocr_for_loop_unit_tests(
+    isolated_settings: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Scripted loop tests must not load or download OCR models."""
+    monkeypatch.setenv("WATCHSKILL_OCR_ENABLED", "false")
+    from watch_skill.config import reset_settings
+
+    reset_settings()
+
 # --- critic schema -----------------------------------------------------------
 
 
