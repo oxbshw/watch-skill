@@ -1,6 +1,6 @@
 # Changelog
 
-## v1.0.0 — 2026-07-11
+## v1.0.0 — 2026-07-12
 
 Video skills for every AI agent, with memory. One release, seven claims,
 each shipped with a measured receipt from the reference machine (8 GB
