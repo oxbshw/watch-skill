@@ -10,21 +10,33 @@
 
 # Watch Skill
 
-**Video understanding and memory for AI agents.**
+**Give every AI agent eyes for video—and a way to inspect its own work.**
 
-Watch Skill turns video into evidence an agent can search, cite, and revisit. It accepts
-URLs from 1,800+ sites, live HLS/DASH streams, local files, meeting recordings, and an
-agent's own browser or desktop capture. Each watch produces a persistent index of scenes,
-on-screen text, and transcript—available through skills, 23 MCP tools, a CLI, REST, and
-native framework adapters.
+Watch Skill is a local-first video intelligence layer for agents. It turns videos, live
+streams, meetings, and screen recordings into searchable, timestamped evidence. Agents
+can understand what happened, retain it across sessions, and cite the exact moment behind
+an answer.
 
-**Watch. Remember. Verify.**
+When the video is the agent's own browser or desktop session, **THE LOOP** closes the
+feedback cycle: record the work, evaluate it against plain-language criteria, guide the
+fix, and verify the result. The same engine is available through skills, 23 MCP tools, a
+CLI, REST, and native framework adapters.
+
+**Watch. Remember. Fix. Verify.**
 
 [![CI](https://github.com/oxbshw/watch-skill/actions/workflows/ci.yml/badge.svg)](https://github.com/oxbshw/watch-skill/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-3776AB)](pyproject.toml)
 
 </div>
+
+## One video layer, three agent capabilities
+
+| Capability | What the agent gains |
+|---|---|
+| **Watch** | Scene-aware frames, on-screen text, and local-first transcription from 1,800+ sites, live HLS/DASH streams, local media, meetings, browsers, windows, and desktops. |
+| **Remember** | A persistent, searchable index with timestamp citations, hybrid retrieval, cross-video synthesis, and reusable lessons. |
+| **Verify** | A capture → critique → fix → proof loop for browser flows, interfaces, generated video, gameplay, and monitored streams. |
 
 ## Start in 60 seconds
 
