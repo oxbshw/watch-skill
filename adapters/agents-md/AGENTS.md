@@ -73,7 +73,7 @@ retry the same command verbatim.
 ## Machine-to-machine surfaces
 
 - MCP server: `watch-skill serve` (stdio) or `watch-skill serve --http`
-  (streamable HTTP on :8747) — 21 tools; the full reference is
+  (streamable HTTP on :8747) — 23 tools; the full reference is
   [`docs/tools/README.md`](../../docs/tools/README.md).
 - REST API: `watch-skill api` (OpenAPI spec at `http://127.0.0.1:8748/openapi.json`).
 - Python: `from watch_skill.watch import watch`.

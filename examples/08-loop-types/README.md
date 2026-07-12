@@ -1,6 +1,6 @@
 # 08 — Loop types (video-gen, game, monitor)
 
-v0.7 generalizes THE LOOP into a pluggable framework: every loop shares the
+THE LOOP is a pluggable framework: every loop shares the
 same spine — produce a recording → perceive → critique against pass criteria
 → diff vs the previous iteration → iterate → before/after artifact — and a
 *loop type* only decides how the recording is produced. `loop_start` /

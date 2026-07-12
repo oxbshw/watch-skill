@@ -176,7 +176,7 @@ pass, `max_iterations`, or two iterations without score progress. On pass
 with ≥2 iterations it renders a before/after MP4+GIF proof artifact. Every
 iteration persists under `<data_dir>/loops/<loop_id>/`.
 
-Since v0.7 the runner is a **pluggable framework** (`loop/framework.py`): a
+The runner is a **pluggable framework** (`loop/framework.py`): a
 loop type is a registry entry deciding only how the recording for an
 iteration is produced. Built-ins: `ui` (the original), `video-gen` (run a
 generator command, adopt the video it writes), and `game` (optionally launch
