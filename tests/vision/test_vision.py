@@ -186,6 +186,34 @@ def test_openrouter_free_model_costs_nothing() -> None:
     assert price_for("openrouter", "qwen/qwen2.5-vl-72b-instruct:free") == 0.0
 
 
+def test_minimax_wire_format_and_regional_base_url(
+    frame: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("WATCHSKILL_MINIMAX_API_KEY", "mm-test-key")
+    monkeypatch.setenv("WATCHSKILL_MINIMAX_BASE_URL", "https://api.minimaxi.com/v1")
+    reset_settings()
+    capture: dict = {}
+    _mock_post(
+        monkeypatch,
+        {"choices": [{"message": {"content": "a red frame via minimax"}}]},
+        capture,
+    )
+
+    out = VisionClient("minimax", "MiniMax-M3").generate("describe", [frame])
+    assert out == "a red frame via minimax"
+    assert capture["url"] == "https://api.minimaxi.com/v1/chat/completions"
+    assert capture["headers"]["Authorization"] == "Bearer mm-test-key"
+    assert capture["body"]["model"] == "MiniMax-M3"
+    assert capture["body"]["messages"][0]["content"][0]["type"] == "image_url"
+
+
+def test_minimax_prices_are_registered() -> None:
+    from watch_skill.vision.registry import price_for
+
+    assert price_for("minimax", "MiniMax-M3") == 0.6
+    assert price_for("minimax", "MiniMax-M2.7") == 0.3
+
+
 def test_describe_frames_batches_by_setting(
     frame: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
