@@ -53,6 +53,13 @@ PROVIDERS: dict[str, ProviderSpec] = {
         key_setting=None,
         default_price_per_mtok=0.0,
     ),
+    "local": ProviderSpec(
+        name="local",
+        # base from settings.local_openai_base_url; OpenAI wire format
+        endpoint="{base}/v1/chat/completions",
+        key_setting=None,
+        default_price_per_mtok=0.0,
+    ),
 }
 
 # Model-specific price overrides live in prices.json next to this file —

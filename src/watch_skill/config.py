@@ -77,6 +77,13 @@ class Settings(BaseSettings):
     groq_api_key: SecretStr | None = None
     openrouter_api_key: SecretStr | None = None
     ollama_base_url: str = "http://127.0.0.1:11434"
+    local_openai_base_url: str = Field(
+        default="http://127.0.0.1:4000",
+        description="Base URL of an OpenAI-compatible gateway served by the "
+        "`local` provider (LiteLLM, LM Studio, vLLM, Jan, or any local router). "
+        "Keyless: the gateway owns the upstream credentials, so no "
+        "frame-bearing request carries a secret out of this process.",
+    )
     ollama_num_ctx: int = Field(
         default=2048,
         description="Context window for local Ollama vision calls. The compute "

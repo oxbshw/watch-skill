@@ -77,6 +77,20 @@ def test_ollama_needs_no_key(frame: Path, monkeypatch: pytest.MonkeyPatch) -> No
     assert "11434" in capture["url"]
 
 
+def test_local_gateway_needs_no_key(frame: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("WATCHSKILL_LOCAL_OPENAI_BASE_URL", "http://127.0.0.1:9999/")
+    reset_settings()
+    capture: dict = {}
+    _mock_post(monkeypatch, {"choices": [{"message": {"content": "gateway answer"}}]}, capture)
+    out = VisionClient("local", "some/vision-model").generate("describe", [frame])
+    assert out == "gateway answer"
+    # OpenAI wire format on the gateway's own endpoint, trailing slash stripped.
+    assert capture["url"] == "http://127.0.0.1:9999/v1/chat/completions"
+    assert capture["body"]["messages"][0]["content"][0]["type"] == "image_url"
+    # Keyless: the gateway owns the upstream credential, no secret leaves here.
+    assert capture["headers"]["Authorization"] == "Bearer local"
+
+
 def test_missing_key_is_structured(frame: Path) -> None:
     with pytest.raises(VisionError) as excinfo:
         VisionClient("anthropic", "claude-sonnet-5").generate("x", [frame])

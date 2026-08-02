@@ -132,12 +132,26 @@ def _ollama_extract(data: dict) -> str:
     return data.get("message", {}).get("content", "")
 
 
+def _local_request(model: str, key: str, prompt: str, images: list[Path]) -> tuple[str, dict, dict]:
+    # A local OpenAI-compatible gateway (LiteLLM, LM Studio, vLLM, ...). Same wire format
+    # as `openai`, different endpoint, and no key: the gateway holds the
+    # upstream credentials itself. Auth is still sent because some gateways
+    # reject a request with no Authorization header at all.
+    settings = get_settings()
+    endpoint = PROVIDERS["local"].endpoint.format(
+        base=settings.local_openai_base_url.rstrip("/")
+    )
+    _, headers, body = _openai_request(model, key or "local", prompt, images)
+    return endpoint, headers, body
+
+
 _BUILDERS: dict[str, tuple[Callable, Callable]] = {
     "anthropic": (_anthropic_request, _anthropic_extract),
     "openai": (_openai_request, _openai_extract),
     "openrouter": (_openrouter_request, _openai_extract),
     "gemini": (_gemini_request, _gemini_extract),
     "ollama": (_ollama_request, _ollama_extract),
+    "local": (_local_request, _openai_extract),
 }
 
 
