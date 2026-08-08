@@ -321,6 +321,46 @@ def bench_perception_cmd(
         print(f"\nwritten: {write}")
 
 
+@bench_app.command("providers")
+def bench_providers_cmd(
+    fixtures: Path = typer.Option(
+        Path("benchmarks/perception/fixtures"), "--fixtures",
+        help="Committed fixture directory (images + fixtures.json).",
+    ),
+    provider: list[str] = typer.Option(
+        None, "--provider", help="Limit to these providers (repeatable). Default: every configured one."
+    ),
+    model: str | None = typer.Option(
+        None, "--model", help="One model for every provider, instead of each one's default."
+    ),
+    write: Path | None = typer.Option(None, "--write", help="Write the markdown report here."),
+) -> None:
+    """Read the same frames with every provider you hold a key for.
+
+    Sixteen providers is a menu; this is how you pick one. Identical inputs,
+    the same char-hit metric, and cost from each provider's own reported
+    tokens — never an estimate.
+    """
+    from watch_skill.bench.providers import bench_providers, render_markdown
+
+    if not (fixtures / "fixtures.json").is_file():
+        print(f"no fixtures at {fixtures} — run benchmarks/perception/make_fixtures.py first")
+        raise typer.Exit(code=1)
+
+    model_for = None
+    if model:
+        from watch_skill.vision.registry import PROVIDERS
+
+        model_for = dict.fromkeys(PROVIDERS, model)
+
+    report = bench_providers(fixtures, providers=list(provider) if provider else None, model_for=model_for)
+    markdown = render_markdown(report)
+    print(markdown)
+    if write is not None:
+        write.write_text(markdown, encoding="utf-8")
+        print(f"written: {write}")
+
+
 library_app = typer.Typer(help="Cross-video memory: notes, synthesis, overview.")
 app.add_typer(library_app, name="library")
 

@@ -40,6 +40,8 @@ over stdio; remote clients use the streamable HTTP endpoint.
 | [Zed](zed.md) | `settings.json` — `context_servers`, not `mcpServers` | Documentation-verified |
 | [Roo Code](roo-code.md) | `.roo/mcp.json` or global `mcp_settings.json` | Documentation-verified |
 | [Continue](continue.md) | `.continue/mcpServers/watch-skill.json` | Documentation-verified |
+| [JetBrains IDEs](jetbrains.md) | `.junie/mcp/mcp.json`, or AI Assistant settings | Documentation-verified |
+| [Aider](aider.md) | No MCP client — runs the CLI through `/run` | Documentation-verified |
 
 ## Plugin and skill-native agents
 

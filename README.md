@@ -152,6 +152,12 @@ See [Getting started](docs/getting-started.md) for manual installation and
 - **Multilingual retrieval.** Script-aware OCR routing, Arabic normalization, CJK substring
   matching, and multilingual embeddings support questions across languages.
 
+Sixteen providers is a menu, not an answer, so there is a benchmark that
+settles it on your own keys: `watch-skill bench providers` reads the same
+committed frames with every provider you have configured and prints char-hit
+rate, latency, and cost from each one's *reported* tokens — see
+[method and results](benchmarks/providers/README.md).
+
 The repository includes reproducible [cost](benchmarks/cost/RESULTS.md) and
 [perception](benchmarks/perception/RESULTS.md) benchmarks. Product claims in this README
 link to the relevant implementation notes or testable example rather than relying on

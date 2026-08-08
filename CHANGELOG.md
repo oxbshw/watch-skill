@@ -1,5 +1,28 @@
 # Changelog
 
+## Unreleased
+
+### A benchmark that picks a provider for you
+- `watch-skill bench providers` reads the same committed fixtures with every
+  provider you hold a key for, and prints char-hit rate, latency, and cost.
+  Sixteen providers is a menu; this is how you choose one.
+- Cost is the provider's **own reported** token count times the dated price
+  in `prices.json`. A provider that reports no usage gets a dash. A call that
+  fails is reported as failed, never as 0% accuracy — those mean different
+  things. A run with no configured provider prints no table at all rather
+  than an empty one.
+- `VisionClient.last_usage` carries the reported token usage from the most
+  recent call, so cost comes from the provider rather than an estimate.
+  `generate` still returns text, so nothing calling it changes.
+
+### Two more agents
+- [JetBrains IDEs](docs/agents/jetbrains.md) — Junie's
+  `.junie/mcp/mcp.json` and AI Assistant, which keep separate configuration.
+- [Aider](docs/agents/aider.md), honestly: it has **no MCP client** — the
+  RFC is open and the pull requests were closed unmerged — so the page
+  documents the `/run` route through the CLI instead of pasting an
+  `mcpServers` block that Aider would ignore.
+
 ## v1.2.0 — 2026-08-08
 
 ### Skills reach every agent, not just Claude Code

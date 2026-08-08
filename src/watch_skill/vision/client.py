@@ -171,6 +171,11 @@ class VisionClient:
 
     provider: str
     model: str
+    # Token usage the provider reported on the most recent call, when it
+    # reported any. `generate` returns text — changing that would ripple
+    # through every caller — so the usage is left here for the cost meter
+    # and the provider benchmark to read, instead of being estimated.
+    last_usage: dict[str, Any] | None = None
 
     def _api_key(self) -> str:
         spec = PROVIDERS[self.provider]
@@ -206,7 +211,9 @@ class VisionClient:
                 endpoint, headers=headers, json=body, timeout=_timeout_for(self.provider)
             )
             response.raise_for_status()
-            text = extract(response.json())
+            payload = response.json()
+            self.last_usage = payload.get("usage") if isinstance(payload, dict) else None
+            text = extract(payload)
         except httpx.HTTPStatusError as exc:
             if self.provider == "ollama" and exc.response.status_code >= 500:
                 # a just-(re)started local server can 500 while the model
@@ -220,7 +227,9 @@ class VisionClient:
                         timeout=_timeout_for(self.provider),
                     )
                     response.raise_for_status()
-                    text = extract(response.json())
+                    payload = response.json()
+                    self.last_usage = payload.get("usage") if isinstance(payload, dict) else None
+                    text = extract(payload)
                 except httpx.HTTPError as retry_exc:
                     raise VisionError(
                         "ollama kept failing after a retry (HTTP 5xx): the "
@@ -266,7 +275,9 @@ class VisionClient:
                         timeout=_timeout_for(self.provider),
                     )
                     response.raise_for_status()
-                    text = extract(response.json())
+                    payload = response.json()
+                    self.last_usage = payload.get("usage") if isinstance(payload, dict) else None
+                    text = extract(payload)
                 except httpx.HTTPError as retry_exc:
                     raise VisionError(
                         "the local vision server died mid-call and did not "
