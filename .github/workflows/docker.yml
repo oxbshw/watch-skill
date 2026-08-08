@@ -29,6 +29,8 @@ jobs:
     permissions:
       contents: read
       packages: write
+      id-token: write      # OIDC identity the provenance attestation is signed with
+      attestations: write
     steps:
       - uses: actions/checkout@v4
 
@@ -72,13 +74,33 @@ jobs:
           cat doctor.json
           docker run --rm "${{ env.IMAGE }}:ci" --help > /dev/null
 
+      # arm64 matters: Apple Silicon is most of the macOS install base, and
+      # running an amd64 image under emulation makes ffmpeg work crawl.
+      - name: Set up QEMU for the arm64 build
+        if: github.event_name != 'pull_request'
+        uses: docker/setup-qemu-action@v3
+
       - name: Push
         if: github.event_name != 'pull_request'
+        id: push
         uses: docker/build-push-action@v6
         with:
           context: .
           push: true
+          platforms: linux/amd64,linux/arm64
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          provenance: mode=max
+          sbom: true
+
+      # Signs the pushed digest with the workflow's own identity, so anyone
+      # can verify the image came from this repository and no other.
+      - name: Attest the build provenance
+        if: github.event_name != 'pull_request'
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-name: ${{ env.IMAGE }}
+          subject-digest: ${{ steps.push.outputs.digest }}
+          push-to-registry: true

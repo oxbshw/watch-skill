@@ -1,9 +1,14 @@
-"""The Claude Code plugin + marketplace packaging is correct and versions
-agree across every manifest.
+"""Packaging for both skill ecosystems, and versions that agree everywhere.
+
+The skills used to live under `adapters/claude-skill/`, where only Claude
+Code could find them. `npx skills add`, which installs into 27+ agents,
+looks for a top-level `skills/` directory, so that is now the canonical
+location and the plugin is rooted at the repository instead — one copy
+serving both.
 
 `/plugin marketplace add oxbshw/watch-skill` resolves the repo-root
-`.claude-plugin/marketplace.json`; installing copies ONLY the plugin
-directory, so every path a manifest references must live inside it.
+`.claude-plugin/marketplace.json`; every path a manifest references must
+resolve from the plugin root.
 """
 from __future__ import annotations
 
@@ -15,7 +20,7 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
-PLUGIN_DIR = ROOT / "adapters" / "claude-skill"
+PLUGIN_DIR = ROOT
 
 
 def _load_json(path: Path) -> dict:
@@ -96,8 +101,55 @@ def test_package_reports_the_release_version() -> None:
 
 @pytest.mark.parametrize("manifest", [
     ".claude-plugin/marketplace.json",
-    "adapters/claude-skill/.claude-plugin/plugin.json",
-    "adapters/claude-skill/.mcp.json",
+    ".claude-plugin/plugin.json",
+    ".mcp.json",
+    "skills.sh.json",
 ])
 def test_manifests_are_valid_json(manifest: str) -> None:
     _load_json(ROOT / manifest)  # raises on malformed JSON
+
+
+# --- cross-agent skill discovery --------------------------------------------
+#
+# `npx skills add oxbshw/watch-skill` installs into 27+ agents, and it finds
+# skills by looking for a top-level `skills/` directory. While they lived
+# under adapters/claude-skill/ only Claude Code could see them.
+
+SKILLS_DIR = ROOT / "skills"
+
+
+def test_skills_live_at_the_top_level_where_the_skills_cli_looks() -> None:
+    assert SKILLS_DIR.is_dir(), "npx skills expects a top-level skills/ directory"
+    found = sorted(p.parent.name for p in SKILLS_DIR.glob("*/SKILL.md"))
+    assert len(found) >= 10, f"expected the full skill library, found {found}"
+    assert "watch" in found, "the entry-point skill must be discoverable"
+
+
+def test_the_skills_manifest_points_at_that_directory() -> None:
+    manifest = _load_json(ROOT / "skills.sh.json")
+    assert manifest["name"] == "watch-skill"
+    assert _rel(ROOT, manifest["skills"]).is_dir()
+
+
+@pytest.mark.parametrize("skill_md", sorted((ROOT / "skills").glob("*/SKILL.md")), ids=lambda p: p.parent.name)
+def test_every_skill_has_the_frontmatter_agents_read(skill_md: Path) -> None:
+    """name and description are what a harness matches against a user's words.
+
+    A skill missing either is invisible: it installs and never triggers.
+    """
+    text = skill_md.read_text(encoding="utf-8")
+    assert text.startswith("---"), "SKILL.md must open with YAML frontmatter"
+    frontmatter = text.split("---")[1]
+
+    name = re.search(r"^name:\s*(\S+)", frontmatter, re.M)
+    assert name, "no name in frontmatter"
+    assert name.group(1) == skill_md.parent.name, "name must match its directory"
+
+    description = re.search(r"^description:\s*(.+)$", frontmatter, re.M)
+    assert description, "no description in frontmatter"
+    assert len(description.group(1)) > 40, "description too thin to trigger on"
+
+
+def test_no_skill_is_left_behind_in_the_old_location() -> None:
+    """A stale copy would drift from the canonical one and confuse installs."""
+    assert not (ROOT / "adapters" / "claude-skill").exists()

@@ -42,4 +42,4 @@ similar agent in `docs/agents/` first:
 - YAML extensions block (Goose)
 
 Skills-directory agents (OpenClaw, Pi, Hermes-style) skip config
-entirely — point them at `adapters/claude-skill/skills/`.
+entirely — point them at `skills/`.

@@ -31,7 +31,7 @@ jobs:
           uv run python - <<'EOF'
           import zipfile
           from pathlib import Path
-          root = Path("adapters/claude-skill/skills/watch")
+          root = Path("skills/watch")
           Path("dist").mkdir(exist_ok=True)
           with zipfile.ZipFile("dist/watch-skill.skill", "w", zipfile.ZIP_DEFLATED) as z:
               for f in root.rglob("*"):
@@ -70,9 +70,15 @@ jobs:
         with:
           name: dist
           path: dist
-      - uses: astral-sh/setup-uv@v5
-      # No token: PyPI verifies the workflow's OIDC identity instead.
-      # Configure the publisher once at
+      # No token: PyPI verifies this workflow's OIDC identity. The publisher
+      # is configured once at
       # https://pypi.org/manage/project/watch-skill/settings/publishing/
+      #
+      # The official action rather than `uv publish` because it also signs
+      # PEP 740 attestations, so an installer can verify a wheel was built
+      # by this workflow in this repository and not swapped en route.
       - name: Publish to PyPI
-        run: uv publish --trusted-publishing always
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          attestations: true
+          print-hash: true

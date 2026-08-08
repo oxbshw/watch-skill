@@ -57,5 +57,5 @@ Or per-project via `.mcp.json` in your project root:
 
 - Tool responses include frames as real images (Claude sees them inline),
   capped at 12 per response.
-- The Claude Skill adapter (`adapters/claude-skill/`) offers `/watch` as a
-  slash command on top of the same engine — see [that README](../../adapters/claude-skill/skills/watch/SKILL.md).
+- The Claude Skill adapter (``) offers `/watch` as a
+  slash command on top of the same engine — see [that README](../../skills/watch/SKILL.md).

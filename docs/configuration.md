@@ -81,9 +81,49 @@ watch-skill setup-vision --provider openrouter --api-key <KEY>
 watch-skill setup-vision --provider ollama
 ```
 
+### Every supported provider
+
+Anthropic, Gemini, and Ollama each have their own wire format. The rest speak
+OpenAI's `/chat/completions`, so they are registry entries rather than code and
+all accept `--base-url` to reach a regional endpoint or a proxy.
+
+| Provider | `--provider` | Key variable | Default host |
+|---|---|---|---|
+| Anthropic | `anthropic` | `WATCHSKILL_ANTHROPIC_API_KEY` | api.anthropic.com |
+| OpenAI | `openai` | `WATCHSKILL_OPENAI_API_KEY` | api.openai.com |
+| Google Gemini | `gemini` | `WATCHSKILL_GEMINI_API_KEY` | generativelanguage.googleapis.com |
+| OpenRouter | `openrouter` | `WATCHSKILL_OPENROUTER_API_KEY` | openrouter.ai |
+| Groq | `groq` | `WATCHSKILL_GROQ_API_KEY` | api.groq.com |
+| Together AI | `together` | `WATCHSKILL_TOGETHER_API_KEY` | api.together.xyz |
+| Fireworks | `fireworks` | `WATCHSKILL_FIREWORKS_API_KEY` | api.fireworks.ai |
+| DeepSeek | `deepseek` | `WATCHSKILL_DEEPSEEK_API_KEY` | api.deepseek.com |
+| xAI | `xai` | `WATCHSKILL_XAI_API_KEY` | api.x.ai |
+| Mistral | `mistral` | `WATCHSKILL_MISTRAL_API_KEY` | api.mistral.ai |
+| MiniMax | `minimax` | `WATCHSKILL_MINIMAX_API_KEY` | api.minimax.io |
+| Moonshot | `moonshot` | `WATCHSKILL_MOONSHOT_API_KEY` | api.moonshot.ai |
+| Z.ai | `zai` | `WATCHSKILL_ZAI_API_KEY` | api.z.ai |
+| Qwen (DashScope) | `qwen` | `WATCHSKILL_QWEN_API_KEY` | dashscope-intl.aliyuncs.com |
+| Ollama (local) | `ollama` | none | 127.0.0.1:11434 |
+| Anything else | `custom` | `WATCHSKILL_CUSTOM_API_KEY` | set `--base-url` |
+
+`custom` covers any server speaking the OpenAI format — vLLM, LM Studio,
+llama.cpp, LiteLLM, Azure OpenAI, or a company gateway:
+
+```bash
+watch-skill setup-vision --provider custom \
+  --base-url http://127.0.0.1:8000/v1 \
+  --api-key none --model my-vision-model
+```
+
+Every OpenAI-compatible entry also has a `WATCHSKILL_<PROVIDER>_BASE_URL`
+variable. Leave it empty to use the default host above.
+
 Use `--model` for one model at both tiers, or `--cheap-model` and
 `--strong-model` for separate routing. Add `--verify` to run a live probe.
 Keys are written to the local `.env`, whose previous version is backed up.
+
+Model names in the table's defaults move fast. If a vendor renames a model,
+pass `--cheap-model` / `--strong-model` rather than waiting for a release.
 
 | Variable | Type | Default | Effect |
 |---|---|---|---|
@@ -93,7 +133,7 @@ Keys are written to the local `.env`, whose previous version is backed up.
 | `WATCHSKILL_GROQ_API_KEY` | secret | unset | Groq API key (preferred cloud-STT backend when cloud STT is opted in). |
 | `WATCHSKILL_OPENROUTER_API_KEY` | secret | unset | OpenRouter API key — one key routes to many vision models, including `:free` variants. |
 | `WATCHSKILL_OLLAMA_BASE_URL` | str | `http://127.0.0.1:11434` | Base URL of a local (or remote) Ollama server. Keyless. |
-| `WATCHSKILL_VISION_CHEAP_PROVIDER` | str | `anthropic` | Provider for bulk work: scene descriptions, first verify pass. One of `anthropic`, `openai`, `gemini`, `openrouter`, `ollama`. |
+| `WATCHSKILL_VISION_CHEAP_PROVIDER` | str | `anthropic` | Provider for bulk work: scene descriptions, first verify pass. Any name from the provider table above. |
 | `WATCHSKILL_VISION_CHEAP_MODEL` | str | `claude-haiku-4-5-20251001` | Model for the cheap tier. |
 | `WATCHSKILL_VISION_STRONG_PROVIDER` | str | `anthropic` | Provider for final answers, low-confidence verification, and the loop critic. |
 | `WATCHSKILL_VISION_STRONG_MODEL` | str | `claude-sonnet-5` | Model for the strong tier. |

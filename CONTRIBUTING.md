@@ -92,6 +92,6 @@ in `health/doctor.py` so self-healing covers them.
 
 ## Releasing
 
-1. Bump `version` in `pyproject.toml` and `adapters/claude-skill/**` manifests.
+1. Bump `version` in `pyproject.toml` and `**` manifests.
 2. `uv build` and check the wheel installs into a clean venv.
 3. Tag `vX.Y.Z`.

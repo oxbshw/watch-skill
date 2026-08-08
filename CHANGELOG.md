@@ -1,5 +1,65 @@
 # Changelog
 
+## v1.2.0 — 2026-08-08
+
+### Skills reach every agent, not just Claude Code
+- The ten skills moved from `adapters/claude-skill/skills/` to a top-level
+  `skills/` directory, which is where the open skills ecosystem looks. They
+  now install into any of its 27+ supported agents:
+  `npx skills add oxbshw/watch-skill -g`. Buried where they were, only
+  Claude Code could see them — the agent-facing layer that decides *when* to
+  watch video was the least distributed part of the project.
+- The Claude Code plugin is rooted at the repository instead of a
+  subdirectory, so one copy of each skill serves both ecosystems rather than
+  a mirror that can drift. `skills.sh.json` declares the package.
+
+### Sixteen vision providers, from six
+- Added Groq, Together AI, Fireworks, DeepSeek, xAI, Mistral, Moonshot,
+  Z.ai, and Qwen (DashScope) — plus `custom` for any OpenAI-compatible
+  server: vLLM, LM Studio, llama.cpp, LiteLLM, Azure OpenAI, a company
+  gateway. Two contributors asked for the last one before it existed.
+- These are registry entries, not code. Every one of them speaks OpenAI's
+  `/chat/completions`, so a single builder is generated from the table and
+  adding a vendor touches no request logic.
+- `--base-url` on `setup-vision`, and a `WATCHSKILL_<PROVIDER>_BASE_URL` for
+  each, so one entry reaches a regional endpoint, a proxy, or a self-hosted
+  server. Passing it to a provider with its own wire format is a clear error
+  rather than a silently ignored flag.
+- **`WATCHSKILL_GROQ_API_KEY` existed with no Groq provider behind it.** The
+  setting was read, reported by `doctor`, and impossible to use.
+
+### Three more agents
+- [Zed](docs/agents/zed.md), whose key is `context_servers` rather than
+  `mcpServers` — a config copied from any other client here does not work.
+- [Roo Code](docs/agents/roo-code.md), with the project-scoped `.roo/mcp.json`
+  a team can commit.
+- [Continue](docs/agents/continue.md), which reads one file per server from
+  `.continue/mcpServers/`.
+
+### Supply chain and platform
+- **PyPI uploads carry PEP 740 attestations.** Publishing moved from
+  `uv publish` to the official PyPI action, which signs the distributions
+  with this workflow's identity — an installer can verify a wheel was built
+  here and not swapped in transit.
+- **The container image is multi-arch.** `linux/arm64` alongside `amd64`, so
+  Apple Silicon and ARM servers stop running ffmpeg under emulation. The
+  pushed digest also gets a signed build-provenance attestation, and the
+  build emits an SBOM.
+- **Dependabot** watches Actions, Python dependencies, and the base image
+  weekly. A compromised action is the shortest path into a pipeline that can
+  publish to PyPI.
+- **`AGENTS.md` at the repository root** — the cross-agent convention that
+  Codex, Cursor, Copilot, and others read. For a project whose users are
+  agents, not having one was an odd gap.
+
+### Changed
+- **An agent page no longer requires hand-drawn art to exist.** The test
+  demanded an avatar for every page, so adding an agent was blocked on
+  someone illustrating it — which contradicted the twenty-minute
+  contribution path in CONTRIBUTING. A page without art belongs in the
+  matrix; it joins the README gallery when the art lands. Art that *does*
+  exist must still be shown, and no page may be orphaned from the matrix.
+
 ## v1.1.0 — 2026-08-08
 
 Distribution work. v1.0 was installable only by cloning the repository,

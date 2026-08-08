@@ -16,7 +16,8 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
-SKILLS_DIR = ROOT / "adapters" / "claude-skill" / "skills"
+# Top level, where the skills CLI looks — see test_plugin_packaging.py.
+SKILLS_DIR = ROOT / "skills"
 
 # The library: every skill the plugin promises. `watch` is the original
 # user-invocable command-style skill; the other nine are the v1.0

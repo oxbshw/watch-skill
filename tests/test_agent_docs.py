@@ -56,25 +56,47 @@ def test_template_skeleton_validates_too() -> None:
     assert not validate.check_file(skeleton)
 
 
-def test_every_agent_guide_has_its_avatar() -> None:
-    assets = ROOT / "docs" / "assets" / "agents"
-    missing: list[str] = []
-    for page in AGENTS_DIR.glob("*.md"):
-        if page.name == "README.md":
-            continue
-        expected = f'../assets/agents/{page.stem}.webp'
-        if expected not in page.read_text(encoding="utf-8"):
-            missing.append(page.name)
-        assert (assets / f"{page.stem}.webp").is_file(), f"avatar missing for {page.name}"
-    assert not missing, f"agent guides without avatar markup: {missing}"
+def _has_avatar(page: Path) -> bool:
+    return (ROOT / "docs" / "assets" / "agents" / f"{page.stem}.webp").is_file()
 
 
-def test_readme_agent_gallery_covers_every_named_agent() -> None:
+def test_a_page_with_an_avatar_actually_shows_it() -> None:
+    """Art that exists but is not referenced is art nobody sees.
+
+    The avatar is deliberately not required to *add* an agent: every avatar
+    is hand-drawn, and gating a new page on someone producing one contradicts
+    the twenty-minute contribution path CONTRIBUTING promises. A page without
+    art still belongs in the matrix; it just does not appear in the README
+    gallery until the art exists.
+    """
+    missing = [
+        page.name
+        for page in AGENTS_DIR.glob("*.md")
+        if page.name != "README.md"
+        and _has_avatar(page)
+        and f"../assets/agents/{page.stem}.webp" not in page.read_text(encoding="utf-8")
+    ]
+    assert not missing, f"avatar exists but the page does not show it: {missing}"
+
+
+def test_readme_gallery_covers_every_agent_that_has_art() -> None:
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
     missing = [
         page.stem
         for page in AGENTS_DIR.glob("*.md")
         if page.name not in {"README.md", "frameworks.md"}
+        and _has_avatar(page)
         and f"docs/assets/agents/{page.stem}.webp" not in readme
     ]
     assert not missing, f"README gallery missing agents: {missing}"
+
+
+def test_pages_without_art_are_still_reachable() -> None:
+    """The matrix is the index of record, so nothing may be orphaned there."""
+    matrix = (AGENTS_DIR / "README.md").read_text(encoding="utf-8")
+    orphaned = [
+        page.name
+        for page in AGENTS_DIR.glob("*.md")
+        if page.name != "README.md" and f"({page.name})" not in matrix
+    ]
+    assert not orphaned, f"pages missing from the matrix: {orphaned}"

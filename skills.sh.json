@@ -1,0 +1,17 @@
+{
+  "name": "watch-skill",
+  "description": "Give any AI agent a video input: watch, remember with timestamped evidence, and verify the agent's own work through THE LOOP.",
+  "homepage": "https://github.com/oxbshw/watch-skill",
+  "license": "MIT",
+  "author": "oxbshw",
+  "keywords": [
+    "video",
+    "vision",
+    "ocr",
+    "transcription",
+    "mcp",
+    "verification",
+    "memory"
+  ],
+  "skills": "./skills"
+}

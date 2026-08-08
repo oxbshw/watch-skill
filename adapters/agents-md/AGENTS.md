@@ -10,7 +10,7 @@ reads repo instructions and can run a shell command, this is the whole
 setup. Agents with richer surfaces have native configs in
 [`docs/agents/`](../../docs/agents/README.md); agents with a skills
 directory can load
-[`adapters/claude-skill/skills/`](../claude-skill/skills/) directly.
+[`skills/`](../../skills/) directly.
 
 ## What it gives you
 

@@ -115,9 +115,20 @@ watch-skill search "pricing decision"       # search every indexed video
 watch-skill serve                           # MCP over stdio
 ```
 
-Transcription, OCR, and search can run locally without an API key. For visual Q&A, use
-Gemini, Anthropic, OpenAI, OpenRouter, or a local Ollama model. See
-[Getting started](docs/getting-started.md) for manual installation and
+Transcription, OCR, and search run locally and need no API key. Visual question
+answering uses whichever provider you already pay for — Anthropic, OpenAI, Gemini,
+OpenRouter, Groq, Together, Fireworks, DeepSeek, xAI, Mistral, MiniMax, Moonshot,
+Z.ai, or Qwen — or nothing at all with a local Ollama model. Anything else that
+speaks the OpenAI format (vLLM, LM Studio, llama.cpp, LiteLLM, Azure OpenAI, a
+company gateway) works through the `custom` provider:
+
+```bash
+watch-skill setup-vision --provider groq            # or any of the above
+watch-skill setup-vision --provider custom \
+  --base-url http://127.0.0.1:8000/v1               # your own server
+```
+
+See [Getting started](docs/getting-started.md) for manual installation and
 [Configuration](docs/configuration.md) for provider and privacy settings.
 
 ## Why use it
@@ -165,12 +176,27 @@ Native tools are also available for [LangChain/LangGraph, CrewAI, OpenAI Agents 
 LlamaIndex, and AutoGen](docs/agents/frameworks.md); any other framework can use REST or
 MCP.
 
-| Connection | Supported agents and frameworks |
+### Skills, in any agent
+
+The ten skills are the agent-facing layer: they decide *when* to reach for video,
+so an agent uses Watch Skill without being told to. They live in a top-level
+`skills/` directory, which is what the open skills ecosystem reads — so they
+install into any of its 27+ supported agents with one command, not just Claude Code:
+
+```bash
+npx skills add oxbshw/watch-skill -g
+```
+
+| Connection | How it reaches the agent |
 |---|---|
-| Plugin and skills | [Claude Code](docs/agents/claude-code.md), [OpenClaw](docs/agents/openclaw.md), [Pi](docs/agents/pi.md), [Hermes-style agents](docs/agents/hermes.md) |
-| MCP | [Claude Desktop](docs/agents/claude-desktop.md), [Cursor](docs/agents/cursor.md), [Codex CLI](docs/agents/codex-cli.md), [Cline](docs/agents/cline.md), [Windsurf](docs/agents/windsurf.md), [Gemini CLI](docs/agents/gemini-cli.md), [VS Code](docs/agents/vscode.md), [GitHub Copilot CLI](docs/agents/github-copilot-cli.md), [Kimi Code](docs/agents/kimi-code.md), [Qwen Code](docs/agents/qwen-code.md), [OpenCode](docs/agents/opencode.md), [Goose](docs/agents/goose.md), [OpenHands](docs/agents/openhands.md), [Kilo Code](docs/agents/kilocode.md), [Qodo](docs/agents/qodo.md), [Agent Zero](docs/agents/agent-zero.md) |
-| Native Python tools | [LangChain/LangGraph, CrewAI, OpenAI Agents SDK, LlamaIndex, and AutoGen](docs/agents/frameworks.md) |
-| HTTP | Vercel AI SDK, n8n, and any client that can call REST/OpenAPI |
+| **Skills** | Every agent the [skills CLI](https://skills.sh) supports — Claude Code, Codex CLI, Cursor, GitHub Copilot, Gemini CLI, VS Code, and the rest — plus [OpenClaw](docs/agents/openclaw.md), [Pi](docs/agents/pi.md), and [Hermes-style agents](docs/agents/hermes.md) |
+| **MCP** | [Claude Desktop](docs/agents/claude-desktop.md), [Cursor](docs/agents/cursor.md), [Codex CLI](docs/agents/codex-cli.md), [Cline](docs/agents/cline.md), [Windsurf](docs/agents/windsurf.md), [Gemini CLI](docs/agents/gemini-cli.md), [VS Code](docs/agents/vscode.md), [GitHub Copilot CLI](docs/agents/github-copilot-cli.md), [Zed](docs/agents/zed.md), [Roo Code](docs/agents/roo-code.md), [Continue](docs/agents/continue.md), [Kimi Code](docs/agents/kimi-code.md), [Qwen Code](docs/agents/qwen-code.md), [OpenCode](docs/agents/opencode.md), [Goose](docs/agents/goose.md), [OpenHands](docs/agents/openhands.md), [Kilo Code](docs/agents/kilocode.md), [Qodo](docs/agents/qodo.md), [Agent Zero](docs/agents/agent-zero.md) |
+| **Native Python tools** | [LangChain/LangGraph, CrewAI, OpenAI Agents SDK, LlamaIndex, and AutoGen](docs/agents/frameworks.md) |
+| **HTTP** | Vercel AI SDK, n8n, and any client that can call REST/OpenAPI |
+
+Skills and MCP complement each other: skills carry the judgement about when video
+is worth watching, MCP carries the 23 tools. Installing both is the full setup, and
+`watch-skill setup` does it.
 
 The [full compatibility matrix](docs/agents/README.md) separates machine-tested,
 machine-configured, and documentation-verified integrations. If your agent is missing,

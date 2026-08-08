@@ -646,12 +646,19 @@ def setup_vision(
     provider: str = typer.Option(
         ...,
         "--provider",
-        help="anthropic | openai | gemini | openrouter | ollama",
+        help="anthropic | openai | gemini | openrouter | ollama | groq | together | "
+        "fireworks | deepseek | xai | mistral | minimax | moonshot | zai | qwen | custom",
     ),
     api_key: str | None = typer.Option(
         None,
         "--api-key",
         help="API key for a cloud provider. Prefer the matching WATCHSKILL_* env var in shared shells.",
+    ),
+    base_url: str | None = typer.Option(
+        None,
+        "--base-url",
+        help="Override the provider's host: a regional endpoint, a proxy, or — with "
+        "--provider custom — any OpenAI-compatible server (vLLM, LM Studio, LiteLLM).",
     ),
     model: str | None = typer.Option(
         None,
@@ -684,6 +691,7 @@ def setup_vision(
                 api_key or "",
                 cheap_model=cheap_model or model,
                 strong_model=strong_model or model,
+                base_url=base_url,
             )
         except WatchSkillError as exc:
             print(json.dumps(exc.to_dict(), indent=2))

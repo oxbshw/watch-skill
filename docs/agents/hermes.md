@@ -26,7 +26,7 @@ bundles skills as directories with instruction files; copy or symlink
 ours):
 
 ```
-adapters/claude-skill/skills/  →  your hermes skills dir
+skills/  →  your hermes skills dir
 ```
 
 **AGENTS.md.** Hermes-style harnesses read repo instructions. Drop

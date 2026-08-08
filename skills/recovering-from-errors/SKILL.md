@@ -1,6 +1,6 @@
 ---
 name: recovering-from-errors
-version: "1.1.0"
+version: "1.2.0"
 description: A Watch Skill command failed, video download broke, ffmpeg or yt-dlp is missing, a provider returned an error, local vision stopped, or the user asks "why can't it watch this" or "repair my setup". Use this to diagnose and apply the engine's structured fix before retrying the original operation.
 license: MIT
 user-invocable: true

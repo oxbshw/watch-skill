@@ -216,7 +216,7 @@ plain PASS/FAIL text judgment covers only what no rule can express.
 | `watch.py` | the front door: acquire → perceive → transcribe with progress callbacks | `watch()` |
 | `config.py` | one typed settings object; `WATCHSKILL_*` env / `.env` / defaults | `get_settings()` |
 
-The agent-facing layer above all of this is `adapters/claude-skill/skills/`
+The agent-facing layer above all of this is `skills/`
 — ten portable `SKILL.md` trigger surfaces (`watch` plus nine task skills) that
 wrap the CLI only, so they ride into any harness that reads skills; the
 engine never knows which agent is calling.

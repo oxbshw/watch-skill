@@ -17,7 +17,7 @@ import httpx
 from watch_skill.config import get_settings
 from watch_skill.errors import VisionError
 from watch_skill.vision.cost import guard_cost
-from watch_skill.vision.registry import PROVIDERS
+from watch_skill.vision.registry import PROVIDERS, base_url_for
 
 _MAX_TOKENS = 1500
 
@@ -91,11 +91,21 @@ def _openrouter_request(model: str, key: str, prompt: str, images: list[Path]) -
     return PROVIDERS["openrouter"].endpoint, headers, body
 
 
-def _minimax_request(model: str, key: str, prompt: str, images: list[Path]) -> tuple[str, dict, dict]:
-    _, headers, body = _openai_request(model, key, prompt, images)
-    settings = get_settings()
-    endpoint = PROVIDERS["minimax"].endpoint.format(base=settings.minimax_base_url.rstrip("/"))
-    return endpoint, headers, body
+def _compatible_request(provider: str):
+    """Build a request function for a vendor that speaks OpenAI's format.
+
+    Body and auth are identical to OpenAI's; only the host changes, and that
+    is data. One of these replaces what would otherwise be a near-identical
+    function per vendor.
+    """
+
+    def request(model: str, key: str, prompt: str, images: list[Path]) -> tuple[str, dict, dict]:
+        _, headers, body = _openai_request(model, key, prompt, images)
+        endpoint = PROVIDERS[provider].endpoint.format(base=base_url_for(provider))
+        return endpoint, headers, body
+
+    request.__name__ = f"_{provider}_request"
+    return request
 
 
 def _gemini_request(model: str, key: str, prompt: str, images: list[Path]) -> tuple[str, dict, dict]:
@@ -143,9 +153,15 @@ _BUILDERS: dict[str, tuple[Callable, Callable]] = {
     "anthropic": (_anthropic_request, _anthropic_extract),
     "openai": (_openai_request, _openai_extract),
     "openrouter": (_openrouter_request, _openai_extract),
-    "minimax": (_minimax_request, _openai_extract),
     "gemini": (_gemini_request, _gemini_extract),
     "ollama": (_ollama_request, _ollama_extract),
+    # Every OpenAI-compatible vendor in the registry, generated from data.
+    # A new one is an entry there — no code here changes.
+    **{
+        name: (_compatible_request(name), _openai_extract)
+        for name, spec in PROVIDERS.items()
+        if spec.openai_compatible
+    },
 }
 
 

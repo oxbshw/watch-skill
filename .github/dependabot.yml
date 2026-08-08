@@ -1,0 +1,41 @@
+version: 2
+updates:
+  # Actions pinned by major tag still move underneath you; a compromised or
+  # abandoned action is the shortest path into a release pipeline that can
+  # publish to PyPI.
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+    commit-message:
+      prefix: "chore(ci)"
+    groups:
+      actions:
+        patterns: ["*"]
+
+  - package-ecosystem: pip
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+    commit-message:
+      prefix: "chore(deps)"
+    # One PR per week for the routine bumps; anything that breaks an API gets
+    # its own so the failure is readable.
+    groups:
+      minor-and-patch:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+    ignore:
+      # Pinned deliberately in pyproject with a reason next to each bound.
+      - dependency-name: rich
+        update-types: ["version-update:semver-major"]
+
+  - package-ecosystem: docker
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+    commit-message:
+      prefix: "chore(docker)"

@@ -74,10 +74,35 @@ class Settings(BaseSettings):
     anthropic_api_key: SecretStr | None = None
     openai_api_key: SecretStr | None = None
     gemini_api_key: SecretStr | None = None
-    groq_api_key: SecretStr | None = None
-    minimax_api_key: SecretStr | None = None
-    minimax_base_url: str = "https://api.minimax.io/v1"
     openrouter_api_key: SecretStr | None = None
+
+    # OpenAI-compatible vendors. Each pairs a key with a base URL so the same
+    # entry reaches a regional host, a proxy, or a self-hosted server; the
+    # defaults mirror registry.PROVIDERS and a blank value falls back to them.
+    groq_api_key: SecretStr | None = None
+    groq_base_url: str = ""
+    minimax_api_key: SecretStr | None = None
+    minimax_base_url: str = ""
+    together_api_key: SecretStr | None = None
+    together_base_url: str = ""
+    fireworks_api_key: SecretStr | None = None
+    fireworks_base_url: str = ""
+    deepseek_api_key: SecretStr | None = None
+    deepseek_base_url: str = ""
+    xai_api_key: SecretStr | None = None
+    xai_base_url: str = ""
+    mistral_api_key: SecretStr | None = None
+    mistral_base_url: str = ""
+    moonshot_api_key: SecretStr | None = None
+    moonshot_base_url: str = ""
+    zai_api_key: SecretStr | None = None
+    zai_base_url: str = ""
+    qwen_api_key: SecretStr | None = None
+    qwen_base_url: str = ""
+    # `custom` is the escape hatch: any OpenAI-compatible server — vLLM,
+    # LM Studio, llama.cpp, LiteLLM, Azure OpenAI, a company gateway.
+    custom_api_key: SecretStr | None = None
+    custom_base_url: str = ""
     ollama_base_url: str = "http://127.0.0.1:11434"
     ollama_num_ctx: int = Field(
         default=2048,

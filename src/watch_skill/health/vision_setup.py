@@ -17,6 +17,7 @@ import urllib.request
 from pathlib import Path
 
 from watch_skill.errors import ConfigError
+from watch_skill.vision.registry import PROVIDERS
 
 # Recommended free-tier Gemini model (covers both tiers; see registry prices).
 DEFAULT_GEMINI_CHEAP = "gemini-3.5-flash"
@@ -41,10 +42,40 @@ CLOUD_PROVIDER_DEFAULTS: dict[str, tuple[str, str, str]] = {
         "anthropic/claude-sonnet-5",
     ),
     "minimax": ("WATCHSKILL_MINIMAX_API_KEY", "MiniMax-M3", "MiniMax-M3"),
+    # OpenAI-compatible vendors. Model names are each vendor's current
+    # vision-capable default; override with --cheap-model / --strong-model.
+    "groq": (
+        "WATCHSKILL_GROQ_API_KEY",
+        "meta-llama/llama-4-scout-17b-16e-instruct",
+        "meta-llama/llama-4-maverick-17b-128e-instruct",
+    ),
+    "together": (
+        "WATCHSKILL_TOGETHER_API_KEY",
+        "meta-llama/Llama-Vision-Free",
+        "Qwen/Qwen2.5-VL-72B-Instruct",
+    ),
+    "fireworks": (
+        "WATCHSKILL_FIREWORKS_API_KEY",
+        "accounts/fireworks/models/qwen2p5-vl-7b-instruct",
+        "accounts/fireworks/models/qwen2p5-vl-72b-instruct",
+    ),
+    "deepseek": ("WATCHSKILL_DEEPSEEK_API_KEY", "deepseek-vl2", "deepseek-vl2"),
+    "xai": ("WATCHSKILL_XAI_API_KEY", "grok-2-vision-1212", "grok-4-vision"),
+    "mistral": ("WATCHSKILL_MISTRAL_API_KEY", "pixtral-12b-2409", "pixtral-large-latest"),
+    "moonshot": ("WATCHSKILL_MOONSHOT_API_KEY", "moonshot-v1-8k-vision-preview", "kimi-latest"),
+    "zai": ("WATCHSKILL_ZAI_API_KEY", "glm-4v-flash", "glm-4.6v"),
+    "qwen": ("WATCHSKILL_QWEN_API_KEY", "qwen-vl-plus", "qwen-vl-max"),
+    # Any OpenAI-compatible server. The model name is whatever it serves, so
+    # there is no sensible default beyond a placeholder the user replaces.
+    "custom": ("WATCHSKILL_CUSTOM_API_KEY", "local-model", "local-model"),
 }
 
+# Written into .env alongside the key so a fresh shell reaches the right host.
+# Sourced from the registry: one table, not two that can disagree.
 CLOUD_PROVIDER_BASE_URLS: dict[str, str] = {
-    "minimax": "https://api.minimax.io/v1",
+    name: spec.default_base_url
+    for name, spec in PROVIDERS.items()
+    if spec.openai_compatible
 }
 
 # Local vision models by machine size. qwen2.5vl:3b reads on-screen text well
@@ -138,8 +169,13 @@ def configure_cloud(
     cheap_model: str | None = None,
     strong_model: str | None = None,
     path: Path | None = None,
+    base_url: str | None = None,
 ) -> tuple[Path, Path | None]:
-    """Write one supported cloud provider, its key, and model tiers."""
+    """Write one supported cloud provider, its key, and model tiers.
+
+    ``base_url`` overrides the vendor's host — a regional endpoint, a proxy,
+    or, with the ``custom`` provider, any OpenAI-compatible server.
+    """
     provider = provider.lower().strip()
     defaults = CLOUD_PROVIDER_DEFAULTS.get(provider)
     if defaults is None:
@@ -157,14 +193,24 @@ def configure_cloud(
         )
     key_name, default_cheap, default_strong = defaults
     updates = {
-            key_name: api_key.strip(),
-            "WATCHSKILL_VISION_CHEAP_PROVIDER": provider,
-            "WATCHSKILL_VISION_CHEAP_MODEL": cheap_model or default_cheap,
-            "WATCHSKILL_VISION_STRONG_PROVIDER": provider,
-            "WATCHSKILL_VISION_STRONG_MODEL": strong_model or default_strong,
+        key_name: api_key.strip(),
+        "WATCHSKILL_VISION_CHEAP_PROVIDER": provider,
+        "WATCHSKILL_VISION_CHEAP_MODEL": cheap_model or default_cheap,
+        "WATCHSKILL_VISION_STRONG_PROVIDER": provider,
+        "WATCHSKILL_VISION_STRONG_MODEL": strong_model or default_strong,
     }
     if provider in CLOUD_PROVIDER_BASE_URLS:
-        updates[f"WATCHSKILL_{provider.upper()}_BASE_URL"] = CLOUD_PROVIDER_BASE_URLS[provider]
+        # Written even when it equals the default, so the .env records which
+        # host this machine talks to rather than leaving it implicit.
+        host = (base_url or "").strip() or CLOUD_PROVIDER_BASE_URLS[provider]
+        updates[f"WATCHSKILL_{provider.upper()}_BASE_URL"] = host.rstrip("/")
+    elif base_url:
+        raise ConfigError(
+            f"{provider} does not take a base URL",
+            code="config.vision_base_url_unsupported",
+            fix="drop --base-url, or use --provider custom for an "
+            "OpenAI-compatible server of your own",
+        )
     return set_env_vars(updates, path)
 
 

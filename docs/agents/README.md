@@ -37,6 +37,9 @@ over stdio; remote clients use the streamable HTTP endpoint.
 | [Kilo Code](kilocode.md) | `kilo.jsonc` | Documentation-verified |
 | [Qodo Command](qodo.md) | Project `mcp.json` and agent TOML | Documentation-verified |
 | [Agent Zero](agent-zero.md) | Settings UI, stdio or HTTP | Documentation-verified |
+| [Zed](zed.md) | `settings.json` — `context_servers`, not `mcpServers` | Documentation-verified |
+| [Roo Code](roo-code.md) | `.roo/mcp.json` or global `mcp_settings.json` | Documentation-verified |
+| [Continue](continue.md) | `.continue/mcpServers/watch-skill.json` | Documentation-verified |
 
 ## Plugin and skill-native agents
 
