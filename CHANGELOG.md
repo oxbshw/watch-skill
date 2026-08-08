@@ -1,10 +1,10 @@
 # Changelog
 
-## Unreleased
+## v1.1.0 — 2026-08-08
 
 Distribution work. v1.0 was installable only by cloning the repository,
 which is the main reason people who found the project did not end up
-running it.
+running it. This is the first release on PyPI.
 
 ### Install
 - **Published to PyPI.** `pip install watch-skill`, `pipx`, and

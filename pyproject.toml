@@ -1,24 +1,29 @@
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling", "hatch-fancy-pypi-readme"]
 build-backend = "hatchling.build"
 
 [project]
 name = "watch-skill"
-version = "1.0.0"
+version = "1.1.0"
 description = "Give any agent a video input: watch, index, ask, and iterate on video via MCP, CLI, REST, and Python."
-readme = "README.md"
+# readme is produced by hatch-fancy-pypi-readme below: the file's relative
+# paths only resolve on GitHub, and PyPI renders the description standalone.
+dynamic = ["readme"]
 requires-python = ">=3.11"
 license = { text = "MIT" }
 authors = [{ name = "oxbshw" }]
 keywords = ["video", "agents", "mcp", "vision", "transcription", "ffmpeg", "yt-dlp"]
 classifiers = [
-    "Development Status :: 4 - Beta",
+    "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Multimedia :: Video",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Scientific/Engineering :: Image Recognition",
 ]
 dependencies = [
     "pydantic>=2.13,<3",
@@ -64,12 +69,34 @@ Homepage = "https://github.com/oxbshw/watch-skill"
 Documentation = "https://github.com/oxbshw/watch-skill/tree/main/docs"
 Changelog = "https://github.com/oxbshw/watch-skill/blob/main/CHANGELOG.md"
 Issues = "https://github.com/oxbshw/watch-skill/issues"
+Source = "https://github.com/oxbshw/watch-skill"
 
 [dependency-groups]
 dev = ["pytest>=9.1,<10", "pytest-timeout>=2.4,<3", "ruff>=0.15,<0.16"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/watch_skill"]
+
+# PyPI renders the long description on its own, so every relative path in
+# README.md would be a broken image or a dead link there. Rewrite them to
+# absolute GitHub URLs at build time and leave the file itself relative,
+# which is what makes it work on a branch or a fork.
+[tool.hatch.metadata.hooks.fancy-pypi-readme]
+content-type = "text/markdown"
+
+[[tool.hatch.metadata.hooks.fancy-pypi-readme.fragments]]
+path = "README.md"
+
+# <img src="docs/..."> and ![](docs/...) -> raw.githubusercontent.com
+[[tool.hatch.metadata.hooks.fancy-pypi-readme.substitutions]]
+pattern = 'src="(?!https?://)([^"]+)"'
+replacement = 'src="https://raw.githubusercontent.com/oxbshw/watch-skill/main/\1"'
+
+# [text](docs/guide.md) -> the file on GitHub. Anchors and absolute URLs
+# are left alone.
+[[tool.hatch.metadata.hooks.fancy-pypi-readme.substitutions]]
+pattern = '\]\((?!https?://|#)([^)]+)\)'
+replacement = '](https://github.com/oxbshw/watch-skill/blob/main/\1)'
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
