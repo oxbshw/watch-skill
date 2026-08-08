@@ -30,10 +30,21 @@ if (-not (Get-Command uv -ErrorAction SilentlyContinue)) {
     } catch {
         Invoke-RestMethod https://astral.sh/uv/install.ps1 | Invoke-Expression
     }
-    $env:Path = [Environment]::GetEnvironmentVariable('Path','User') + ';' + $env:Path
+    # The uv installer writes the user PATH, which this already-running
+    # process cannot see; pull it in, and add the default location in case
+    # the installer used a fallback that has not registered yet.
+    $env:Path = [Environment]::GetEnvironmentVariable('Path','User') + ';' +
+                (Join-Path $env:USERPROFILE '.local\bin') + ';' + $env:Path
     if (-not (Get-Command uv -ErrorAction SilentlyContinue)) {
         Write-Error "uv did not land on PATH - open a new terminal and re-run this script."
     }
+}
+
+# In GitHub Actions each step is a fresh shell, so a PATH we discovered here
+# is lost unless it is handed over explicitly.
+if ($env:GITHUB_PATH) {
+    $uvDir = Split-Path (Get-Command uv).Source
+    Add-Content -Path $env:GITHUB_PATH -Value $uvDir -Encoding utf8
 }
 
 # --- get the code ----------------------------------------------------------

@@ -37,10 +37,17 @@ if ! command -v uv >/dev/null 2>&1; then
     fi
 fi
 
+# In GitHub Actions each step is a fresh shell, so a PATH we discovered here
+# is lost unless it is handed over explicitly.
+if [ -n "${GITHUB_PATH:-}" ]; then
+    dirname -- "$(command -v uv)" >> "$GITHUB_PATH"
+fi
+
 # --- get the code -----------------------------------------------------------
 if [ "${WATCHSKILL_INSTALL_LOCAL:-}" = "1" ]; then
     # CI path: exercise this checkout rather than whatever main happens to be.
-    SRC_DIR=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+    unset CDPATH  # a set CDPATH makes `cd` print and can land elsewhere
+    SRC_DIR=$(cd -- "$(dirname -- "$0")/.." && pwd)
     step "Installing from local checkout $SRC_DIR"
     mkdir -p "$INSTALL_DIR"
     # shellcheck disable=SC2216  # cp -R of a dot-path copies contents, not the dir

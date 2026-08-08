@@ -54,12 +54,22 @@ jobs:
           uv run watch-skill --version
           uv run watch-skill --help > /dev/null
 
+      # `|| true` matters: the step runs under `bash -e`, so a failing doctor
+      # would abort before the report it just wrote could be printed — which
+      # hides the one thing worth seeing.
       - name: Doctor must not fail
         run: |
           cd "${{ runner.temp }}/watch-skill"
-          uv run watch-skill doctor --json > doctor.json
+          uv run watch-skill doctor --json > doctor.json || true
           cat doctor.json
-          python -c "import json,sys; sys.exit(0 if json.load(open('doctor.json'))['ok'] else 1)"
+          python - <<'EOF'
+          import json, sys
+          report = json.load(open("doctor.json"))
+          for check in report["checks"]:
+              if check["status"] == "fail":
+                  print(f"::error::doctor {check['name']}: {check['message']}")
+          sys.exit(0 if report["ok"] else 1)
+          EOF
 
       # `timeout` is GNU coreutils and is not on macOS by default, so the
       # bound is enforced in the shell instead of by an absent binary.
