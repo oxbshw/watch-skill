@@ -3,6 +3,17 @@
 Thanks for helping agents see. This document is short on ceremony and long on
 the rules that actually keep the codebase healthy.
 
+## How review works
+
+Every pull request gets a review request automatically through
+[CODEOWNERS](.github/CODEOWNERS). The aim is a first response within a week —
+not necessarily a merge, but a human reply saying what happens next. If a PR
+of yours has gone quiet past that, a nudge in the thread is welcome and not
+considered rude.
+
+CI needs a maintainer to approve the run on a first-time contributor's PR, so
+a pending "action required" status means the queue, not a rejection.
+
 ## Add your agent
 
 The single most useful contribution right now: get your agent into

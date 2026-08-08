@@ -42,8 +42,25 @@ def test_dead_server_no_binary_raises_server_down(monkeypatch: pytest.MonkeyPatc
     with pytest.raises(VisionError) as excinfo:
         ensure_ollama("http://127.0.0.1:11434")
     assert excinfo.value.code == "vision.server_down"
-    assert "ollama serve" in excinfo.value.fix
     assert excinfo.value.details["restart_attempted"] is False
+    # With nothing installed, "run `ollama serve`" is not a fix the reader can
+    # act on, so the message leads with installing it and names the cloud
+    # alternative — while still covering an install that is off PATH.
+    fix = excinfo.value.fix
+    assert "install" in fix.lower()
+    assert "setup-vision" in fix
+    assert "ollama serve" in fix
+
+
+def test_no_restart_is_announced_when_there_is_nothing_to_restart(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """It used to print "restarting it detached" before checking for a binary."""
+    monkeypatch.setattr(local_health, "ollama_alive", lambda base, timeout=3.0: False)
+    monkeypatch.setattr(local_health, "_ollama_binary", lambda: None)
+    with pytest.raises(VisionError):
+        ensure_ollama("http://127.0.0.1:11434")
+    assert "restarting" not in capsys.readouterr().err
 
 
 def test_dead_server_restarts_once_and_recovers(monkeypatch: pytest.MonkeyPatch) -> None:

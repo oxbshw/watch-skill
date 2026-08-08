@@ -14,6 +14,8 @@ then connect your client through the [agent matrix](agents/README.md).
 | Configure storage, models, or privacy | [Configuration](configuration.md) |
 | Fix an installation or runtime issue | [Troubleshooting](troubleshooting.md) |
 | Understand cost and routing | [Cost policy](cost.md) |
+| Compare against other options | [Comparison](comparison.md) |
+| Move over from claude-video | [Migration guide](migrate-from-claude-video.md) |
 | Build capture–critique–verify workflows | [THE LOOP](guides/the-loop.md) |
 | Apply Watch Skill to a job | [Use-case packs](packs/README.md) |
 | Extend or review the engine | [Architecture](architecture.md) and [decisions](DECISIONS.md) |

@@ -2,8 +2,10 @@
 from __future__ import annotations
 
 import hashlib
+import os
 import shutil
 import sqlite3
+import tempfile
 from pathlib import Path
 from typing import Any
 
@@ -19,16 +21,55 @@ def video_id_for(source: str) -> str:
 
 
 def _persist_frames(result: WatchResult, video_id: str) -> Path:
-    """Copy kept frames out of the throwaway work dir into managed storage."""
-    dest = get_settings().data_dir / "frames" / video_id
-    if dest.exists():
-        shutil.rmtree(dest, ignore_errors=True)
-    dest.mkdir(parents=True, exist_ok=True)
-    if result.perception is not None:
+    """Copy kept frames out of the throwaway work dir into managed storage.
+
+    Staged through a private directory and swapped in at the end. Wiping the
+    destination first looked simpler but destroyed the very files it was about
+    to copy in two ways:
+
+    * re-indexing the same WatchResult — the retry path — reads frames whose
+      paths this function already repointed *into* the destination, so the
+      wipe deleted its own inputs;
+    * two processes indexing the same video race, because the id is derived
+      from content and both land on one directory.
+
+    Either way the copy failed with a bare FileNotFoundError and the index
+    kept a row pointing at frames that were no longer there.
+    """
+    frames_root = get_settings().data_dir / "frames"
+    dest = frames_root / video_id
+    if result.perception is None:
+        dest.mkdir(parents=True, exist_ok=True)
+        return dest
+
+    frames_root.mkdir(parents=True, exist_ok=True)
+    staging = Path(tempfile.mkdtemp(prefix=f".{video_id}.", dir=frames_root))
+    try:
+        # Sources may live in the work dir (first pass) or already inside
+        # dest (a retry); staging elsewhere means both read fine.
+        copied: list[tuple[Any, Path]] = []
         for frame in result.perception.frames:
-            target = dest / frame.path.name
+            target = staging / frame.path.name
             shutil.copy2(frame.path, target)
-            frame.path = target
+            copied.append((frame, target))
+
+        # Swap: the window where dest is absent is a rename wide, not a copy.
+        previous = dest.with_name(f".{video_id}.old-{os.getpid()}")
+        if dest.exists():
+            os.replace(dest, previous)
+        try:
+            os.replace(staging, dest)
+        except OSError:
+            if previous.exists():  # put the old frames back rather than lose both
+                os.replace(previous, dest)
+            raise
+        finally:
+            shutil.rmtree(previous, ignore_errors=True)
+
+        for frame, target in copied:
+            frame.path = dest / target.name
+    finally:
+        shutil.rmtree(staging, ignore_errors=True)
     return dest
 
 

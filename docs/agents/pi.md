@@ -12,11 +12,10 @@ Watch Skill is a CLI, so this is the honest path — no adapter code.
 
 ## Install
 
-```powershell
-git clone https://github.com/oxbshw/watch-skill && cd watch-skill
-uv sync --extra all
-uv run watch-skill doctor
-uv tool install .   # `watch-skill` on PATH — Pi skills shell out to it
+```bash
+# `watch-skill` on PATH — Pi skills shell out to it
+uv tool install "watch-skill[standard]"   # or: pipx install "watch-skill[standard]"
+watch-skill doctor
 ```
 
 ## Configure

@@ -37,6 +37,37 @@ def test_tools_are_registered() -> None:
     assert {"library_synthesize", "library_overview"} <= names
 
 
+def test_docs_state_the_real_tool_count() -> None:
+    """Docs quoted "13 MCP tools" for three releases after the count changed.
+
+    Nothing failed when a tool was added, so the number silently rotted in
+    the README, getting-started, and architecture pages at once. Pin the
+    documented figure to the registry instead of to someone's memory.
+    """
+    import re
+    from pathlib import Path
+
+    async def _list():
+        async with Client(mcp) as client:
+            return [t.name for t in await client.list_tools()]
+
+    count = len(asyncio.run(_list()))
+    root = Path(__file__).resolve().parents[2]
+    pattern = re.compile(r"(\d+)\s+(?:MCP\s+)?tools\b")
+
+    stale: list[str] = []
+    for rel in ("README.md", "docs/getting-started.md", "docs/architecture.md",
+                "docs/README.md", "docs/tools/README.md"):
+        path = root / rel
+        if not path.is_file():
+            continue
+        for found in pattern.findall(path.read_text(encoding="utf-8")):
+            if int(found) != count:
+                stale.append(f"{rel} says {found}")
+
+    assert not stale, f"registry has {count} tools; {'; '.join(stale)}"
+
+
 def test_list_videos_empty() -> None:
     result = _call("list_videos")
     assert "empty" in result.content[0].text

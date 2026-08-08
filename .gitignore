@@ -22,6 +22,10 @@ build/
 .pytest_cache/
 .ruff_cache/
 .coverage
+# pytest's summary line does not print in this shell, so counts get read from
+# a junit file — scratch output, never part of the tree
+.pytest-junit.xml
+*.junit.xml
 
 # OS noise
 Thumbs.db
@@ -40,3 +44,4 @@ issues_export.local.json
 # Internal notes (never tracked)
 notes.local/
 t.xml
+.agents/

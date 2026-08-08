@@ -81,9 +81,12 @@ def ensure_ollama(base_url: str) -> None:
     """Alive, or restarted-and-alive, or a structured error. Never silent."""
     if ollama_alive(base_url):
         return
-    print("[watch-skill] ollama is down — restarting it detached", file=sys.stderr)
+    # Try first, then narrate. Announcing the restart up front printed a line
+    # that was untrue whenever no ollama binary existed — once per call, so a
+    # batch run repeated it for every video.
     launched = restart_ollama_detached()
     if launched:
+        print("[watch-skill] ollama is down — restarting it detached", file=sys.stderr)
         deadline = time.monotonic() + _RESTART_WAIT_SECONDS
         while time.monotonic() < deadline:
             if ollama_alive(base_url):
@@ -94,9 +97,16 @@ def ensure_ollama(base_url: str) -> None:
         f"the local vision server at {base_url} is not responding"
         + ("" if launched else " and the ollama binary was not found"),
         code="vision.server_down",
-        fix="start it yourself: `ollama serve` (or `ollama app.exe` on Windows); "
-        "check RAM headroom with `watch-skill doctor` — a loaded machine can "
-        "kill the model load. Never use `ollama stop`.",
+        fix=(
+            "start it yourself: `ollama serve` (or `ollama app.exe` on Windows); "
+            "check RAM headroom with `watch-skill doctor` — a loaded machine can "
+            "kill the model load. Never use `ollama stop`."
+            if launched
+            else "no `ollama` on PATH: install it from https://ollama.com, or "
+            "if it is already installed, start it yourself with `ollama serve` "
+            "and make sure the binary is on PATH. A cloud vision provider works "
+            "instead — `watch-skill setup-vision`."
+        ),
         details={"base_url": base_url, "restart_attempted": launched},
     )
 

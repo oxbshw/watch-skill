@@ -1,0 +1,127 @@
+name: Install
+
+# The installers used to carry a "written on Windows, unverified elsewhere"
+# disclaimer. This workflow is what replaced it: every push runs the real
+# scripts on a clean runner for each OS we claim to support.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "scripts/install.sh"
+      - "scripts/install.ps1"
+      - "pyproject.toml"
+      - ".github/workflows/install.yml"
+  pull_request:
+    paths:
+      - "scripts/install.sh"
+      - "scripts/install.ps1"
+      - "pyproject.toml"
+      - ".github/workflows/install.yml"
+  schedule:
+    # Installers break from the outside — a new uv, a moved ffmpeg package.
+    # Catch that on a Monday, not from a bug report.
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+jobs:
+  posix:
+    name: install.sh (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Lint the script
+        if: runner.os == 'Linux'
+        run: shellcheck scripts/install.sh
+
+      # Run against the checked-out copy rather than curl-ing main, so a PR
+      # tests its own changes.
+      - name: Run the installer
+        run: sh scripts/install.sh
+        env:
+          WATCHSKILL_HOME: ${{ runner.temp }}/watch-skill
+          WATCHSKILL_INSTALL_REF: ${{ github.sha }}
+          WATCHSKILL_INSTALL_LOCAL: "1"
+
+      - name: The CLI must exist and report its version
+        run: |
+          cd "${{ runner.temp }}/watch-skill"
+          uv run watch-skill --version
+          uv run watch-skill --help > /dev/null
+
+      - name: Doctor must not fail
+        run: |
+          cd "${{ runner.temp }}/watch-skill"
+          uv run watch-skill doctor --json > doctor.json
+          cat doctor.json
+          python -c "import json,sys; sys.exit(0 if json.load(open('doctor.json'))['ok'] else 1)"
+
+      # `timeout` is GNU coreutils and is not on macOS by default, so the
+      # bound is enforced in the shell instead of by an absent binary.
+      - name: MCP server must start and answer a handshake
+        run: |
+          cd "${{ runner.temp }}/watch-skill"
+          printf '%s\n' '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"ci","version":"0"}}}' \
+            | uv run watch-skill serve > handshake.txt 2>server.log &
+          server=$!
+          for _ in $(seq 1 90); do
+            grep -q '"result"' handshake.txt && break
+            kill -0 "$server" 2>/dev/null || break
+            sleep 1
+          done
+          kill "$server" 2>/dev/null || true
+          wait "$server" 2>/dev/null || true
+          cat server.log
+          grep -q '"result"' handshake.txt
+
+  windows:
+    name: install.ps1 (windows-latest)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run the installer
+        shell: pwsh
+        run: ./scripts/install.ps1
+        env:
+          WATCHSKILL_HOME: ${{ runner.temp }}\watch-skill
+          WATCHSKILL_INSTALL_REF: ${{ github.sha }}
+          WATCHSKILL_INSTALL_LOCAL: "1"
+
+      - name: The CLI must exist and report its version
+        shell: pwsh
+        run: |
+          Set-Location "${{ runner.temp }}\watch-skill"
+          uv run watch-skill --version
+          uv run watch-skill --help | Out-Null
+
+      - name: Doctor must not fail
+        shell: pwsh
+        run: |
+          Set-Location "${{ runner.temp }}\watch-skill"
+          uv run watch-skill doctor --json | Out-File -Encoding utf8 doctor.json
+          Get-Content doctor.json
+          $report = Get-Content doctor.json -Raw | ConvertFrom-Json
+          if (-not $report.ok) { exit 1 }
+
+  # Proves the claim the README makes about zero-install usage. Runs only
+  # after a release has actually landed on PyPI.
+  uvx:
+    name: uvx from PyPI
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.11"
+      - name: uvx must resolve and run the published package
+        run: uvx --from "watch-skill[standard]" watch-skill --version

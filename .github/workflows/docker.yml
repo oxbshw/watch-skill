@@ -1,0 +1,84 @@
+name: Docker
+
+# Publishes ghcr.io/oxbshw/watch-skill. GitHub Container Registry needs no
+# account setup and no secret — GITHUB_TOKEN is enough.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "Dockerfile"
+      - "pyproject.toml"
+      - "uv.lock"
+      - "src/**"
+      - ".github/workflows/docker.yml"
+  release:
+    types: [published]
+  pull_request:
+    paths:
+      - "Dockerfile"
+      - ".github/workflows/docker.yml"
+  workflow_dispatch:
+
+env:
+  IMAGE: ghcr.io/${{ github.repository }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      # Pull requests from forks cannot push; build them anyway so a broken
+      # Dockerfile is caught in review rather than on main.
+      - name: Log in to ghcr.io
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Tags and labels
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE }}
+          tags: |
+            type=ref,event=branch
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          load: true
+          tags: ${{ env.IMAGE }}:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # A pushed image that cannot answer --version is worse than no image.
+      - name: The image must run
+        run: |
+          docker run --rm "${{ env.IMAGE }}:ci" --version
+          docker run --rm "${{ env.IMAGE }}:ci" doctor --no-fix --json > doctor.json || true
+          cat doctor.json
+          docker run --rm "${{ env.IMAGE }}:ci" --help > /dev/null
+
+      - name: Push
+        if: github.event_name != 'pull_request'
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

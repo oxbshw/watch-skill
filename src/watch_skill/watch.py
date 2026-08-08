@@ -35,6 +35,22 @@ class WatchResult:
         return self.start_seconds is not None or self.end_seconds is not None
 
 
+def _validate_budget(max_frames: int | None) -> None:
+    """A frame budget below 1 is not a budget.
+
+    Zero and negatives used to fall through to the sampler, which clamped
+    them to a single frame and reported a normal-looking selection — so a
+    typo produced a confident report built from one frame.
+    """
+    if max_frames is not None and max_frames < 1:
+        raise PerceptionError(
+            f"max_frames must be at least 1 (got {max_frames})",
+            code="perceive.bad_budget",
+            fix="drop max_frames to use the automatic budget, or pass a "
+            "positive count; --detail transcript skips frames entirely",
+        )
+
+
 def _validate_window(
     start: float | None, end: float | None, duration: float
 ) -> None:
@@ -80,6 +96,9 @@ def watch(
     (reference-proven fast path). ``cue_timestamps`` pins frames at given
     absolute times. ``duration_cap`` bounds live-stream capture.
     """
+    # Cheap argument checks first: a bad budget should not cost a download.
+    _validate_budget(max_frames)
+
     work_dir = Path(out_dir).resolve() if out_dir else Path(tempfile.mkdtemp(prefix="watch-skill-"))
     work_dir.mkdir(parents=True, exist_ok=True)
 

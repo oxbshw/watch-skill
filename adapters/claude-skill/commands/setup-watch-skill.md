@@ -26,11 +26,16 @@ If that fails, install it with **uv** (which also bootstraps its own Python —
 no system Python needed). Prefer `uv`; fall back to `pipx`, then `pip`:
 
 ```bash
-# preferred: isolated tool install straight from the repo
-uv tool install "watch-skill[all] @ git+https://github.com/oxbshw/watch-skill" \
-  || pipx install "watch-skill[all] @ git+https://github.com/oxbshw/watch-skill" \
-  || pip install --user "watch-skill[all] @ git+https://github.com/oxbshw/watch-skill"
+# preferred: isolated tool install from PyPI
+uv tool install "watch-skill[standard]" \
+  || pipx install "watch-skill[standard]" \
+  || pip install --user "watch-skill[standard]"
 ```
+
+`standard` is frames, retrieval, and MCP. Use `watch-skill[all]` instead to
+add OCR, local Whisper, the REST surface, and the browser THE LOOP drives —
+larger, and not needed to answer questions about a video. Whichever you pick,
+`doctor` names anything missing and prints the command that adds it.
 
 If `uv` itself is missing, install it first (`winget install astral-sh.uv` on
 Windows, or `curl -fsSL https://astral.sh/uv/install.sh | sh` on macOS/Linux),

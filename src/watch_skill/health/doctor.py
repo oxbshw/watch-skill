@@ -572,10 +572,51 @@ def check_api_keys() -> CheckResult:
     )
 
 
+# Optional tiers, the import that proves each one, and what you lose without
+# it. Keeping this table here means a light install can explain itself
+# instead of failing later with a raw ModuleNotFoundError.
+_FEATURE_TIERS: tuple[tuple[str, str, str], ...] = (
+    ("perceive", "cv2", "scene detection and frame extraction"),
+    ("index", "fastembed", "semantic search and cross-video memory"),
+    ("mcp", "fastmcp", "the MCP server (`watch-skill serve`)"),
+    ("ocr", "rapidocr", "reading on-screen text"),
+    ("whisper", "faster_whisper", "local transcription when captions are absent"),
+    ("loop", "playwright", "THE LOOP: browser capture and verification"),
+    ("api", "fastapi", "the REST surface (`watch-skill api`)"),
+)
+
+
+def check_features() -> CheckResult:
+    """Report which optional tiers are installed, and how to add the rest."""
+    import importlib.util
+
+    missing = [
+        (extra, why)
+        for extra, module, why in _FEATURE_TIERS
+        if importlib.util.find_spec(module) is None
+    ]
+    if not missing:
+        return CheckResult("features", "ok", "all optional tiers installed")
+
+    names = ", ".join(extra for extra, _ in missing)
+    detail = "; ".join(f"{extra}: {why}" for extra, why in missing)
+    # The standard tier is the one that makes `watch` work at all; anything
+    # beyond that is a genuine choice, so this warns rather than fails.
+    core_missing = [e for e, _ in missing if e in ("perceive", "index", "mcp")]
+    status: Status = "warn" if core_missing else "ok"
+    return CheckResult(
+        "features",
+        status,
+        f"not installed — {detail}. Add with: "
+        f'pip install "watch-skill[{names}]"',
+    )
+
+
 def run_doctor(fix: bool = True) -> DoctorReport:
     """Run every check; when ``fix`` is set, remediate what we can en route."""
     report = DoctorReport()
     report.checks.append(check_python())
+    report.checks.append(check_features())
     report.checks.append(check_ffmpeg(fix=fix))
     report.checks.append(check_playwright_recording(fix=fix))
     report.checks.append(check_yt_dlp(fix=fix))

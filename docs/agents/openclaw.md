@@ -11,11 +11,10 @@ as-is.
 
 ## Install
 
-```powershell
-git clone https://github.com/oxbshw/watch-skill && cd watch-skill
-uv sync --extra all
-uv run watch-skill doctor
-uv tool install .   # puts `watch-skill` on PATH, which the skills call
+```bash
+# puts `watch-skill` on PATH, which the skills call
+uv tool install "watch-skill[standard]"   # or: pipx install "watch-skill[standard]"
+watch-skill doctor
 ```
 
 ## Configure

@@ -24,6 +24,15 @@ VIDEO_EXTS = ytdlp.VIDEO_EXTS
 
 def _resolve_local(source: str) -> AcquireResult:
     path = Path(source).expanduser().resolve()
+    if path.is_dir():
+        # "file not found" is wrong and unhelpful here: the path exists, and
+        # a folder of recordings is what `batch` is for.
+        raise AcquisitionError(
+            f"{path} is a directory, not a video file",
+            code="acquire.is_a_directory",
+            fix=f'watch every video in it with: watch-skill batch "{path}"',
+            details={"source": source},
+        )
     if not path.is_file():
         raise AcquisitionError(
             f"file not found: {path}",

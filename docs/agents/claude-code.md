@@ -11,16 +11,25 @@ follow-ups — with no manual intervention).
 
 ## Install
 
-```powershell
+```bash
+uvx --from "watch-skill[standard]" watch-skill doctor   # bootstraps ffmpeg + yt-dlp
+```
+
+<details>
+<summary>From source instead (contributors)</summary>
+
+```bash
 git clone https://github.com/oxbshw/watch-skill && cd watch-skill
 uv sync --extra all
-uv run watch-skill doctor        # bootstraps ffmpeg + yt-dlp
+uv run watch-skill doctor
 ```
+
+</details>
 
 ## Register the MCP server
 
 ```powershell
-claude mcp add watch-skill -- uv --directory "C:\path\to\watch-skill" run watch-skill serve
+claude mcp add watch-skill -- uvx --from "watch-skill[standard]" watch-skill serve
 ```
 
 Or per-project via `.mcp.json` in your project root:
@@ -29,8 +38,8 @@ Or per-project via `.mcp.json` in your project root:
 {
   "mcpServers": {
     "watch-skill": {
-      "command": "uv",
-      "args": ["--directory", "C:\\path\\to\\watch-skill", "run", "watch-skill", "serve"]
+      "command": "uvx",
+      "args": ["--from", "watch-skill[standard]", "watch-skill", "serve"]
     }
   }
 }

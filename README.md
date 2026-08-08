@@ -25,6 +25,8 @@ CLI, REST, and native framework adapters.
 **Watch. Remember. Fix. Verify.**
 
 [![CI](https://github.com/oxbshw/watch-skill/actions/workflows/ci.yml/badge.svg)](https://github.com/oxbshw/watch-skill/actions/workflows/ci.yml)
+[![Install](https://github.com/oxbshw/watch-skill/actions/workflows/install.yml/badge.svg)](https://github.com/oxbshw/watch-skill/actions/workflows/install.yml)
+[![PyPI](https://img.shields.io/pypi/v/watch-skill)](https://pypi.org/project/watch-skill/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-3776AB)](pyproject.toml)
 
@@ -38,30 +40,67 @@ CLI, REST, and native framework adapters.
 | **Remember** | A persistent, searchable index with timestamp citations, hybrid retrieval, cross-video synthesis, and reusable lessons. |
 | **Verify** | A capture → critique → fix → proof loop for browser flows, interfaces, generated video, gameplay, and monitored streams. |
 
-## Start in 60 seconds
+## Install
 
-### Claude Code
+One command, any platform, no clone:
+
+```bash
+uvx --from "watch-skill[standard]" watch-skill setup
+```
+
+That registers the MCP server in every AI agent it finds on the machine, backing up each
+config first. To wire an agent up by hand:
+
+```json
+{ "mcpServers": { "watch-skill": {
+    "command": "uvx",
+    "args": ["--from", "watch-skill[standard]", "watch-skill", "serve"] } } }
+```
+
+<details>
+<summary>Other ways in</summary>
+
+**Claude Code plugin**
 
 ```text
 /plugin marketplace add oxbshw/watch-skill
 /plugin install watch-skill@watch-skill
 ```
 
-Run `/watch-skill:setup-watch-skill` once after installation. It installs the engine,
-checks the binary dependencies, registers the MCP server, and offers to configure a
-vision provider.
+Then run `/watch-skill:setup-watch-skill` once.
 
-### macOS and Linux
+**pip or pipx**
+
+```bash
+pipx install "watch-skill[standard]"
+```
+
+**Docker** — nothing installed on the host; the volume keeps the index:
+
+```bash
+docker run --rm -i -v watch-skill-data:/data ghcr.io/oxbshw/watch-skill serve
+```
+
+**From source** (installs uv and Python if missing):
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/oxbshw/watch-skill/main/scripts/install.sh | sh
 ```
 
-### Windows
-
 ```powershell
 powershell -ExecutionPolicy Bypass -c "irm https://raw.githubusercontent.com/oxbshw/watch-skill/main/scripts/install.ps1 | iex"
 ```
+
+Both scripts run end to end on Linux, macOS, and Windows runners on every push.
+
+</details>
+
+`standard` is frames, retrieval, and MCP — about 200 MB. `watch-skill[all]` adds OCR,
+local Whisper, REST, and the browser THE LOOP drives. `watch-skill doctor` names anything
+missing and prints the command that adds it, so starting small is safe.
+
+Coming from [claude-video](https://github.com/bradautomates/claude-video)? Your `/watch`
+commands and flags work unchanged — see the [migration guide](docs/migrate-from-claude-video.md).
 
 Then watch a video and ask a follow-up:
 
@@ -223,6 +262,7 @@ extension points.
 | [THE LOOP](docs/guides/the-loop.md) | Capture, critique, iteration, and proof artifacts |
 | [Cost policy](docs/cost.md) | Routing, budgets, caching, and benchmark method |
 | [Troubleshooting](docs/troubleshooting.md) | Dependency repair and common runtime errors |
+| [Comparison](docs/comparison.md) | Honest trade-offs against the alternatives |
 | [Engineering decisions](docs/DECISIONS.md) | The reasoning behind non-obvious design choices |
 | [Roadmap](docs/ROADMAP.md) | Planned work and contribution opportunities |
 
@@ -239,5 +279,13 @@ uv run ruff check .
 See [CONTRIBUTING.md](CONTRIBUTING.md) for test tiers, documentation standards, and the
 agent-adapter checklist. Security and privacy reports are covered by
 [SECURITY.md](SECURITY.md).
+
+## Listed on
+
+Independent directories that index Watch Skill. Listings are maintained by their
+operators, so details there can lag a release.
+
+- [Agent Skills Hub](https://agentskillshub.top/skill/oxbshw/watch-skill/)
+- [Neuralbox](https://neuralbox.tech/oxbshw-watch-skill)
 
 Watch Skill is available under the [MIT License](LICENSE).

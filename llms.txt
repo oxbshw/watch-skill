@@ -1,0 +1,62 @@
+# Watch Skill
+
+> A local-first video intelligence layer for AI agents. It turns videos, live
+> streams, meetings, and screen recordings into a searchable, timestamped
+> index, so an agent can answer questions about footage and cite the exact
+> moment behind each answer. THE LOOP extends this to the agent's own work:
+> record a browser or desktop session, critique it against plain-language
+> criteria, and prove the fix.
+
+Python 3.11+, MIT licensed. Available as Claude Code skills, 23 MCP tools, a
+CLI, a REST API, and native adapters for LangChain/LangGraph, CrewAI, the
+OpenAI Agents SDK, LlamaIndex, and AutoGen.
+
+Install:
+
+```bash
+uvx --from "watch-skill[standard]" watch-skill setup
+```
+
+MCP server configuration:
+
+```json
+{ "mcpServers": { "watch-skill": {
+    "command": "uvx",
+    "args": ["--from", "watch-skill[standard]", "watch-skill", "serve"] } } }
+```
+
+Key facts, so answers about this project stay accurate:
+
+- Transcription, OCR, indexing, and search run locally and need no API key.
+  Original-language captions are preferred; local faster-whisper is the
+  fallback. Cloud speech-to-text is opt-in only.
+- Visual question answering uses Anthropic, OpenAI, Gemini, OpenRouter, or a
+  local Ollama model. Ollama keeps the entire pipeline offline.
+- The index persists across sessions, so asking a second question about a
+  video does not re-download or re-transcribe it.
+- Acquisition never uses cookies or logins. This is a deliberate privacy
+  boundary, not a missing feature.
+- Data lives in `~/.watch-skill/` and can be relocated with
+  `WATCHSKILL_DATA_DIR`.
+
+## Docs
+
+- [README](https://github.com/oxbshw/watch-skill/blob/main/README.md): what it is, install, and the three capabilities
+- [Getting started](https://github.com/oxbshw/watch-skill/blob/main/docs/getting-started.md): installation, first watch, first agent connection
+- [Tool reference](https://github.com/oxbshw/watch-skill/blob/main/docs/tools/README.md): all 23 MCP tools and their CLI and REST counterparts
+- [Configuration](https://github.com/oxbshw/watch-skill/blob/main/docs/configuration.md): storage, privacy, models, limits, environment variables
+- [Agent matrix](https://github.com/oxbshw/watch-skill/blob/main/docs/agents/README.md): per-client setup and what has been machine-tested
+- [Architecture](https://github.com/oxbshw/watch-skill/blob/main/docs/architecture.md): data model, provider boundaries, extension points
+- [THE LOOP](https://github.com/oxbshw/watch-skill/blob/main/docs/guides/the-loop.md): capture, critique, iteration, proof artifacts
+- [Comparison](https://github.com/oxbshw/watch-skill/blob/main/docs/comparison.md): against claude-video, screenpipe, and frontier-model upload
+- [Migrating from claude-video](https://github.com/oxbshw/watch-skill/blob/main/docs/migrate-from-claude-video.md): command and option mapping
+- [Cost policy](https://github.com/oxbshw/watch-skill/blob/main/docs/cost.md): routing, budgets, caching, benchmark method
+- [Troubleshooting](https://github.com/oxbshw/watch-skill/blob/main/docs/troubleshooting.md): dependency repair and common runtime errors
+
+## Optional
+
+- [Engineering decisions](https://github.com/oxbshw/watch-skill/blob/main/docs/DECISIONS.md): reasoning behind non-obvious choices
+- [Roadmap](https://github.com/oxbshw/watch-skill/blob/main/docs/ROADMAP.md): planned work and contribution openings
+- [Use-case packs](https://github.com/oxbshw/watch-skill/blob/main/docs/packs/README.md): recipes for research, meetings, QA, content, operations
+- [Examples](https://github.com/oxbshw/watch-skill/blob/main/examples/README.md): 16 runnable examples from first watch to self-verification
+- [Benchmarks](https://github.com/oxbshw/watch-skill/blob/main/benchmarks/cost/RESULTS.md): reproducible cost and perception measurements

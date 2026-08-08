@@ -6388,6 +6388,16 @@ perceive = [
     { name = "pillow" },
     { name = "scenedetect" },
 ]
+standard = [
+    { name = "fastembed" },
+    { name = "fastmcp" },
+    { name = "imagehash" },
+    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
+    { name = "numpy", version = "2.5.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
+    { name = "opencv-python-headless" },
+    { name = "pillow" },
+    { name = "scenedetect" },
+]
 whisper = [
     { name = "faster-whisper" },
 ]
@@ -6426,9 +6436,10 @@ requires-dist = [
     { name = "scenedetect", marker = "extra == 'perceive'", specifier = ">=0.7,<0.8" },
     { name = "typer", specifier = ">=0.26,<1" },
     { name = "uvicorn", marker = "extra == 'api'", specifier = ">=0.50,<1" },
+    { name = "watch-skill", extras = ["perceive", "index", "mcp"], marker = "extra == 'standard'" },
     { name = "watch-skill", extras = ["perceive", "ocr", "whisper", "index", "mcp", "api", "loop"], marker = "extra == 'all'" },
 ]
-provides-extras = ["perceive", "ocr", "whisper", "index", "mcp", "api", "loop", "diarize", "langchain", "openai-agents", "crewai", "llamaindex", "autogen", "all"]
+provides-extras = ["perceive", "ocr", "whisper", "index", "mcp", "api", "loop", "diarize", "langchain", "openai-agents", "crewai", "llamaindex", "autogen", "standard", "all"]
 
 [package.metadata.requires-dev]
 dev = [

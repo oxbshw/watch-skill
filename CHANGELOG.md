@@ -1,5 +1,80 @@
 # Changelog
 
+## Unreleased
+
+Distribution work. v1.0 was installable only by cloning the repository,
+which is the main reason people who found the project did not end up
+running it.
+
+### Install
+- **Published to PyPI.** `pip install watch-skill`, `pipx`, and
+  `uvx --from "watch-skill[standard]" watch-skill serve` all work, so an
+  agent can be pointed at the package with no checkout and no path. The
+  release workflow uploads via trusted publishing (OIDC, no stored token)
+  in a separate job, so a failed upload cannot take the GitHub Release
+  with it.
+- **New `standard` tier** — frames, retrieval, and MCP at roughly 200 MB
+  against ~600 MB for `all`. OCR, local Whisper, REST, and the LOOP
+  browser are opt-in. `doctor` gained a `features` check that names every
+  missing tier and prints the command that installs it, so a small start
+  fails loudly rather than mysteriously.
+- **The installers are tested now.** `scripts/install.sh` and
+  `install.ps1` carried a note saying they had only ever run on Windows.
+  A new `install` workflow executes them on ubuntu, macOS, and Windows
+  runners on every change and weekly, asserting the CLI runs, `doctor`
+  passes, and the MCP server answers `initialize`. The note is gone
+  because the claim is now checked.
+- **Docker image** at `ghcr.io/oxbshw/watch-skill`, with the index on a
+  volume. CI refuses to push an image that cannot answer `--version`.
+- **Every agent guide** now shows the `uvx` config instead of a
+  machine-specific `uv --directory /path/to/checkout` line, with the
+  source route kept for contributors.
+
+### Fixed
+- **v1.0.0 reported its version as `0.6.0`.** The release bumped every
+  manifest and missed `src/watch_skill/__init__.py`, so the first thing a
+  bug report quotes named the wrong release. `__version__` now derives
+  from installed package metadata, and a test ties it to `pyproject.toml`.
+- **Docs claimed 13 MCP tools; there are 23.** The number was stale in
+  three pages at once because nothing checked it. A test now compares
+  every documented count against the live tool registry.
+- **Indexing a video twice deleted its own frames.** `_persist_frames`
+  wiped the destination before copying into it, and it also repoints each
+  frame at that destination — so the second call deleted the files it was
+  about to read, and two processes indexing the same video raced on one
+  directory. Both ended in a bare `FileNotFoundError` with an index row
+  pointing at frames that no longer existed. Frames are now staged in a
+  private directory and swapped in, so a failed pass leaves the previous
+  ones untouched.
+- **Redirected output was mojibake outside UTF-8 locales.** stdout was
+  left on the system codepage, so on a cp1256/cp1252/cp932 machine
+  `watch-skill watch ... > report.md` wrote U+FFFD in place of em dashes
+  and any non-Latin script, and every agent reading stdout got the same.
+  Output is pinned to UTF-8.
+- **`--max-frames 0` silently analyzed one frame** instead of rejecting a
+  budget that cannot be met; negatives did the same. Both now fail before
+  the source is fetched.
+- **Pointing `watch` at a folder said "file not found"** about a path that
+  plainly exists. It now says so and names `watch-skill batch`.
+- **"ollama is down — restarting it detached" printed when no ollama was
+  installed**, once per call, and the suggested fix was to run a binary
+  the reader did not have.
+
+### Added
+- `--version` / `-V` on the CLI, alongside the existing `version` command.
+- `--detail transcript|efficient|balanced|token-burner`, matching
+  claude-video's vocabulary so a migrating user's commands run unchanged.
+  An explicit `--max-frames` still wins.
+- [Comparison](docs/comparison.md) and
+  [migration guide](docs/migrate-from-claude-video.md), including what
+  Watch Skill is worse at.
+- `llms.txt`, `CODEOWNERS`, a review-turnaround note in CONTRIBUTING, and
+  a populated `FUNDING.yml`.
+- SECURITY.md now states plainly that `loop_video_gen` and `loop_game`
+  execute the command string you pass them, that an agent with MCP access
+  can therefore run arbitrary commands through those two tools, and what
+  to do if that is not acceptable in your setup.
+
 ## v1.0.0 — 2026-07-12
 
 Video skills for every AI agent, with memory. One release, seven claims,

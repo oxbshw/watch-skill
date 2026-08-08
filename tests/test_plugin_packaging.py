@@ -81,6 +81,19 @@ def test_versions_agree_across_manifests() -> None:
     assert mk["metadata"]["version"] == version, "marketplace metadata vs pyproject"
 
 
+def test_package_reports_the_release_version() -> None:
+    """v1.0.0 shipped announcing itself as 0.6.0.
+
+    The release bumped every manifest above and missed
+    `src/watch_skill/__init__.py`, so `watch-skill version` — the first thing
+    a bug reporter is asked for — named the wrong release. __version__ now
+    derives from installed metadata; this guards the contract either way.
+    """
+    from watch_skill import __version__
+
+    assert __version__ == _pyproject_version(), "watch_skill.__version__ vs pyproject"
+
+
 @pytest.mark.parametrize("manifest", [
     ".claude-plugin/marketplace.json",
     "adapters/claude-skill/.claude-plugin/plugin.json",

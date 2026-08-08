@@ -11,11 +11,10 @@ Watch Skill's skills library is exactly that shape.
 
 ## Install
 
-```powershell
-git clone https://github.com/oxbshw/watch-skill && cd watch-skill
-uv sync --extra all
-uv run watch-skill doctor
-uv tool install .   # `watch-skill` on PATH for the skills to call
+```bash
+# the skills shell out to `watch-skill`, so it needs to be on PATH
+uv tool install "watch-skill[standard]"   # or: pipx install "watch-skill[standard]"
+watch-skill doctor
 ```
 
 ## Configure

@@ -3,10 +3,20 @@
 # Installs uv (and thereby Python) if missing, clones/updates Watch Skill,
 # syncs dependencies, runs the self-healing doctor, and offers to register
 # the MCP server in every AI agent found on the machine.
+#
+# Every push runs this script end to end on windows-latest; see
+# .github/workflows/install.yml.
+#
+# Environment:
+#   WATCHSKILL_HOME    install directory (default: $env:USERPROFILE\watch-skill)
+#   WATCHSKILL_EXTRAS  dependency tier: standard (default) or all
+#   WATCHSKILL_INSTALL_LOCAL=1  install from this checkout instead of cloning
+#   WATCHSKILL_INSTALL_REF      git ref to check out after cloning
 
 $ErrorActionPreference = 'Stop'
 $repo = 'https://github.com/oxbshw/watch-skill'
-$installDir = Join-Path $env:USERPROFILE 'watch-skill'
+$installDir = if ($env:WATCHSKILL_HOME) { $env:WATCHSKILL_HOME } else { Join-Path $env:USERPROFILE 'watch-skill' }
+$extras = if ($env:WATCHSKILL_EXTRAS) { $env:WATCHSKILL_EXTRAS } else { 'standard' }
 
 function Write-Step($msg) { Write-Host "`n==> $msg" -ForegroundColor Cyan }
 
@@ -27,12 +37,19 @@ if (-not (Get-Command uv -ErrorAction SilentlyContinue)) {
 }
 
 # --- get the code ----------------------------------------------------------
-if (Test-Path (Join-Path $installDir 'pyproject.toml')) {
+if ($env:WATCHSKILL_INSTALL_LOCAL -eq '1') {
+    # CI path: exercise this checkout rather than whatever main happens to be.
+    $srcDir = Split-Path -Parent $PSScriptRoot
+    Write-Step "Installing from local checkout $srcDir"
+    New-Item -ItemType Directory -Force -Path $installDir | Out-Null
+    Copy-Item -Path (Join-Path $srcDir '*') -Destination $installDir -Recurse -Force
+} elseif (Test-Path (Join-Path $installDir 'pyproject.toml')) {
     Write-Step "Updating existing install at $installDir"
     if (Get-Command git -ErrorAction SilentlyContinue) { git -C $installDir pull --ff-only }
 } elseif (Get-Command git -ErrorAction SilentlyContinue) {
     Write-Step "Cloning into $installDir"
     git clone $repo $installDir
+    if ($env:WATCHSKILL_INSTALL_REF) { git -C $installDir checkout --detach $env:WATCHSKILL_INSTALL_REF }
 } else {
     Write-Step "git not found - downloading source zip"
     $zip = Join-Path $env:TEMP 'watch_skill.zip'
@@ -42,10 +59,13 @@ if (Test-Path (Join-Path $installDir 'pyproject.toml')) {
 }
 
 # --- dependencies + self-healing doctor ------------------------------------
-Write-Step "Installing dependencies (uv sync)"
+# `standard` is frames + retrieval + MCP (~200 MB). `all` adds OCR, local
+# Whisper, REST, and the browser used by THE LOOP (~600 MB). `doctor` names
+# whatever is missing and prints the command that adds it.
+Write-Step "Installing dependencies (uv sync --extra $extras)"
 Push-Location $installDir
 try {
-    uv sync --extra all
+    uv sync --extra $extras
     Write-Step "Running the doctor (bootstraps ffmpeg / yt-dlp / deno)"
     uv run watch-skill doctor
     Write-Step "Registering Watch Skill in your AI agents"
@@ -56,12 +76,21 @@ try {
 
 Write-Step "Done"
 Write-Host @"
-If your agent was not auto-configured, paste this MCP server config:
+If your agent was not auto-configured, paste this MCP server config. It
+points at the checkout this script just made, so your local changes are what
+runs:
 
   { "mcpServers": { "watch-skill": {
       "command": "uv",
       "args": ["--directory", "$($installDir -replace '\\','\\\\')", "run", "watch-skill", "serve"] } } }
 
+Not developing on it? Drop the checkout and use the published package instead:
+
+  { "mcpServers": { "watch-skill": {
+      "command": "uvx",
+      "args": ["--from", "watch-skill[standard]", "watch-skill", "serve"] } } }
+
 Per-agent guides: $installDir\docs\agents\README.md
+Want OCR, local Whisper, and THE LOOP too?  uv sync --extra all
 Try it: restart your agent and say  "watch this video: <any URL>"
 "@

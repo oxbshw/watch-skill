@@ -1,3 +1,4 @@
-# Placeholder — fill in when sponsorship accounts exist.
-# github: [your-github-username]
-# custom: ["https://..."]
+# Enabling the Sponsor button takes two steps and this file is only one of
+# them: GitHub Sponsors must also be switched on for the oxbshw account at
+# https://github.com/sponsors — until then the button stays hidden.
+github: [oxbshw]

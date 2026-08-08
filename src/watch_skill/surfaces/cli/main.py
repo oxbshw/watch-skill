@@ -13,11 +13,23 @@ from pathlib import Path
 import typer
 from rich.console import Console
 
-# Legacy Windows consoles (cp1256 etc.) can't encode every indexed title;
-# degrade to '?' instead of crashing `list`/`search` output.
+# Pin the output encoding to UTF-8.
+#
+# On Windows a tty goes through the console API and handles Unicode fine, but
+# a pipe or a redirect falls back to the system codepage — cp1256, cp1252,
+# cp932. Reports carry em dashes and, for non-English video, the content's own
+# script, so `watch-skill watch ... > report.md` was writing U+FFFD where the
+# text should be, and anything reading our stdout got the same. Setting only
+# errors="replace" stopped the crash but kept the corruption.
+#
+# errors="replace" stays as the backstop for a stream that cannot be moved to
+# UTF-8 at all.
 for _stream in (sys.stdout, sys.stderr):
     if hasattr(_stream, "reconfigure"):
-        _stream.reconfigure(errors="replace")
+        try:
+            _stream.reconfigure(encoding="utf-8", errors="replace")
+        except (ValueError, OSError):  # detached or already-wrapped stream
+            _stream.reconfigure(errors="replace")
 
 app = typer.Typer(
     name="watch-skill",
@@ -99,6 +111,11 @@ def watch(
     index: bool = typer.Option(
         True, "--index/--no-index", help="Persist to the searchable index (ask/search later)."
     ),
+    detail: str | None = typer.Option(
+        None,
+        "--detail",
+        help="Frame-budget preset: transcript | efficient | balanced | token-burner.",
+    ),
 ) -> None:
     """Watch a video: acquire -> scenes -> frames -> OCR -> transcript -> report."""
     from pathlib import Path
@@ -107,6 +124,28 @@ def watch(
     from watch_skill.perceive.budget import parse_time
     from watch_skill.report import render_report
     from watch_skill.watch import watch as run_watch
+
+    # `--detail` is claude-video's vocabulary. Accepting it means a migrating
+    # user's existing commands run unchanged; each preset just sets the frame
+    # budget this engine already had. An explicit --max-frames still wins.
+    if detail is not None:
+        preset = detail.strip().lower()
+        presets = {
+            "transcript": None,
+            "efficient": 12,
+            "balanced": 32,
+            "token-burner": 96,
+        }
+        if preset not in presets:
+            _console.print(
+                f"[red]error:[/red] unknown --detail {detail!r}; "
+                f"expected one of: {', '.join(presets)}"
+            )
+            raise typer.Exit(code=2) from None
+        if preset == "transcript":
+            transcript_only = True
+        elif max_frames is None:
+            max_frames = presets[preset]
 
     cues = None
     if timestamps:
@@ -957,6 +996,31 @@ def version() -> None:
     from watch_skill import __version__
 
     print(__version__)
+
+
+def _print_version(value: bool) -> None:
+    """Callback for the top-level --version flag."""
+    if value:
+        from watch_skill import __version__
+
+        print(__version__)
+        raise typer.Exit()
+
+
+# `watch-skill version` has always worked, but `--version` is what people
+# type first — and what packaging smoke tests reach for.
+@app.callback()
+def _main(
+    _version: bool = typer.Option(
+        False,
+        "--version",
+        "-V",
+        help="Print the Watch Skill version and exit.",
+        callback=_print_version,
+        is_eager=True,
+    ),
+) -> None:
+    """Give any agent a video input: watch, index, ask, and iterate."""
 
 
 if __name__ == "__main__":
