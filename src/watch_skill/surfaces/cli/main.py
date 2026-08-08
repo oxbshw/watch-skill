@@ -103,6 +103,13 @@ def watch(
     diarize: bool = typer.Option(
         False, "--diarize", help="Label transcript by speaker (diarize extra + HF token)."
     ),
+    word_timestamps: bool = typer.Option(
+        False,
+        "--word-timestamps",
+        help="Align each word, so `get_moment` can cite the exact word rather "
+        "than a segment that may run for ten seconds. Costs extra decoding "
+        "time and only applies to the local-whisper rung.",
+    ),
     duration: float | None = typer.Option(
         None, "--duration", help="Bound live-stream capture to N seconds."
     ),
@@ -164,6 +171,7 @@ def watch(
             allow_cloud_stt=True if cloud_stt else None,
             whisper_model=whisper_model,
             diarize=True if diarize else None,
+            word_timestamps=word_timestamps,
             duration_cap=duration,
             out_dir=Path(out_dir) if out_dir else None,
             use_cache=not no_cache,

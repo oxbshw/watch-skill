@@ -250,6 +250,16 @@ MIGRATIONS: list[Migration] = [
     );
     CREATE INDEX idx_library_answers_norm ON library_answers(question_norm);
     """,
+    # v8 — word-level timestamps.
+    #
+    # A segment can run ten seconds, so "when was that said" answered from
+    # segment bounds is only ever accurate to the segment. Words are stored
+    # as JSON on the segment rather than as their own table: they are always
+    # read with their segment, never queried across videos, and a row per
+    # word would multiply the index size for no lookup we perform.
+    """
+    ALTER TABLE segments ADD COLUMN words_json TEXT;
+    """,
 ]
 
 

@@ -104,9 +104,13 @@ def _insert_derived(conn: sqlite3.Connection, result: WatchResult, video_id: str
     """Insert segments/scenes/ocr; return (kind, ref_id, timestamp, text) for embedding."""
     to_embed: list[tuple] = []
     for seg in result.transcript.segments:
+        import json as _json  # noqa: PLC0415
+
+        words = _json.dumps([w.to_dict() for w in seg.words]) if seg.words else None
         cur = conn.execute(
-            "INSERT INTO segments (video_id, start, end, text) VALUES (?, ?, ?, ?)",
-            (video_id, seg.start, seg.end, seg.text),
+            "INSERT INTO segments (video_id, start, end, text, words_json) "
+            "VALUES (?, ?, ?, ?, ?)",
+            (video_id, seg.start, seg.end, seg.text, words),
         )
         to_embed.append(("segment", cur.lastrowid, seg.start, seg.text))
 

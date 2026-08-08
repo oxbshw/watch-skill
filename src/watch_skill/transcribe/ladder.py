@@ -28,8 +28,13 @@ def get_transcript(
     preferred_cloud_backend: str | None = None,
     start_seconds: float | None = None,
     end_seconds: float | None = None,
+    word_timestamps: bool = False,
 ) -> Transcript:
-    """Run the ladder. Any rung may be force-disabled; defaults come from settings."""
+    """Run the ladder. Any rung may be force-disabled; defaults come from settings.
+
+    ``word_timestamps`` only reaches the local-whisper rung: captions carry
+    no word alignment, and the cloud backends here do not return one either.
+    """
     settings = get_settings()
     use_local = settings.local_whisper_enabled if allow_local is None else allow_local
     use_cloud = settings.cloud_stt_enabled if allow_cloud is None else allow_cloud
@@ -55,7 +60,9 @@ def get_transcript(
                 video_path, work_dir / "audio.mp3",
                 start_seconds=start_seconds, end_seconds=end_seconds,
             )
-            transcript = local.transcribe_local(audio_path, model_size=model)
+            transcript = local.transcribe_local(
+                audio_path, model_size=model, word_timestamps=word_timestamps
+            )
             return transcript.offset(start_seconds or 0.0)
         except TranscriptionError as exc:
             print(f"[watch-skill] local whisper unavailable ({exc.code})", file=sys.stderr)

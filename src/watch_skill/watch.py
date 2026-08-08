@@ -84,6 +84,7 @@ def watch(
     allow_local_whisper: bool | None = None,
     allow_cloud_stt: bool | None = None,
     whisper_model: str | None = None,
+    word_timestamps: bool = False,
     diarize: bool | None = None,
     duration_cap: float | None = None,
     out_dir: Path | None = None,
@@ -154,6 +155,7 @@ def watch(
         whisper_model=whisper_model,
         start_seconds=start_seconds,
         end_seconds=end_seconds,
+        word_timestamps=word_timestamps,
     )
     if start_seconds is not None or end_seconds is not None:
         transcript = transcript.filter_range(start_seconds, end_seconds)

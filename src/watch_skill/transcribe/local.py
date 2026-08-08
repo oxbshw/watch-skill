@@ -11,7 +11,7 @@ import sys
 from pathlib import Path
 
 from watch_skill.errors import TranscriptionError
-from watch_skill.transcribe.types import Segment, Transcript
+from watch_skill.transcribe.types import Segment, Transcript, Word
 
 # (min free RAM GiB, model). Whisper CT2 int8 sizes are roughly: tiny 0.1 GB,
 # base 0.15 GB, small 0.5 GB, medium 1.5 GB, large-v3 3 GB — headroom included.
@@ -74,9 +74,16 @@ def pick_model_size() -> str:
 
 
 def transcribe_local(
-    audio_path: Path, model_size: str = "auto", language: str | None = None
+    audio_path: Path,
+    model_size: str = "auto",
+    language: str | None = None,
+    word_timestamps: bool = False,
 ) -> Transcript:
-    """Transcribe an audio file fully offline with faster-whisper."""
+    """Transcribe an audio file fully offline with faster-whisper.
+
+    ``word_timestamps`` asks the model to align each word. It costs extra
+    decoding time, so it is off unless something needs word-level citation.
+    """
     try:
         from faster_whisper import WhisperModel  # noqa: PLC0415
     except ImportError as exc:
@@ -96,13 +103,28 @@ def transcribe_local(
     try:
         model = WhisperModel(size, device=device, compute_type=compute)
         raw_segments, _info = model.transcribe(
-            str(audio_path), language=language, vad_filter=True
+            str(audio_path),
+            language=language,
+            vad_filter=True,
+            word_timestamps=word_timestamps,
         )
-        segments = [
-            Segment(start=round(s.start, 2), end=round(s.end, 2), text=s.text.strip())
-            for s in raw_segments
-            if s.text.strip()
-        ]
+        segments = []
+        for s in raw_segments:
+            if not s.text.strip():
+                continue
+            words = [
+                Word(start=round(w.start, 2), end=round(w.end, 2), text=w.word.strip())
+                for w in (getattr(s, "words", None) or [])
+                if w.word.strip()
+            ]
+            segments.append(
+                Segment(
+                    start=round(s.start, 2),
+                    end=round(s.end, 2),
+                    text=s.text.strip(),
+                    words=words,
+                )
+            )
     except Exception as exc:
         raise TranscriptionError(
             f"local whisper failed: {exc}",

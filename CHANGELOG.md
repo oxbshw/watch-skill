@@ -2,6 +2,35 @@
 
 ## Unreleased
 
+### Word-level timestamps
+- `watch-skill watch --word-timestamps` aligns each word through the
+  local-whisper rung, and `get_moment` now names the word being spoken at
+  the instant you asked about. A segment can run ten seconds, so a citation
+  built from segment bounds was only ever accurate to the segment.
+- Words ride on `Segment.words`, survive `offset()` (a window-transcribed
+  segment and its words must not end up on different timelines), and are
+  stored as JSON on the segment row — schema v8. They are always read with
+  their segment and never queried across videos, so a row per word would
+  multiply the index for a lookup nobody performs.
+- Captions and cloud STT carry no alignment. The field is absent there
+  rather than filled with segment bounds pretending to be words.
+
+### Two roadmap entries settled with measurements, not opinions
+- **sqlite-vec stays out.** The roadmap claimed the numpy batch cosine does
+  10k vectors in ~120 ms; measured, it is **18.9 ms** — pessimistic by 6x —
+  scaling linearly to 218 ms at 100k. sqlite-vec is also still 0.1.9 with no
+  stated development status, and the roadmap's own condition was "adopt once
+  it stabilizes". The real scaling problem in that table is ~2 KB per vector
+  (a 100k library is a 200 MB file), so narrower storage comes first. Full
+  table in [DECISIONS](docs/DECISIONS.md).
+- **The MCP 2026-07-28 revision is a release candidate**, and adopting one
+  ahead of `fastmcp` would mean forking the transport. Its three
+  deprecations — Roots, Sampling, Logging — turn out not to touch this
+  server at all: paths arrive as tool parameters, vision goes straight to a
+  provider rather than borrowing the client's model, and progress goes to
+  stderr. The migration when it lands is transport-level, and the two places
+  that assume the handshake are noted.
+
 ### A benchmark that picks a provider for you
 - `watch-skill bench providers` reads the same committed fixtures with every
   provider you hold a key for, and prints char-hit rate, latency, and cost.
@@ -15,7 +44,10 @@
   recent call, so cost comes from the provider rather than an estimate.
   `generate` still returns text, so nothing calling it changes.
 
-### Two more agents
+### Three more agents
+- [Amp](docs/agents/amp.md) — `amp mcp add`, or the `amp.mcpServers`
+  settings key, which is namespaced differently from every other client
+  here, so a copied block needs that one change.
 - [JetBrains IDEs](docs/agents/jetbrains.md) — Junie's
   `.junie/mcp/mcp.json` and AI Assistant, which keep separate configuration.
 - [Aider](docs/agents/aider.md), honestly: it has **no MCP client** — the

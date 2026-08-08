@@ -247,7 +247,7 @@ def get_moment(
         else:
             frames = [dict(r) for r in frames][:max_frames]
         segments = conn.execute(
-            """SELECT start, end, text FROM segments
+            """SELECT start, end, text, words_json FROM segments
                WHERE video_id = ? AND end >= ? AND start <= ? ORDER BY start""",
             (video["id"], lo, hi),
         ).fetchall()
@@ -258,9 +258,28 @@ def get_moment(
         ).fetchall()
     finally:
         conn.close()
+    # Words are stored as JSON on the segment; decode them here so callers
+    # get structure instead of a string, and name the word actually being
+    # spoken at the asked-for instant — the point of storing them at all.
+    import json as _json  # noqa: PLC0415
+
+    decoded: list[dict] = []
+    for row in segments:
+        seg = dict(row)
+        raw = seg.pop("words_json", None)
+        words = _json.loads(raw) if raw else []
+        if words:
+            seg["words"] = words
+            spoken = next(
+                (w for w in words if w["start"] <= timestamp <= w["end"]), None
+            )
+            if spoken is not None:
+                seg["word_at_timestamp"] = spoken
+        decoded.append(seg)
+
     return MomentContext(
         video_id=video["id"], timestamp=timestamp, window=window,
         frames=[dict(f) for f in frames],
-        segments=[dict(s) for s in segments],
+        segments=decoded,
         ocr=[dict(o) for o in ocr],
     )

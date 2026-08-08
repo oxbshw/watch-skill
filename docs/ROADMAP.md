@@ -40,15 +40,24 @@ MCP tool names stable, forward migrations only.
 
 - **Scene graph**: object/person persistence across scenes ("track the
   red car"), built on the existing phash alignment.
-- **sqlite-vec for vector search** (`index/`): the numpy batch cosine
-  handles 10k vectors in ~120 ms; past ~100k stored items a real ANN
-  index pays off. sqlite-vec keeps everything in the one SQLite file;
-  adopt once it stabilizes.
+- **Narrower vector storage** (`index/`), ahead of any ANN index. Measured
+  2026-08-08: the numpy batch cosine does 10k vectors in 18.9 ms, not the
+  ~120 ms this entry used to claim, and scales linearly to 218 ms at 100k.
+  Scan speed is not the bottleneck yet — file size is, at ~2 KB per vector
+  (a 100k-item library is a 200 MB index). Quantization or a narrower dtype
+  buys more than sqlite-vec would.
+- **sqlite-vec for vector search**: still 0.1.9 with no stated development
+  status, and the numbers above say the latency it would fix is not yet
+  felt. It keeps everything in the one SQLite file, which is why it remains
+  the intended answer — see [DECISIONS](DECISIONS.md) for the full table and
+  the condition to revisit.
 - **Streaming watch progress over MCP** (`surfaces/mcp/`): partial
   transcript/scene events as they land, so agents can answer before the
   watch finishes.
-- **Word-level timestamps**: faster-whisper supports them; plumb through
-  Segment and let `get_moment` cite exact words.
+- ~~**Word-level timestamps**~~ — shipped. `--word-timestamps` aligns each
+  word through the local-whisper rung; `get_moment` names the word being
+  spoken at the instant asked about. Captions and cloud STT carry no
+  alignment, so the field is absent rather than guessed.
 - **Diarization polish** (`transcribe/diarize.py`): lighter local
   backend, speaker naming from context, diarized evidence.
 - **yt-dlp PO-token / impersonation extras** (`acquire/`): opt-in

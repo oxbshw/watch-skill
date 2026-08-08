@@ -209,3 +209,70 @@ questions — the honest response until a re-watch refreshes it.
   servers keep the model resident, so agent follow-ups don't pay the load.
 - Full offline suite on the upgraded stack: 202 passed (see CI for the
   cross-platform matrix).
+
+### Not adopting the MCP 2026-07-28 release candidate yet (2026-08-08)
+
+The 2026-07-28 revision is the largest since MCP launched, and it is a
+release *candidate*. It removes the `initialize`/`initialized` handshake and
+`Mcp-Session-Id` entirely, moves client info into `_meta` on every request,
+adds `MCP-Protocol-Version` / `Mcp-Method` / `Mcp-Name` headers, requires
+`server/discover`, and reshapes Tasks into an extension.
+
+We are staying on the current revision for now, for two reasons. The server
+is built on `fastmcp`, so the protocol version is that library's decision
+before it is ours — adopting ahead of it would mean forking the transport.
+And a candidate is not a specification: shipping against one and then
+tracking its changes costs more than waiting, on a surface where every
+change breaks configured agents.
+
+What that costs us is bounded, because the deprecations do not touch this
+server:
+
+- **Roots** — not used. Watch Skill takes paths and URLs as tool
+  parameters, which is what the deprecation notice recommends instead.
+- **Sampling** — not used. Vision calls go straight to a provider through
+  `VisionClient`; the client's model is never borrowed. (The word "sampling"
+  in `surfaces/mcp/server.py` is about frame budgets.)
+- **Logging** — not used. Progress goes to stderr, which is what the notice
+  points at for stdio servers, and structured errors travel in the tool
+  result.
+
+So the migration when it lands is transport-level: headers, discovery, and
+dropping handshake assumptions. Two things in this repository assume the
+handshake and will need updating with it — the MCP smoke test in
+`.github/workflows/install.yml`, which asserts an `initialize` response, and
+the per-agent smoke tests in `docs/agents/`.
+
+Revisit when fastmcp ships support and the revision is final rather than a
+candidate.
+
+### sqlite-vec stays out for now, and here is the measurement (2026-08-08)
+
+The roadmap carried "the numpy batch cosine handles 10k vectors in ~120 ms;
+past ~100k a real ANN index pays off". Measured on the reference machine
+(Windows 10, 8 GB RAM, CPU-only, 384-dim vectors, best of three scans):
+
+| rows | full scan | index file |
+|---|---|---|
+| 1,000 | 3.2 ms | — |
+| 10,000 | 18.9 ms | 20 MB |
+| 50,000 | 108 ms | 99 MB |
+| 100,000 | 218 ms | 197 MB |
+| 250,000 | 549 ms | 493 MB |
+
+The 10k figure was pessimistic by roughly 6x. Scaling is linear at about
+2.2 µs per stored vector, so the point where a scan stops feeling instant
+sits near 100k — not below it.
+
+Two things follow. sqlite-vec is still 0.1.9 with no stated development
+status, and the roadmap's own condition was "adopt once it stabilizes";
+putting a pre-1.0 binary dependency in the read path of the index, which is
+the product, buys latency we do not yet need. And the more pressing number
+in that table is not the milliseconds but the megabytes: ~2 KB per vector
+means a 100k-item library is a 200 MB file. Vector storage width is the
+scaling problem to solve first, ahead of scan speed.
+
+Re-measure at 100k real items before revisiting. If the scan is the
+complaint rather than the disk, sqlite-vec is the answer — it keeps
+everything in the one SQLite file, which is why it was chosen over an
+external ANN service.
