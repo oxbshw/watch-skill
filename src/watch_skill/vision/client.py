@@ -91,6 +91,13 @@ def _openrouter_request(model: str, key: str, prompt: str, images: list[Path]) -
     return PROVIDERS["openrouter"].endpoint, headers, body
 
 
+def _minimax_request(model: str, key: str, prompt: str, images: list[Path]) -> tuple[str, dict, dict]:
+    _, headers, body = _openai_request(model, key, prompt, images)
+    settings = get_settings()
+    endpoint = PROVIDERS["minimax"].endpoint.format(base=settings.minimax_base_url.rstrip("/"))
+    return endpoint, headers, body
+
+
 def _gemini_request(model: str, key: str, prompt: str, images: list[Path]) -> tuple[str, dict, dict]:
     parts: list[dict[str, Any]] = [
         {"inline_data": {"mime_type": _media_type(p), "data": _b64(p)}} for p in images
@@ -136,6 +143,7 @@ _BUILDERS: dict[str, tuple[Callable, Callable]] = {
     "anthropic": (_anthropic_request, _anthropic_extract),
     "openai": (_openai_request, _openai_extract),
     "openrouter": (_openrouter_request, _openai_extract),
+    "minimax": (_minimax_request, _openai_extract),
     "gemini": (_gemini_request, _gemini_extract),
     "ollama": (_ollama_request, _ollama_extract),
 }

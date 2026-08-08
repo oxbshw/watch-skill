@@ -40,6 +40,11 @@ CLOUD_PROVIDER_DEFAULTS: dict[str, tuple[str, str, str]] = {
         "google/gemini-3.5-flash",
         "anthropic/claude-sonnet-5",
     ),
+    "minimax": ("WATCHSKILL_MINIMAX_API_KEY", "MiniMax-M3", "MiniMax-M3"),
+}
+
+CLOUD_PROVIDER_BASE_URLS: dict[str, str] = {
+    "minimax": "https://api.minimax.io/v1",
 }
 
 # Local vision models by machine size. qwen2.5vl:3b reads on-screen text well
@@ -151,16 +156,16 @@ def configure_cloud(
             fix=f"set {defaults[0]} or pass --api-key",
         )
     key_name, default_cheap, default_strong = defaults
-    return set_env_vars(
-        {
+    updates = {
             key_name: api_key.strip(),
             "WATCHSKILL_VISION_CHEAP_PROVIDER": provider,
             "WATCHSKILL_VISION_CHEAP_MODEL": cheap_model or default_cheap,
             "WATCHSKILL_VISION_STRONG_PROVIDER": provider,
             "WATCHSKILL_VISION_STRONG_MODEL": strong_model or default_strong,
-        },
-        path,
-    )
+    }
+    if provider in CLOUD_PROVIDER_BASE_URLS:
+        updates[f"WATCHSKILL_{provider.upper()}_BASE_URL"] = CLOUD_PROVIDER_BASE_URLS[provider]
+    return set_env_vars(updates, path)
 
 
 # Compatibility helper retained for callers that already use it directly.

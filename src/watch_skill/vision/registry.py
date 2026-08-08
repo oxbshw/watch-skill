@@ -47,6 +47,12 @@ PROVIDERS: dict[str, ProviderSpec] = {
         key_setting="openrouter_api_key",
         default_price_per_mtok=3.0,
     ),
+    "minimax": ProviderSpec(
+        name="minimax",
+        endpoint="{base}/chat/completions",
+        key_setting="minimax_api_key",
+        default_price_per_mtok=0.6,
+    ),
     "ollama": ProviderSpec(
         name="ollama",
         endpoint="{base}/api/chat",  # base from settings.ollama_base_url

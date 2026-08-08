@@ -71,6 +71,16 @@ def test_configure_cloud_accepts_separate_model_tiers(tmp_path: Path) -> None:
     assert "WATCHSKILL_VISION_STRONG_MODEL=strong-vision" in text
 
 
+def test_configure_minimax_writes_base_url(tmp_path: Path) -> None:
+    env = tmp_path / ".env"
+    vs.configure_cloud("minimax", "secret", path=env)
+    text = env.read_text(encoding="utf-8")
+    assert "WATCHSKILL_MINIMAX_API_KEY=secret" in text
+    assert "WATCHSKILL_MINIMAX_BASE_URL=https://api.minimax.io/v1" in text
+    assert "WATCHSKILL_VISION_CHEAP_PROVIDER=minimax" in text
+    assert "WATCHSKILL_VISION_STRONG_MODEL=MiniMax-M3" in text
+
+
 def test_configure_ollama_pins_batch_size_one(tmp_path: Path) -> None:
     env = tmp_path / ".env"
     vs.configure_ollama(model="llava:7b", path=env)

@@ -75,6 +75,8 @@ class Settings(BaseSettings):
     openai_api_key: SecretStr | None = None
     gemini_api_key: SecretStr | None = None
     groq_api_key: SecretStr | None = None
+    minimax_api_key: SecretStr | None = None
+    minimax_base_url: str = "https://api.minimax.io/v1"
     openrouter_api_key: SecretStr | None = None
     ollama_base_url: str = "http://127.0.0.1:11434"
     ollama_num_ctx: int = Field(
