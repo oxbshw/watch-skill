@@ -8,9 +8,11 @@ install. All paths are handled via :class:`pathlib.Path` and quoted-safe
 from __future__ import annotations
 
 import os
+import platform
 import shutil
 import stat
 import sys
+import tarfile
 import zipfile
 from pathlib import Path
 
@@ -20,7 +22,18 @@ from watch_skill.errors import DependencyError
 YT_DLP_RELEASE_URL = "https://github.com/yt-dlp/yt-dlp/releases/latest/download/"
 FFMPEG_PORTABLE_ZIP_URL = "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip"
 
+# Static builds for the platforms gyan.dev does not cover. BtbN publishes
+# self-contained Linux tarballs on a stable "latest" tag; evermeet.cx is the
+# long-standing source for notarized macOS binaries and ships ffmpeg and
+# ffprobe as separate downloads.
+FFMPEG_LINUX_TARBALL_URL = (
+    "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/"
+    "ffmpeg-master-latest-{arch}-gpl.tar.xz"
+)
+FFMPEG_MACOS_ZIP_URL = "https://evermeet.cx/ffmpeg/getrelease/{tool}/zip"
+
 _WINDOWS = sys.platform == "win32"
+_MACOS = sys.platform == "darwin"
 
 
 def managed_bin_dir(create: bool = False) -> Path:
@@ -105,18 +118,91 @@ def bootstrap_yt_dlp() -> Path:
     return dest
 
 
-def bootstrap_ffmpeg_portable() -> tuple[Path, Path]:
-    """Windows-only last resort: extract portable ffmpeg + ffprobe from gyan.dev.
+def _linux_arch_tag() -> str:
+    """BtbN's asset suffix for this CPU."""
+    machine = platform.machine().lower()
+    if machine in ("aarch64", "arm64"):
+        return "linuxarm64"
+    if machine in ("x86_64", "amd64"):
+        return "linux64"
+    raise DependencyError(
+        f"no portable ffmpeg build for {machine}",
+        code="health.unsupported_platform",
+        fix="install ffmpeg with your package manager: apt install ffmpeg",
+    )
 
-    Returns (ffmpeg_path, ffprobe_path) inside the managed bin dir.
-    """
-    if not _WINDOWS:
+
+def _bootstrap_ffmpeg_linux(bin_dir: Path) -> tuple[Path, Path]:
+    """Extract ffmpeg + ffprobe from BtbN's static tarball."""
+    url = FFMPEG_LINUX_TARBALL_URL.format(arch=_linux_arch_tag())
+    archive = bin_dir / "ffmpeg-static.tar.xz"
+    _download_file(url, archive)
+    found: dict[str, Path | None] = {"ffmpeg": None, "ffprobe": None}
+    try:
+        with tarfile.open(archive, mode="r:xz") as tf:
+            for member in tf.getmembers():
+                leaf = member.name.rsplit("/", 1)[-1]
+                if leaf in found and found[leaf] is None and member.isfile():
+                    src = tf.extractfile(member)
+                    if src is None:
+                        continue
+                    target = bin_dir / leaf
+                    with src, target.open("wb") as dst:
+                        shutil.copyfileobj(src, dst)
+                    target.chmod(0o755)
+                    found[leaf] = target
+    finally:
+        archive.unlink(missing_ok=True)
+    missing = [name for name, path in found.items() if path is None]
+    if missing:
         raise DependencyError(
-            "portable ffmpeg bootstrap is implemented for Windows only",
-            code="health.unsupported_platform",
-            fix="install ffmpeg via your system package manager",
+            f"portable ffmpeg tarball did not contain: {', '.join(missing)}",
+            code="health.bootstrap_failed",
+            fix="install ffmpeg with your package manager: apt install ffmpeg",
         )
+    return found["ffmpeg"], found["ffprobe"]  # type: ignore[return-value]
+
+
+def _bootstrap_ffmpeg_macos(bin_dir: Path) -> tuple[Path, Path]:
+    """Fetch ffmpeg and ffprobe from evermeet.cx (one zip each)."""
+    paths: dict[str, Path] = {}
+    for tool in ("ffmpeg", "ffprobe"):
+        zip_path = bin_dir / f"{tool}.zip"
+        _download_file(FFMPEG_MACOS_ZIP_URL.format(tool=tool), zip_path)
+        try:
+            with zipfile.ZipFile(zip_path) as zf:
+                member = next(
+                    (m for m in zf.namelist() if m.rsplit("/", 1)[-1] == tool), None
+                )
+                if member is None:
+                    raise DependencyError(
+                        f"{tool} zip did not contain a {tool} binary",
+                        code="health.bootstrap_failed",
+                        fix="install ffmpeg with Homebrew: brew install ffmpeg",
+                    )
+                target = bin_dir / tool
+                with zf.open(member) as src, target.open("wb") as dst:
+                    shutil.copyfileobj(src, dst)
+                target.chmod(0o755)
+                paths[tool] = target
+        finally:
+            zip_path.unlink(missing_ok=True)
+    return paths["ffmpeg"], paths["ffprobe"]
+
+
+def bootstrap_ffmpeg_portable() -> tuple[Path, Path]:
+    """Download a self-contained ffmpeg + ffprobe into the managed bin dir.
+
+    Returns (ffmpeg_path, ffprobe_path). Each platform needs its own source:
+    gyan.dev for Windows, BtbN's static tarballs for Linux, evermeet.cx for
+    macOS. This used to be Windows-only, which meant `doctor` failed outright
+    on the two platforms most contributors are on.
+    """
     bin_dir = managed_bin_dir(create=True)
+    if _MACOS:
+        return _bootstrap_ffmpeg_macos(bin_dir)
+    if not _WINDOWS:
+        return _bootstrap_ffmpeg_linux(bin_dir)
     zip_path = bin_dir / "ffmpeg-release-essentials.zip"
     _download_file(FFMPEG_PORTABLE_ZIP_URL, zip_path)
     wanted = {"ffmpeg.exe": None, "ffprobe.exe": None}

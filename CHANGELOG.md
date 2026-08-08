@@ -31,6 +31,15 @@ running it. This is the first release on PyPI.
   source route kept for contributors.
 
 ### Fixed
+- **`doctor` failed outright on Linux and macOS.** The portable ffmpeg
+  bootstrap was implemented for Windows only, so on the two platforms most
+  contributors use, a machine without a system ffmpeg got
+  `health.unsupported_platform` and the installer stopped there — while the
+  skill documentation claimed the bootstrap covered "Windows/macOS/Linux".
+  Static builds are now fetched per platform: BtbN tarballs on Linux
+  (x86_64 and arm64), evermeet.cx on macOS. Nothing found this earlier
+  because nothing ran the installer anywhere but Windows; the new install
+  matrix caught it on its first real run.
 - **v1.0.0 reported its version as `0.6.0`.** The release bumped every
   manifest and missed `src/watch_skill/__init__.py`, so the first thing a
   bug report quotes named the wrong release. `__version__` now derives
