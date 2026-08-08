@@ -1,44 +1,48 @@
-<p align="center">
-  <img src="docs/assets/watch-skill-repositories.webp" alt="Watch Skill tracks repositories and skills from an AI agent's workspace" width="100%">
-</p>
-
-<p align="center">
-  <img src="docs/assets/watch-skill-repositories-alt.webp" alt="Watch Skill repository and skill tracking shown in a warm pixel-art workspace" width="100%">
-</p>
-
 <div align="center">
+
+<img src="docs/assets/watch-skill-hero.webp" alt="Watch Skill: watch a video, remember the evidence with timestamps, and verify an agent's work through THE LOOP" width="88%">
 
 # Watch Skill
 
-**Give every AI agent eyes for video—and a way to inspect its own work.**
-
-Watch Skill is a local-first video intelligence layer for agents. It turns videos, live
-streams, meetings, and screen recordings into searchable, timestamped evidence. Agents
-can understand what happened, retain it across sessions, and cite the exact moment behind
-an answer.
-
-When the video is the agent's own browser or desktop session, **THE LOOP** closes the
-feedback cycle: record the work, evaluate it against plain-language criteria, guide the
-fix, and verify the result. The same engine is available through skills, 23 MCP tools, a
-CLI, REST, and native framework adapters.
-
-**Watch. Remember. Fix. Verify.**
+**Give every AI agent eyes for video — and a way to check its own work.**
 
 [![CI](https://github.com/oxbshw/watch-skill/actions/workflows/ci.yml/badge.svg)](https://github.com/oxbshw/watch-skill/actions/workflows/ci.yml)
 [![Install](https://github.com/oxbshw/watch-skill/actions/workflows/install.yml/badge.svg)](https://github.com/oxbshw/watch-skill/actions/workflows/install.yml)
 [![PyPI](https://img.shields.io/pypi/v/watch-skill)](https://pypi.org/project/watch-skill/)
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-3776AB)](pyproject.toml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
+[Install](#install) · [Documentation](docs/README.md) · [Examples](examples/README.md) · [Comparison](docs/comparison.md) · [Roadmap](docs/ROADMAP.md)
 
 </div>
 
-## One video layer, three agent capabilities
+Watch Skill turns videos, live streams, meetings, and screen recordings into a searchable,
+timestamped index. An agent can ask what happened, get an answer that cites the exact
+moment behind it, and ask again tomorrow without processing the video a second time.
 
-| Capability | What the agent gains |
+When the video is the agent's *own* browser or desktop session, **THE LOOP** closes the
+circle: record the work, judge it against plain-language criteria, and prove the fix.
+
+```bash
+uvx --from "watch-skill[standard]" watch-skill setup
+```
+
+<p align="center">
+  <img src="docs/assets/loop_before_after.gif" alt="A checkout flow fails with a NaN total, is fixed, and passes verification" width="720">
+  <br>
+  <sub>THE LOOP catching a <code>$NaN</code> total that an end-state screenshot misses, then proving the fix.</sub>
+</p>
+
+## What it does
+
+| | |
 |---|---|
 | **Watch** | Scene-aware frames, on-screen text, and local-first transcription from 1,800+ sites, live HLS/DASH streams, local media, meetings, browsers, windows, and desktops. |
 | **Remember** | A persistent, searchable index with timestamp citations, hybrid retrieval, cross-video synthesis, and reusable lessons. |
 | **Verify** | A capture → critique → fix → proof loop for browser flows, interfaces, generated video, gameplay, and monitored streams. |
+
+Available as Claude Code skills, 23 MCP tools, a CLI, a REST API, and native adapters for
+LangChain/LangGraph, CrewAI, the OpenAI Agents SDK, LlamaIndex, and AutoGen.
 
 ## Install
 
@@ -196,12 +200,8 @@ watch-skill loop start \
 ```
 
 The loop captures the full interaction, critiques failures, and records proof after the
-agent applies a fix. [Example 14](examples/14-browser-verification/) includes a transient
-`$NaN` bug that an end-state screenshot misses.
-
-<p align="center">
-  <img src="docs/assets/loop_before_after.gif" alt="A checkout flow fails with a NaN total, is fixed, and passes verification" width="720">
-</p>
+agent applies a fix — the run shown at the top of this page.
+[Example 14](examples/14-browser-verification/) walks through that transient `$NaN` bug.
 
 ### Export an offline report
 
@@ -282,10 +282,16 @@ agent-adapter checklist. Security and privacy reports are covered by
 
 ## Listed on
 
-Independent directories that index Watch Skill. Listings are maintained by their
-operators, so details there can lag a release.
+Independent directories that index Watch Skill. They are maintained by their operators,
+so the details there can lag a release.
 
 - [Agent Skills Hub](https://agentskillshub.top/skill/oxbshw/watch-skill/)
 - [Neuralbox](https://neuralbox.tech/oxbshw-watch-skill)
 
-Watch Skill is available under the [MIT License](LICENSE).
+---
+
+<div align="center">
+
+Released under the [MIT License](LICENSE) · Built by [oxbshw](https://github.com/oxbshw)
+
+</div>

@@ -70,6 +70,11 @@ running it.
   Watch Skill is worse at.
 - `llms.txt`, `CODEOWNERS`, a review-turnaround note in CONTRIBUTING, and
   a populated `FUNDING.yml`.
+- README rework: one hero image instead of two near-identical ones, and it
+  now shows what the project actually does — watch, remember with
+  timestamps, verify — rather than repository and skill tracking. The LOOP
+  demo moved above the fold, and the install command is the first thing
+  after the description.
 - SECURITY.md now states plainly that `loop_video_gen` and `loop_game`
   execute the command string you pass them, that an agent with MCP access
   can therefore run arbitrary commands through those two tools, and what
