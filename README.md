@@ -9,6 +9,7 @@
 [![CI](https://github.com/oxbshw/watch-skill/actions/workflows/ci.yml/badge.svg)](https://github.com/oxbshw/watch-skill/actions/workflows/ci.yml)
 [![Install](https://github.com/oxbshw/watch-skill/actions/workflows/install.yml/badge.svg)](https://github.com/oxbshw/watch-skill/actions/workflows/install.yml)
 [![PyPI](https://img.shields.io/pypi/v/watch-skill)](https://pypi.org/project/watch-skill/)
+[![Downloads](https://img.shields.io/pypi/dm/watch-skill)](https://pypi.org/project/watch-skill/)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-3776AB)](pyproject.toml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
@@ -46,46 +47,48 @@ LangChain/LangGraph, CrewAI, the OpenAI Agents SDK, LlamaIndex, and AutoGen.
 
 ## Install
 
-One command, any platform, no clone:
+Two pieces, and you want both. The **engine** does the work; the **skills** teach your
+agent when to reach for it.
 
 ```bash
+# 1. the engine — installs, wires up every AI agent on the machine, backs up each config
 uvx --from "watch-skill[standard]" watch-skill setup
+
+# 2. the skills — into Claude Code, Codex, Cursor, Copilot, Gemini CLI, and 20+ more
+npx skills add oxbshw/watch-skill -g
 ```
 
-That registers the MCP server in every AI agent it finds on the machine, backing up each
-config first. To wire an agent up by hand:
+Neither needs a clone, and the engine command works the same on macOS, Linux, and
+Windows — [CI runs it on all three](https://github.com/oxbshw/watch-skill/actions/workflows/install.yml)
+on every push.
 
-```json
-{ "mcpServers": { "watch-skill": {
-    "command": "uvx",
-    "args": ["--from", "watch-skill[standard]", "watch-skill", "serve"] } } }
+Prefer a permanent install to `uvx` fetching on demand?
+
+```bash
+pipx install "watch-skill[standard]"     # or: pip install "watch-skill[standard]"
+watch-skill setup
 ```
 
 <details>
-<summary>Other ways in</summary>
+<summary>Other ways in — Claude Code plugin, Docker, from source</summary>
 
-**Claude Code plugin**
+**Claude Code plugin** — skills, slash commands, and the MCP server in one:
 
 ```text
 /plugin marketplace add oxbshw/watch-skill
 /plugin install watch-skill@watch-skill
+/watch-skill:setup-watch-skill
 ```
 
-Then run `/watch-skill:setup-watch-skill` once.
-
-**pip or pipx**
-
-```bash
-pipx install "watch-skill[standard]"
-```
-
-**Docker** — nothing installed on the host; the volume keeps the index:
+**Docker** — nothing on the host; the volume is where the index lives, so do not skip it:
 
 ```bash
 docker run --rm -i -v watch-skill-data:/data ghcr.io/oxbshw/watch-skill serve
 ```
 
-**From source** (installs uv and Python if missing):
+Built for `linux/amd64` and `linux/arm64`, with an SBOM and a signed build attestation.
+
+**From source** (installs uv and Python if either is missing):
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/oxbshw/watch-skill/main/scripts/install.sh | sh
@@ -95,24 +98,59 @@ curl -fsSL https://raw.githubusercontent.com/oxbshw/watch-skill/main/scripts/ins
 powershell -ExecutionPolicy Bypass -c "irm https://raw.githubusercontent.com/oxbshw/watch-skill/main/scripts/install.ps1 | iex"
 ```
 
-Both scripts run end to end on Linux, macOS, and Windows runners on every push.
+**Wiring an agent by hand** — the block most MCP clients take:
+
+```json
+{ "mcpServers": { "watch-skill": {
+    "command": "uvx",
+    "args": ["--from", "watch-skill[standard]", "watch-skill", "serve"] } } }
+```
+
+Zed, Amp, and a few others name that key differently; each
+[agent guide](docs/agents/README.md) shows the exact shape.
 
 </details>
 
 `standard` is frames, retrieval, and MCP — about 200 MB. `watch-skill[all]` adds OCR,
 local Whisper, REST, and the browser THE LOOP drives. `watch-skill doctor` names anything
-missing and prints the command that adds it, so starting small is safe.
+missing and prints the one command that installs it, so starting small is safe.
 
 Coming from [claude-video](https://github.com/bradautomates/claude-video)? Your `/watch`
 commands and flags work unchanged — see the [migration guide](docs/migrate-from-claude-video.md).
 
-Then watch a video and ask a follow-up:
+## First run
 
 ```bash
 watch-skill watch "https://youtu.be/..." "Summarize the important moments."
-watch-skill ask <video_id> "When does the demo first fail?"
-watch-skill search "pricing decision"       # search every indexed video
-watch-skill serve                           # MCP over stdio
+```
+
+That prints a report and an id. Everything after it is a lookup against the index, not a
+second download:
+
+```bash
+watch-skill ask <video_id> "when does the demo first fail?"
+watch-skill search "pricing decision"        # across every video you've watched
+watch-skill library ask "what did the team decide about auth?"
+```
+
+Useful flags on `watch`:
+
+| Flag | Use it when |
+|---|---|
+| `--detail transcript` | You want the words, not the pictures — much faster |
+| `--detail balanced` \| `token-burner` | More frames, more cost |
+| `--start 4:10 --end 6:00` | Only a slice of a long video matters |
+| `--word-timestamps` | You need the exact word, not the ten-second segment it sat in |
+| `--no-cache` | Re-fetch a source that changed |
+
+And the rest of the surface:
+
+```bash
+watch-skill serve                            # MCP over stdio — what agents connect to
+watch-skill api                              # REST, port 8748
+watch-skill doctor                           # check and repair the setup
+watch-skill viewer <video_id> --out r.html   # one self-contained page to share
+watch-skill bench providers                  # compare every provider you have a key for
 ```
 
 Transcription, OCR, and search run locally and need no API key. Visual question
@@ -182,15 +220,19 @@ Native tools are also available for [LangChain/LangGraph, CrewAI, OpenAI Agents 
 LlamaIndex, and AutoGen](docs/agents/frameworks.md); any other framework can use REST or
 MCP.
 
-### Skills, in any agent
+### Why both skills and MCP
 
-The ten skills are the agent-facing layer: they decide *when* to reach for video,
-so an agent uses Watch Skill without being told to. They live in a top-level
-`skills/` directory, which is what the open skills ecosystem reads — so they
-install into any of its 27+ supported agents with one command, not just Claude Code:
+MCP gives an agent 23 tools. Skills give it the judgement about when to use them —
+that a screen recording in the conversation is worth watching, that a follow-up
+question should hit the index instead of re-processing, that a UI change deserves a
+verification pass. An agent with only the tools waits to be told; an agent with the
+skills reaches for them.
+
+That is why `npx skills add oxbshw/watch-skill -g` is step two of the install and not
+an optional extra. Pick individual ones with `--skill <name>`, or list them first:
 
 ```bash
-npx skills add oxbshw/watch-skill -g
+npx skills add oxbshw/watch-skill --list
 ```
 
 | Connection | How it reaches the agent |

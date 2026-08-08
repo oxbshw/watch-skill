@@ -5,10 +5,32 @@ minutes. Every command below is copy-pasteable.
 
 ## 1. Install (about 2 minutes)
 
-The installer bootstraps `uv` (and a Python if you have none), clones the
-repo, installs dependencies, runs the self-healing `doctor` (which installs
-ffmpeg, yt-dlp, and deno if missing), and registers the MCP server in every
-supported agent it finds on your machine.
+Two commands. The first installs the engine and registers the MCP server in
+every supported agent on your machine, backing up each config first. The
+second installs the skills, which are what make an agent reach for video on
+its own rather than waiting to be told.
+
+```bash
+uvx --from "watch-skill[standard]" watch-skill setup
+npx skills add oxbshw/watch-skill -g
+```
+
+`uvx` comes with [uv](https://docs.astral.sh/uv/); if you do not have it,
+either installer script below will bootstrap it for you. The second command
+needs Node, and is optional — MCP alone works, the agent just needs telling.
+
+Along the way `watch-skill setup` runs the self-healing `doctor`, which
+installs ffmpeg, yt-dlp, and deno if they are missing.
+
+**A permanent install** instead of `uvx` fetching on demand:
+
+```bash
+pipx install "watch-skill[standard]"   # or: pip install "watch-skill[standard]"
+watch-skill setup
+```
+
+<details>
+<summary>From source, if you want to see every step or plan to contribute</summary>
 
 **Windows (PowerShell):**
 
@@ -22,10 +44,11 @@ powershell -ExecutionPolicy Bypass -c "irm https://raw.githubusercontent.com/oxb
 curl -fsSL https://raw.githubusercontent.com/oxbshw/watch-skill/main/scripts/install.sh | sh
 ```
 
-The install lands in `~/watch-skill` (override on macOS/Linux with
-`WATCHSKILL_HOME=/path/to/dir` before the command).
+The install lands in `~/watch-skill` (override with `WATCHSKILL_HOME`).
+These scripts clone the repo, sync dependencies, and run `doctor` and
+`setup` for you.
 
-**Manual install** (if you prefer to see every step):
+Or by hand:
 
 ```bash
 git clone https://github.com/oxbshw/watch-skill
@@ -33,6 +56,8 @@ cd watch-skill
 uv sync --extra all          # or: pip install -e ".[all]"
 uv run watch-skill doctor    # checks AND fixes: ffmpeg, yt-dlp, deno, disk, GPU, API keys
 ```
+
+</details>
 
 `doctor` should end with every check `ok` (some informational checks may
 `warn` — a warning never blocks a watch). Re-run it any time something
