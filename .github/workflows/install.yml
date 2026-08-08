@@ -5,18 +5,19 @@ name: Install
 # scripts on a clean runner for each OS we claim to support.
 
 on:
+  # No path filter on main. A first attempt watched only scripts/ and
+  # pyproject.toml, and then the fix that made the installer work on Linux
+  # and macOS landed in src/watch_skill/health/ — so the run that would have
+  # proved it never fired. What the installer does depends on the engine it
+  # installs, so the whole tree is the trigger.
   push:
     branches: [main]
-    paths:
-      - "scripts/install.sh"
-      - "scripts/install.ps1"
-      - "pyproject.toml"
-      - ".github/workflows/install.yml"
   pull_request:
     paths:
-      - "scripts/install.sh"
-      - "scripts/install.ps1"
+      - "scripts/**"
+      - "src/watch_skill/health/**"
       - "pyproject.toml"
+      - "uv.lock"
       - ".github/workflows/install.yml"
   schedule:
     # Installers break from the outside — a new uv, a moved ffmpeg package.
