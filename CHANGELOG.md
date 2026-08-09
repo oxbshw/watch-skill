@@ -2,6 +2,31 @@
 
 ## Unreleased
 
+### The library tells you what it costs
+- `watch-skill stats --disk` reports where the index's space went: the
+  database, the stored frames, and every video ranked by what it is
+  responsible for — frames and vectors counted separately, since which half
+  is heavy decides what to do about it.
+- The index is meant to grow; it just grew silently. `clean` offered caches,
+  old loops, and orphans and never mentioned the library itself, so
+  reclaiming space meant guessing a `forget` and checking. The report ends
+  with the command that acts on it.
+- `--top` shortens the listing without changing the totals, and `--json`
+  makes it machine-readable.
+
+### THE LOOP, as a page you can read
+- `watch-skill loop viewer <loop_id>` renders one run as a self-contained
+  page: every iteration in a strip, and for each one its verdict, its
+  frames, and the critic's issues with severity and suggested fix.
+- The comparison is the point. Between two iterations it shows what was
+  **fixed**, what was **introduced**, and what is **still there** — so a fix
+  that quietly broke something else cannot pass as a clean win. The
+  before/after GIF proves a verdict flipped; this says why it flipped.
+- Clicking an issue brings up the frame nearest the moment the critic named,
+  which is the reason the recording was kept at all.
+- Same conventions as the video viewer: one file, frames inlined, no network,
+  readable with scripting off.
+
 ### The 0% scripts fix themselves now
 - Lao, Khmer, Myanmar, and Tibetan read as **empty** with RapidOCR — that is
   the 0% row in the perception benchmark, and tesseract is the documented

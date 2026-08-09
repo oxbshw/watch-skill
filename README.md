@@ -150,6 +150,7 @@ watch-skill serve                            # MCP over stdio — what agents co
 watch-skill api                              # REST, port 8748
 watch-skill doctor                           # check and repair the setup
 watch-skill viewer <video_id> --out r.html   # one self-contained page to share
+watch-skill loop viewer <loop_id>            # a run's iterations, compared
 watch-skill bench providers                  # compare every provider you have a key for
 ```
 

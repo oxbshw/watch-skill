@@ -278,8 +278,20 @@ def forget(
 @app.command()
 def stats(
     cost: bool = typer.Option(False, "--cost", help="Lifetime spend split by source + estimated $."),
+    disk: bool = typer.Option(
+        False, "--disk", help="Where the index's disk went, by video, largest first."
+    ),
+    top: int = typer.Option(10, "--top", help="How many videos to list with --disk."),
+    as_json: bool = typer.Option(False, "--json", help="Machine-readable output."),
 ) -> None:
     """Lifetime token savings and answer counts."""
+    if disk:
+        from watch_skill.index.usage import index_usage, render_usage
+
+        usage = index_usage(top=top if top > 0 else None)
+        print(json.dumps(usage.to_dict(), indent=2) if as_json else render_usage(usage))
+        return
+
     from watch_skill.answer.cache import lifetime_stats
 
     data = lifetime_stats()
@@ -605,6 +617,28 @@ def loop_status_cmd(loop_id: str = typer.Argument(...)) -> None:
         print(json.dumps(exc.to_dict(), indent=2))
         raise typer.Exit(code=1) from None
     _print_loop_state(state)
+
+
+@loop_app.command("viewer")
+def loop_viewer_cmd(
+    loop_id: str = typer.Argument(...),
+    out: str | None = typer.Option(None, "--out", "-o", help="Output HTML path."),
+) -> None:
+    """Render one loop run as a self-contained page: every iteration, compared.
+
+    The before/after GIF shows that a verdict changed. This shows why — which
+    issue went away, which one appeared, and the frame the critic was looking
+    at when it said so.
+    """
+    from watch_skill.errors import WatchSkillError
+    from watch_skill.loop.viewer import generate_loop_viewer
+
+    try:
+        path = generate_loop_viewer(loop_id, out_path=out)
+    except WatchSkillError as exc:
+        print(json.dumps(exc.to_dict(), indent=2))
+        raise typer.Exit(code=1) from None
+    print(f"loop viewer written: {path}")
 
 
 @app.command()

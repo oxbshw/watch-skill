@@ -57,8 +57,11 @@ MCP tool names stable, forward migrations only.
   still works. Table in [DECISIONS](DECISIONS.md).
 - **Index size is the remaining scaling limit** (`index/`): ~2 KB per vector
   means a 100k-item library is a 200 MB file, while the scan behind it is
-  only 115 ms. Pruning, per-video eviction, or an opt-in smaller embedding
-  model reduce that without charging every query for it.
+  only 115 ms. `watch-skill stats --disk` now shows where that space went
+  and ranks videos by what they cost, so `forget` is an informed decision
+  rather than a guess. Still open: automatic eviction by age or access, and
+  an opt-in smaller embedding model — both reduce the file without charging
+  every query, which is what ruled out narrower vectors.
 - **sqlite-vec for vector search**: still 0.1.9 with no stated development
   status, and the numbers above say the latency it would fix is not yet
   felt. It keeps everything in the one SQLite file, which is why it remains
