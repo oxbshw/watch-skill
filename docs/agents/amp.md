@@ -1,5 +1,7 @@
 # Watch Skill in Amp
 
+<img src="../assets/agents/amp.webp" alt="Amp avatar beside a tower of glowing film reels" width="360">
+
 **Status: doc-verified ☑** — config matches Sourcegraph's own Amp MCP setup
 guide; not executed here.
 

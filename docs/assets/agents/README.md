@@ -26,6 +26,12 @@ endorsement.
 | `qwen-code.webp` | [Qwen Code](https://github.com/QwenLM/qwen-code) |
 | `vscode.webp` | [Visual Studio Code](https://code.visualstudio.com/) |
 | `windsurf.webp` | [Windsurf](https://windsurf.com/) |
+| `zed.webp` | [Zed](https://github.com/zed-industries/zed) |
+| `roo-code.webp` | [Roo Code](https://github.com/RooCodeInc/Roo-Code) |
+| `continue.webp` | [Continue](https://github.com/continuedev/continue) |
+| `jetbrains.webp` | [JetBrains / Junie](https://www.jetbrains.com/) |
+| `amp.webp` | [Amp / Sourcegraph](https://ampcode.com/) |
+| `aider.webp` | [Aider](https://github.com/Aider-AI/aider) |
 | `frameworks.webp` | [LangChain](https://github.com/langchain-ai/langchain), [CrewAI](https://github.com/crewAIInc/crewAI), [OpenAI Agents SDK](https://github.com/openai/openai-agents-python), [LlamaIndex](https://github.com/run-llama/llama_index), and [AutoGen](https://github.com/microsoft/autogen) |
 
 The final project files are WebP images to keep the documentation payload small. The

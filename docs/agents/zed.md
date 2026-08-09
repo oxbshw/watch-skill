@@ -1,5 +1,7 @@
 # Watch Skill in Zed
 
+<img src="../assets/agents/zed.webp" alt="Zed avatar sprinting with a trail of film frames" width="360">
+
 **Status: doc-verified ☑** — config matches Zed's official context-server
 docs; not executed here.
 

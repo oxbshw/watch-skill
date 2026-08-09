@@ -1,5 +1,7 @@
 # Watch Skill in Continue
 
+<img src="../assets/agents/continue.webp" alt="Continue avatar as an endless loop of film" width="360">
+
 **Status: doc-verified ☑** — config matches the official Continue MCP docs;
 not executed here.
 

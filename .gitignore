@@ -45,3 +45,5 @@ issues_export.local.json
 notes.local/
 t.xml
 .agents/
+.preview/
+.playwright-mcp/

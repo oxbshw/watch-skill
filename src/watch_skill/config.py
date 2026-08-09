@@ -74,6 +74,15 @@ class Settings(BaseSettings):
     anthropic_api_key: SecretStr | None = None
     openai_api_key: SecretStr | None = None
     gemini_api_key: SecretStr | None = None
+    mcp_inline_ui: bool = Field(
+        default=False,
+        description="Attach the viewer page to MCP tool results as a ui:// "
+        "resource. Clients that render it (Goose, LibreChat, mcp-ui "
+        "inspectors) show a scrubbable timeline inline; the rest ignore the "
+        "block. Off by default because it is a large payload most clients "
+        "cannot use yet.",
+    )
+
     openrouter_api_key: SecretStr | None = None
 
     # OpenAI-compatible vendors. Each pairs a key with a base URL so the same

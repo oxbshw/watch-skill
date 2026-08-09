@@ -169,6 +169,7 @@ pass `--cheap-model` / `--strong-model` rather than waiting for a release.
 | Variable | Type | Default | Effect |
 |---|---|---|---|
 | `WATCHSKILL_RESPONSE_FRAME_CAP` | int | `12` | Max image blocks per MCP or REST response (frames beyond the cap are evenly sampled, first and last kept). |
+| `WATCHSKILL_MCP_INLINE_UI` | bool | `false` | Attach the viewer page to MCP results as a `ui://` resource. Clients that render it (Goose, LibreChat, mcp-ui inspectors) show a scrubbable timeline inline; the rest ignore the block. Off by default — it is a large payload most clients cannot use yet. Text stays the first block, so turning it on never changes what a non-rendering client sees. |
 | `WATCHSKILL_API_BEARER_TOKEN` | secret | unset | Bearer token for the REST API. Unset = local only: the API refuses to bind to a non-loopback host without it (`config.public_bind_no_token`). |
 
 ### Read outside the settings object

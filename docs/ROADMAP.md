@@ -40,7 +40,15 @@ MCP tool names stable, forward migrations only.
 
 - **Scene graph**: object/person persistence across scenes ("track the
   red car"), built on the existing phash alignment.
-- **Narrower vector storage** (`index/`), ahead of any ANN index. Measured
+- **Bootstrap tesseract like every other binary** (`health/binaries.py`).
+  The perception benchmark reads Lao at **0%** with RapidOCR, and tesseract
+  is the documented fallback for that whole family — Lao, Khmer, Myanmar,
+  Tibetan. It is also the only external binary the project does not fetch:
+  ffmpeg, yt-dlp, and deno all self-install, while tesseract raises an error
+  telling you to run winget. The engine is not the gap here — RapidOCR reads
+  clean text at confidence 1.00, and Surya stays opt-in because it needs
+  more RAM than the 8 GB reference machine. The gap is that the fix for the
+  0% row is the one thing a user has to install by hand. Measured
   2026-08-08: the numpy batch cosine does 10k vectors in 18.9 ms, not the
   ~120 ms this entry used to claim, and scales linearly to 218 ms at 100k.
   Scan speed is not the bottleneck yet — file size is, at ~2 KB per vector

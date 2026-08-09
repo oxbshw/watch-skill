@@ -66,6 +66,20 @@ def _run_watch(
     return video_id, result
 
 
+def _maybe_ui(video_id: str) -> list[Any]:
+    """The inline viewer page, when the operator has it switched on.
+
+    Off by default: it is a sizeable block, only some clients render it, and
+    the ones that don't would otherwise be handed a page they cannot use.
+    """
+    if not get_settings().mcp_inline_ui:
+        return []
+    from watch_skill.surfaces.mcp.ui import video_ui
+
+    block = video_ui(video_id)
+    return [block] if block else []
+
+
 def _watch_response(video_id: str, result: Any, question: str | None) -> list[Any]:
     from watch_skill.report import render_report
 
@@ -73,7 +87,9 @@ def _watch_response(video_id: str, result: Any, question: str | None) -> list[An
     if question:
         header += f"question (answer it from the frames + transcript below): {question}\n"
     frames = [str(f.path) for f in (result.perception.frames if result.perception else [])]
-    return [header + render_report(result), *_frame_images(frames)]
+    # Text first, always: it is the answer. The UI block is an enhancement a
+    # client may ignore, never the thing the answer lives in.
+    return [header + render_report(result), *_frame_images(frames), *_maybe_ui(video_id)]
 
 
 @mcp.tool(output_schema=None)

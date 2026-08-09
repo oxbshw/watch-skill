@@ -1,5 +1,7 @@
 # Watch Skill in Aider
 
+<img src="../assets/agents/aider.webp" alt="Aider avatar as a terminal printing frames on a receipt roll" width="360">
+
 **Status: documentation-verified ☑ — via the CLI, not MCP.**
 
 Aider has no MCP client. The RFC is open and the exploratory pull requests

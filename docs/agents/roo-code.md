@@ -1,5 +1,7 @@
 # Watch Skill in Roo Code
 
+<img src="../assets/agents/roo-code.webp" alt="Roo Code kangaroo carrying frames in its pouch" width="360">
+
 **Status: doc-verified ☑** — config matches the official Roo Code MCP docs;
 not executed here.
 

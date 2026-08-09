@@ -1,5 +1,7 @@
 # Watch Skill in JetBrains IDEs
 
+<img src="../assets/agents/jetbrains.webp" alt="JetBrains avatar among CRT monitors playing frames" width="360">
+
 **Status: doc-verified ☑** — config matches JetBrains' own Junie and AI
 Assistant MCP documentation; not executed here.
 

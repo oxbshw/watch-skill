@@ -2,6 +2,30 @@
 
 ## Unreleased
 
+### The answer, rendered
+- MCP tool results can now carry the viewer page as an inline `ui://`
+  resource. A client that renders them — Goose, LibreChat, the mcp-ui
+  inspectors — shows a scrubbable timeline with frames, transcript, and
+  every cited piece of evidence, instead of a wall of text. Clients that do
+  not simply ignore the block. `WATCHSKILL_MCP_INLINE_UI=true`.
+- Off by default: it is a sizeable payload and most clients cannot use it
+  yet. Text is always the first block and the UI always the last, so a
+  client reading only the first still has the answer.
+- Nothing in that path can cost you the answer. A missing video, a broken
+  renderer, or a page over 4 MB all mean "no UI this time" rather than an
+  error — losing a real result to a rendering nicety would be the wrong
+  trade.
+- `viewer.py` grew `render_viewer_html`, and `generate_viewer` now writes
+  what it returns. One renderer, so the page a user shares and the page an
+  agent shows cannot drift apart.
+- The mcp-ui convention is three fields, written out here rather than
+  imported: its Python package is a thin set of dataclasses last released in
+  2025, and the read path of a tool response is not where to add a stale
+  dependency. Skybridge was considered for the same job and set aside — it
+  is a React/TypeScript full-stack framework, and adopting it would mean a
+  second server or a rewritten MCP surface, against the rule that all logic
+  stays in the Python engine.
+
 ### Word-level timestamps
 - `watch-skill watch --word-timestamps` aligns each word through the
   local-whisper rung, and `get_moment` now names the word being spoken at
