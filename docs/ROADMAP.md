@@ -48,12 +48,17 @@ MCP tool names stable, forward migrations only.
   telling you to run winget. The engine is not the gap here — RapidOCR reads
   clean text at confidence 1.00, and Surya stays opt-in because it needs
   more RAM than the 8 GB reference machine. The gap is that the fix for the
-  0% row is the one thing a user has to install by hand. Measured
-  2026-08-08: the numpy batch cosine does 10k vectors in 18.9 ms, not the
-  ~120 ms this entry used to claim, and scales linearly to 218 ms at 100k.
-  Scan speed is not the bottleneck yet — file size is, at ~2 KB per vector
-  (a 100k-item library is a 200 MB index). Quantization or a narrower dtype
-  buys more than sqlite-vec would.
+  0% row is the one thing a user has to install by hand.
+- ~~**Narrower vector storage**~~ — tried, measured, rejected. float16
+  halves the index (197 MB → 80 MB at 100k) with no change to ranking, but
+  widening it back on every read takes the scan from 115 ms to ~310 ms per
+  100k, and no decode strategy avoids that. Storage stays float32; the
+  reader accepts either width, so an index written during the experiment
+  still works. Table in [DECISIONS](DECISIONS.md).
+- **Index size is the remaining scaling limit** (`index/`): ~2 KB per vector
+  means a 100k-item library is a 200 MB file, while the scan behind it is
+  only 115 ms. Pruning, per-video eviction, or an opt-in smaller embedding
+  model reduce that without charging every query for it.
 - **sqlite-vec for vector search**: still 0.1.9 with no stated development
   status, and the numbers above say the latency it would fix is not yet
   felt. It keeps everything in the one SQLite file, which is why it remains

@@ -126,9 +126,27 @@ def _batch_cosine(query_vec: list[float], rows: list) -> list[float]:
     try:
         import numpy as np  # noqa: PLC0415
 
-        matrix = np.frombuffer(
-            b"".join(row["vector"] for row in rows), dtype="<f4"
-        ).reshape(len(rows), -1)
+        # Width is per row, not per index: vectors written before the float16
+        # switch sit beside ones written after it, and an index that was only
+        # ever appended to holds both. Reading a float16 blob as float32
+        # returns numbers rather than an error, so guessing one width for the
+        # batch would score silently wrong instead of failing.
+        widths = {len(row["vector"]) // (row["dim"] or 1) for row in rows}
+        if len(widths) == 1:
+            # One buffer, one reinterpret. Falling into the per-row loop below
+            # for a uniformly float16 index cost 650 ms per 100k scan against
+            # 218 ms — the storage win is not worth paying for on every query.
+            only = widths.pop()
+            matrix = np.frombuffer(
+                b"".join(row["vector"] for row in rows),
+                dtype="<f2" if only == 2 else "<f4",
+            ).reshape(len(rows), -1).astype(np.float32, copy=False)
+        else:
+            matrix = np.empty((len(rows), rows[0]["dim"]), dtype=np.float32)
+            for i, row in enumerate(rows):
+                dtype = "<f2" if len(row["vector"]) == row["dim"] * 2 else "<f4"
+                matrix[i] = np.frombuffer(row["vector"], dtype=dtype)
+
         query = np.asarray(query_vec, dtype=np.float32)
         norms = np.linalg.norm(matrix, axis=1) * (np.linalg.norm(query) or 1.0)
         norms[norms == 0] = 1.0

@@ -276,3 +276,39 @@ Re-measure at 100k real items before revisiting. If the scan is the
 complaint rather than the disk, sqlite-vec is the answer — it keeps
 everything in the one SQLite file, which is why it was chosen over an
 external ANN service.
+
+### float16 vectors: halves the index, costs more than it saves (2026-08-09)
+
+The previous entry named vector storage as the scaling problem ahead of scan
+speed — ~2 KB per vector, so a 100k-item library is a 200 MB index. float16
+is the obvious answer and it works on the accuracy side: on this model's own
+output the top-20 is unchanged and the largest cosine error is 2.3e-5. int8
+quarters the size but drops 5% of the top-20, so it was never a candidate.
+
+The read side is where it fails. Every scan has to widen float16 back before
+the matmul, and that dominates:
+
+| decode path | 100k scan |
+|---|---|
+| float32, no conversion | 115 ms |
+| float16, one `astype` | 320 ms |
+| float16, cache-sized blocks | 309 ms |
+| float16, native numpy matmul | 324 ms |
+
+Chunking does not help and letting numpy do the float16 matmul itself is no
+better — the conversion is the cost, not the allocation. End to end through
+the index the change measured 218 ms → 412 ms per 100k query while taking
+the file from 197 MB to 80 MB.
+
+Two hundred milliseconds on every query to save 118 MB of disk is the wrong
+way round on a search path, so storage stays float32.
+
+What was kept: `unpack_vector` and the batch reader both accept either width,
+uniform or mixed within one index. That costs nothing — a uniform batch is
+still a single `frombuffer` — and it means an index written while this was
+being tried still reads correctly. The hazard it guards is silence rather
+than failure: a float16 blob read as float32 returns plausible numbers, so a
+wrong guess would score wrong instead of erroring.
+
+Revisit only with a decode that is free, which in practice means a format
+numpy can matmul without widening.

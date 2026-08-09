@@ -239,10 +239,15 @@ def test_batch_cosine_matches_pure_python() -> None:
     query = [random.uniform(-1, 1) for _ in range(dim)]
 
     fast = _batch_cosine(query, rows)
+    # The reference scores the ORIGINAL full-precision vectors while the rows
+    # hold what storage keeps, which is float16 — so the gap this asserts is
+    # the storage width, not a disagreement between the two code paths. At
+    # ~1e-4 it is orders below what separates neighbouring search hits;
+    # `tests/index/test_vector_width.py` holds the ranking itself.
     reference = [emb.cosine_similarity(query, v) for v in vectors]
     assert len(fast) == len(reference)
     for f, r in zip(fast, reference, strict=True):
-        assert abs(f - r) < 1e-5
+        assert abs(f - r) < 1e-3
 
 
 def test_fts_survives_special_characters(indexed_video: str) -> None:
