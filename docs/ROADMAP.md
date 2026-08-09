@@ -40,15 +40,15 @@ MCP tool names stable, forward migrations only.
 
 - **Scene graph**: object/person persistence across scenes ("track the
   red car"), built on the existing phash alignment.
-- **Bootstrap tesseract like every other binary** (`health/binaries.py`).
-  The perception benchmark reads Lao at **0%** with RapidOCR, and tesseract
-  is the documented fallback for that whole family — Lao, Khmer, Myanmar,
-  Tibetan. It is also the only external binary the project does not fetch:
-  ffmpeg, yt-dlp, and deno all self-install, while tesseract raises an error
-  telling you to run winget. The engine is not the gap here — RapidOCR reads
-  clean text at confidence 1.00, and Surya stays opt-in because it needs
-  more RAM than the 8 GB reference machine. The gap is that the fix for the
-  0% row is the one thing a user has to install by hand.
+- ~~**Bootstrap tesseract like every other binary**~~ — done, as far as it
+  can be. Language files now download themselves on first use for the
+  scripts RapidOCR reads at 0% (Lao, Khmer, Myanmar, Tibetan), which is the
+  half that is usually missing — `apt install tesseract-ocr` ships English
+  and leaves those in separate packages. The binary is installed via winget
+  on Windows; elsewhere it needs a package manager, so `doctor` warns with
+  the exact command instead of failing. The engine was never the gap:
+  RapidOCR reads clean text at confidence 1.00, and Surya stays opt-in
+  because it needs more RAM than the 8 GB reference machine.
 - ~~**Narrower vector storage**~~ — tried, measured, rejected. float16
   halves the index (197 MB → 80 MB at 100k) with no change to ranking, but
   widening it back on every read takes the scan from 115 ms to ~310 ms per

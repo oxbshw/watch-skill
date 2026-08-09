@@ -612,6 +612,72 @@ def check_features() -> CheckResult:
     )
 
 
+def _try_winget_tesseract() -> bool:
+    if shutil.which("winget") is None:
+        return False
+    result = _run(
+        [
+            "winget", "install", "--id", "UB-Mannheim.TesseractOCR", "-e",
+            "--accept-source-agreements", "--accept-package-agreements",
+            "--disable-interactivity",
+        ],
+        timeout=900.0,
+    )
+    if result.returncode != 0:
+        return False
+    from watch_skill.perceive import ocr_backends  # noqa: PLC0415
+
+    try:
+        ocr_backends._tesseract_binary()
+    except Exception:
+        return False
+    return True
+
+
+def check_ocr_gap_scripts(fix: bool = True) -> CheckResult:
+    """Lao, Khmer, Myanmar and Tibetan: RapidOCR reads them at 0%.
+
+    tesseract is the documented fallback for that family, and it was the one
+    external dependency the project told users to install by hand. The
+    language files are data and are fetched on demand wherever we run; the
+    binary still needs a package manager off Windows.
+    """
+    from watch_skill.perceive.ocr_backends import RAPIDOCR_GAP
+
+    scripts = ", ".join(sorted(RAPIDOCR_GAP))
+    try:
+        from watch_skill.perceive import ocr_backends  # noqa: PLC0415
+
+        ocr_backends._tesseract_binary()
+    except Exception:
+        if fix and sys.platform == "win32":
+            try:
+                if _try_winget_tesseract():
+                    record_incident("bootstrap", "installed tesseract via winget")
+                    return CheckResult(
+                        "ocr-gap-scripts", "ok", "installed tesseract via winget",
+                        fix_applied="winget",
+                    )
+            except (subprocess.TimeoutExpired, OSError):
+                pass
+        hint = {
+            "win32": "winget install UB-Mannheim.TesseractOCR",
+            "darwin": "brew install tesseract",
+        }.get(sys.platform, "apt install tesseract-ocr  (or dnf/pacman)")
+        # A warning, not a failure: these scripts are a minority of videos and
+        # everything else still works without it.
+        return CheckResult(
+            "ocr-gap-scripts", "warn",
+            f"tesseract not installed — {scripts} will read as empty. Install "
+            f"it with: {hint}. Language files download themselves once it is "
+            "there.",
+        )
+    return CheckResult(
+        "ocr-gap-scripts", "ok",
+        f"tesseract available for {scripts}; language files fetch on demand",
+    )
+
+
 def run_doctor(fix: bool = True) -> DoctorReport:
     """Run every check; when ``fix`` is set, remediate what we can en route."""
     report = DoctorReport()
@@ -626,6 +692,7 @@ def run_doctor(fix: bool = True) -> DoctorReport:
     report.checks.append(check_memory_headroom())
     report.checks.append(check_gpu())
     report.checks.append(check_ocr_models())
+    report.checks.append(check_ocr_gap_scripts(fix=fix))
     report.checks.append(check_model_files(fix=fix))
     report.checks.append(check_index_integrity(fix=fix))
     report.checks.append(check_local_vision(fix=fix))

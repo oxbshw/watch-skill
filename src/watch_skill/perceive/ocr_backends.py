@@ -23,7 +23,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from watch_skill.config import get_settings
-from watch_skill.errors import PerceptionError
+from watch_skill.errors import DependencyError, PerceptionError
 from watch_skill.perceive.types import OcrBlock
 
 # Scripts RapidOCR has NO recognizer for → ISO 639-1 → tesseract traineddata.
@@ -262,16 +262,33 @@ def ocr_frame_tesseract(
     confidences, merged per line."""
     traineddata = RAPIDOCR_GAP.get(lang.split("-")[0].lower(), lang)
     binary = _tesseract_binary()
+
+    # A system tesseract almost never ships the gap scripts: `apt install
+    # tesseract-ocr` gives you English and leaves Lao, Khmer, and Myanmar in
+    # separate packages. Telling the reader to go and download a file we can
+    # fetch ourselves was the wrong side of the self-healing line.
+    args = [binary, str(image_path), "stdout", "-l", traineddata, "tsv"]
     if traineddata not in tesseract_langs(binary):
-        raise PerceptionError(
-            f"tesseract has no '{traineddata}' language data installed",
-            code="perceive.tesseract_lang_missing",
-            fix=f"download {traineddata}.traineddata from "
-            "https://github.com/tesseract-ocr/tessdata and place it in the "
-            "tesseract tessdata directory",
-        )
+        from watch_skill.health.binaries import bootstrap_traineddata, tessdata_dir
+
+        try:
+            bootstrap_traineddata(traineddata)
+        except DependencyError as exc:
+            raise PerceptionError(
+                f"tesseract has no '{traineddata}' language data and it could "
+                f"not be downloaded: {exc}",
+                code="perceive.tesseract_lang_missing",
+                fix=f"check the network and re-run, or install it directly: "
+                f"`apt install tesseract-ocr-{traineddata}` — or download "
+                f"https://github.com/tesseract-ocr/tessdata_fast/raw/main/"
+                f"{traineddata}.traineddata into {tessdata_dir()}",
+            ) from exc
+        # --tessdata-dir must precede the positional arguments.
+        args = [binary, "--tessdata-dir", str(tessdata_dir()), str(image_path),
+                "stdout", "-l", traineddata, "tsv"]
+
     out = subprocess.run(
-        [binary, str(image_path), "stdout", "-l", traineddata, "tsv"],
+        args,
         capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=120,
     )
     if out.returncode != 0:

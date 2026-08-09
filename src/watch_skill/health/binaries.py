@@ -225,6 +225,45 @@ def bootstrap_ffmpeg_portable() -> tuple[Path, Path]:
     return wanted["ffmpeg.exe"], wanted["ffprobe.exe"]  # type: ignore[return-value]
 
 
+# tesseract's own language files, which are data rather than a binary and so
+# can be fetched anywhere. `tessdata_fast` is the maintained integer model
+# set — a few MB per script against ~15 MB for `tessdata_best`, and the gap
+# it closes here is 0%, not a percentage point.
+TESSDATA_URL = "https://github.com/tesseract-ocr/tessdata_fast/raw/main/{lang}.traineddata"
+
+
+def tessdata_dir(create: bool = False) -> Path:
+    """Where Watch Skill keeps traineddata it downloaded itself."""
+    path = managed_bin_dir(create=create) / "tessdata"
+    if create:
+        path.mkdir(parents=True, exist_ok=True)
+    return path
+
+
+def bootstrap_traineddata(lang: str) -> Path:
+    """Fetch one tesseract language file into the managed tessdata dir.
+
+    The binary cannot be installed without a package manager on Linux or
+    macOS, but this half always can — and it is the half that is usually
+    missing. `apt install tesseract-ocr` ships English and leaves Lao,
+    Khmer, and Myanmar in separate packages most people never learn about,
+    so a machine with tesseract present still reads those at 0%.
+    """
+    dest = tessdata_dir(create=True) / f"{lang}.traineddata"
+    if dest.is_file() and dest.stat().st_size > 0:
+        return dest
+    _download_file(TESSDATA_URL.format(lang=lang), dest)
+    if dest.stat().st_size == 0:
+        dest.unlink(missing_ok=True)
+        raise DependencyError(
+            f"downloaded {lang}.traineddata was empty",
+            code="health.bootstrap_failed",
+            fix=f"check that '{lang}' exists in "
+            "https://github.com/tesseract-ocr/tessdata_fast",
+        )
+    return dest
+
+
 def bootstrap_deno() -> Path:
     """Get a deno binary into the managed bin dir (copy or portable zip).
 

@@ -2,6 +2,22 @@
 
 ## Unreleased
 
+### The 0% scripts fix themselves now
+- Lao, Khmer, Myanmar, and Tibetan read as **empty** with RapidOCR — that is
+  the 0% row in the perception benchmark, and tesseract is the documented
+  fallback. Until now the pipeline stopped there and told you to download a
+  `.traineddata` by hand, the only dependency in the project handled that
+  way while ffmpeg, yt-dlp, and deno all self-install.
+- Language files are data, so they are fetched on demand on every platform,
+  into the managed bin dir, and passed with `--tessdata-dir`. This is the
+  half that is usually missing: `apt install tesseract-ocr` ships English and
+  leaves those scripts in separate packages, so a machine with tesseract
+  installed still read them at 0%.
+- The binary itself installs via winget on Windows. Elsewhere it needs a
+  package manager, so `doctor` gained an `ocr-gap-scripts` check that names
+  the affected scripts and the exact command — a warning, not a failure,
+  because these are a minority of videos and nothing else depends on it.
+
 ### The answer, rendered
 - MCP tool results can now carry the viewer page as an inline `ui://`
   resource. A client that renders them — Goose, LibreChat, the mcp-ui

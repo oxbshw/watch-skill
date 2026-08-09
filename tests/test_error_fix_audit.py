@@ -105,10 +105,19 @@ def test_top_error_paths_fix_text_is_executable(tmp_path: Path) -> None:
         _shutil.which = real_which
         Path.is_file = real_is_file  # type: ignore[method-assign]
 
+    # Missing language data is now downloaded rather than refused, so this
+    # error only surfaces when the download itself cannot happen.
+    from watch_skill.errors import DependencyError
+    from watch_skill.health import binaries
+
     real_binary = ocr_backends._tesseract_binary
     real_langs = ocr_backends.tesseract_langs
+    real_bootstrap = binaries.bootstrap_traineddata
     ocr_backends._tesseract_binary = lambda: "tesseract"
     ocr_backends.tesseract_langs = lambda binary=None: {"eng"}
+    binaries.bootstrap_traineddata = lambda lang: (_ for _ in ()).throw(
+        DependencyError("offline", code="health.download_failed", fix="check the network")
+    )
     try:
         with pytest.raises(PerceptionError) as e6:
             ocr_backends.ocr_frame_tesseract(Path("f.png"), "km")
@@ -116,6 +125,7 @@ def test_top_error_paths_fix_text_is_executable(tmp_path: Path) -> None:
     finally:
         ocr_backends._tesseract_binary = real_binary
         ocr_backends.tesseract_langs = real_langs
+        binaries.bootstrap_traineddata = real_bootstrap
 
     # 7: local vision server down, no binary
     from watch_skill.vision import local_health

@@ -62,13 +62,57 @@ def test_missing_binary_is_a_structured_error(monkeypatch: pytest.MonkeyPatch) -
     assert "winget install" in excinfo.value.fix
 
 
-def test_missing_language_data_is_a_structured_error(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_missing_language_data_is_fetched_rather_than_refused(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """The file is data we can download; refusing was the old behaviour.
+
+    `apt install tesseract-ocr` leaves Khmer in a separate package, so this
+    path is the common one rather than an edge case.
+    """
+    from watch_skill import config
+    from watch_skill.health import binaries
+
+    monkeypatch.setenv("WATCHSKILL_DATA_DIR", str(tmp_path / "data"))
+    config.reset_settings()
     monkeypatch.setattr(ocr_backends, "_tesseract_binary", lambda: "tesseract")
     monkeypatch.setattr(ocr_backends, "tesseract_langs", lambda binary=None: {"eng"})
+
+    asked: list[str] = []
+
+    def fake_download(url: str, dest: Path, timeout: float = 600.0) -> Path:
+        asked.append(url)
+        dest.write_bytes(b"fake model")
+        return dest
+
+    monkeypatch.setattr(binaries, "_download_file", fake_download)
+    # The run itself fails on the absent binary; what matters is that the
+    # language file was fetched first instead of the call being refused.
+    with pytest.raises((PerceptionError, FileNotFoundError, OSError)):
+        ocr_frame_tesseract(Path("frame.png"), "km")
+    assert asked and asked[0].endswith("khm.traineddata")
+
+
+def test_an_undownloadable_language_still_says_what_to_do(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    from watch_skill import config
+    from watch_skill.errors import DependencyError
+    from watch_skill.health import binaries
+
+    monkeypatch.setenv("WATCHSKILL_DATA_DIR", str(tmp_path / "data"))
+    config.reset_settings()
+    monkeypatch.setattr(ocr_backends, "_tesseract_binary", lambda: "tesseract")
+    monkeypatch.setattr(ocr_backends, "tesseract_langs", lambda binary=None: {"eng"})
+
+    def no_network(lang: str):
+        raise DependencyError("offline", code="health.download_failed", fix="check the network")
+
+    monkeypatch.setattr(binaries, "bootstrap_traineddata", no_network)
     with pytest.raises(PerceptionError) as excinfo:
         ocr_frame_tesseract(Path("frame.png"), "km")
     assert excinfo.value.code == "perceive.tesseract_lang_missing"
-    assert "khm.traineddata" in excinfo.value.fix
+    assert "khm" in excinfo.value.fix
 
 
 def test_surya_missing_is_a_structured_error() -> None:
