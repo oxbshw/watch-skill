@@ -303,6 +303,82 @@ def plan(
     ))
 
 
+jobs_app = typer.Typer(help="Durable background jobs: submit, watch, cancel, drain.")
+app.add_typer(jobs_app, name="jobs")
+
+
+@jobs_app.command("list")
+def jobs_list_cmd(
+    state: str = typer.Option("", "--state", help="queued|running|succeeded|failed|cancelled"),
+    limit: int = typer.Option(25, "--limit"),
+) -> None:
+    """Every durable job on this machine, newest first."""
+    from watch_skill import jobs
+
+    rows = jobs.list_jobs(state=state or None, limit=limit)
+    print(json.dumps([job.to_dict() for job in rows], indent=2, ensure_ascii=False))
+
+
+@jobs_app.command("status")
+def jobs_status_cmd(
+    job_id: str = typer.Argument(...),
+    events: bool = typer.Option(False, "--events", help="Include the append-only log."),
+) -> None:
+    """One job's state, and optionally everything that happened to it."""
+    from watch_skill import jobs
+    from watch_skill.errors import WatchSkillError
+
+    try:
+        job = jobs.get(job_id)
+    except WatchSkillError as exc:
+        print(json.dumps(exc.to_dict(), indent=2))
+        raise typer.Exit(code=1) from None
+    payload = job.to_dict()
+    if events:
+        payload["events"] = [e.model_dump(mode="json") for e in jobs.events(job_id)]
+    print(json.dumps(payload, indent=2, ensure_ascii=False))
+
+
+@jobs_app.command("cancel")
+def jobs_cancel_cmd(job_id: str = typer.Argument(...)) -> None:
+    """Ask a job to stop. Queued stops now; running stops at its next checkpoint."""
+    from watch_skill import jobs
+    from watch_skill.errors import WatchSkillError
+
+    try:
+        job = jobs.cancel(job_id)
+    except WatchSkillError as exc:
+        print(json.dumps(exc.to_dict(), indent=2))
+        raise typer.Exit(code=1) from None
+    print(json.dumps(job.to_dict(), indent=2, ensure_ascii=False))
+
+
+@jobs_app.command("worker")
+def jobs_worker_cmd(
+    kinds: list[str] = typer.Option(None, "--kind", help="Restrict to these job kinds."),
+    max_jobs: int = typer.Option(0, "--max-jobs", help="Exit after N jobs (0 = forever)."),
+    idle_exit: bool = typer.Option(False, "--idle-exit", help="Exit when the queue empties."),
+) -> None:
+    """Drain the durable queue in this process.
+
+    Any number of workers on a machine may run at once — a job is claimed
+    under a lease, so exactly one of them gets each job.
+    """
+    from watch_skill.jobs.worker import Worker
+
+    worker = Worker(kinds=list(kinds) if kinds else None)
+    completed = worker.run_forever(max_jobs=max_jobs or None, idle_exit=idle_exit)
+    print(json.dumps({"owner": worker.owner, "completed": completed}, indent=2))
+
+
+@jobs_app.command("recover")
+def jobs_recover_cmd() -> None:
+    """Re-queue jobs whose worker died. Runs automatically before every claim."""
+    from watch_skill import jobs
+
+    print(json.dumps({"recovered": jobs.recover_stale_leases()}, indent=2))
+
+
 verify_app = typer.Typer(help="Deterministic verification contracts and evidence.")
 app.add_typer(verify_app, name="verify")
 

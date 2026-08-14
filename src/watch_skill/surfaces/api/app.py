@@ -233,6 +233,37 @@ def create_app() -> FastAPI:
             raise _http_error(exc) from exc
         return payload
 
+    @app.get("/v1/jobs", tags=["jobs"])
+    def jobs_list(state: str | None = None, limit: int = 25) -> dict[str, Any]:
+        """Durable jobs on this machine, newest first."""
+        from watch_skill import jobs
+
+        return {"jobs": [job.to_dict() for job in jobs.list_jobs(state, limit)]}
+
+    @app.get("/v1/jobs/{job_id}", tags=["jobs"])
+    def jobs_status(job_id: str, events: bool = False) -> dict[str, Any]:
+        """One durable job's state, optionally with its append-only log."""
+        from watch_skill import jobs
+
+        try:
+            job = jobs.get(job_id)
+        except WatchSkillError as exc:
+            raise _http_error(exc) from exc
+        payload = job.to_dict()
+        if events:
+            payload["events"] = [e.model_dump(mode="json") for e in jobs.events(job_id)]
+        return payload
+
+    @app.post("/v1/jobs/{job_id}/cancel", tags=["jobs"])
+    def jobs_cancel(job_id: str) -> dict[str, Any]:
+        """Ask a job to stop; running jobs stop at their next checkpoint."""
+        from watch_skill import jobs
+
+        try:
+            return jobs.cancel(job_id).to_dict()
+        except WatchSkillError as exc:
+            raise _http_error(exc) from exc
+
     @app.get("/v1/plan", tags=["system"])
     def plan(frames: int = 0, tier: str = "strong") -> dict[str, Any]:
         """The effective policy and what a run would send, before it runs."""

@@ -389,3 +389,21 @@ Print the Watch Skill version. No flags.
 The MCP tools accept per-call parameters (`budget`, `max_frames`,
 `include_frames`, `verify`, `window`, …) that override the same settings for
 one call. They are documented per tool in [tools/README.md](tools/README.md).
+
+### `watch-skill jobs ...`
+
+Durable background work. A job id survives a restart, so an agent that
+reconnects after a crash can still collect its result.
+
+```bash
+watch-skill jobs list [--state queued|running|succeeded|failed|cancelled]
+watch-skill jobs status <job_id> [--events]   # --events prints the append-only log
+watch-skill jobs cancel <job_id>
+watch-skill jobs worker [--kind watch] [--max-jobs N] [--idle-exit]
+watch-skill jobs recover                      # re-queue jobs whose worker died
+```
+
+`cancel` on a queued job stops it immediately; on a running job it is
+acknowledged at the next stage checkpoint, and the partial work is discarded
+rather than half-committed. Any number of workers may run at once — a job is
+claimed under a lease, so exactly one gets each job.

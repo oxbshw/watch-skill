@@ -1,6 +1,6 @@
 # MCP tool reference
 
-All 27 tools exposed by the `watch-skill` MCP server
+All 28 tools exposed by the `watch-skill` MCP server
 (`src/watch_skill/surfaces/mcp/server.py`), with parameters, defaults, and
 what comes back. Every tool has a REST twin — the mapping table is at the
 bottom.

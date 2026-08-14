@@ -113,16 +113,25 @@ async def watch_video(
     Pass background=true for an instant job_id, then poll get_status."""
     from watch_skill import jobs
 
+    if background:
+        # Durable: the id outlives this process, so a client that reconnects
+        # after a restart can still collect the result.
+        durable = jobs.submit_and_run(
+            "watch",
+            {"source": source, "start": start, "end": end, "budget": budget},
+            idempotency_key=f"watch:{source}:{start}:{end}:{budget}",
+        )
+        return [
+            f"started background watch: job_id `{durable.job_id}`\n"
+            f"Poll get_status('{durable.job_id}') every few seconds; when done "
+            "it returns the video_id for ask_video. The job survives a server "
+            "restart, and cancel_job stops it."
+        ]
+
     job = jobs.start_job(
         "watch",
         lambda progress: _run_watch(source, start, end, budget, progress),
     )
-    if background:
-        return [
-            f"started background watch: job_id `{job.job_id}`\n"
-            f"Poll get_status('{job.job_id}') every few seconds; when done it "
-            "returns the video_id for ask_video."
-        ]
     while job.status == "running":
         if ctx is not None:
             try:
@@ -139,21 +148,52 @@ async def watch_video(
 @mcp.tool
 def get_status(job_id: str) -> str:
     """Check a background job started with watch_video(background=true).
-    Returns status/phase/progress; when done it includes the video_id to use
-    with ask_video. Poll every few seconds, not in a tight loop."""
+    Returns state/stage/progress; when it succeeds it includes the video_id to
+    use with ask_video. Poll every few seconds, not in a tight loop.
+
+    Durable job ids survive a server restart. In-process ids (from an older
+    session) do not, and say so."""
     from watch_skill import jobs
 
     try:
-        job = jobs.get_job(job_id)
+        job = jobs.get(job_id)
+    except WatchSkillError:
+        # Fall back to the in-process table so ids handed out by an older
+        # build keep resolving for the life of this process.
+        try:
+            legacy = jobs.get_job(job_id)
+        except WatchSkillError as exc:
+            return _error_payload(exc)
+        payload = legacy.to_dict()
+        if legacy.status == "done" and legacy.result:
+            video_id, result = legacy.result
+            payload["video_id"] = video_id
+            payload["next"] = f"ask_video('{video_id}', <your question>)"
+            payload["transcript_source"] = result.transcript.source
+        return json.dumps(payload, ensure_ascii=False, indent=2)
+
+    payload = job.to_dict()
+    payload["durable"] = True
+    if job.state.value == "succeeded" and job.result_kind == "video_id":
+        payload["video_id"] = job.result_ref
+        payload["next"] = f"ask_video('{job.result_ref}', <your question>)"
+    return json.dumps(payload, ensure_ascii=False, indent=2)
+
+
+@mcp.tool
+def cancel_job(job_id: str) -> str:
+    """Stop a durable background job.
+
+    A queued job stops immediately. A running one is asked to stop and
+    acknowledges at its next stage checkpoint, so cancellation is real rather
+    than a flag nobody reads — partial work is discarded, not half-committed."""
+    from watch_skill import jobs
+
+    try:
+        job = jobs.cancel(job_id)
     except WatchSkillError as exc:
         return _error_payload(exc)
-    payload = job.to_dict()
-    if job.status == "done":
-        video_id, result = job.result
-        payload["video_id"] = video_id
-        payload["next"] = f"ask_video('{video_id}', <your question>)"
-        payload["transcript_source"] = result.transcript.source
-    return json.dumps(payload, ensure_ascii=False, indent=2)
+    return json.dumps(job.to_dict(), ensure_ascii=False, indent=2)
 
 
 @mcp.tool(output_schema=None)
