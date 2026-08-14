@@ -39,6 +39,8 @@ LRI, PDI = "⁦", "⁩"
     ("¿Cuándo aparece la pantalla de advertencia?", "es"),
     ("Quand l'écran d'avertissement apparaît-il ?", "fr"),
     ("Wann erscheint der Warnbildschirm?", "de"),
+    ("Quando appare la schermata di avviso?", "it"),
+    ("Quando aparece a tela de aviso?", "pt"),
     ("When does the warning screen appear?", "en"),
 ])
 def test_detect_lang(text: str, expected: str) -> None:
@@ -47,6 +49,26 @@ def test_detect_lang(text: str, expected: str) -> None:
 
 def test_detect_lang_defaults_to_english() -> None:
     assert detect_lang("zzz qqq") == "en"
+
+
+@pytest.mark.parametrize("text", [
+    "Qual é o assunto do vídeo?",
+    "Do que trata a primeira parte do video?",
+    "Quais são os três pontos principais?",
+    "Me mostra o momento em que ele abre o terminal",
+])
+def test_portuguese_is_not_lost_to_its_neighbours(text: str) -> None:
+    """Portuguese shares most of its function words with Spanish, French and
+    Italian, so a short question used to draw — and a draw was decided by
+    declaration order, never by evidence."""
+    assert detect_lang(text) == "pt"
+
+
+def test_tie_prefers_the_language_with_unshared_words() -> None:
+    """`mostra` is Portuguese and Italian; `ele` is only Portuguese. The tie
+    breaks on the word nobody else claims, not on dict order."""
+    assert detect_lang("ele mostra") == "pt"
+    assert detect_lang("appare lo schermo") == "it"
 
 
 # ---- honest floor localized ------------------------------------------------

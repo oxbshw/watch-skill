@@ -58,7 +58,8 @@ _LATIN_STOP = {
     "de": {"der", "die", "das", "und", "wann", "wie", "wo", "was", "ein", "eine",
            "zeigt", "warum", "bildschirm", "erscheint", "video"},
     "pt": {"os", "as", "que", "quando", "onde", "como", "para", "uma", "aparece",
-           "vídeo", "mostra", "tela", "está"},
+           "vídeo", "mostra", "tela", "está", "é", "não", "são", "qual", "quais",
+           "do", "da", "dos", "das", "você", "ele", "ela", "isso", "sobre", "tem"},
     "it": {"il", "le", "che", "di", "quando", "dove", "come", "per", "una", "mostra",
            "video", "appare", "schermo"},
     "en": {"the", "what", "when", "where", "how", "why", "is", "does", "show",
@@ -80,9 +81,22 @@ def detect_lang(text: str) -> str:
         return max(counts, key=counts.get)  # type: ignore[arg-type]
 
     tokens = {t.strip(".,!?¿¡:;\"'()").lower() for t in text.split()}
-    scores = {lang: len(tokens & words) for lang, words in _LATIN_STOP.items()}
-    best = max(scores, key=scores.get)  # type: ignore[arg-type]
-    return best if scores[best] > 0 else "en"
+    hits = {lang: tokens & words for lang, words in _LATIN_STOP.items()}
+    top = max(len(h) for h in hits.values())
+    if top == 0:
+        return "en"
+    tied = [lang for lang, h in hits.items() if len(h) == top]
+    if len(tied) == 1:
+        return tied[0]
+    # A tie on raw count used to be settled by dict order, which quietly handed
+    # every draw to whichever language was declared first. Prefer the language
+    # whose matched words no other tied language claims — a word only Portuguese
+    # uses is worth more than one Portuguese and Italian share.
+    def _unshared(lang: str) -> int:
+        others = set().union(*(hits[other] for other in tied if other != lang))
+        return len(hits[lang] - others)
+
+    return max(tied, key=_unshared)
 
 
 def is_rtl(lang: str) -> bool:
