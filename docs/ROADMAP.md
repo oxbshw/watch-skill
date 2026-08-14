@@ -20,18 +20,36 @@ MCP tool names stable, forward migrations only.
 Stated plainly rather than left implicit. Each of these is a design that is
 not built yet, not a feature that half-works.
 
-- **Background jobs are still in-memory.** `watch_skill.jobs` runs work in
-  daemon threads with state in a dict, so a `job_id` dies with the process and
-  a long transcription cannot be cancelled — a thread timeout leaves Whisper
-  running. The durable design (SQLite-backed state, per-stage checkpoints,
-  heartbeats, resume after restart, real worker cancellation) is not
-  implemented. Treat `background=true` as "don't block the client", not as a
-  job queue.
-- **Capture capability reporting is not machine-tested off Windows.**
-  `loop/capture.py` selects a backend per platform, but there is no
-  capability-matrix command, and the macOS (ScreenCaptureKit/AVFoundation)
-  and Wayland (PipeWire/portal) paths are not verified on this machine. The
-  docs should not be read as a support claim for those.
+- **Live sessions have no audio.** `AudioChunk` is a defined contract and
+  nothing produces one. There is no audio capture stage, no streaming
+  transcription, and no `speech` events in a live session; `audio_chunks` and
+  `audio_gap_seconds` are always zero. Recorded watching transcribes normally
+  — this gap is live-only. See [live.md](live.md).
+- **Live triggers and the Observer Loop are not built.** No deterministic or
+  semantic trigger evaluation exists, so nothing watches a live session for a
+  declared condition.
+- **Live capture is file-replay and stream only.** Browser, screen, window and
+  camera work for *recorded* capture (`capture`, `loop_start`) and are not
+  wired as live sources. `capture-capabilities` reports this per kind rather
+  than leaving it to be discovered at the failure.
+- **The MCP UI is a self-contained HTML viewer, not an MCP App.** The official
+  MCP Apps extension (`ui://` resources, app-only tools, interactive live
+  player) is not implemented.
+- **The ten skills are not consolidated.** `benchmarks/skill_tokens.py`
+  measures the current cost — 1,259 discovery tokens every session across ten
+  skills, 5,232 body tokens total — and the four-skill progressive-disclosure
+  design is not built. The number is a baseline, not a result.
+- **There is no plugin entry-point SDK, TypeScript SDK, or adoption
+  analytics.** Backends are internal protocols; external plugins cannot
+  register.
+- **Capture is still not machine-tested off Windows.**
+  `watch-skill capture-capabilities` now reports every kind with how its
+  answer was established, so nothing claims support it has not earned — macOS
+  screen is `degraded` (ScreenCaptureKit unimplemented, permission unprobeable)
+  and Wayland is `unavailable` (the PipeWire/portal path does not exist here).
+  Detection is tested in CI on every platform; actual hardware capture is not,
+  because the runners have no camera, microphone, or desktop session. See
+  [capture-capabilities.md](capture-capabilities.md).
 - **Verification check types stop where they can be deterministic.** DOM
   locator, accessibility, browser-console and failed-request assertions, and
   test-report ingestion are designed but absent — see
