@@ -39,6 +39,18 @@ def _get_model(name: str):
             '(install with `uv sync --extra index`)',
             file=sys.stderr,
         )
+    except Exception as exc:  # noqa: BLE001
+        # Installed but unloadable: out of memory, a truncated model cache, a
+        # runtime the CPU cannot use. Semantic search is a ranking
+        # improvement, not a precondition for retrieval, so degrade to
+        # keyword-only rather than taking every query down with it. Announced
+        # once, on stderr, because silently worse results are their own bug.
+        _unavailable = True
+        print(
+            f"[watch-skill] embedding model unavailable ({type(exc).__name__}: "
+            f"{exc}) — falling back to keyword-only search",
+            file=sys.stderr,
+        )
     return _models.get(name)
 
 

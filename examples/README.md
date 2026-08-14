@@ -36,6 +36,7 @@ active environment, invoke `python` and `watch-skill` directly instead.
 | 15 | [Private offline workflow](15-private-offline-workflow/) | OCR extra and ffmpeg | Run acquisition, OCR, indexing, and answers with cloud use disabled. |
 | 16 | [Shareable viewer](16-shareable-viewer/) | Any indexed video | Export one self-contained HTML report. |
 | 17 | [Freshness and offline](17-freshness-and-offline/) | ffmpeg | An overwritten video becomes a new revision; offline stays offline with keys set; an empty critique is `inconclusive`. |
+| 18 | [Live watch](18-live-watch/) | ffmpeg, Pillow | A state change reported **while the source is still playing**, then finalised into ordinary indexed memory. |
 
 ## Useful commands
 

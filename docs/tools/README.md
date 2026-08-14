@@ -1,6 +1,6 @@
 # MCP tool reference
 
-All 28 tools exposed by the `watch-skill` MCP server
+All 34 tools exposed by the `watch-skill` MCP server
 (`src/watch_skill/surfaces/mcp/server.py`), with parameters, defaults, and
 what comes back. Every tool has a REST twin — the mapping table is at the
 bottom.
@@ -329,6 +329,85 @@ What the library knows: videos and hours indexed, note counts by kind,
 the entities recurring across multiple videos, recent additions, and the
 library-level savings meter. No parameters. Orient here before
 `library_synthesize`, or when the user asks what has been watched.
+
+## Live watching
+
+Watching something **as it happens** — a stream, or a local file replayed at
+real time. Events are produced while the source is still playing, not after it
+ends. No model runs per frame: scene changes and on-screen text changes are
+detected locally, and a question selects a handful of already-captured frames
+when interpretation is actually needed.
+
+### `start_live_watch`
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `target` | str | required | File path (replayed live) or stream URL |
+| `kind` | str | `file_replay` | `file_replay` or `stream`. Anything else reports honestly that this build/machine cannot record it |
+| `profile` | str | `local-lite` | `local-lite`, `local-realtime`, or `forensic` (keeps everything, drops nothing) |
+| `fps` | float | `2.0` | **Analysis** frame rate — capture keeps up regardless |
+| `buffer_seconds` | float | `120.0` | Rolling retention window; evidence around an event is pinned and exempt |
+
+Returns a `session_id`. Check `capture_capabilities` first for anything
+other than a file or stream.
+
+### `observe_live`
+
+Cursor-addressed event deltas. Pass the previous `next_cursor` to get only
+new events — **repeating a cursor returns the same events**, so a retried
+call never loses or double-counts anything.
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `session_id` | str | required | From `start_live_watch` |
+| `cursor` | str | `""` | The previous `next_cursor`; omit to start at the beginning |
+| `limit` | int | `50` | Batch size cap |
+| `wait_seconds` | float | `0.0` | Long-poll instead of returning an empty batch |
+| `types` | list[str] | — | Filter by event type |
+
+Event types include `scene_change`, `visible_text_change`, `speech`,
+`motion`, `ui_state_change`, `anomaly`, `capture_gap`, and
+`provider_degraded`. Every event carries a media timestamp, a wall
+timestamp, a confidence, and whether it is an `observation` or an
+`inference`. Evidence is referenced by `artifact_id` — never a filesystem
+path.
+
+### `ask_live`
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `session_id` | str | required | |
+| `question` | str | required | Natural language |
+| `scope` | str | `recent` | `now`, `recent` (last `seconds`), or `session` |
+| `seconds` | float | `30.0` | Window for `recent` |
+
+Answers cite the media timestamps they came from. When nothing observed
+supports an answer, it says so rather than inventing one.
+
+### `get_live_status`
+
+State, frames captured vs analyzed, **dropped frames**, queue depths, and
+buffer size. Omit `session_id` to list every live session on this machine.
+Dropped frames are counted and reported, never hidden — a live view that
+silently skips is a live view you cannot trust.
+
+### `stop_live_watch`
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `session_id` | str | required | |
+| `finalize` | bool | `true` | Turn the pinned evidence into an ordinary indexed video |
+
+After finalising, `ask_video` and `search_videos` work on the session with
+**no reprocessing of the media** — the frames and OCR were already produced
+while it ran.
+
+### `capture_capabilities`
+
+What this machine can actually record, and how each answer was established:
+`machine_tested`, `probed`, or `not_tested`. Nothing is reported
+`available` on the strength of a code path existing. Unavailable entries
+carry a `repair` string or an explicit limitation.
 
 ## Health
 

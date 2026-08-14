@@ -759,6 +759,127 @@ def get_evidence(run_id: str) -> str:
 
 
 @mcp.tool
+def start_live_watch(
+    target: str,
+    kind: str = "file_replay",
+    profile: str = "local-lite",
+    fps: float = 2.0,
+    buffer_seconds: float = 120.0,
+) -> str:
+    """Start WATCHING SOMETHING AS IT HAPPENS — a stream, or a local file
+    replayed at real time. Events (scene changes, on-screen text changes)
+    are produced while the source is still playing, not after it ends.
+
+    Returns a session_id. Poll observe_live with the returned cursor to see
+    what happens; ask_live answers questions about it; stop_live_watch ends
+    it and can turn it into permanent searchable memory.
+
+    kind: file_replay | stream. Others report honestly that this machine or
+    build cannot record them — check capture_capabilities first."""
+    from watch_skill.live import start_live
+
+    try:
+        session = start_live(target, kind=kind, profile=profile, fps=fps,
+                             buffer_seconds=buffer_seconds)
+    except WatchSkillError as exc:
+        return _error_payload(exc)
+    payload = session.to_public()
+    payload["next"] = f"observe_live('{session.session_id}')"
+    return json.dumps(payload, ensure_ascii=False, indent=2)
+
+
+@mcp.tool
+def observe_live(
+    session_id: str,
+    cursor: str = "",
+    limit: int = 50,
+    wait_seconds: float = 0.0,
+    types: list[str] | None = None,
+) -> str:
+    """Read what has happened in a live session since your last cursor.
+
+    Pass the `next_cursor` from the previous call to get only new events —
+    repeating a cursor returns the same events, so a retry never loses or
+    doubles anything. wait_seconds long-polls instead of returning empty."""
+    from watch_skill.live import observe
+
+    try:
+        return json.dumps(
+            observe(session_id, cursor=cursor or None, limit=limit,
+                    timeout_seconds=wait_seconds, types=types),
+            ensure_ascii=False, indent=2,
+        )
+    except WatchSkillError as exc:
+        return _error_payload(exc)
+
+
+@mcp.tool
+def ask_live(
+    session_id: str,
+    question: str,
+    scope: str = "recent",
+    seconds: float = 30.0,
+) -> str:
+    """Ask what is happening right now, or what happened earlier in a live
+    session. Answers come with the media timestamps they came from.
+
+    scope: now | recent (last `seconds`) | session. When nothing observed
+    supports an answer it says so rather than inventing one."""
+    from watch_skill.live import ask_live as _ask
+
+    try:
+        return json.dumps(_ask(session_id, question, scope=scope, seconds=seconds),
+                          ensure_ascii=False, indent=2)
+    except WatchSkillError as exc:
+        return _error_payload(exc)
+
+
+@mcp.tool
+def get_live_status(session_id: str = "") -> str:
+    """How a live session is doing: state, frames captured vs analyzed,
+    dropped frames, queue depths, buffer size. Omit session_id to list every
+    live session on this machine."""
+    from watch_skill.live import list_live, status
+
+    try:
+        if not session_id:
+            return json.dumps({"sessions": list_live()}, ensure_ascii=False, indent=2)
+        return json.dumps(status(session_id), ensure_ascii=False, indent=2)
+    except WatchSkillError as exc:
+        return _error_payload(exc)
+
+
+@mcp.tool
+def stop_live_watch(session_id: str, finalize: bool = True) -> str:
+    """Stop a live session. With finalize=true the pinned evidence becomes an
+    ordinary indexed video — ask_video and search_videos work on it
+    afterwards, with no reprocessing of the media."""
+    from watch_skill.live import stop_live
+    from watch_skill.live.finalize import finalize_session
+
+    try:
+        payload = stop_live(session_id)
+        if finalize:
+            video_id = finalize_session(session_id)
+            payload["finalized_video_id"] = video_id
+            payload["next"] = f"ask_video('{video_id}', <your question>)"
+    except WatchSkillError as exc:
+        return _error_payload(exc)
+    return json.dumps(payload, ensure_ascii=False, indent=2)
+
+
+@mcp.tool
+def capture_capabilities() -> str:
+    """What this machine can actually record, and how each answer was
+    established. Check before attempting screen/window/camera capture —
+    nothing here is reported available on the strength of a code path
+    existing."""
+    from watch_skill.live import capability_matrix
+
+    return json.dumps(capability_matrix(), ensure_ascii=False, indent=2)
+
+
+@mcp.tool
 def doctor() -> str:
     """Run this when ANY other tool fails with a dependency/download error, or
     on first use. Checks AND self-heals: installs missing ffmpeg/yt-dlp,

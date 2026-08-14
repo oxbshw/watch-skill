@@ -303,6 +303,130 @@ def plan(
     ))
 
 
+live_app = typer.Typer(help="Watch something as it happens.")
+app.add_typer(live_app, name="live")
+
+
+@app.command("capture-capabilities")
+def capture_capabilities_cmd() -> None:
+    """What this machine can actually record, and how each answer was checked."""
+    from watch_skill.live import capability_matrix
+
+    print(json.dumps(capability_matrix(), indent=2, ensure_ascii=False))
+
+
+@live_app.command("start")
+def live_start_cmd(
+    target: str = typer.Argument(..., help="File path (replayed live) or stream URL."),
+    kind: str = typer.Option("file_replay", "--kind", help="file_replay | stream"),
+    profile: str = typer.Option("local-lite", "--profile"),
+    fps: float = typer.Option(2.0, "--fps", help="Analysis frame rate."),
+    buffer_seconds: float = typer.Option(120.0, "--buffer"),
+    follow: bool = typer.Option(False, "--follow", help="Stream events until it ends."),
+) -> None:
+    """Start a live session. --follow prints events as they happen."""
+    from watch_skill.errors import WatchSkillError
+    from watch_skill.live import observe, start_live, stop_live
+
+    try:
+        session = start_live(target, kind=kind, profile=profile, fps=fps,
+                             buffer_seconds=buffer_seconds)
+    except WatchSkillError as exc:
+        print(json.dumps(exc.to_dict(), indent=2))
+        raise typer.Exit(code=1) from None
+
+    if not follow:
+        print(json.dumps(session.to_public(), indent=2, ensure_ascii=False))
+        return
+
+    cursor = ""
+    try:
+        while True:
+            batch = observe(session.session_id, cursor=cursor or None,
+                            timeout_seconds=2.0)
+            for event in batch["events"]:
+                print(f"{event['media_ts']:8.2f}s  {event['type']:<22} "
+                      f"{event['summary']}")
+            cursor = batch["next_cursor"]
+            if batch["state"] not in ("running", "starting", "paused"):
+                break
+    except KeyboardInterrupt:
+        stop_live(session.session_id, reason="interrupted by operator")
+        print("\nstopped.")
+
+
+@live_app.command("observe")
+def live_observe_cmd(
+    session_id: str = typer.Argument(...),
+    cursor: str = typer.Option("", "--cursor"),
+    limit: int = typer.Option(50, "--limit"),
+    wait: float = typer.Option(0.0, "--wait", help="Long-poll seconds."),
+) -> None:
+    """Read events after a cursor. Repeating a cursor is idempotent."""
+    from watch_skill.errors import WatchSkillError
+    from watch_skill.live import observe
+
+    try:
+        print(json.dumps(observe(session_id, cursor=cursor or None, limit=limit,
+                                 timeout_seconds=wait), indent=2, ensure_ascii=False))
+    except WatchSkillError as exc:
+        print(json.dumps(exc.to_dict(), indent=2))
+        raise typer.Exit(code=1) from None
+
+
+@live_app.command("ask")
+def live_ask_cmd(
+    session_id: str = typer.Argument(...),
+    question: str = typer.Argument(...),
+    scope: str = typer.Option("recent", "--scope", help="now | recent | session"),
+    seconds: float = typer.Option(30.0, "--seconds"),
+) -> None:
+    """Ask what is happening, answered with media timestamps."""
+    from watch_skill.errors import WatchSkillError
+    from watch_skill.live import ask_live
+
+    try:
+        print(json.dumps(ask_live(session_id, question, scope=scope, seconds=seconds),
+                         indent=2, ensure_ascii=False))
+    except WatchSkillError as exc:
+        print(json.dumps(exc.to_dict(), indent=2))
+        raise typer.Exit(code=1) from None
+
+
+@live_app.command("status")
+def live_status_cmd(session_id: str = typer.Argument("")) -> None:
+    """One session's health, or every live session on this machine."""
+    from watch_skill.errors import WatchSkillError
+    from watch_skill.live import list_live, status
+
+    try:
+        payload = status(session_id) if session_id else {"sessions": list_live()}
+    except WatchSkillError as exc:
+        print(json.dumps(exc.to_dict(), indent=2))
+        raise typer.Exit(code=1) from None
+    print(json.dumps(payload, indent=2, ensure_ascii=False))
+
+
+@live_app.command("stop")
+def live_stop_cmd(
+    session_id: str = typer.Argument(...),
+    finalize: bool = typer.Option(True, "--finalize/--no-finalize"),
+) -> None:
+    """Stop a session; finalize turns its pinned evidence into indexed memory."""
+    from watch_skill.errors import WatchSkillError
+    from watch_skill.live import stop_live
+    from watch_skill.live.finalize import finalize_session
+
+    try:
+        payload = stop_live(session_id)
+        if finalize:
+            payload["finalized_video_id"] = finalize_session(session_id)
+    except WatchSkillError as exc:
+        print(json.dumps(exc.to_dict(), indent=2))
+        raise typer.Exit(code=1) from None
+    print(json.dumps(payload, indent=2, ensure_ascii=False))
+
+
 jobs_app = typer.Typer(help="Durable background jobs: submit, watch, cancel, drain.")
 app.add_typer(jobs_app, name="jobs")
 

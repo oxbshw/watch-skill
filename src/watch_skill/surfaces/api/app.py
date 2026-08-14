@@ -233,6 +233,81 @@ def create_app() -> FastAPI:
             raise _http_error(exc) from exc
         return payload
 
+    @app.post("/v1/live", tags=["live"])
+    def live_start(body: dict[str, Any]) -> dict[str, Any]:
+        """Start watching something as it happens."""
+        from watch_skill.live import start_live
+
+        try:
+            session = start_live(
+                body["target"], kind=body.get("kind", "file_replay"),
+                profile=body.get("profile", "local-lite"),
+                fps=float(body.get("fps", 2.0)),
+                buffer_seconds=float(body.get("buffer_seconds", 120.0)),
+            )
+        except WatchSkillError as exc:
+            raise _http_error(exc) from exc
+        return session.to_public()
+
+    @app.get("/v1/live", tags=["live"])
+    def live_list(active_only: bool = False) -> dict[str, Any]:
+        from watch_skill.live import list_live
+
+        return {"sessions": list_live(active_only)}
+
+    @app.get("/v1/live/{session_id}", tags=["live"])
+    def live_status(session_id: str) -> dict[str, Any]:
+        from watch_skill.live import status
+
+        try:
+            return status(session_id)
+        except WatchSkillError as exc:
+            raise _http_error(exc) from exc
+
+    @app.get("/v1/live/{session_id}/events", tags=["live"])
+    def live_events(
+        session_id: str, cursor: str = "", limit: int = 50, wait: float = 0.0
+    ) -> dict[str, Any]:
+        """Cursor-addressed event deltas. Repeating a cursor is idempotent."""
+        from watch_skill.live import observe
+
+        try:
+            return observe(session_id, cursor=cursor or None, limit=limit,
+                           timeout_seconds=wait)
+        except WatchSkillError as exc:
+            raise _http_error(exc) from exc
+
+    @app.post("/v1/live/{session_id}/ask", tags=["live"])
+    def live_ask(session_id: str, body: dict[str, Any]) -> dict[str, Any]:
+        from watch_skill.live import ask_live
+
+        try:
+            return ask_live(session_id, body["question"],
+                            scope=body.get("scope", "recent"),
+                            seconds=float(body.get("seconds", 30.0)))
+        except WatchSkillError as exc:
+            raise _http_error(exc) from exc
+
+    @app.post("/v1/live/{session_id}/stop", tags=["live"])
+    def live_stop(session_id: str, finalize: bool = True) -> dict[str, Any]:
+        from watch_skill.live import stop_live
+        from watch_skill.live.finalize import finalize_session
+
+        try:
+            payload = stop_live(session_id)
+            if finalize:
+                payload["finalized_video_id"] = finalize_session(session_id)
+        except WatchSkillError as exc:
+            raise _http_error(exc) from exc
+        return payload
+
+    @app.get("/v1/capture-capabilities", tags=["system"])
+    def capture_capabilities() -> dict[str, Any]:
+        """What this machine can actually record, and how each was checked."""
+        from watch_skill.live import capability_matrix
+
+        return capability_matrix()
+
     @app.get("/v1/jobs", tags=["jobs"])
     def jobs_list(state: str | None = None, limit: int = 25) -> dict[str, Any]:
         """Durable jobs on this machine, newest first."""

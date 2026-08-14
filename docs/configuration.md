@@ -390,7 +390,7 @@ The MCP tools accept per-call parameters (`budget`, `max_frames`,
 `include_frames`, `verify`, `window`, …) that override the same settings for
 one call. They are documented per tool in [tools/README.md](tools/README.md).
 
-### `watch-skill jobs ...`
+### Durable background jobs
 
 Durable background work. A job id survives a restart, so an agent that
 reconnects after a crash can still collect its result.

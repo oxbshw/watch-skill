@@ -57,4 +57,13 @@ def _watch_job(ctx: JobContext) -> tuple[str | None, str | None]:
     return video_id, "video_id"
 
 
+def _finalize_live_job(ctx: JobContext) -> tuple[str | None, str | None]:
+    """Turn a stopped live session into permanent searchable memory."""
+    from watch_skill.live.finalize import finalize_session
+
+    ctx.checkpoint(JobStage.FINALIZE, 0.2)
+    return finalize_session(ctx.payload["session_id"], ctx=ctx), "video_id"
+
+
 register("watch", _watch_job)
+register("finalize_live", _finalize_live_job)

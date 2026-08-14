@@ -2,6 +2,104 @@
 
 ## Unreleased
 
+### Watching something while it is still happening
+
+Watch Skill could watch a video. It could not watch an ongoing one and say
+what changed as it changed — everything was read to the end and reported
+afterwards.
+
+A live session now emits events **before the source has finished producing
+media**. That is the whole feature, so it is what the end-to-end test asserts:
+the change must be reported while the capture process is still running. A
+pipeline that ingests everything and then reports would pass every other check
+while being batch processing with a different name.
+
+- `start_live_watch`, `observe_live`, `ask_live`, `get_live_status`,
+  `stop_live_watch` over MCP, with `watch-skill live start|observe|ask|status|stop`
+  and `/v1/live/*` twins. `--follow` prints events as they arrive.
+- Capture, fast vision, OCR, and persistence are **separate bounded stages**.
+  They were one stage first, and the first OCR call — which loads models and
+  takes tens of seconds — meant no scene change was reported until it had
+  warmed up. The live view was blind for exactly as long as its slowest
+  detector took to start.
+- Analysis stages take the newest frame and **count what they discarded**;
+  persistence drops nothing, because a frame that is not written cannot become
+  evidence later. Every queue has a fixed bound and reports its depth.
+- No model runs per frame. Scene changes are perceptual hashing; text changes
+  are local OCR compared as token sets, so OCR jitter on a static screen does
+  not fire an event every frame.
+- A rolling buffer retains a recent window and **pins** the media three seconds
+  either side of every detection — the cause of an event is usually visible
+  before the event. Expired segments leave a row marked `expired`, so evidence
+  that aged out says so instead of returning silence.
+- Events carry a media clock and a wall clock, kept apart, plus whether each is
+  an `observation` or an `inference`. Evidence is addressed by `artifact_id`;
+  a test asserts public event payloads contain no filesystem paths, which is
+  how the original session-started summary was caught leaking one.
+- `observe_live` is cursor-addressed by sequence number, so repeating a cursor
+  is idempotent and a retried call neither loses nor double-counts. A cursor
+  from another session is refused rather than silently reset.
+- Stopping finalises the session into an **ordinary indexed video** —
+  `ask_video` and `search_videos` work on it with no reprocessing, because the
+  frames and OCR already exist. Idempotent, and refused while still running.
+
+Implemented live sources are `file_replay` (a local file paced at real time by
+`ffmpeg -re` — a real live source, and what makes the proof runnable without
+hardware) and `stream`. Live audio, triggers, semantic live perception, and
+live browser/screen capture are **not implemented**; `docs/live.md` lists them
+plainly rather than as roadmap entries dressed as features.
+
+### Capture capabilities you can trust
+
+`watch-skill capture-capabilities` (plus MCP and REST twins) reports what this
+machine can actually record. Nothing is `available` because a code path
+exists: each entry says whether it was `machine_tested`, `probed`, or
+`not_tested`, and an `available` entry is never `not_tested`.
+
+macOS screen capture is `degraded` — the AVFoundation device is there,
+ScreenCaptureKit is not implemented, and the permission cannot be probed
+without attempting a capture. Linux Wayland is `unavailable`: the PipeWire
+portal path does not exist here, and a portal being installed would not change
+that. Camera and microphone are `degraded` everywhere, because a device layer
+being present is not a device being present. WebRTC has no implementation and
+says so.
+
+### A queue that survives the process that started it
+
+A `job_id` used to die with the server: state lived in a dict, work ran in a
+daemon thread, and a long transcription could not really be cancelled.
+
+Jobs now live in their own SQLite database — deliberately not the video index,
+because a heartbeat every few seconds per running job would contend with the
+read path that answers questions, and losing the queue should never risk the
+video memory.
+
+- Work is claimed under a **lease**, so a worker that dies leaves a row whose
+  lease stops being renewed and the next worker takes it. Proved out of
+  process: a real worker is SIGKILLed mid-job, a second recovers it, and the
+  artifact is written exactly once.
+- Every transition is a guarded UPDATE with the expected state in the WHERE
+  clause, so two racing workers produce one winner and one no-op. A database
+  trigger refuses to move a terminal job back to running.
+- Idempotency is a unique index rather than a read-then-write, because the two
+  submissions that matter arrive at the same moment.
+- `ctx.checkpoint()` reports progress and raises on a pending cancel, so a
+  handler that calls it between bounded chunks is cancellable without knowing
+  anything about the queue. A 20-second job stops in under one and leaves no
+  output behind.
+- `cancel_job` (MCP), `watch-skill jobs list|status|cancel|worker|recover`,
+  and `GET/POST /v1/jobs`. `watch_video(background=true)` is now durable.
+  `start_job`/`get_job` remain for callable-based callers and say plainly that
+  they are in-process only.
+
+### Semantic search degrades; retrieval does not disappear
+
+An embedding model that was installed but could not **load** — out of memory,
+a truncated cache, an unusable runtime — took every query down with it, even
+though keyword search would have worked perfectly. Vector scoring is a ranking
+improvement, not a precondition for finding anything, so it now falls back to
+keyword-only and says so once on stderr rather than on every query.
+
 ### A video's identity is its bytes, not its path
 
 Overwriting `demo.mp4` used to return yesterday's frames, OCR, and cached
