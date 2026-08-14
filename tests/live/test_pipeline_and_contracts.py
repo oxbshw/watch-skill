@@ -199,3 +199,42 @@ def test_live_budget_permits_no_egress_by_default() -> None:
     budget = LiveBudget()
     assert budget.max_egress_frames == 0
     assert budget.max_usd == 0.0
+
+
+def test_stream_capture_is_unavailable_under_offline_policy(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A capability the policy would refuse must not read as available.
+
+    Reporting `available` while offline mode blocks the first connection
+    tells the operator at the failure instead of at the question.
+    """
+    from watch_skill.live import capabilities as caps
+
+    monkeypatch.setattr(caps, "_source_network_allowed", lambda: False)
+    capability = caps.capability_for("stream")
+    assert capability.status == "unavailable"
+    assert "offline" in (capability.repair + " ".join(capability.limitations)).lower()
+
+
+def test_stream_capture_is_available_when_egress_is_permitted(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from watch_skill.live import capabilities as caps
+
+    monkeypatch.setattr(caps, "_source_network_allowed", lambda: True)
+    monkeypatch.setattr(caps, "_have", lambda _binary: True)
+    assert caps.capability_for("stream").status == "available"
+
+
+def test_an_unreadable_policy_is_not_treated_as_permission(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Fail closed: if the policy cannot be read, assume no egress."""
+    from watch_skill.live import capabilities as caps
+
+    def explode():
+        raise RuntimeError("config unreadable")
+
+    monkeypatch.setattr("watch_skill.policy.get_policy", explode)
+    assert caps._source_network_allowed() is False

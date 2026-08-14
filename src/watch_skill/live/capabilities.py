@@ -94,6 +94,21 @@ def _file_replay() -> CaptureCapability:
 
 def _stream() -> CaptureCapability:
     have = _have("ffmpeg")
+    # A stream needs egress, so the policy has a veto. Reporting `available`
+    # while offline mode would refuse the very first connection is the same
+    # dishonesty as claiming a backend exists because a class does — the
+    # operator finds out at the failure instead of at the question.
+    allowed = _source_network_allowed()
+    if have and not allowed:
+        return CaptureCapability(
+            kind="stream", status="unavailable",
+            backend="ffmpeg (rtsp/rtmp/hls/dash)",
+            repair="stream capture needs network egress; unset "
+                   "WATCHSKILL_OFFLINE / raise WATCHSKILL_COST_POLICY above "
+                   "offline_only, or watch a local file instead",
+            verified="probed",
+            limitations=["blocked by the active execution policy (offline)"],
+        )
     return CaptureCapability(
         kind="stream",
         status="available" if have else "unavailable",
@@ -103,9 +118,18 @@ def _stream() -> CaptureCapability:
         repair="" if have else "run `watch-skill doctor` to bootstrap ffmpeg",
         # Reaching a real stream needs a network the probe cannot assume, so
         # this is 'probed', not 'machine_tested'.
-        verified="probed" if have else "probed",
+        verified="probed",
         limitations=["needs network egress; refused under offline policy"],
     )
+
+
+def _source_network_allowed() -> bool:
+    try:
+        from watch_skill.policy import get_policy  # noqa: PLC0415
+
+        return bool(get_policy().allow_source_network)
+    except Exception:  # noqa: BLE001 - an unreadable policy is not permission
+        return False
 
 
 def _browser() -> CaptureCapability:

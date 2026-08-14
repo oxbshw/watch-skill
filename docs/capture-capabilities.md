@@ -81,6 +81,12 @@ for a page.
 **WebRTC** has no implementation. Push frames through the SDK instead
 (`LiveSourceKind.PUSHED`).
 
+**`stream` under offline mode** reports `unavailable`, not `available`. It
+needs egress, so the execution policy has a veto — and reporting it available
+while offline mode would refuse the first connection tells you at the failure
+instead of at the question. If the policy cannot be read at all, the answer is
+"no egress": an unreadable policy is not permission.
+
 ## What CI verifies
 
 Capability *detection* is tested on every platform in CI: the shape of every
