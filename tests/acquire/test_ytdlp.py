@@ -1,6 +1,7 @@
 """yt-dlp wrapper: breakage fingerprints, subtitle/video picking, self-heal flow."""
 from __future__ import annotations
 
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -52,6 +53,25 @@ def test_pick_video_prefers_mp4(tmp_path: Path) -> None:
     (tmp_path / "media.mp4").write_bytes(b"x")
     picked = ytdlp._pick_video(tmp_path)
     assert picked is not None and picked.suffix == ".mp4"
+
+
+def test_download_never_falls_back_to_a_video_above_1080p(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A bare yt-dlp fallback can select 4K when a capped combined format is absent."""
+    calls: list[list[str]] = []
+
+    def fake_run(args: list[str], url: str, timeout: float = 3600.0) -> subprocess.CompletedProcess[str]:
+        calls.append(args)
+        (tmp_path / "media.mp4").write_bytes(b"video")
+        return subprocess.CompletedProcess(args, 0, "", "")
+
+    monkeypatch.setattr(ytdlp, "_run_yt_dlp", fake_run)
+
+    ytdlp._download_once("https://example.com/watch", tmp_path, audio_only=False)
+
+    format_index = calls[0].index("-f") + 1
+    assert calls[0][format_index] == "bv*[height<=1080]+ba/b[height<=1080]/bv*[height<=1080]"
 
 
 def test_download_self_heals_on_breakage(

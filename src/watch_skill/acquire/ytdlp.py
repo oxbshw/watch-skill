@@ -20,6 +20,7 @@ from watch_skill.health.doctor import update_yt_dlp
 from watch_skill.health.log import record_incident
 
 VIDEO_EXTS = {".mp4", ".mkv", ".webm", ".mov", ".m4v", ".avi", ".flv", ".wmv"}
+MAX_VIDEO_HEIGHT = 1080
 
 # Known extractor-breakage fingerprints. When yt-dlp fails with one of these,
 # the extractor (not the network or the video) is the likely culprit, and a
@@ -157,7 +158,13 @@ def fetch_captions(url: str, out_dir: Path) -> dict[str, Any]:
 def _download_once(url: str, out_dir: Path, audio_only: bool) -> dict[str, Any]:
     """One yt-dlp download attempt. Raises AcquisitionError with captured stderr."""
     out_dir.mkdir(parents=True, exist_ok=True)
-    fmt = "ba/bestaudio" if audio_only else "bv*[height<=720]+ba/b[height<=720]/bv+ba/b"
+    # Do not fall back to bare ``bv+ba`` or ``b``: those selectors can choose
+    # a 4K stream when a site does not offer the preferred combined format.
+    fmt = (
+        "ba/bestaudio"
+        if audio_only
+        else f"bv*[height<={MAX_VIDEO_HEIGHT}]+ba/b[height<={MAX_VIDEO_HEIGHT}]/bv*[height<={MAX_VIDEO_HEIGHT}]"
+    )
     args = [
         "-N", "8",
         "-f", fmt,
