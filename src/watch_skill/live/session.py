@@ -59,12 +59,13 @@ _PROFILE_CAPACITY = {
 class RunningSession:
     """One live session executing in this process."""
 
-    def __init__(self, session: LiveSession) -> None:
+    def __init__(self, session: LiveSession, source: Any) -> None:
         self.session = session
         self.state = DetectorState()
         self.pipeline = Pipeline()
         self.stop_event = threading.Event()
-        self._source: Any = None
+        # Opened by the caller, before the session row exists — see start_live.
+        self._source: Any = source
         self._threads: list[threading.Thread] = []
         self._last_sweep = 0.0
         self._start_wall = time.time()
@@ -75,10 +76,6 @@ class RunningSession:
 
     def start(self) -> None:
         spec = self.session.spec
-        media_dir = buf.session_dir(self.session.session_id) / "frames"
-        media_dir.mkdir(parents=True, exist_ok=True)
-        self._source = open_source(spec, media_dir)
-
         capacity = _PROFILE_CAPACITY[spec.profile]
         overflow = (Overflow.BLOCK if spec.profile is LiveProfile.FORENSIC
                     else Overflow.DROP_OLDEST)
@@ -335,11 +332,24 @@ def start_live(
         spec=spec,
         policy_snapshot=get_policy().to_dict(),
     )
+
+    # Open the source BEFORE the session row exists. A typo'd path or an
+    # unsupported capture kind should leave nothing behind — a `failed`
+    # session that never started is noise in `live list`, and it accumulates.
+    media_dir = buf.session_dir(session.session_id) / "frames"
+    media_dir.mkdir(parents=True, exist_ok=True)
+    try:
+        source = open_source(spec, media_dir)
+    except WatchSkillError:
+        buf.cleanup(session.session_id)
+        raise
+
     db.insert_session(session)
-    runner = RunningSession(session)
+    runner = RunningSession(session, source)
     try:
         runner.start()
     except WatchSkillError as exc:
+        # Past this point the session did exist, so its failure is recorded.
         db.update_session(session.session_id, state=LiveState.FAILED,
                           error=exc.to_dict(), stopped_at=time.time())
         raise
