@@ -137,8 +137,17 @@ class ClientVisionModel:
         return self.client.generate(full, [before, after])
 
 
-def get_vision(tier: Tier = "strong", provider: str | None = None, model: str | None = None) -> ClientVisionModel:
-    """Build the configured vision model for a tier, with per-call overrides."""
+def get_vision(
+    tier: Tier = "strong",
+    provider: str | None = None,
+    model: str | None = None,
+    phase: str = "vision",
+) -> ClientVisionModel:
+    """Build the configured vision model for a tier, with per-call overrides.
+
+    ``phase`` labels the spend in the run ledger, so a cost report can say
+    which part of the system spent the money instead of reporting one total.
+    """
     settings = get_settings()
     if tier == "cheap":
         resolved_provider = provider or settings.vision_cheap_provider
@@ -146,4 +155,6 @@ def get_vision(tier: Tier = "strong", provider: str | None = None, model: str | 
     else:
         resolved_provider = provider or settings.vision_strong_provider
         resolved_model = model or settings.vision_strong_model
-    return ClientVisionModel(VisionClient(provider=resolved_provider, model=resolved_model))
+    return ClientVisionModel(
+        VisionClient(provider=resolved_provider, model=resolved_model, phase=phase)
+    )

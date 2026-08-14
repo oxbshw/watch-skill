@@ -122,6 +122,140 @@ def _migration_v3_meta(conn: sqlite3.Connection) -> None:
         )
 
 
+def _migration_v9_content_identity(conn: sqlite3.Connection) -> None:
+    """v9 — content revisioning: alias -> asset -> revision -> artifacts.
+
+    Until now a video's id was ``sha256(source_string)``, so overwriting
+    ``demo.mp4`` reused the row that described the *old* file. Identity moves
+    to the bytes: a revision is keyed by content digest, an alias records
+    which revision it currently points at, and a superseded revision keeps its
+    rows instead of being overwritten.
+
+    ``videos`` is rebuilt because ``source`` was UNIQUE — the one constraint
+    that makes "this path has pointed at two different videos" unrepresentable.
+    Existing rows are copied verbatim and keep their ids; each gets a legacy
+    revision whose digest is marked ``legacy`` so nothing reports it as a
+    content hash it never computed.
+    """
+    conn.executescript(
+        """
+        CREATE TABLE assets (
+            id TEXT PRIMARY KEY,
+            created_at TEXT NOT NULL DEFAULT (datetime('now'))
+        );
+
+        CREATE TABLE revisions (
+            id TEXT PRIMARY KEY,
+            asset_id TEXT NOT NULL REFERENCES assets(id) ON DELETE CASCADE,
+            content_digest TEXT NOT NULL UNIQUE,
+            digest_algorithm TEXT NOT NULL DEFAULT 'sha256',
+            digest_source TEXT NOT NULL DEFAULT 'content',
+            fingerprint_json TEXT NOT NULL DEFAULT '{}',
+            origin_json TEXT NOT NULL DEFAULT '{}',
+            acquired_at TEXT NOT NULL DEFAULT (datetime('now'))
+        );
+        CREATE INDEX idx_revisions_asset ON revisions(asset_id);
+
+        CREATE TABLE source_aliases (
+            id TEXT PRIMARY KEY,
+            alias TEXT NOT NULL,
+            normalized TEXT NOT NULL UNIQUE,
+            kind TEXT NOT NULL,
+            asset_id TEXT REFERENCES assets(id) ON DELETE SET NULL,
+            revision_id TEXT REFERENCES revisions(id) ON DELETE SET NULL,
+            fingerprint_json TEXT NOT NULL DEFAULT '{}',
+            policy TEXT NOT NULL DEFAULT 'revalidate',
+            checked_at TEXT,
+            created_at TEXT NOT NULL DEFAULT (datetime('now'))
+        );
+        CREATE INDEX idx_source_aliases_asset ON source_aliases(asset_id);
+
+        CREATE TABLE video_aliases (
+            alias_video_id TEXT PRIMARY KEY,
+            video_id TEXT NOT NULL,
+            reason TEXT NOT NULL DEFAULT 'legacy',
+            created_at TEXT NOT NULL DEFAULT (datetime('now'))
+        );
+        """
+    )
+
+    # SQLite rewrites child REFERENCES clauses on RENAME unless asked not to;
+    # legacy mode is what the official 12-step ALTER procedure prescribes for
+    # this ordering, and it leaves segments/scenes/ocr_blocks pointing at
+    # `videos` throughout.
+    conn.execute("PRAGMA legacy_alter_table = ON")
+    try:
+        conn.executescript(
+            """
+            ALTER TABLE videos RENAME TO videos_v8;
+            CREATE TABLE videos (
+                id TEXT PRIMARY KEY,
+                source TEXT NOT NULL,
+                title TEXT,
+                uploader TEXT,
+                duration_seconds REAL NOT NULL DEFAULT 0,
+                width INTEGER,
+                height INTEGER,
+                transcript_source TEXT,
+                frames_dir TEXT,
+                created_at TEXT NOT NULL DEFAULT (datetime('now')),
+                last_analyzed_at TEXT NOT NULL DEFAULT (datetime('now')),
+                asset_id TEXT,
+                revision_id TEXT,
+                content_digest TEXT,
+                superseded_at TEXT
+            );
+            INSERT INTO videos (id, source, title, uploader, duration_seconds,
+                                width, height, transcript_source, frames_dir,
+                                created_at, last_analyzed_at)
+                SELECT id, source, title, uploader, duration_seconds, width,
+                       height, transcript_source, frames_dir, created_at,
+                       last_analyzed_at
+                FROM videos_v8;
+            DROP TABLE videos_v8;
+            CREATE INDEX idx_videos_revision ON videos(revision_id);
+            CREATE INDEX idx_videos_digest ON videos(content_digest);
+            CREATE INDEX idx_videos_source ON videos(source);
+            """
+        )
+    finally:
+        conn.execute("PRAGMA legacy_alter_table = OFF")
+
+    from watch_skill.acquire.sources import classify_source
+    from watch_skill.identity import (
+        alias_id,
+        normalize_alias,
+        revision_id_for,
+        synthetic_digest,
+    )
+
+    for row in conn.execute("SELECT id, source FROM videos").fetchall():
+        # No bytes were ever hashed for these rows, and inventing a digest that
+        # LOOKS like one would let a v1 row masquerade as verified content.
+        digest = synthetic_digest(f"legacy-video/{row['id']}")
+        asset = "as_" + row["id"]
+        revision = revision_id_for(digest)
+        conn.execute("INSERT OR IGNORE INTO assets (id) VALUES (?)", (asset,))
+        conn.execute(
+            "INSERT OR IGNORE INTO revisions (id, asset_id, content_digest, "
+            "digest_source, origin_json) VALUES (?, ?, ?, 'legacy', ?)",
+            (revision, asset, digest, '{"migrated_from": "schema_v8"}'),
+        )
+        conn.execute(
+            "UPDATE videos SET asset_id = ?, revision_id = ? WHERE id = ?",
+            (asset, revision, row["id"]),
+        )
+        conn.execute(
+            "INSERT OR IGNORE INTO source_aliases "
+            "(id, alias, normalized, kind, asset_id, revision_id, policy) "
+            "VALUES (?, ?, ?, ?, ?, ?, 'revalidate')",
+            (
+                alias_id(row["source"]), row["source"], normalize_alias(row["source"]),
+                classify_source(row["source"]).value, asset, revision,
+            ),
+        )
+
+
 MIGRATIONS: list[Migration] = [
     # v1 — initial schema
     """
@@ -260,6 +394,8 @@ MIGRATIONS: list[Migration] = [
     """
     ALTER TABLE segments ADD COLUMN words_json TEXT;
     """,
+    # v9 — content revisioning (see the callable for why videos is rebuilt)
+    _migration_v9_content_identity,
 ]
 
 
@@ -280,11 +416,12 @@ def connect(db_path: Path | None = None) -> sqlite3.Connection:
     """Open (creating + migrating if needed) the index database."""
     path = db_path if db_path is not None else get_settings().index_path
     path.parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(str(path))
+    conn = sqlite3.connect(str(path), timeout=30.0)
     conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA foreign_keys = ON")
     conn.execute("PRAGMA journal_mode = WAL")
+    conn.execute("PRAGMA busy_timeout = 30000")
     migrate(conn)
+    conn.execute("PRAGMA foreign_keys = ON")
     return conn
 
 
@@ -295,15 +432,29 @@ def schema_version(conn: sqlite3.Connection) -> int:
 
 
 def migrate(conn: sqlite3.Connection) -> int:
-    """Apply pending migrations in order; returns the resulting version."""
+    """Apply pending migrations in order; returns the resulting version.
+
+    Foreign keys are disabled for the duration: v9 rebuilds ``videos``, and a
+    table rebuild with cascades armed deletes the child rows it is trying to
+    preserve. The pragma is a no-op inside a transaction, so it has to be set
+    out here rather than inside the migration that needs it.
+    """
     current = schema_version(conn)
-    for version, migration in enumerate(MIGRATIONS, start=1):
-        if version <= current:
-            continue
-        with conn:
-            if callable(migration):
-                migration(conn)
-            else:
-                conn.executescript(migration)
-            conn.execute("INSERT INTO schema_version (version) VALUES (?)", (version,))
+    if current >= len(MIGRATIONS):
+        return current
+    conn.execute("PRAGMA foreign_keys = OFF")
+    try:
+        for version, migration in enumerate(MIGRATIONS, start=1):
+            if version <= current:
+                continue
+            with conn:
+                if callable(migration):
+                    migration(conn)
+                else:
+                    conn.executescript(migration)
+                conn.execute(
+                    "INSERT INTO schema_version (version) VALUES (?)", (version,)
+                )
+    finally:
+        conn.execute("PRAGMA foreign_keys = ON")
     return schema_version(conn)

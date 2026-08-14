@@ -16,6 +16,7 @@ import httpx
 
 from watch_skill.config import get_settings
 from watch_skill.errors import VisionError
+from watch_skill.policy import Channel, charge, guard_egress, is_local_provider
 from watch_skill.vision.cost import guard_cost
 from watch_skill.vision.registry import PROVIDERS, base_url_for
 
@@ -176,6 +177,20 @@ class VisionClient:
     # through every caller — so the usage is left here for the cost meter
     # and the provider benchmark to read, instead of being estimated.
     last_usage: dict[str, Any] | None = None
+    # Which part of the system is spending, so the run ledger can say where
+    # the money went rather than reporting one undifferentiated total.
+    phase: str = "vision"
+
+    def _guard_policy(self, images: list[Path]) -> None:
+        """Ask the policy before anything is built, read, or sent."""
+        local = is_local_provider(self.provider)
+        guard_egress(
+            Channel.LOCAL_MODEL if local else Channel.CLOUD_MODEL,
+            provider=self.provider,
+        )
+        if images:
+            guard_egress(Channel.FRAMES, provider=self.provider)
+        guard_egress(Channel.TEXT, provider=self.provider)
 
     def _api_key(self) -> str:
         spec = PROVIDERS[self.provider]
@@ -191,7 +206,12 @@ class VisionClient:
         return key.get_secret_value().strip()
 
     def generate(self, prompt: str, images: list[Path] | None = None) -> str:
-        """One vision call. Cost-guarded for cloud providers."""
+        """One vision call, policy- and cost-guarded.
+
+        The policy check happens before the request is even built, so a denied
+        call cannot leak through a half-constructed body, and before the key is
+        read, so a configured key never implies permission to use it.
+        """
         if self.provider not in _BUILDERS:
             raise VisionError(
                 f"unknown vision provider: {self.provider}",
@@ -199,7 +219,9 @@ class VisionClient:
                 fix=f"one of: {', '.join(sorted(_BUILDERS))}",
             )
         images = images or []
-        guard_cost(self.provider, self.model, images)
+        self._guard_policy(images)
+        estimated = guard_cost(self.provider, self.model, images)
+        charge(self.phase, estimated_usd=estimated)
         if self.provider == "ollama":
             from watch_skill.vision.local_health import ensure_ollama  # noqa: PLC0415
 

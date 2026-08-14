@@ -16,7 +16,14 @@ from watch_skill.watch import WatchResult
 
 
 def video_id_for(source: str) -> str:
-    """Stable short id for a source (matches cache keying philosophy)."""
+    """The v1 id for a source string.
+
+    Kept because every id already printed, cached, or written into an agent's
+    notes came from here and must keep resolving. It is no longer how new
+    videos are identified — that is the content digest (see
+    :mod:`watch_skill.identity`) — so this is a *legacy resolver*, not an
+    identity function.
+    """
     return hashlib.sha256(source.strip().encode("utf-8")).hexdigest()[:16]
 
 
@@ -75,22 +82,31 @@ def _persist_frames(result: WatchResult, video_id: str) -> Path:
 
 def _insert_video(conn: sqlite3.Connection, result: WatchResult, video_id: str, frames_dir: Path) -> None:
     info = result.acquisition.info
+    revision = result.acquisition.revision
     conn.execute(
         """
         INSERT INTO videos (id, source, title, uploader, duration_seconds, width,
-                            height, transcript_source, frames_dir)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                            height, transcript_source, frames_dir,
+                            asset_id, revision_id, content_digest)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(id) DO UPDATE SET
             title=excluded.title, uploader=excluded.uploader,
             duration_seconds=excluded.duration_seconds,
             transcript_source=excluded.transcript_source,
             frames_dir=excluded.frames_dir,
+            asset_id=excluded.asset_id,
+            revision_id=excluded.revision_id,
+            content_digest=excluded.content_digest,
+            superseded_at=NULL,
             last_analyzed_at=datetime('now')
         """,
         (
             video_id, result.acquisition.source, info.get("title"), info.get("uploader"),
             result.metadata.duration_seconds, result.metadata.width, result.metadata.height,
             result.transcript.source, str(frames_dir),
+            revision.asset_id if revision else None,
+            revision.revision_id if revision else None,
+            revision.content_digest if revision else None,
         ),
     )
     # re-analysis replaces derived rows (cached answers invalidate too —
@@ -189,9 +205,40 @@ def _maybe_describe_scenes(conn: sqlite3.Connection, video_id: str) -> None:
     Opportunistic: silently skipped when no key is configured for the cheap
     provider or the call fails — the index works without descriptions, they
     just make retrieval smarter.
+
+    This is the path that used to upload every indexed frame to whichever
+    cloud provider had a key set, because a key was read as consent. It now
+    asks the policy first: ``off`` and a denied frame-egress channel both mean
+    no frame leaves, and ``auto`` resolves to local rather than upgrading
+    itself to cloud.
     """
-    from watch_skill.errors import VisionError
+    from watch_skill.errors import PolicyError, VisionError
+    from watch_skill.policy import (
+        Channel,
+        SceneDescriptionMode,
+        get_policy,
+        is_local_provider,
+    )
     from watch_skill.vision import get_vision
+
+    policy = get_policy()
+    mode = policy.describes_scene_egress()
+    if mode is SceneDescriptionMode.OFF:
+        return
+    provider = get_settings().vision_cheap_provider
+    if mode is SceneDescriptionMode.LOCAL and not is_local_provider(provider):
+        print(
+            "[watch-skill] scene descriptions skipped (policy: local only, "
+            f"cheap provider is {provider})",
+            file=__import__("sys").stderr,
+        )
+        return
+    if not policy.check(Channel.FRAMES, provider=provider).allowed:
+        print(
+            "[watch-skill] scene descriptions skipped (frame egress denied by policy)",
+            file=__import__("sys").stderr,
+        )
+        return
 
     rows = conn.execute(
         "SELECT id, frame_path FROM scenes WHERE video_id = ? AND description IS NULL "
@@ -202,8 +249,12 @@ def _maybe_describe_scenes(conn: sqlite3.Connection, video_id: str) -> None:
     if not rows:
         return
     try:
-        model = get_vision("cheap")
+        model = get_vision("cheap", phase="index.describe_scenes")
         descriptions = model.describe_frames([Path(r["frame_path"]) for r in rows])
+    except PolicyError as exc:
+        print(f"[watch-skill] scene descriptions skipped ({exc.code})",
+              file=__import__("sys").stderr)
+        return
     except VisionError as exc:
         import sys
 
@@ -219,12 +270,34 @@ def _maybe_describe_scenes(conn: sqlite3.Connection, video_id: str) -> None:
             set_scene_description(conn, row["id"], description)
 
 
+def _video_id_for_result(conn: sqlite3.Connection, result: WatchResult) -> str:
+    """Which row this watch pass writes into.
+
+    Content-derived when the acquisition produced a revision, so re-analysing
+    unchanged bytes lands on the same row and changed bytes never do. Without
+    a revision (a captions-only probe has no media to hash) it falls back to
+    the v1 id, which is the behaviour those paths always had.
+    """
+    from watch_skill.index.revisions import bind_alias, claim_video_row, record_revision
+
+    revision = result.acquisition.revision
+    if revision is None:
+        return video_id_for(result.acquisition.source)
+    result.acquisition.revision = record_revision(conn, revision)
+    bind_alias(conn, result.acquisition.source, result.acquisition.revision)
+    video_id, _ = claim_video_row(
+        conn, result.acquisition.source, result.acquisition.revision
+    )
+    return video_id
+
+
 def index_watch_result(result: WatchResult, describe_scenes: bool = True) -> str:
     """Persist everything a watch pass learned; returns the video_id."""
-    video_id = video_id_for(result.acquisition.source)
-    frames_dir = _persist_frames(result, video_id)
     conn = connect()
     try:
+        with conn:
+            video_id = _video_id_for_result(conn, result)
+        frames_dir = _persist_frames(result, video_id)
         with conn:
             _insert_video(conn, result, video_id, frames_dir)
             items = _insert_derived(conn, result, video_id)
@@ -291,15 +364,149 @@ def augment_video(video_id: str, perception: Any) -> int:
         conn.close()
 
 
+def _lookup_row(conn: sqlite3.Connection, video_id_or_source: str) -> dict[str, Any] | None:
+    """Resolve an id or a source string to one video row.
+
+    Order matters. An explicit id — v1, v2, or one that was superseded — names
+    an exact revision and wins outright, because an agent holding an id is
+    asking about *that* analysis. A source string names an alias, which points
+    at whatever is current, so it resolves through the alias table and falls
+    back to the v1 id only for rows written before aliases existed.
+    """
+    from watch_skill.identity import looks_like_video_id
+    from watch_skill.index.revisions import get_alias_state, resolve_video_id
+
+    candidate = video_id_or_source.strip()
+    if looks_like_video_id(candidate):
+        resolved = resolve_video_id(conn, candidate)
+        if resolved:
+            row = conn.execute("SELECT * FROM videos WHERE id = ?", (resolved,)).fetchone()
+            if row:
+                return dict(row)
+
+    state = get_alias_state(conn, candidate)
+    if state is not None and state.revision_id:
+        row = conn.execute(
+            "SELECT * FROM videos WHERE revision_id = ? ORDER BY last_analyzed_at DESC "
+            "LIMIT 1",
+            (state.revision_id,),
+        ).fetchone()
+        if row:
+            return dict(row)
+
+    row = conn.execute(
+        "SELECT * FROM videos WHERE id = ? OR source = ? OR id = ? "
+        "ORDER BY superseded_at IS NOT NULL, last_analyzed_at DESC LIMIT 1",
+        (candidate, candidate, video_id_for(candidate)),
+    ).fetchone()
+    return dict(row) if row else None
+
+
 def get_video(video_id_or_source: str) -> dict[str, Any] | None:
     """Look up a video row by id or by original source string."""
     conn = connect()
     try:
-        row = conn.execute(
-            "SELECT * FROM videos WHERE id = ? OR source = ? OR id = ?",
-            (video_id_or_source, video_id_or_source, video_id_for(video_id_or_source)),
-        ).fetchone()
-        return dict(row) if row else None
+        return _lookup_row(conn, video_id_or_source)
+    finally:
+        conn.close()
+
+
+def check_freshness(video_id_or_source: str) -> dict[str, Any]:
+    """Whether the indexed artifacts still describe what the source holds now.
+
+    Callers that are about to present stored evidence as current — ask, moment,
+    search, the viewer — go through here first. The four states are the whole
+    point: ``freshness_unknown`` is a real answer, and answering anyway while
+    pretending otherwise is the bug this replaced.
+    """
+    from watch_skill.acquire.sources import SourceKind, classify_source
+    from watch_skill.identity import Freshness, local_fingerprint, looks_like_video_id
+    from watch_skill.index.revisions import get_alias_state, resolve_alias
+
+    candidate = video_id_or_source.strip()
+    conn = connect()
+    try:
+        row = _lookup_row(conn, candidate)
+        if row is None:
+            return {"state": Freshness.UNKNOWN.value, "video_id": None,
+                    "reason": "not indexed"}
+
+        # An id names one immutable revision. It cannot go stale; it can only
+        # have been superseded, which the caller is told about explicitly.
+        if looks_like_video_id(candidate) and row["id"] in (
+            candidate, *(
+                r["alias_video_id"] for r in conn.execute(
+                    "SELECT alias_video_id FROM video_aliases WHERE video_id = ?",
+                    (row["id"],),
+                ).fetchall()
+            )
+        ):
+            return {
+                "state": Freshness.FRESH.value,
+                "video_id": row["id"],
+                "revision_id": row["revision_id"],
+                "superseded": bool(row["superseded_at"]),
+                "reason": "an id names one immutable revision",
+            }
+
+        alias = candidate if get_alias_state(conn, candidate) else row["source"]
+        observed = None
+        if classify_source(alias) is SourceKind.LOCAL_FILE:
+            try:
+                observed = local_fingerprint(Path(alias).expanduser().resolve())
+            except OSError:
+                observed = None  # gone or unreadable -> freshness_unknown, not fresh
+        resolution = resolve_alias(conn, alias, observed=observed)
+        return {
+            "state": resolution.freshness.value,
+            "video_id": resolution.video_id or row["id"],
+            "revision_id": row["revision_id"],
+            "superseded": bool(row["superseded_at"]),
+            "reason": resolution.reason,
+            "alias": alias,
+        }
+    finally:
+        conn.close()
+
+
+def require_current(
+    video_id_or_source: str, *, allow_stale: bool = False
+) -> dict[str, Any]:
+    """Gate every read that presents stored artifacts as current evidence.
+
+    Demonstrably stale content raises rather than answering: the old failure
+    mode was a confident, correctly-formatted answer about a video that no
+    longer exists at that path. ``freshness_unknown`` — a remote source we did
+    not go to the network to check, or a row migrated from v1 that never had a
+    digest — is returned rather than raised, and travels with the answer so
+    the caller can see what was and was not established.
+    """
+    from watch_skill.errors import StaleContentError
+    from watch_skill.identity import Freshness
+
+    state = check_freshness(video_id_or_source)
+    if allow_stale or state["state"] not in (
+        Freshness.STALE.value, Freshness.REFRESH_REQUIRED.value
+    ):
+        return state
+    raise StaleContentError(
+        f"the source has changed since it was indexed: {video_id_or_source}",
+        code=f"index.{state['state']}",
+        fix="re-watch it to index the current content, or ask by video_id "
+        f"({state['video_id']}) to read the revision that was indexed",
+        details=state,
+    )
+
+
+def source_revisions(video_id_or_source: str) -> list[dict[str, Any]]:
+    """Every revision recorded for this source, newest first."""
+    from watch_skill.index.revisions import revisions_for_alias
+
+    conn = connect()
+    try:
+        row = _lookup_row(conn, video_id_or_source)
+        alias = row["source"] if row else video_id_or_source
+        return revisions_for_alias(conn, alias)
     finally:
         conn.close()
 

@@ -90,6 +90,18 @@ def _check_recording(
     critique = critic(perception, criteria)
     if critique.verdict == "pass":
         return []
+    if critique.verdict in ("inconclusive", "error"):
+        # "I could not tell" is not "it happened". Emitting a detection here
+        # would page someone about a broken critic; emitting nothing would
+        # hide that the watch is blind. So it is reported as what it is.
+        return [
+            {
+                "timestamp": 0.0,
+                "severity": "inconclusive",
+                "description": critique.summary,
+                "limitations": critique.limitations,
+            }
+        ]
     return [
         {
             "timestamp": issue.timestamp,

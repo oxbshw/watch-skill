@@ -49,6 +49,22 @@ gate. Do not add network calls to the offline suite.
 - **Privacy invariants are tested** in `tests/test_privacy.py` and listed in
   [SECURITY.md](SECURITY.md). The video never leaves the machine; no cookies
   or logins; cloud speech-to-text is opt-in. Breaking one is a security bug.
+- **Every network or provider boundary asks the policy first.** Call
+  `policy.guard_egress(...)` before the request is built and before a key is
+  read. Constructing a provider client and going around it is a security bug,
+  not a shortcut. `tests/test_policy.py` runs the engine with every provider
+  key set and asserts offline mode leaks nothing.
+- **Identity is the bytes.** Never key an artifact off a source string. New
+  content is a new revision (`watch_skill.identity`); a source string resolves
+  through the alias table. A read that presents stored artifacts as current
+  evidence goes through `store.require_current` first.
+- **Absent evidence is never a pass.** No frames, no OCR, an unreachable
+  model, a timed-out check — all `inconclusive`. If you add a code path that
+  can end in a verdict, the failure branch is `inconclusive` or `error`, and
+  it ships with a test that proves it.
+- **Say "proof" only when required deterministic checks passed and the
+  attestation verifies.** Otherwise it is evidence, a before/after comparison,
+  or an advisory visual verdict. Never describe a hash as a signature.
 - **Errors carry a `fix`.** Every raised `WatchSkillError` needs a code and a
   sentence telling the reader what to do. `tests/test_error_fix_audit.py`
   enforces it.

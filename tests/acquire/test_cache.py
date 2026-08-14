@@ -40,13 +40,15 @@ def test_lookup_misses_when_video_deleted() -> None:
 
 
 def test_lru_eviction_removes_oldest_first() -> None:
-    _fake_download(URL_A, size=600)
+    # Sizes are well clear of the manifest so the assertion measures eviction
+    # order, not how many bytes entry.json happens to be this release.
+    _fake_download(URL_A, size=6000)
     time.sleep(0.05)
-    _fake_download(URL_B, size=600)
+    _fake_download(URL_B, size=6000)
     # touch A so B becomes the LRU entry
     time.sleep(0.05)
     assert cache.lookup(URL_A) is not None
-    evicted = cache.evict_lru(max_bytes=800)
+    evicted = cache.evict_lru(max_bytes=8000)
     assert evicted == 1
     assert cache.lookup(URL_B) is None
     assert cache.lookup(URL_A) is not None

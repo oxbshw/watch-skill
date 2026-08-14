@@ -143,14 +143,28 @@ def test_video_id_stability() -> None:
 def test_search_finds_phrase_across_two_videos(
     sample_video: Path, tmp_path: Path
 ) -> None:
-    """M2 acceptance: search_videos finds a phrase across 2 different videos."""
+    """M2 acceptance: search_videos finds a phrase across 2 different videos.
+
+    The second clip is re-encoded rather than copied. A byte-identical copy at
+    a second path is ONE video under content identity — that de-duplication is
+    the point of :mod:`watch_skill.identity`, so testing cross-video search
+    with a copy would be testing it against itself.
+    """
     import shutil
+    import subprocess
 
     from watch_skill.transcribe.types import Segment, Transcript
 
+    ffmpeg = shutil.which("ffmpeg")
+    if ffmpeg is None:
+        pytest.skip("ffmpeg not available")
     second_video = tmp_path / "second copy dir" / "another clip.mp4"
     second_video.parent.mkdir(parents=True)
-    shutil.copy2(sample_video, second_video)
+    subprocess.run(
+        [ffmpeg, "-y", "-i", str(sample_video), "-t", "6", "-c:v", "libx264",
+         "-pix_fmt", "yuv420p", str(second_video)],
+        check=True, capture_output=True,
+    )
 
     ids = []
     for i, path in enumerate((sample_video, second_video)):
@@ -179,7 +193,10 @@ def test_scene_descriptions_indexed_when_vision_available(
         def describe_frames(self, frames, context=""):
             return [f"a synthetic scene number {i}" for i in range(len(frames))]
 
-    monkeypatch.setattr("watch_skill.vision.get_vision", lambda tier: FakeModel())
+    monkeypatch.setattr(
+        "watch_skill.vision.get_vision",
+        lambda tier, provider=None, model=None, phase="vision": FakeModel(),
+    )
     conn = connect()
     try:
         with conn:

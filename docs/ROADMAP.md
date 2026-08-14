@@ -15,6 +15,36 @@ benchmark tables and the examples' recorded runs). Everything below
 builds on them without breaking the contracts: engine agent-agnostic,
 MCP tool names stable, forward migrations only.
 
+## Known gaps in the current tree
+
+Stated plainly rather than left implicit. Each of these is a design that is
+not built yet, not a feature that half-works.
+
+- **Background jobs are still in-memory.** `watch_skill.jobs` runs work in
+  daemon threads with state in a dict, so a `job_id` dies with the process and
+  a long transcription cannot be cancelled — a thread timeout leaves Whisper
+  running. The durable design (SQLite-backed state, per-stage checkpoints,
+  heartbeats, resume after restart, real worker cancellation) is not
+  implemented. Treat `background=true` as "don't block the client", not as a
+  job queue.
+- **Capture capability reporting is not machine-tested off Windows.**
+  `loop/capture.py` selects a backend per platform, but there is no
+  capability-matrix command, and the macOS (ScreenCaptureKit/AVFoundation)
+  and Wayland (PipeWire/portal) paths are not verified on this machine. The
+  docs should not be read as a support claim for those.
+- **Verification check types stop where they can be deterministic.** DOM
+  locator, accessibility, browser-console and failed-request assertions, and
+  test-report ingestion are designed but absent — see
+  [verification.md](verification.md). They are missing rather than stubbed,
+  because a check that always passes is worse than no check.
+- **`remote_attested` is defined and not implemented**, on purpose. See
+  [DECISIONS.md](DECISIONS.md).
+- **Skill token footprint is measured, not yet reduced.** Ten skills,
+  23,581 bytes, ~1,140 metadata tokens at discovery and ~4,717 body tokens if
+  every skill loads. No progressive disclosure is in use. The overlap between
+  `watch` / `watching-videos` / `asking-with-evidence` / `video-memory` is
+  real and unaddressed.
+
 ## v1.1 candidates
 
 - **Team-shared video memory**: the remote MCP recipe (streamable HTTP +

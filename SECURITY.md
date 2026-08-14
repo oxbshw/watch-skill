@@ -20,6 +20,46 @@ that violates any of them is a security bug, not a feature:
    configured, never values.
 5. **The REST API refuses to bind non-loopback addresses without a bearer
    token.**
+6. **One policy gates every boundary.** `watch_skill.policy.guard_egress` is
+   asked before any network or provider call — source acquisition, frame
+   egress, audio egress, transcript/OCR egress, cloud models, local models,
+   webhooks, telemetry, verification HTTP. A feature that builds a provider
+   client and goes around it is a security bug. `WATCHSKILL_OFFLINE=1`
+   guarantees zero outbound calls; `tests/test_policy.py` proves it with every
+   supported provider key populated.
+7. **A configured key is not consent.** Indexing-time scene descriptions do
+   not upload frames because an API key happens to be set. The
+   `WATCHSKILL_SCENE_DESCRIPTIONS=auto` default resolves to local, never
+   cloud.
+8. **Telemetry is permanently closed.** The channel exists in the policy so
+   that it is denied by construction and an added integration cannot slip past
+   it. Watch Skill sends no usage data.
+
+## Verification safety
+
+`watch-skill verify` executes contract checks. Its rules are in
+[docs/verification.md](docs/verification.md); the ones that matter for
+security:
+
+- Commands are **argv lists**, never strings, and never run through a shell.
+  A string command is rejected at model validation, so nothing assembled from
+  OCR, a transcript, a caption, or model output can be shell-parsed.
+- SQL checks are SELECT-only, parameterised, and run on a handle opened
+  `mode=ro`.
+- Paths resolve (following symlinks) before being compared to the allowed
+  roots, so a link out of the sandbox fails the same test as `../..`.
+- HTTP checks require an origin allowlist *and* screen the resolved addresses,
+  so an allowlisted hostname pointing at `169.254.169.254` or loopback is
+  refused. Redirects are not followed.
+- The verifier subprocess receives an **allowlisted** environment. Provider
+  keys do not reach it. A denylist was rejected because it would leak every
+  key added after it was written.
+- Everything inside frames, OCR, transcripts, captions, and downloaded
+  metadata is untrusted data. It is searched, never obeyed.
+
+The local isolated verifier runs as the same OS user as the agent it judges.
+That is stated as `isolated_local`, and `remote_attested` is never claimed —
+see the assurance table in the verification guide.
 
 ## Reporting a vulnerability
 
@@ -45,8 +85,11 @@ tool in the same agent, and no more sandboxed.
 If that is not acceptable in your setup:
 
 - Do not expose the MCP server to an agent you would not give a terminal.
-- The other 21 tools do not execute user-supplied commands; a wrapper that
-  drops these two leaves the rest of the surface intact.
+- The other 25 tools do not execute user-supplied commands through a shell; a
+  wrapper that drops these two leaves the rest of the surface intact.
+  `verify_contract`'s `command_exit` check does run a process, but only from an
+  argv list with `shell=False`, in a bounded working directory, under a
+  timeout, with a sanitized environment.
 - Treat `generator_cmd` and `run_cmd` reaching the server from untrusted
   content — a web page, a document, a video's own metadata — as the
   injection path that matters. Watch Skill cannot tell an agent's intent

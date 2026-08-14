@@ -223,14 +223,34 @@ def test_describe_critique_passes_clean_frames(monkeypatch) -> None:
     assert critique.score >= 90 and critique.issues == []
 
 
-def test_describe_critique_judge_error_degrades_to_pass_when_rules_clean(monkeypatch) -> None:
+def test_describe_critique_judge_error_is_inconclusive_not_pass(monkeypatch) -> None:
+    """A judge that could not be reached judged nothing.
+
+    This used to return ``pass`` on the reasoning that no rule had fired. But
+    "no rule fired" and "the only thing that could have decided was down" is
+    an absence of evidence, and absence of evidence became a green loop.
+    """
     fake = _FakeVision(
         {"frame_0.jpg": "a normal page"},
         judge_reply=VisionError("empty", code="vision.empty"),
     )
     monkeypatch.setattr(critic_mod, "get_vision", lambda *a, **k: fake)
     critique = describe_critique(_perception([""]), "never NaN")
-    assert critique.verdict == "pass"  # rules clean + judge unavailable = pass
+    assert critique.verdict == "inconclusive"
+    assert critique.decisive is False
+
+
+def test_describe_critique_banned_rule_still_decides_without_the_judge(
+    monkeypatch,
+) -> None:
+    """A deterministic rule that DOES fire needs no judge at all."""
+    fake = _FakeVision(
+        {"frame_0.jpg": "cart total reads NaN"},
+        judge_reply=VisionError("empty", code="vision.empty"),
+    )
+    monkeypatch.setattr(critic_mod, "get_vision", lambda *a, **k: fake)
+    critique = describe_critique(_perception([""]), "never NaN")
+    assert critique.verdict == "fail"
 
 
 def test_describe_critique_reads_ocr_evidence(monkeypatch) -> None:

@@ -30,6 +30,11 @@ class CacheEntry:
     video_path: Path | None
     subtitle_path: Path | None
     info: dict[str, Any]
+    # Digest of the committed media plus the stat it had at commit time. A hit
+    # whose stat still matches skips re-hashing a multi-gigabyte download; a
+    # hit whose stat has drifted is re-hashed rather than trusted.
+    content_digest: str | None = None
+    committed_stat: dict[str, Any] | None = None
 
 
 def cache_key(source: str) -> str:
@@ -63,6 +68,8 @@ def _load_entry(directory: Path) -> CacheEntry | None:
         video_path=video,
         subtitle_path=subs if subs and subs.is_file() else None,
         info=meta.get("info", {}),
+        content_digest=meta.get("content_digest"),
+        committed_stat=meta.get("committed_stat"),
     )
 
 
@@ -78,11 +85,44 @@ def lookup(source: str) -> CacheEntry | None:
     return entry
 
 
+def stat_signature(path: Path) -> dict[str, Any]:
+    """Size + mtime of a file — the cheap check that its bytes are untouched."""
+    info = path.stat()
+    return {"size": info.st_size, "mtime_ns": info.st_mtime_ns}
+
+
+def digest_if_needed(entry: CacheEntry) -> str | None:
+    """The cached entry's content digest, hashing only when it has to.
+
+    A cache hit whose file still has the size and mtime it was committed with
+    is byte-identical, so the stored digest stands. Anything else — a manifest
+    from before digests existed, a file touched since — is re-read.
+    """
+    if entry.video_path is None:
+        return None
+    current = stat_signature(entry.video_path)
+    if entry.content_digest and entry.committed_stat == current:
+        return entry.content_digest
+    from watch_skill.identity import digest_file  # noqa: PLC0415
+
+    digest = digest_file(entry.video_path)
+    meta_path = entry.dir / ENTRY_FILE
+    try:
+        meta = json.loads(meta_path.read_text(encoding="utf-8"))
+        meta["content_digest"] = digest
+        meta["committed_stat"] = current
+        meta_path.write_text(json.dumps(meta, ensure_ascii=False, indent=2), encoding="utf-8")
+    except (OSError, json.JSONDecodeError):
+        pass  # the digest is still correct; caching it again is an optimisation
+    return digest
+
+
 def commit(
     source: str,
     video_path: Path | None,
     subtitle_path: Path | None = None,
     info: dict[str, Any] | None = None,
+    content_digest: str | None = None,
 ) -> CacheEntry:
     """Record a completed download that already lives inside the entry dir.
 
@@ -90,11 +130,20 @@ def commit(
     the manifest — no copy of a multi-GB file.
     """
     directory = entry_dir(source, create=True)
+    if content_digest is None and video_path is not None and video_path.is_file():
+        from watch_skill.identity import digest_file  # noqa: PLC0415
+
+        content_digest = digest_file(video_path)
     meta = {
         "source": source,
         "video": video_path.name if video_path else None,
         "subtitle": subtitle_path.name if subtitle_path else None,
         "info": info or {},
+        "content_digest": content_digest,
+        "committed_stat": (
+            stat_signature(video_path)
+            if video_path is not None and video_path.is_file() else None
+        ),
         "committed_at": time.time(),
     }
     (directory / ENTRY_FILE).write_text(
@@ -107,6 +156,8 @@ def commit(
         video_path=video_path,
         subtitle_path=subtitle_path,
         info=info or {},
+        content_digest=content_digest,
+        committed_stat=meta["committed_stat"],
     )
 
 

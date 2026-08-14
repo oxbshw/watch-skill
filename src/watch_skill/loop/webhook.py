@@ -44,6 +44,9 @@ def deliver_event(
     _sleep: Callable[[float], None] = time.sleep,
 ) -> bool:
     """POST one event; True when a 2xx came back within the retry budget."""
+    from watch_skill.policy import Channel, guard_egress  # noqa: PLC0415
+
+    guard_egress(Channel.WEBHOOK)
     body = json.dumps(event, ensure_ascii=False).encode("utf-8")
     headers = {
         "Content-Type": "application/json",

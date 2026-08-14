@@ -14,6 +14,7 @@ import sys
 from pathlib import Path
 
 from watch_skill.acquire import cache, cobalt, direct, ytdlp
+from watch_skill.acquire.identify import identify
 from watch_skill.acquire.sources import SourceKind, classify_source, is_url_kind
 from watch_skill.acquire.types import AcquireResult
 from watch_skill.errors import AcquisitionError
@@ -59,7 +60,7 @@ def _from_cache(source: str, kind: SourceKind) -> AcquireResult | None:
     if entry is None or entry.video_path is None:
         return None
     print(f"[watch-skill] cache hit: {entry.dir}", file=sys.stderr)
-    return AcquireResult(
+    result = AcquireResult(
         source=source,
         kind=kind,
         video_path=entry.video_path,
@@ -67,6 +68,30 @@ def _from_cache(source: str, kind: SourceKind) -> AcquireResult | None:
         info=entry.info,
         from_cache=True,
         acquirer="cache",
+    )
+    # A cached download is a cached *revision*, not a cached URL: the digest
+    # travels with the entry so a hit is bound to the bytes it holds.
+    return identify(result, digest_hint=cache.digest_if_needed(entry))
+
+
+def _guard_source_network(source: str) -> None:
+    """Refuse a remote fetch the policy has closed, before any subprocess runs.
+
+    Offline mode has to fail here rather than inside yt-dlp: a spawned
+    downloader that has already opened a socket is not offline, however the
+    call ends.
+    """
+    from watch_skill.policy import Channel, get_policy  # noqa: PLC0415
+
+    decision = get_policy().check(Channel.SOURCE)
+    if decision.allowed:
+        return
+    raise AcquisitionError(
+        f"offline mode: {source} is not available locally",
+        code="acquire.offline_denied",
+        fix="watch it once with the network on (it lands in the cache and "
+        "works offline afterwards), or point at a local file",
+        details={"source": source, "reason": decision.reason},
     )
 
 
@@ -140,20 +165,27 @@ def acquire(
         )
 
     if kind == SourceKind.LOCAL_FILE:
-        return _resolve_local(source)
+        return identify(_resolve_local(source))
 
     assert is_url_kind(kind)
+    # A cache hit is local content, so offline mode is allowed to serve it —
+    # the network guard belongs on the fetch, not on the lookup.
     if use_cache:
         cached = _from_cache(source, kind)
         if cached is not None:
             return cached
 
+    _guard_source_network(source)
     out_dir = cache.entry_dir(source, create=True)
     result = _try_chain(source, kind, out_dir, audio_only, duration_cap)
+    result = identify(result)
     # Audio-only fetches are not committed: a later full fetch must not be
     # shadowed by a cache entry that has no video frames in it.
     if use_cache and not audio_only:
-        cache.commit(source, result.video_path, result.subtitle_path, result.info)
+        cache.commit(
+            source, result.video_path, result.subtitle_path, result.info,
+            content_digest=result.revision.content_digest if result.revision else None,
+        )
     return result
 
 
@@ -168,6 +200,7 @@ def fetch_captions_only(source: str) -> AcquireResult:
             "back to local whisper automatically",
             details={"source": source},
         )
+    _guard_source_network(source)
     out_dir = cache.entry_dir(source, create=True)
     probe = ytdlp.fetch_captions(source, out_dir)
     return AcquireResult(

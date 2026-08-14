@@ -193,13 +193,18 @@ def frames_near(
 
 
 def ask_video(
-    video_id_or_source: str, question: str, k: int = 8, max_frames: int = 6
+    video_id_or_source: str, question: str, k: int = 8, max_frames: int = 6,
+    allow_stale: bool = False,
 ) -> dict[str, Any]:
     """Retrieval-based answer context: top hits + the frames around them.
 
     Returns text evidence with timestamps plus a handful of frame paths —
-    NOT a re-run of the full analysis.
+    NOT a re-run of the full analysis. Refuses to answer from artifacts whose
+    source has demonstrably changed; ``allow_stale`` opts into reading the
+    historical revision anyway.
     """
+    from watch_skill.index.store import require_current
+
     video = get_video(video_id_or_source)
     if video is None:
         raise IndexError_(
@@ -207,6 +212,7 @@ def ask_video(
             code="index.video_not_found",
             fix="run watch_video/`watch-skill watch --index` on it first, or list_videos()",
         )
+    freshness = require_current(video_id_or_source, allow_stale=allow_stale)
     hits = hybrid_search(question, video_id=video["id"], k=k)
     conn = connect()
     try:
@@ -226,6 +232,7 @@ def ask_video(
         "question": question,
         "hits": [vars(h) for h in hits],
         "frames": frame_rows,
+        "freshness": freshness,
     }
 
 
@@ -240,9 +247,12 @@ def search_videos(query: str, k: int = 12) -> list[dict[str, Any]]:
 
 
 def get_moment(
-    video_id_or_source: str, timestamp: float, window: float = 10.0, max_frames: int = 6
+    video_id_or_source: str, timestamp: float, window: float = 10.0, max_frames: int = 6,
+    allow_stale: bool = False,
 ) -> MomentContext:
     """Dense context around one moment: nearby frames, transcript, OCR."""
+    from watch_skill.index.store import require_current
+
     video = get_video(video_id_or_source)
     if video is None:
         raise IndexError_(
@@ -250,6 +260,7 @@ def get_moment(
             code="index.video_not_found",
             fix="run watch_video on it first",
         )
+    require_current(video_id_or_source, allow_stale=allow_stale)
     lo, hi = timestamp - window / 2, timestamp + window / 2
     conn = connect()
     try:

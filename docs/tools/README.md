@@ -1,6 +1,6 @@
 # MCP tool reference
 
-All 23 tools exposed by the `watch-skill` MCP server
+All 27 tools exposed by the `watch-skill` MCP server
 (`src/watch_skill/surfaces/mcp/server.py`), with parameters, defaults, and
 what comes back. Every tool has a REST twin — the mapping table is at the
 bottom.
@@ -11,7 +11,13 @@ Two conventions hold everywhere:
   `{"error": "<code>", "message": ..., "fix": ..., "details": {...}}` —
   act on `fix` (it usually says "run doctor" or names the setting to
   change). Error codes are namespaced by stage: `acquire.*`, `perceive.*`,
-  `transcribe.*`, `index.*`, `vision.*`, `loop.*`, `health.*`, `config.*`.
+  `transcribe.*`, `index.*`, `vision.*`, `loop.*`, `health.*`, `config.*`,
+  `policy.*`, `verify.*`.
+- **Stored evidence is freshness-checked.** `ask_video`, `get_moment` and the
+  answer engine refuse to answer from a source that has demonstrably changed
+  (`index.stale`), because the alternative is a confident answer about a video
+  that is no longer there. Pass a `video_id` to read a specific revision on
+  purpose, or re-watch to index the current one.
 - **Images are capped.** Responses attach at most
   `WATCHSKILL_RESPONSE_FRAME_CAP` images (even-sampled, first + last kept);
   retrieval is designed to make more unnecessary.
@@ -333,6 +339,69 @@ on first use. Checks and self-heals: installs missing ffmpeg/yt-dlp,
 updates a stale yt-dlp, verifies disk space, GPU, and API keys. No
 parameters. Each failing check includes a `fix` you can act on.
 
+## Freshness, policy & verification
+
+### `check_source`
+
+Whether an indexed video still matches what its source holds **now**, plus
+every revision recorded for it. Call it before treating an older analysis as
+current — a local path can be overwritten between sessions.
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `video` | str | required | `video_id` or the original source URL/path |
+
+Returns `{state, video_id, revision_id, superseded, reason, revisions[]}`.
+`state` is one of `fresh`, `stale`, `refresh_required`, `freshness_unknown`.
+Anything but `fresh` means re-watch before answering, or answer about a
+specific `video_id` and say which revision you are describing.
+
+### `execution_plan`
+
+What a run *would* send, and what it could cost, before it sends anything.
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `frames` | int | `0` | Frames the run would carry |
+| `tier` | str | `strong` | `cheap` or `strong` |
+
+Returns the provider, model, payload counts, the exact network actions, the
+estimated maximum spend (labelled `estimated`), and the full effective policy:
+offline mode, each egress channel, the provider allowlist, and both ceilings.
+Answers "will this upload my video?" without running anything.
+
+### `verify_contract`
+
+Decide whether an agent run succeeded, using deterministic checks rather than
+an opinion about a screenshot.
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `title` | str | required | What this contract is about |
+| `checks` | list[dict] | required | `{id, type, required, params}` — see [Verification](../verification.md) |
+| `working_dir` | str | `.` | Bounds every path a check may touch |
+| `allowed_origins` | list[str] | `[]` | Origins an `http_request` check may reach |
+
+The contract is frozen and digested before it runs, so it cannot be widened
+afterwards. `pass` requires **every** required check to pass; a check that
+fails, times out, or never runs makes the run `inconclusive`, never a pass. A
+contract with no required check is `inconclusive` by construction — visual
+evidence alone is not verification.
+
+Returns the verdict, the assurance level, the contract digest, what was not
+established, and a `run_id`.
+
+### `get_evidence`
+
+Read a verification run's evidence bundle and attestation back. The
+attestation is re-checked against the bundle on the way out, so an edited
+evidence file raises `verify.attestation_tampered` instead of being reported
+as a verified pass.
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `run_id` | str | required | From `verify_contract` |
+
 ## REST twins
 
 The REST API (`watch-skill api`, OpenAPI spec at `/openapi.json`) mirrors
@@ -341,6 +410,10 @@ every tool for non-MCP agents:
 | MCP tool | REST endpoint |
 |---|---|
 | `watch_video` | `POST /v1/watch` |
+| `check_source` | `GET /v1/videos/{video}/freshness` |
+| `execution_plan` | `GET /v1/plan` |
+| `verify_contract` | `POST /v1/verify` |
+| `get_evidence` | `GET /v1/verify/{run_id}` |
 | `ask_video` | `POST /v1/answer` (full Answer payload; `POST /v1/ask` is raw retrieval) |
 | `get_moment` | `GET /v1/videos/{video}/moment` |
 | `search_videos` | `GET /v1/search?q=` |

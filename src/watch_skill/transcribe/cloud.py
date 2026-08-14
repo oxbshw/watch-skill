@@ -26,7 +26,15 @@ MAX_ATTEMPTS = 4
 RETRY_BASE_DELAY = 2.0
 
 
-def _require_cloud_enabled() -> None:
+def _require_cloud_enabled(backend: str | None = None) -> None:
+    """Two gates, both of which must open.
+
+    The opt-in setting is the operator's standing consent; the policy is the
+    rule for *this run*. Offline mode overrides a standing yes, which is the
+    point of having a policy at all.
+    """
+    from watch_skill.policy import Channel, guard_egress  # noqa: PLC0415
+
     if not get_settings().cloud_stt_enabled:
         raise TranscriptionError(
             "cloud STT is disabled (privacy default)",
@@ -34,6 +42,7 @@ def _require_cloud_enabled() -> None:
             fix="set WATCHSKILL_CLOUD_STT_ENABLED=1 to opt in — only extracted "
             "audio is sent, never the video file",
         )
+    guard_egress(Channel.AUDIO, provider=backend)
 
 
 def pick_backend(preferred: str | None = None) -> tuple[str, str]:
@@ -143,8 +152,9 @@ def transcribe_cloud(
     preferred_backend: str | None = None,
 ) -> Transcript:
     """Extract audio, upload (chunked with overlap if large), merge segments."""
-    _require_cloud_enabled()
+    _require_cloud_enabled(preferred_backend)
     backend, api_key = pick_backend(preferred_backend)
+    _require_cloud_enabled(backend)  # the allowlist applies to the CHOSEN backend
     endpoint, model = (
         (GROQ_ENDPOINT, GROQ_MODEL) if backend == "groq" else (OPENAI_ENDPOINT, OPENAI_MODEL)
     )

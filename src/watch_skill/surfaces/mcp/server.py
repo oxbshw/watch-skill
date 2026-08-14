@@ -612,6 +612,113 @@ def library_overview() -> str:
 
 
 @mcp.tool
+def check_source(video: str) -> str:
+    """Whether an indexed video still matches what its source holds NOW, plus
+    every revision recorded for it.
+
+    Call this before treating an older analysis as current — especially for a
+    local path, which can be overwritten between sessions. States: `fresh`,
+    `stale`, `refresh_required`, `freshness_unknown`. Anything but `fresh`
+    means re-watch before answering, or answer about a specific `video_id`
+    and say which revision you are describing."""
+    from watch_skill.index.store import check_freshness, source_revisions
+
+    try:
+        payload = check_freshness(video)
+        payload["revisions"] = source_revisions(video)
+    except WatchSkillError as exc:
+        return _error_payload(exc)
+    return json.dumps(payload, ensure_ascii=False, indent=2)
+
+
+@mcp.tool
+def execution_plan(frames: int = 0, tier: str = "strong") -> str:
+    """What a run would send and what it could cost, BEFORE it sends anything.
+
+    Returns the provider, model, payload counts, the exact network actions,
+    the estimated maximum spend, and the full effective policy (offline mode,
+    egress channels, provider allowlist, ceilings). Use it to answer "will
+    this upload my video?" without running anything."""
+    from watch_skill.policy import execution_plan as plan
+
+    settings = get_settings()
+    provider = (settings.vision_cheap_provider if tier == "cheap"
+                else settings.vision_strong_provider)
+    model = (settings.vision_cheap_model if tier == "cheap"
+             else settings.vision_strong_model)
+    return json.dumps(
+        plan(phase=f"vision.{tier}", provider=provider, model=model, frames=frames),
+        ensure_ascii=False, indent=2,
+    )
+
+
+@mcp.tool
+def verify_contract(
+    title: str,
+    checks: list[dict[str, Any]],
+    working_dir: str = ".",
+    allowed_origins: list[str] | None = None,
+) -> str:
+    """Decide whether an agent run actually succeeded, using deterministic
+    checks rather than an opinion about a screenshot.
+
+    `checks` is a list of {id, type, required, params}. Types: file_exists,
+    file_digest, json_value, json_schema, sqlite_query, http_request,
+    command_exit, numeric_invariant, visual_absent. The contract is frozen
+    and digested before it runs, so it cannot be widened afterwards.
+
+    Verdicts: `pass` only when every REQUIRED check passed; `fail` when one
+    failed; `inconclusive` when one could not run, or when the contract has
+    no required check at all — visual evidence alone is never a pass.
+    Returns the verdict, the assurance level, what was not established, and
+    a run_id whose evidence bundle is hash-bound against tampering."""
+    from watch_skill.verify import draft_contract, verify_run
+
+    try:
+        contract = draft_contract(title, checks, created_by="mcp").freeze()
+        bundle, attestation = verify_run(
+            contract, working_dir=working_dir,
+            allowed_origins=allowed_origins or [],
+        )
+    except WatchSkillError as exc:
+        return _error_payload(exc)
+    return json.dumps({
+        "run_id": bundle.run_id,
+        "verdict": bundle.verdict,
+        "assurance": bundle.assurance,
+        "contract_digest": bundle.contract_digest,
+        "limitations": bundle.limitations,
+        "signature_status": attestation.signature_status,
+        "checks": [
+            {"id": r.check_id, "type": r.type, "required": r.required,
+             "status": r.status.value, "expected": r.expected,
+             "observed": r.observed, "summary": r.summary}
+            for r in bundle.check_results
+        ],
+    }, ensure_ascii=False, indent=2, default=str)
+
+
+@mcp.tool
+def get_evidence(run_id: str) -> str:
+    """Read back a verification run's evidence bundle and attestation.
+
+    The attestation is re-checked against the bundle on the way out, so an
+    edited evidence file raises instead of being reported as a verified
+    pass."""
+    from watch_skill.verify import load_run
+
+    try:
+        contract, bundle, attestation = load_run(run_id)
+    except WatchSkillError as exc:
+        return _error_payload(exc)
+    return json.dumps({
+        "contract": contract.model_dump(mode="json"),
+        "evidence": bundle.model_dump(mode="json"),
+        "attestation": attestation.model_dump(mode="json"),
+    }, ensure_ascii=False, indent=2, default=str)
+
+
+@mcp.tool
 def doctor() -> str:
     """Run this when ANY other tool fails with a dependency/download error, or
     on first use. Checks AND self-heals: installs missing ffmpeg/yt-dlp,

@@ -110,6 +110,15 @@ class CaptureRequest(BaseModel):
     script: list[dict[str, Any]] | None = None
 
 
+class VerifyRequest(BaseModel):
+    """A contract to freeze and run. Mirrors the MCP verify_contract tool."""
+
+    title: str
+    checks: list[dict[str, Any]]
+    working_dir: str = "."
+    allowed_origins: list[str] = Field(default_factory=list)
+
+
 class LoopStartRequest(BaseModel):
     """POST /v1/loops body."""
 
@@ -211,6 +220,63 @@ def create_app() -> FastAPI:
         payload = result.to_dict()
         payload["frames"] = _frame_payload(result.frames, req.inline_frames)
         return payload
+
+    @app.get("/v1/videos/{video}/freshness", tags=["video"])
+    def freshness(video: str) -> dict[str, Any]:
+        """Whether the indexed evidence still describes the live source."""
+        from watch_skill.index.store import check_freshness, source_revisions
+
+        try:
+            payload = check_freshness(video)
+            payload["revisions"] = source_revisions(video)
+        except WatchSkillError as exc:
+            raise _http_error(exc) from exc
+        return payload
+
+    @app.get("/v1/plan", tags=["system"])
+    def plan(frames: int = 0, tier: str = "strong") -> dict[str, Any]:
+        """The effective policy and what a run would send, before it runs."""
+        from watch_skill.policy import execution_plan
+
+        settings = get_settings()
+        provider = (settings.vision_cheap_provider if tier == "cheap"
+                    else settings.vision_strong_provider)
+        model = (settings.vision_cheap_model if tier == "cheap"
+                 else settings.vision_strong_model)
+        return execution_plan(phase=f"vision.{tier}", provider=provider,
+                              model=model, frames=frames)
+
+    @app.post("/v1/verify", tags=["verify"])
+    def verify(req: VerifyRequest) -> dict[str, Any]:
+        """Run a frozen contract's deterministic checks over an agent run."""
+        from watch_skill.verify import draft_contract, verify_run
+
+        try:
+            contract = draft_contract(req.title, req.checks, created_by="rest").freeze()
+            bundle, attestation = verify_run(
+                contract, working_dir=req.working_dir,
+                allowed_origins=req.allowed_origins,
+            )
+        except WatchSkillError as exc:
+            raise _http_error(exc) from exc
+        payload = bundle.model_dump(mode="json")
+        payload["attestation"] = attestation.model_dump(mode="json")
+        return payload
+
+    @app.get("/v1/verify/{run_id}", tags=["verify"])
+    def verify_show(run_id: str) -> dict[str, Any]:
+        """Read a recorded run back, re-checking its attestation."""
+        from watch_skill.verify import load_run
+
+        try:
+            contract, bundle, attestation = load_run(run_id)
+        except WatchSkillError as exc:
+            raise _http_error(exc) from exc
+        return {
+            "contract": contract.model_dump(mode="json"),
+            "evidence": bundle.model_dump(mode="json"),
+            "attestation": attestation.model_dump(mode="json"),
+        }
 
     @app.get("/v1/videos/{video}/moment", tags=["video"])
     def get_moment(

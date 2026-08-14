@@ -22,7 +22,10 @@ timestamped index. An agent can ask what happened, get an answer that cites the 
 moment behind it, and ask again tomorrow without processing the video a second time.
 
 When the video is the agent's *own* browser or desktop session, **THE LOOP** closes the
-circle: record the work, judge it against plain-language criteria, and prove the fix.
+circle: record the work, critique it against plain-language criteria, and show before and
+after. That critique is *advisory* — a model describing pictures. To decide whether the
+work actually succeeded, attach a **verification contract**: deterministic checks, frozen
+before the run, that hold the verdict.
 
 ```bash
 uvx --from "watch-skill[standard]" watch-skill setup
@@ -31,7 +34,7 @@ uvx --from "watch-skill[standard]" watch-skill setup
 <p align="center">
   <img src="docs/assets/loop_before_after.gif" alt="A checkout flow fails with a NaN total, is fixed, and passes verification" width="720">
   <br>
-  <sub>THE LOOP catching a <code>$NaN</code> total that an end-state screenshot misses, then proving the fix.</sub>
+  <sub>THE LOOP catching a <code>$NaN</code> total that an end-state screenshot misses, then showing the fix.</sub>
 </p>
 
 ## What it does
@@ -40,10 +43,19 @@ uvx --from "watch-skill[standard]" watch-skill setup
 |---|---|
 | **Watch** | Scene-aware frames, on-screen text, and local-first transcription from 1,800+ sites, live HLS/DASH streams, local media, meetings, browsers, windows, and desktops. |
 | **Remember** | A persistent, searchable index with timestamp citations, hybrid retrieval, cross-video synthesis, and reusable lessons. |
-| **Verify** | A capture → critique → fix → proof loop for browser flows, interfaces, generated video, gameplay, and monitored streams. |
+| **Verify** | A capture → critique → fix → re-capture loop for browser flows, interfaces, generated video, gameplay, and monitored streams — with deterministic contracts deciding pass or fail. |
 
-Available as Claude Code skills, 23 MCP tools, a CLI, a REST API, and native adapters for
+Available as Claude Code skills, 27 MCP tools, a CLI, a REST API, and native adapters for
 LangChain/LangGraph, CrewAI, the OpenAI Agents SDK, LlamaIndex, and AutoGen.
+
+Three things it will not do, because each one is a way of being confidently wrong:
+
+- **Answer from a video that changed.** Identity follows the bytes, not the path. Overwrite
+  `demo.mp4` and the next question returns `stale`, not yesterday's frames.
+- **Upload a frame you did not agree to send.** A configured API key is not consent.
+  `watch-skill plan` prints every network action before a run makes one.
+- **Call an absent judgement a pass.** No frames, no OCR, an unreachable model, a timed-out
+  check — all `inconclusive`. Only a required deterministic check produces a `pass`.
 
 ## Install
 
@@ -181,8 +193,11 @@ See [Getting started](docs/getting-started.md) for manual installation and
 - **Local-first processing.** Original-language captions are preferred, local Whisper is
   the default fallback, and cloud speech-to-text is opt-in. An Ollama configuration keeps
   the complete pipeline on the machine.
-- **Flow verification.** THE LOOP records an agent's browser, screen, or window; checks the
-  result against plain-language criteria; and produces before/after proof after a fix.
+- **Flow verification.** THE LOOP records an agent's browser, screen, or window and checks
+  the result against plain-language criteria, producing a before/after comparison. The
+  model's read of that recording is advisory; a [verification
+  contract](docs/verification.md) turns it into a decision, and its evidence bundle is
+  hash-bound so an edited result stops verifying.
 - **Corrections that persist.** `report_mistake` stores a local lesson, applies it to related
   questions, and turns it into a replayable evaluation.
 - **Measured cost controls.** Text-first answers, semantic caching, configurable token
@@ -225,7 +240,7 @@ MCP.
 
 ### Why both skills and MCP
 
-MCP gives an agent 23 tools. Skills give it the judgement about when to use them —
+MCP gives an agent 27 tools. Skills give it the judgement about when to use them —
 that a screen recording in the conversation is worth watching, that a follow-up
 question should hit the index instead of re-processing, that a UI change deserves a
 verification pass. An agent with only the tools waits to be told; an agent with the
@@ -246,7 +261,7 @@ npx skills add oxbshw/watch-skill --list
 | **HTTP** | Vercel AI SDK, n8n, and any client that can call REST/OpenAPI |
 
 Skills and MCP complement each other: skills carry the judgement about when video
-is worth watching, MCP carries the 23 tools. Installing both is the full setup, and
+is worth watching, MCP carries the 27 tools. Installing both is the full setup, and
 `watch-skill setup` does it.
 
 The [full compatibility matrix](docs/agents/README.md) separates machine-tested,
@@ -276,9 +291,20 @@ watch-skill loop start \
   --criteria "Checkout completes and the total is always a valid currency amount"
 ```
 
-The loop captures the full interaction, critiques failures, and records proof after the
-agent applies a fix — the run shown at the top of this page.
+The loop captures the full interaction, critiques failures, and records the before/after
+comparison once the agent applies a fix — the run shown at the top of this page.
 [Example 14](examples/14-browser-verification/) walks through that transient `$NaN` bug.
+
+The critique is one model's reading of the recording. To make success a decision rather
+than an opinion, attach deterministic checks:
+
+```bash
+watch-skill verify run checkout-contract.json --dir .
+```
+
+`pass` requires every **required** check to pass. A check that fails, times out, or never
+runs makes the run `inconclusive` — never a pass. See
+[Verification](docs/verification.md).
 
 ### Export an offline report
 
@@ -299,7 +325,7 @@ self-verification.
 | Learn the core | [01 Watch and ask](examples/01-watch-and-ask), [02 Focused moment](examples/02-focused-moment), [03 Cross-video search](examples/03-cross-video-search) |
 | Build with agents | [06 MCP and REST](examples/06-agent-integration), [09 Framework adapters](examples/09-framework-adapters), [15 Private offline workflow](examples/15-private-offline-workflow) |
 | Understand and organize | [05 Multilingual Arabic](examples/05-multilingual-arabic), [10 Structured extraction](examples/10-structured-extraction), [11 Batch mode](examples/11-batch-mode), [12 Library memory](examples/12-library-memory) |
-| Verify and improve | [04 UI loop](examples/04-ui-loop), [07 Lessons and stats](examples/07-lessons-and-stats), [08 Loop types](examples/08-loop-types), [13 Self-improvement](examples/13-self-improvement), [14 Browser verification](examples/14-browser-verification) |
+| Verify and improve | [04 UI loop](examples/04-ui-loop), [07 Lessons and stats](examples/07-lessons-and-stats), [08 Loop types](examples/08-loop-types), [13 Self-improvement](examples/13-self-improvement), [14 Browser verification](examples/14-browser-verification), [17 Freshness and offline](examples/17-freshness-and-offline) |
 | Share results | [16 Export a self-contained viewer](examples/16-shareable-viewer) |
 
 See the [example catalog](examples/README.md) for prerequisites, expected output, and a
@@ -332,9 +358,10 @@ extension points.
 |---|---|
 | [Documentation index](docs/README.md) | Choose a guide by task or audience |
 | [Getting started](docs/getting-started.md) | Installation, first watch, and first agent connection |
-| [Tool reference](docs/tools/README.md) | All 23 MCP tools and their REST/CLI counterparts |
+| [Tool reference](docs/tools/README.md) | All 27 MCP tools and their REST/CLI counterparts |
 | [Configuration](docs/configuration.md) | Storage, privacy, models, limits, and environment variables |
 | [Agent matrix](docs/agents/README.md) | Per-client setup and verification status |
+| [Verification](docs/verification.md) | Contracts, deterministic checks, assurance levels, attestations |
 | [Use-case packs](docs/packs/README.md) | Recipes for research, meetings, QA, content, and operations |
 | [THE LOOP](docs/guides/the-loop.md) | Capture, critique, iteration, and proof artifacts |
 | [Cost policy](docs/cost.md) | Routing, budgets, caching, and benchmark method |

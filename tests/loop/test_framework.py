@@ -142,8 +142,12 @@ def test_game_producer_fails_fast_when_cmd_dies(tmp_path: Path) -> None:
     state = LoopState(
         loop_id="g", target="screen:", pass_criteria="c", script=None,
         max_iterations=3, duration_seconds=1.0, loop_type="game",
+        # Generous window: the producer now returns as soon as the process
+        # dies, so a large value costs nothing when it works and stops the
+        # test being a coin flip on a loaded machine — which is how this
+        # failed intermittently in the full suite but never on its own.
         extra={"run_cmd": f'"{sys.executable}" -c "import sys; sys.exit(1)"',
-               "warmup_seconds": 0.3},
+               "warmup_seconds": 20.0},
     )
     with pytest.raises(LoopError) as exc:
         fw._produce_game(state, tmp_path / "iter")

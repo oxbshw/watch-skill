@@ -30,11 +30,47 @@ run rungs 4–5:
 |---|---|
 | `cheapest` (default) | cheapest path that clears confidence wins; strong tier only on low confidence |
 | `quality_first` | verify goes straight to the strong tier, every time |
-| `offline_only` | only keyless/local providers (Ollama) may verify — cloud never sees a frame |
+| `offline_only` | only local providers (Ollama) may run — cloud never sees a frame, at any stage |
 
 `offline_only` with no local model configured simply skips verification:
 answers degrade to retrieval-grounded with the honest floor intact, not
 to guesses.
+
+### Money and data are separate policies
+
+`COST_POLICY` governs spend. `WATCHSKILL_OFFLINE=1` governs whether anything
+leaves the machine at all — source acquisition included — and it overrides a
+standing opt-in such as `CLOUD_STT_ENABLED`. You can want cheap-and-cloudy or
+expensive-and-local; collapsing the two would make one of those impossible to
+express.
+
+`offline_only` is enforced at every boundary, not just in the answer ladder.
+That includes indexing-time scene descriptions, which used to upload frames
+whenever *any* provider key happened to be set. A configured key is not
+consent: `WATCHSKILL_SCENE_DESCRIPTIONS` defaults to `auto`, and `auto`
+resolves to local, never cloud.
+
+### See what a run will do before it does it
+
+```powershell
+watch-skill plan --frames 8
+```
+
+Prints the provider, the model, the payload counts, the exact network actions,
+the estimated maximum spend, and the effective policy — before anything is
+sent. The MCP twin is `execution_plan`; the REST twin is `GET /v1/plan`.
+
+### The run ceiling
+
+`WATCHSKILL_COST_CEILING_USD` bounds a single call.
+`WATCHSKILL_COST_CEILING_RUN_USD` (default `$5`) bounds everything one run
+spends **together** — indexing descriptions, answers, loop critics, library
+synthesis, extraction, and verification — which is what the per-answer meter
+never counted. Passing it raises `policy.run_cost_ceiling` rather than
+continuing to spend.
+
+Estimates are always labelled `estimated`. Provider-reported usage is recorded
+separately when the provider returns it, and the two are never merged.
 
 ## The meter
 

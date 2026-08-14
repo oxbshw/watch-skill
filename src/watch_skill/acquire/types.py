@@ -24,3 +24,7 @@ class AcquireResult:
     info: dict[str, Any] = field(default_factory=dict)
     from_cache: bool = False
     acquirer: str = "unknown"  # which chain step produced this: yt-dlp | cobalt | ffmpeg | local
+    # Identity of the bytes this acquisition actually produced. Populated by
+    # acquire.identify; ``None`` only when nothing was fetched (a captions
+    # probe), because everything downstream keys artifacts off the revision.
+    revision: Any = None

@@ -312,3 +312,107 @@ wrong guess would score wrong instead of erroring.
 
 Revisit only with a decode that is free, which in practice means a format
 numpy can matmul without widening.
+
+## Content identity follows the bytes, not the string
+
+`video_id = sha256(source_string)` was wrong in a way that only shows up
+later: overwrite `demo.mp4` and every artifact derived from the *old* file —
+frames, OCR, cached answers — comes back for the new one, correctly formatted
+and completely wrong. Reproduced against `cb3c430`; the same watch twice
+across an overwrite returned one id.
+
+Identity is now four things kept apart:
+
+- **alias** — the path or URL typed. Mutable by nature.
+- **asset** — what that alias has pointed at over time.
+- **revision** — one immutable version, keyed by content digest.
+- **fingerprint** — size, mtime, inode / ETag, Last-Modified. Cheap, and its
+  only job is to decide whether the digest has to be recomputed.
+
+Two things this buys that a "just re-hash it" design does not. A 4 GB file
+whose stat is unchanged is never read; a download is hashed once, during the
+write, and the digest travels in the cache manifest. And identical bytes
+reached through two aliases are one video rather than two.
+
+**Why `videos` was rebuilt rather than extended.** `source` was `UNIQUE`,
+which makes "this path has pointed at two different videos" unrepresentable —
+the exact fact the fix has to record. SQLite cannot drop an implicit unique
+index, so migration v9 does the documented rebuild, with
+`legacy_alter_table=ON` so the RENAME does not rewrite the child tables'
+`REFERENCES` clauses, and foreign keys off for the duration so the cascades
+do not delete the rows being preserved. `tests/index/test_migration_v9.py`
+builds a real v8 database and asserts every derived row survives, that the
+cascade still works afterwards, and that `PRAGMA foreign_key_check` is clean.
+
+**Why old ids still resolve.** Every id ever printed came from the v1
+function, and agents have them in notes. A v1 row is *adopted* on re-watch —
+it keeps its id and gains a real digest — and the content-derived id maps
+onto it through `video_aliases`. Migrated rows get a revision marked
+`digest_source: legacy` and a NULL `content_digest`, because inventing
+something digest-shaped for bytes that were never hashed would let a v1 row
+pass as verified content.
+
+**Freshness is four-valued on purpose.** `freshness_unknown` is a real
+answer, not a soft `fresh`. A remote source nobody went to the network for
+genuinely is unknown, and the previous design's only way to say that was to
+answer confidently anyway.
+
+## One policy object, asked at every boundary
+
+`offline_only` lived in the answer ladder, so it governed follow-up questions
+and nothing else. Indexing-time scene descriptions read "an API key exists"
+as "you may upload every frame of this video", which is a consent bug rather
+than a config bug.
+
+Enforcement is centralised in `policy.guard_egress` and the channels are
+split finely — frames, audio, transcript text, source acquisition, cloud
+models, local models, webhooks, telemetry, verification HTTP — because
+permitting one is not permitting another. Someone who allows OCR text to
+reach a model has not agreed to upload the frame it came from.
+
+Money and data egress are separate policies. `COST_POLICY` is about spend;
+`WATCHSKILL_OFFLINE` is about whether anything leaves at all, and it
+overrides a standing opt-in like `CLOUD_STT_ENABLED`. Cheap-and-cloudy and
+expensive-and-local are both legitimate, and one policy could not express
+both.
+
+`auto` scene descriptions resolve to *local*, never cloud. An automatic
+upgrade to cloud would recreate the original bug with an extra step.
+
+`tests/test_policy.py` runs the engine with every supported provider key
+populated and asserts zero outbound calls. A guarantee about network traffic
+is worth what its test is worth.
+
+## Verification: what decides, and what merely observes
+
+A recording is evidence. It is not an oracle, and the previous critic treated
+it as one: no frames scored 92 and passed, an unreachable model passed, an
+uncallable fallback judge passed. Absent evidence produced the same output as
+success.
+
+Verdicts are now `pass` / `fail` / `inconclusive` / `error`, and every one
+carries an assurance level. The layers have separate jobs: perception shows
+what happened, the critic offers an opinion, **required deterministic checks
+decide**, and an attestation binds the result to its inputs.
+
+A contract is frozen and digested before the run it judges. A model may add
+checks — they land advisory whatever the proposal says — but cannot remove,
+relax, or mark required an existing one. An agent that can rewrite the
+definition of success while being measured against it is not being measured.
+
+A contract with no required check yields `inconclusive`, not `pass`. Visual
+evidence alone is not verification, and the type system should not let
+someone accidentally claim it is.
+
+**`remote_attested` is defined and deliberately not implemented.** A verifier
+running as the same OS user as the agent it judges is not independent of that
+agent. `isolated_local` — separate process, allowlisted environment, bounded
+roots, strict timeouts — is the honest ceiling here, and a contract that asks
+for more fails loudly rather than quietly settling.
+
+**Attestations are hash-bound and say so.** `signature_status` reads
+`unsigned_hash_bound`. Hashing proves the bundle has not been edited; it
+proves nothing about who produced it. Ed25519 signing exists behind the
+`attest` extra because `cryptography` is not a declared dependency, and
+shipping a hash under the word "signed" would be the most misleading thing in
+the system.

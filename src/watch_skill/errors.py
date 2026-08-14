@@ -80,10 +80,28 @@ class IndexError_(WatchSkillError):
     default_code = "index.failed"
 
 
+class StaleContentError(WatchSkillError):
+    """The source has changed since it was indexed.
+
+    Raised instead of quietly answering from artifacts that describe content
+    the source no longer holds. Carries the freshness state and the revision
+    it would have answered from, so a caller can re-watch or explicitly ask
+    for the historical revision by id.
+    """
+
+    default_code = "index.stale_content"
+
+
 class VisionError(WatchSkillError):
     """Vision-model call failed or was blocked (e.g. cost guard)."""
 
     default_code = "vision.failed"
+
+
+class PolicyError(WatchSkillError):
+    """An action was refused by the effective execution/egress policy."""
+
+    default_code = "policy.denied"
 
 
 class LoopError(WatchSkillError):

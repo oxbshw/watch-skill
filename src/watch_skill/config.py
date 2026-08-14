@@ -133,8 +133,33 @@ class Settings(BaseSettings):
         default="anthropic", description="Provider for final answers and critiques."
     )
     vision_strong_model: str = Field(default="claude-sonnet-5")
+    # --- execution / egress policy -----------------------------------------
+    offline: bool = Field(
+        default=False,
+        description="Hard offline mode: zero outbound network calls, including "
+        "source acquisition. A remote URL becomes a structured error unless "
+        "the content is already cached locally. Separate from cost_policy, "
+        "which governs money rather than data leaving the machine.",
+    )
+    scene_descriptions: str = Field(
+        default="auto",
+        description="Where indexing-time scene descriptions run: 'off', "
+        "'local', 'cloud', or 'auto'. 'auto' never upgrades to cloud on its "
+        "own — a configured API key is not consent to upload every frame.",
+    )
+    provider_allowlist: str = Field(
+        default="",
+        description="Comma-separated providers that may be called at all. "
+        "Empty = any configured provider.",
+    )
     cost_ceiling_usd: float = Field(
         default=1.0, description="Warn/abort ceiling for a single cloud vision call."
+    )
+    cost_ceiling_run_usd: float = Field(
+        default=5.0,
+        description="Ceiling for everything ONE run spends — indexing "
+        "descriptions, answers, loop critics, library synthesis, extraction "
+        "and verification together, not just follow-up questions.",
     )
     cost_policy: str = Field(
         default="cheapest",
@@ -302,3 +327,8 @@ def get_settings() -> Settings:
 def reset_settings() -> None:
     """Clear the cached settings (tests / after env mutation)."""
     get_settings.cache_clear()
+    # The effective policy is derived from settings, so a stale policy after a
+    # settings change would be a security bug, not a caching quirk.
+    from watch_skill.policy import reset_policy  # noqa: PLC0415
+
+    reset_policy()

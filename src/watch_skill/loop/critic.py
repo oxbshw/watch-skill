@@ -13,7 +13,7 @@ from typing import Any
 from pydantic import BaseModel, Field, ValidationError
 
 from watch_skill.config import get_settings
-from watch_skill.errors import VisionError
+from watch_skill.errors import PolicyError, VisionError
 from watch_skill.perceive.types import PerceptionResult
 from watch_skill.vision import get_vision
 
@@ -28,12 +28,50 @@ class Issue(BaseModel):
 
 
 class Critique(BaseModel):
-    """The critic's full structured verdict."""
+    """The critic's full structured verdict.
 
-    verdict: str = Field(pattern="^(pass|fail)$")
+    ``verdict`` gained two values that the two-value version could not express
+    and therefore reported as ``pass``: ``inconclusive`` (the evidence did not
+    support a judgement) and ``error`` (the critic itself failed). The old
+    binary shape meant no frames, an unreachable model, or a parser failure
+    all produced a confident pass with a score of 92.
+
+    ``assurance`` states how much the verdict is worth. A model looking at
+    pictures is ``visual_advisory``; only deterministic checks raise it.
+    """
+
+    verdict: str = Field(pattern="^(pass|fail|inconclusive|error)$")
     score: int = Field(ge=0, le=100)
     summary: str = ""
     issues: list[Issue] = Field(default_factory=list)
+    assurance: str = Field(
+        default="visual_advisory",
+        pattern="^(visual_advisory|deterministic_local|isolated_local|remote_attested)$",
+    )
+    # Why a verdict could not be reached. Empty for pass/fail.
+    limitations: list[str] = Field(default_factory=list)
+
+    @property
+    def decisive(self) -> bool:
+        """Whether this verdict may drive a stop condition at all."""
+        return self.verdict in ("pass", "fail")
+
+
+def inconclusive(summary: str, *limitations: str, error: bool = False) -> Critique:
+    """The verdict for "I could not tell", which is not the same as "fine".
+
+    Score 0, never a number that reads like a grade: a 92 next to
+    ``inconclusive`` is exactly how the old fail-open behaviour looked from
+    the outside.
+    """
+    return Critique(
+        verdict="error" if error else "inconclusive",
+        score=0,
+        summary=summary,
+        issues=[],
+        assurance="visual_advisory",
+        limitations=list(limitations) or [summary],
+    )
 
 
 _JSON_RE = re.compile(r"\{.*\}", re.DOTALL)
@@ -216,21 +254,55 @@ def describe_critique(
       the smallest role.
 
     Any failing frame becomes an Issue; the Critique is assembled in code.
+    Every path that cannot reach a judgement returns ``inconclusive`` — no
+    frames, no usable evidence, a describe call that never succeeded, or a
+    judge that could not be reached. None of those is a pass.
     """
-    vision = get_vision("strong", provider=provider, model=model)
     frames = _select_frames(perception)
+    if not frames:
+        return inconclusive(
+            "no frames were extracted, so nothing was looked at",
+            "the recording produced zero frames",
+        )
+
     banned = _banned_terms(pass_criteria)
     exemplars, banned_patterns = _split_exemplars(pass_criteria)
+    deterministic = bool(banned or banned_patterns or exemplars)
+
+    try:
+        vision = get_vision("strong", provider=provider, model=model,
+                            phase="loop.critic")
+    except Exception as exc:  # noqa: BLE001 - any construction failure is inconclusive
+        if not deterministic:
+            return inconclusive(
+                f"no vision model available and the criteria carry no "
+                f"deterministic rule to fall back on ({exc})",
+                "vision model unavailable",
+            )
+        vision = None
 
     evidence_by_frame: list[tuple[Any, str]] = []
+    describe_failures = 0
     for frame in frames:
-        try:
-            description = vision.describe_frames([frame.path])[0]
-        except VisionError:
-            description = ""
+        description = ""
+        if vision is not None:
+            try:
+                description = vision.describe_frames([frame.path])[0]
+            except VisionError:
+                describe_failures += 1
         evidence = " / ".join(part for part in (description, frame.ocr_text) if part)
         if evidence:
             evidence_by_frame.append((frame, evidence))
+
+    if not evidence_by_frame:
+        # Every frame produced neither a description nor OCR text. There is
+        # nothing to judge, and judging nothing used to score 92.
+        return inconclusive(
+            "no usable visual evidence: every frame produced an empty "
+            "description and no OCR text",
+            f"{describe_failures}/{len(frames)} frame descriptions failed",
+            "OCR returned nothing for the sampled frames",
+        )
 
     issues: list[Issue] = []
     for frame, evidence in evidence_by_frame:
@@ -255,15 +327,24 @@ def describe_critique(
     exemplar_satisfied = bool(exemplars) and any(
         p.search(evidence) for _, evidence in evidence_by_frame for p in exemplars
     )
+    judged = False
     if not issues and not exemplar_satisfied:
-        # no rule decided anything — fall back to the per-frame text judge
+        # No rule decided anything — fall back to the per-frame text judge.
+        # A judge that cannot be reached is a judge that did not decide, so a
+        # frame it never saw cannot count toward a pass.
+        judge_failures = 0
         for frame, evidence in evidence_by_frame:
+            if vision is None:
+                judge_failures += 1
+                continue
             try:
                 reply = vision.client.generate(
                     _JUDGE_PROMPT.format(evidence=evidence, criteria=pass_criteria.strip())
                 )
             except VisionError:
-                continue  # judge unavailable; treat the frame as passing
+                judge_failures += 1
+                continue
+            judged = True
             if "fail" in reply.lower():
                 issues.append(
                     Issue(
@@ -274,18 +355,41 @@ def describe_critique(
                         suggested_fix="",
                     )
                 )
+        if not issues and judge_failures:
+            return inconclusive(
+                f"the judge could not be reached for {judge_failures} of "
+                f"{len(evidence_by_frame)} frames, so no pass can be claimed",
+                "fallback judge unavailable",
+            )
+        if not issues and not judged:
+            return inconclusive(
+                "no deterministic rule applied and no frame was judged",
+                "nothing in the criteria could be checked against the evidence",
+            )
+
     if issues:
         return Critique(
             verdict="fail",
             score=35,
             summary=issues[0].description[:160],
             issues=issues,
+            assurance="deterministic_local" if deterministic else "visual_advisory",
+        )
+    if describe_failures and not deterministic:
+        return inconclusive(
+            f"{describe_failures} of {len(frames)} frames could not be described, "
+            "so the pass is not supported by the whole recording",
+            "partial visual evidence",
         )
     return Critique(
         verdict="pass",
         score=92,
         summary="All sampled frames satisfy the pass criteria.",
         issues=[],
+        # A model looking at pictures is advisory. Only a deterministic rule
+        # taken from the criteria — a banned term, an exemplar shape — earns
+        # anything more, and even that is local rather than independent.
+        assurance="deterministic_local" if deterministic else "visual_advisory",
     )
 
 
@@ -302,13 +406,25 @@ def critique_recording(
     degrades to the describe-then-judge critic instead of dying — the vision
     stays real either way.
     """
-    vision = get_vision("strong", provider=provider, model=model)
+    if not perception.frames:
+        return inconclusive(
+            "no frames were extracted, so nothing was looked at",
+            "the recording produced zero frames",
+        )
+    try:
+        vision = get_vision("strong", provider=provider, model=model,
+                            phase="loop.critic")
+    except Exception as exc:  # noqa: BLE001
+        return describe_critique(perception, pass_criteria, provider=provider,
+                                 model=model) if _has_rules(pass_criteria) else \
+            inconclusive(f"no vision model available ({exc})", "vision unavailable")
+
     prompt, frame_paths = _build_prompt(perception, pass_criteria)
     last_error: Exception | None = None
     for _ in range(2):
         try:
             raw = vision.client.generate(prompt, frame_paths)
-            return parse_critique(raw)
+            critique = parse_critique(raw)
         except (ValueError, ValidationError, json.JSONDecodeError) as exc:
             last_error = exc
             prompt = (
@@ -316,11 +432,20 @@ def critique_recording(
                 + f"\n\nYour previous output was invalid ({exc}). "
                 "Return ONLY the JSON object this time."
             )
+        except PolicyError:
+            raise  # a policy refusal is the operator's decision, not a degrade
         except VisionError as exc:
             if exc.code in ("vision.empty", "vision.http_error", "vision.call_failed"):
                 last_error = exc
                 break  # model can't handle the JSON-critic call; degrade below
             raise
+        else:
+            # The model chose the words; it does not get to choose how much
+            # they are worth. A JSON verdict is still one model looking at
+            # pictures, so the assurance is pinned here rather than trusted
+            # from the payload.
+            critique.assurance = "visual_advisory"
+            return critique
     import sys
 
     print(
@@ -329,3 +454,9 @@ def critique_recording(
         file=sys.stderr,
     )
     return describe_critique(perception, pass_criteria, provider=provider, model=model)
+
+
+def _has_rules(pass_criteria: str) -> bool:
+    """Whether the criteria contain anything checkable without a model."""
+    positive, banned = _split_exemplars(pass_criteria)
+    return bool(_banned_terms(pass_criteria) or positive or banned)

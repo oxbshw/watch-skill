@@ -83,7 +83,10 @@ def test_critic_retries_once_on_malformed(monkeypatch: pytest.MonkeyPatch) -> No
     class FakeVision:
         client = FakeClient()
 
-    monkeypatch.setattr(critic_mod, "get_vision", lambda tier, provider=None, model=None: FakeVision())
+    monkeypatch.setattr(
+        critic_mod, "get_vision",
+        lambda tier, provider=None, model=None, phase="vision": FakeVision(),
+    )
     perception = _fake_perception(["aaaa000000000000"], [0.0])
     critique = critic_mod.critique_recording(perception, "page must render")
     assert critique.verdict == "pass"

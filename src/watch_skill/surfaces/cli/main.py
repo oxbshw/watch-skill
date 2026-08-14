@@ -260,6 +260,140 @@ def ask(
 
 
 @app.command()
+def freshness(
+    video: str = typer.Argument(..., help="video_id or the original source URL/path."),
+) -> None:
+    """Say whether the indexed evidence still describes what the source holds.
+
+    Four answers, all of them real: fresh, stale, refresh_required,
+    freshness_unknown. The last one means the check could not be made — a
+    remote source nobody went to the network for, or a row indexed before
+    content digests existed — and it is reported rather than glossed over.
+    """
+    from watch_skill.errors import WatchSkillError
+    from watch_skill.index.store import check_freshness, source_revisions
+
+    try:
+        state = check_freshness(video)
+        state["revisions"] = source_revisions(video)
+    except WatchSkillError as exc:
+        print(json.dumps(exc.to_dict(), indent=2))
+        raise typer.Exit(code=1) from None
+    print(json.dumps(state, indent=2, ensure_ascii=False))
+
+
+@app.command()
+def plan(
+    frames: int = typer.Option(0, "--frames", help="Frames this run would send."),
+    tier: str = typer.Option("strong", "--tier", help="cheap | strong."),
+) -> None:
+    """Print the effective policy and what a run would send, before it runs."""
+    from watch_skill.config import get_settings
+    from watch_skill.policy import execution_plan
+
+    settings = get_settings()
+    provider = (settings.vision_cheap_provider if tier == "cheap"
+                else settings.vision_strong_provider)
+    model = (settings.vision_cheap_model if tier == "cheap"
+             else settings.vision_strong_model)
+    print(json.dumps(
+        execution_plan(phase=f"vision.{tier}", provider=provider, model=model,
+                       frames=frames),
+        indent=2, ensure_ascii=False,
+    ))
+
+
+verify_app = typer.Typer(help="Deterministic verification contracts and evidence.")
+app.add_typer(verify_app, name="verify")
+
+
+@verify_app.command("run")
+def verify_run_cmd(
+    contract_path: Path = typer.Argument(..., help="JSON file holding the contract."),
+    working_dir: Path = typer.Option(Path("."), "--dir", help="Bounded working directory."),
+    in_process: bool = typer.Option(
+        False, "--in-process",
+        help="Run checks here instead of an isolated child process (weaker assurance).",
+    ),
+) -> None:
+    """Freeze a contract if needed, run its checks, write a bound evidence bundle."""
+    from pydantic import ValidationError
+
+    from watch_skill.errors import WatchSkillError
+    from watch_skill.verify import VerificationContract, verify_run
+
+    try:
+        # utf-8-sig: Notepad, PowerShell's Set-Content, and Excel all write a
+        # BOM, and a contract is a file a human authors on whatever they have.
+        contract = VerificationContract.model_validate_json(
+            contract_path.read_text(encoding="utf-8-sig")
+        )
+    except (OSError, ValidationError) as exc:
+        print(json.dumps({
+            "error": "verify.contract_unreadable",
+            "message": f"could not read a contract from {contract_path}",
+            "fix": "check the file is JSON with `contract_id`, `title`, and a "
+                   "`checks` list; `watch-skill verify checks` lists the types",
+            "details": {"reason": str(exc)[:600]},
+        }, indent=2))
+        raise typer.Exit(code=1) from None
+    try:
+        if not contract.frozen:
+            contract = contract.freeze(created_by="cli")
+        bundle, attestation = verify_run(
+            contract, working_dir=working_dir, isolated=not in_process
+        )
+    except WatchSkillError as exc:
+        print(json.dumps(exc.to_dict(), indent=2))
+        raise typer.Exit(code=1) from None
+    print(json.dumps({
+        "run_id": bundle.run_id,
+        "verdict": bundle.verdict,
+        "assurance": bundle.assurance,
+        "limitations": bundle.limitations,
+        "signature_status": attestation.signature_status,
+        "checks": [
+            {"id": r.check_id, "status": r.status.value, "required": r.required,
+             "summary": r.summary}
+            for r in bundle.check_results
+        ],
+    }, indent=2, ensure_ascii=False))
+    raise typer.Exit(code=0 if bundle.verdict == "pass" else 1)
+
+
+@verify_app.command("show")
+def verify_show_cmd(run_id: str = typer.Argument(...)) -> None:
+    """Re-read a recorded run, re-checking its attestation on the way out."""
+    from watch_skill.errors import WatchSkillError
+    from watch_skill.verify import load_run
+
+    try:
+        _, bundle, attestation = load_run(run_id)
+    except WatchSkillError as exc:
+        print(json.dumps(exc.to_dict(), indent=2))
+        raise typer.Exit(code=1) from None
+    payload = bundle.model_dump(mode="json")
+    payload["attestation"] = attestation.model_dump(mode="json")
+    print(json.dumps(payload, indent=2, ensure_ascii=False))
+
+
+@verify_app.command("list")
+def verify_list_cmd() -> None:
+    """Every verification run recorded on this machine, newest first."""
+    from watch_skill.verify import list_runs
+
+    print(json.dumps(list_runs(), indent=2, ensure_ascii=False))
+
+
+@verify_app.command("checks")
+def verify_checks_cmd() -> None:
+    """The check types this build can actually run."""
+    from watch_skill.verify import SUPPORTED_CHECK_TYPES
+
+    print(json.dumps(list(SUPPORTED_CHECK_TYPES), indent=2))
+
+
+@app.command()
 def forget(
     video: str = typer.Argument(..., help="video_id or original source to remove from the index."),
 ) -> None:

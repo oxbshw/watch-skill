@@ -13,17 +13,26 @@ from watch_skill.index.retrieval import (
     hybrid_search,
     search_videos,
 )
-from watch_skill.index.store import get_video, index_watch_result, list_videos, video_id_for
+from watch_skill.index.store import (
+    check_freshness,
+    get_video,
+    index_watch_result,
+    list_videos,
+    source_revisions,
+    video_id_for,
+)
 
 __all__ = [
     "Hit",
     "MomentContext",
     "ask_video",
+    "check_freshness",
     "get_moment",
     "get_video",
     "hybrid_search",
     "index_watch_result",
     "list_videos",
     "search_videos",
+    "source_revisions",
     "video_id_for",
 ]

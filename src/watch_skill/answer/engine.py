@@ -206,8 +206,11 @@ def answer_question(
     use_cache: bool = True,
     verify: bool | None = None,
     k: int = 8,
+    allow_stale: bool = False,
 ) -> Answer:
     """The self-healing ask: never unverified silently, never invented."""
+    from watch_skill.index.store import require_current
+
     settings = get_settings()
     video = get_video(video_id_or_source)
     if video is None:
@@ -216,6 +219,9 @@ def answer_question(
             code="index.video_not_found",
             fix="run watch_video on it first, or list_videos()",
         )
+    # Before anything is read: artifacts may only be presented as evidence
+    # about a source that still holds the content they were derived from.
+    freshness = require_current(video_id_or_source, allow_stale=allow_stale)
 
     if use_cache:
         hit = cache.lookup(video["id"], question)
@@ -335,6 +341,7 @@ def answer_question(
         tokens_saved_estimate=max(0, naive - spent),
         cost_breakdown={k: v for k, v in breakdown.items() if v},
         cost_usd_estimate=round(usd_spent, 6),
+        freshness=freshness.get("state"),
     )
     cache.put(answer)
     cache.record_savings(answer.tokens_saved_estimate)

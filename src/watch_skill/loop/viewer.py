@@ -39,6 +39,10 @@ body.js .iter:hover{opacity:.9;transform:translateY(-2px)}
   letter-spacing:.05em;text-transform:uppercase;font-weight:650}
 .verdict.pass{background:#1e3a1e;color:var(--good)}
 .verdict.fail{background:#4a2320;color:#f0a89c}
+.verdict.unknown{background:#3a3320;color:#e8d08c}
+.limits{margin:8px 0;padding:8px 12px;border-left:3px solid #e8d08c;
+  background:#221f16;font-size:12px}
+.limits ul{margin:4px 0 0 16px;padding:0}
 .issue{display:flex;gap:10px;padding:7px 9px;border-radius:6px;align-items:baseline}
 .issue+.issue{border-top:1px solid var(--line)}
 body.js .issue.seek{cursor:pointer}
@@ -64,6 +68,21 @@ body.js .issue.seek:hover{background:var(--acc-dim)}
 
 def _esc(value: Any) -> str:
     return html.escape(str(value if value is not None else ""), quote=True)
+
+
+def _limitations_html(limitations: list[str]) -> str:
+    """Say what the run could NOT establish, next to what it could.
+
+    A report that shows only findings reads as complete. Naming the gaps is
+    what keeps an inconclusive verdict from looking like a clean one.
+    """
+    if not limitations:
+        return ""
+    items = "".join(f"<li>{_esc(item)}</li>" for item in limitations)
+    return (
+        '<div class="limits"><strong>Not established:</strong>'
+        f"<ul>{items}</ul></div>"
+    )
 
 
 def _issues_html(issues: list[dict]) -> str:
@@ -199,7 +218,10 @@ def render_loop_html(loop_id: str) -> tuple[str, str]:
         critique = record.get("critique") or {}
         verdict = str(critique.get("verdict", "?")).lower()
         score = critique.get("score")
-        cls = "pass" if verdict == "pass" else "fail"
+        # An inconclusive verdict gets its own colour. Painting it as a fail
+        # would claim the critic found something; painting it as a pass is the
+        # bug this whole verdict model exists to stop.
+        cls = {"pass": "pass", "fail": "fail"}.get(verdict, "unknown")
         cards.append(
             f'<button class="iter" data-i="{n}">'
             f'<div class="n">iteration {n}</div>'
@@ -212,7 +234,9 @@ def render_loop_html(loop_id: str) -> tuple[str, str]:
         panes.append(
             f'<div id="pane-{n}" hidden>'
             f'<div class="panel-hd"><span class="verdict {cls}">{_esc(verdict)}</span>'
-            f'<span class="meta">{_esc(critique.get("summary", ""))}</span></div>'
+            f'<span class="meta">{_esc(critique.get("assurance", "visual_advisory"))}'
+            f' &middot; {_esc(critique.get("summary", ""))}</span></div>'
+            f'{_limitations_html(critique.get("limitations") or [])}'
             f'{_delta_html(previous, critique)}'
             f'<div class="scrub">{marks}</div>'
             f'<div class="frames">{frames or "<div class=empty>no frames stored</div>"}</div>'

@@ -39,6 +39,10 @@ class Answer:
     # local_escalation / vision_call (cache shows as cached=True + zero spend).
     cost_breakdown: dict[str, int] = field(default_factory=dict)
     cost_usd_estimate: float = 0.0  # cloud calls only; local work is $0
+    # What was established about the source at answer time: fresh / stale /
+    # refresh_required / freshness_unknown. Never None for a new answer; None
+    # only when reviving an answer cached before revisioning existed.
+    freshness: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         data = asdict(self)

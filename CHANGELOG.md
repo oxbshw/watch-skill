@@ -2,6 +2,110 @@
 
 ## Unreleased
 
+### A video's identity is its bytes, not its path
+
+Overwriting `demo.mp4` used to return yesterday's frames, OCR, and cached
+answers, with nothing in the reply admitting it. The id was
+`sha256(source_string)`, so the same path always meant the same video.
+
+- Identity now separates four things: the **alias** you typed, the **asset**
+  it has pointed at over time, an immutable **revision** keyed by content
+  digest, and the cheap **fingerprint** that decides whether the digest needs
+  recomputing at all. A multi-gigabyte file whose size, mtime, and inode are
+  unchanged is not re-hashed; downloads are hashed once and the digest travels
+  with the cache entry.
+- `ask`, `get_moment`, and the answer engine refuse to answer from a source
+  that has demonstrably changed (`index.stale`), and every answer now carries
+  the freshness it established: `fresh`, `stale`, `refresh_required`, or
+  `freshness_unknown`. The last one is a real answer — a remote source nobody
+  went to the network for is *unknown*, not fresh.
+- Superseded revisions are kept, not overwritten. `watch-skill freshness
+  <video>` shows the chain; asking by `video_id` still reads the exact
+  revision that id names.
+- Identical bytes reached through two different paths are one video.
+- **Every id ever printed still resolves.** A v1 row is *adopted* on re-watch —
+  it keeps its id and gains a real digest — and content-derived ids map onto it
+  through an alias table. Migration `v9` backfills existing rows with a
+  revision marked `digest_source: legacy`, never a digest it did not compute.
+
+### One policy, asked at every boundary
+
+`offline_only` was a cost setting consulted by one function in the answer
+ladder. A configured API key therefore meant indexing-time scene descriptions
+uploaded frames whether or not you had agreed to that.
+
+- `watch_skill.policy` gates source acquisition, frame egress, audio egress,
+  transcript/OCR egress, cloud models, local models, webhooks, telemetry, and
+  verification HTTP. Every boundary asks it; going around it is a security bug.
+- `WATCHSKILL_OFFLINE=1` guarantees **zero** outbound calls, acquisition
+  included. A remote URL returns `acquire.offline_denied` unless it is already
+  cached. Proven by a test that runs the engine with every supported provider
+  key populated and asserts nothing leaves.
+- `offline_only` is now literal and end-to-end: no frame, audio payload, or
+  transcript reaches a cloud provider at any stage.
+- `WATCHSKILL_SCENE_DESCRIPTIONS` is explicit — `off`, `local`, `cloud`, or
+  `auto`. `auto` resolves to local and never upgrades itself to cloud.
+- `WATCHSKILL_PROVIDER_ALLOWLIST` refuses a provider before its key is read.
+- The cost ledger covers indexing descriptions, answers, loop critics, library
+  synthesis, extraction, and verification — not just follow-up questions — and
+  keeps estimates apart from provider-reported usage.
+  `WATCHSKILL_COST_CEILING_RUN_USD` bounds the whole run.
+- `watch-skill plan` (MCP `execution_plan`, `GET /v1/plan`) prints the
+  provider, the payload counts, the exact network actions, and the ceiling
+  **before** a run sends anything.
+
+### The critic fails closed
+
+A recording with zero frames scored 92/100 and passed. So did an unreachable
+model, an empty description, and a judge that could not be called.
+
+- Verdicts are `pass`, `fail`, `inconclusive`, or `error`, and every critique
+  carries an assurance level. `inconclusive` scores 0 — a 92 next to "could
+  not tell" is exactly how the old behaviour looked from outside.
+- No frames, no usable evidence, a failed describe pass, an unavailable model,
+  or an unreachable fallback judge are all `inconclusive`. None of them can
+  stop a loop successfully.
+- A model cannot promote its own verdict: a JSON critique claiming
+  `remote_attested` is pinned back to `visual_advisory`.
+- The monitor reports an inconclusive critique as inconclusive rather than
+  paging someone about a detection that never happened.
+
+### Verification contracts decide; the critic advises
+
+- A `VerificationContract` is written, **frozen**, and digested before the run
+  it judges. Editing it afterwards raises `verify.contract_tampered`; a model
+  may add checks — they land advisory whatever the proposal said — but cannot
+  remove, relax, or mark required an existing one.
+- Nine deterministic check types: `file_exists`, `file_digest`, `json_value`
+  (RFC 6901 pointers), `json_schema`, `sqlite_query`, `http_request`,
+  `command_exit`, `numeric_invariant`, `visual_absent`.
+- `pass` requires every **required** check to pass. A check that fails, times
+  out, or never runs makes the run `inconclusive`. A contract with no required
+  check is `inconclusive` by construction — visual evidence is not verification.
+- Checks run in an isolated child process with an allowlisted environment
+  (provider keys do not reach it), bounded roots, and strict timeouts. That is
+  `isolated_local`. `remote_attested` is defined but **not implemented**, and a
+  contract requiring it fails loudly instead of quietly settling for less.
+- Each run writes a hash-bound evidence bundle and attestation. Editing
+  `evidence.json` makes it stop verifying. Unsigned by default and labelled
+  `unsigned_hash_bound`; Ed25519 signing needs `watch-skill[attest]`. Nothing
+  calls a hash a signature.
+- Commands are argv lists, never strings, so nothing built from OCR, a
+  transcript, or model output can be shell-parsed. SQL is SELECT-only,
+  parameterised, and read-only at the driver. HTTP checks screen resolved
+  addresses, not just hostnames.
+
+### Four new tools, and honest wording
+
+- MCP: `check_source`, `execution_plan`, `verify_contract`, `get_evidence`
+  (27 total). CLI: `watch-skill freshness`, `plan`, `verify run|show|list|checks`.
+  REST: `GET /v1/videos/{video}/freshness`, `GET /v1/plan`, `POST /v1/verify`,
+  `GET /v1/verify/{run_id}`.
+- "Proof" is now reserved for a result whose required deterministic checks
+  passed and whose attestation verifies. Everything else says "evidence",
+  "before/after comparison", or "advisory visual verdict".
+- New: [docs/verification.md](docs/verification.md).
+
 ### The library tells you what it costs
 - `watch-skill stats --disk` reports where the index's space went: the
   database, the stored frames, and every video ranked by what it is

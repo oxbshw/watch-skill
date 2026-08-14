@@ -14,6 +14,7 @@ then connect your client through the [agent matrix](agents/README.md).
 | Configure storage, models, or privacy | [Configuration](configuration.md) |
 | Fix an installation or runtime issue | [Troubleshooting](troubleshooting.md) |
 | Understand cost and routing | [Cost policy](cost.md) |
+| Decide whether an agent run actually succeeded | [Verification](verification.md) |
 | Compare against other options | [Comparison](comparison.md) |
 | Move over from claude-video | [Migration guide](migrate-from-claude-video.md) |
 | Build capture–critique–verify workflows | [THE LOOP](guides/the-loop.md) |

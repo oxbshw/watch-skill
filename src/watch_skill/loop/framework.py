@@ -14,7 +14,6 @@ existing loops (``loop_type`` defaults to "ui").
 from __future__ import annotations
 
 import subprocess
-import time
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
@@ -173,7 +172,14 @@ def _produce_game(state: LoopState, iter_dir: Path) -> CaptureResult:
             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
             cwd=state.extra.get("workdir") or None,
         )
-        time.sleep(float(state.extra.get("warmup_seconds", 3.0)))
+        # wait() rather than sleep()+poll(): it returns the instant the process
+        # dies anywhere in the warmup window instead of sampling only at the
+        # end, so a game that fails to start is caught rather than sometimes
+        # caught depending on how loaded the machine is.
+        try:
+            process.wait(timeout=float(state.extra.get("warmup_seconds", 3.0)))
+        except subprocess.TimeoutExpired:
+            pass  # still running after warmup: that is what we want
         if process.poll() is not None:
             raise LoopError(
                 f"game process exited immediately (code {process.returncode})",

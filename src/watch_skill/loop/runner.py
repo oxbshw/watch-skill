@@ -127,14 +127,33 @@ def _run_iteration(state: LoopState, critic_override: Any = None) -> dict[str, A
 
 
 def _update_status(state: LoopState) -> None:
+    """Decide whether the loop stops, and on what.
+
+    Only a decisive verdict can stop it successfully. ``inconclusive`` and
+    ``error`` mean the critic could not tell — the loop says so and keeps the
+    iteration for inspection rather than declaring victory over evidence it
+    never had.
+    """
     latest = state.iterations[-1]["critique"]
-    if latest["verdict"] == "pass":
+    verdict = latest.get("verdict")
+    if verdict == "pass":
         state.status = "passed"
+        return
+    if verdict in ("inconclusive", "error"):
+        state.status = (
+            "inconclusive" if len(state.iterations) >= state.max_iterations
+            else "running"
+        )
         return
     if len(state.iterations) >= state.max_iterations:
         state.status = "max_iterations"
         return
-    scores = [it["critique"]["score"] for it in state.iterations]
+    # A score from a non-decisive iteration is not a measurement, so it cannot
+    # count toward "we are not making progress".
+    scores = [
+        it["critique"]["score"] for it in state.iterations
+        if it["critique"].get("verdict") in ("pass", "fail")
+    ]
     if len(scores) >= _NO_PROGRESS_WINDOW + 1:
         recent, baseline = scores[-_NO_PROGRESS_WINDOW:], scores[-_NO_PROGRESS_WINDOW - 1]
         if all(score <= baseline for score in recent):
