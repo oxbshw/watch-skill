@@ -5,6 +5,7 @@ functional gap). Model size auto-selects from available RAM/VRAM.
 """
 from __future__ import annotations
 
+import json
 import shutil
 import subprocess
 import sys
@@ -73,17 +74,89 @@ def pick_model_size() -> str:
     return "tiny"
 
 
-def transcribe_local(
-    audio_path: Path,
-    model_size: str = "auto",
-    language: str | None = None,
-    word_timestamps: bool = False,
-) -> Transcript:
-    """Transcribe an audio file fully offline with faster-whisper.
+def _transcript_from_payload(payload: dict) -> Transcript:
+    """Restore the local child process result without changing its evidence."""
+    return Transcript(
+        segments=[
+            Segment(
+                start=float(segment["start"]),
+                end=float(segment["end"]),
+                text=str(segment["text"]),
+                words=[
+                    Word(start=float(word["start"]), end=float(word["end"]), text=str(word["text"]))
+                    for word in segment.get("words", [])
+                ],
+            )
+            for segment in payload["segments"]
+        ],
+        source=str(payload["source"]),
+    )
 
-    ``word_timestamps`` asks the model to align each word. It costs extra
-    decoding time, so it is off unless something needs word-level citation.
-    """
+
+def _transcribe_in_subprocess(
+    audio_path: Path,
+    size: str,
+    language: str | None,
+    word_timestamps: bool,
+    device: str,
+    compute: str,
+) -> Transcript:
+    """Keep PyAV out of the process that may already have loaded OpenCV."""
+    payload = {
+        "audio_path": str(audio_path),
+        "size": size,
+        "language": language,
+        "word_timestamps": word_timestamps,
+        "device": device,
+        "compute": compute,
+    }
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            "from watch_skill.transcribe.local import _child_main; raise SystemExit(_child_main())",
+        ],
+        input=json.dumps(payload),
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if result.returncode != 0:
+        try:
+            error = json.loads(result.stderr)
+        except json.JSONDecodeError:
+            error = {
+                "error": "transcribe.local_failed",
+                "message": f"local whisper process failed: {result.stderr.strip() or result.returncode}",
+                "fix": "try a smaller model (WATCHSKILL_WHISPER_MODEL=tiny) or enable cloud STT",
+                "details": {"model": size, "device": device},
+            }
+        raise TranscriptionError(
+            error["message"],
+            code=error["error"],
+            fix=error["fix"],
+            details=error["details"],
+        )
+    try:
+        return _transcript_from_payload(json.loads(result.stdout))
+    except (json.JSONDecodeError, KeyError, TypeError, ValueError) as exc:
+        raise TranscriptionError(
+            "local whisper process returned an invalid transcript",
+            code="transcribe.local_failed",
+            fix="try again; if it persists, use cloud STT",
+            details={"model": size, "device": device},
+        ) from exc
+
+
+def _transcribe_in_process(
+    audio_path: Path,
+    size: str,
+    language: str | None,
+    word_timestamps: bool,
+    device: str,
+    compute: str,
+) -> Transcript:
+    """Run faster-whisper without the macOS OpenCV/PyAV isolation boundary."""
     try:
         from faster_whisper import WhisperModel  # noqa: PLC0415
     except ImportError as exc:
@@ -93,13 +166,6 @@ def transcribe_local(
             fix='install the whisper extra: `uv sync --extra whisper` or `pip install "watch-skill[whisper]"`',
         ) from exc
 
-    size = pick_model_size() if model_size == "auto" else model_size
-    device = "cuda" if has_cuda_gpu() else "cpu"
-    compute = "float16" if device == "cuda" else "int8"
-    print(
-        f"[watch-skill] local whisper: model={size} device={device} ({compute})…",
-        file=sys.stderr,
-    )
     try:
         model = WhisperModel(size, device=device, compute_type=compute)
         raw_segments, _info = model.transcribe(
@@ -133,3 +199,48 @@ def transcribe_local(
             details={"model": size, "device": device},
         ) from exc
     return Transcript(segments=segments, source=f"whisper-local ({size})")
+
+
+def transcribe_local(
+    audio_path: Path,
+    model_size: str = "auto",
+    language: str | None = None,
+    word_timestamps: bool = False,
+) -> Transcript:
+    """Transcribe an audio file fully offline with faster-whisper.
+
+    ``word_timestamps`` asks the model to align each word. It costs extra
+    decoding time, so it is off unless something needs word-level citation.
+    """
+    size = pick_model_size() if model_size == "auto" else model_size
+    device = "cuda" if has_cuda_gpu() else "cpu"
+    compute = "float16" if device == "cuda" else "int8"
+    print(
+        f"[watch-skill] local whisper: model={size} device={device} ({compute})…",
+        file=sys.stderr,
+    )
+    if sys.platform == "darwin":
+        return _transcribe_in_subprocess(audio_path, size, language, word_timestamps, device, compute)
+    return _transcribe_in_process(audio_path, size, language, word_timestamps, device, compute)
+
+
+def _child_main() -> int:
+    """Run local Whisper from a clean interpreter and write its JSON result."""
+    try:
+        payload = json.load(sys.stdin)
+        transcript = _transcribe_in_process(
+            Path(payload["audio_path"]),
+            str(payload["size"]),
+            payload.get("language"),
+            bool(payload["word_timestamps"]),
+            str(payload["device"]),
+            str(payload["compute"]),
+        )
+    except TranscriptionError as exc:
+        json.dump(exc.to_dict(), sys.stderr)
+        return 1
+    json.dump(
+        {"segments": [segment.to_dict() for segment in transcript.segments], "source": transcript.source},
+        sys.stdout,
+    )
+    return 0

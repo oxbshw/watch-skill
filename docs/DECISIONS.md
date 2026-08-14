@@ -49,9 +49,24 @@ swaps. Newest entries at the bottom of each section.
 - **Embeddings: fastembed (ONNX) instead of sentence-transformers.** The
   plan called for sentence-transformers, but it drags in torch (~2 GB
   installed); this machine has <7 GB free disk total across drives, so the
-  install would fail outright. fastembed serves the same MiniLM-class models
-  (`sentence-transformers/all-MiniLM-L6-v2`) through onnxruntime, which the
-  OCR stack already installs. Same vectors, ~50 MB instead of ~2 GB.
+   install would fail outright. fastembed serves the same MiniLM-class models
+   (`sentence-transformers/all-MiniLM-L6-v2`) through onnxruntime, which the
+   OCR stack already installs. Same vectors, ~50 MB instead of ~2 GB.
+
+## 2026-08-14 — macOS AVFoundation isolation
+
+- **macOS scene detection uses ffmpeg, not PySceneDetect.** PySceneDetect's
+  package initializer eagerly loads both its OpenCV and PyAV backends. Their
+  bundled AVFoundation libraries define the same Objective-C classes, producing
+  duplicate-class warnings and risking capture instability. On macOS, the
+  existing ffmpeg dependency detects cuts with its `scene` score, preserving
+  scene-aware frame selection without importing PySceneDetect. Other platforms
+  retain PySceneDetect's content detector.
+- **Local Whisper runs in a clean child interpreter on macOS.** Faster Whisper
+  loads PyAV, while OCR loads OpenCV. Keeping the transcription rung outside
+  the perception process prevents either native stack from contaminating the
+  other. The child returns only structured transcript data over standard I/O;
+  the video and extracted audio remain local.
 
 ## Reference-inherited defaults (from a code read of claude-video 0.2.0)
 

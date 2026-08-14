@@ -1,6 +1,8 @@
 """VTT parsing, rolling dedupe, range filtering, chunk planning with overlap."""
 from __future__ import annotations
 
+import json
+import sys
 from pathlib import Path
 
 from watch_skill.transcribe.audio import CHUNK_OVERLAP_SECONDS, plan_chunks
@@ -108,3 +110,46 @@ def test_transcript_offset_shifts_timestamps() -> None:
     assert shifted.segments[1].end == 125.0
     assert t.segments[0].start == 0.0  # original untouched
     assert t.offset(0.0) is t
+
+
+def test_local_whisper_uses_a_clean_process_on_macos(tmp_path, monkeypatch) -> None:
+    """OpenCV and PyAV cannot both load AVFoundation in the parent process."""
+    from watch_skill.transcribe import local
+
+    calls: list[tuple[list[str], dict]] = []
+
+    class Result:
+        returncode = 0
+        stdout = json.dumps({
+            "segments": [{
+                "start": 0.0, "end": 1.0, "text": "hello",
+                "words": [{"start": 0.0, "end": 1.0, "text": "hello"}],
+            }],
+            "source": "whisper-local (tiny)",
+        })
+        stderr = ""
+
+    def run(command: list[str], **kwargs):
+        calls.append((command, kwargs))
+        return Result()
+
+    monkeypatch.setattr(local.sys, "platform", "darwin")
+    monkeypatch.setattr(local, "has_cuda_gpu", lambda: False)
+    monkeypatch.setattr(local.subprocess, "run", run)
+
+    transcript = local.transcribe_local(tmp_path / "audio.mp3", model_size="tiny", word_timestamps=True)
+
+    assert calls[0][0] == [
+        sys.executable,
+        "-c",
+        "from watch_skill.transcribe.local import _child_main; raise SystemExit(_child_main())",
+    ]
+    assert json.loads(calls[0][1]["input"]) == {
+        "audio_path": str(tmp_path / "audio.mp3"),
+        "size": "tiny",
+        "language": None,
+        "word_timestamps": True,
+        "device": "cpu",
+        "compute": "int8",
+    }
+    assert transcript.segments[0].words[0].text == "hello"
