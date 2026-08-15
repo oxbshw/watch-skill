@@ -2,6 +2,84 @@
 
 ## Unreleased
 
+### The session can hear
+
+`AudioChunk` was a contract nothing produced. Live audio is now a real path:
+its own ffmpeg process, normalized to mono 16 kHz PCM at the boundary,
+assembled into overlapping utterances, transcribed, and published as citable
+speech events.
+
+- **Audio queues block where video queues drop.** A frame from four seconds
+  ago has been superseded; a lost half-second of speech is a word nobody will
+  say again. Anything genuinely missed becomes a `capture_gap` event, because
+  a transcript with an unmarked hole invites the reader to conclude nobody
+  spoke — a different claim from "we were not listening".
+- **Utterances overlap by half a second.** Adjacent blocks transcribed
+  independently reliably lose the word on the seam.
+- Silence is gated by mean amplitude, not a VAD model: the check runs on every
+  utterance, and the expensive thing it avoids is exactly the model we would
+  have to load to make the decision.
+- Two backends, kept distinct rather than blurred. `faster-whisper` does real
+  recognition. `deterministic-fixture` tests the *transport* on machines
+  without the model — it names itself in every event it produces, and its
+  tests say plainly that they prove nothing about accuracy. Recognition has
+  its own test, gated on the model being installed.
+- `detectors.asr` always says which silence this is: no audio track, disabled
+  for the session, no model installed, or a failure mid-run.
+
+### Models load once, and a slow one no longer blinds the session
+
+Adding ASR to a process that already loads OCR and embeddings is how the
+previous end-to-end run hit `bad allocation`.
+
+- **Loading is single-flight.** A plain dict checked before a slow constructor
+  is a race, not a cache — every thread misses, every thread builds.
+  `_get_engine` had exactly that shape.
+- A failed model degrades only its own detector, retries on a cooldown rather
+  than at the frame rate, and is announced once instead of per frame.
+- Idle models are released, which is what the earlier run needed: a parent
+  holding weights it had finished with while a child was refused memory.
+
+### One clock, so audio and video can be compared
+
+Audio and video come from independent ffmpeg processes, each counting its own
+bytes. Their media clocks drift and neither knows the other exists.
+
+- Drift is **measured**, not assumed. A stream that produced nothing gives
+  `null`, because an absent stream is not a synchronisation and reporting zero
+  would claim a measurement nobody made.
+- A timeline that jumps backwards has **reset**, not drifted — a reconnect is
+  a separate discontinuity, and unlike a forward gap it is not lost time.
+- Timestamps are never rewritten. A media timestamp is what the source said;
+  correcting it silently would make a citation point at something the viewer
+  will not find there.
+- `aligned_evidence` answers "what was on screen when they said that" by
+  deterministic timestamp overlap, so the ranking can be reproduced by hand.
+
+### Correlated events, with guesses labelled as guesses
+
+Three parallel event logs are not understanding. Fusion joins them —
+deterministically, by timestamp overlap and shared entities. No model runs.
+
+The rule the layer exists to enforce: **an observation is what was seen, an
+inference is what it might mean, and they never share a sentence.** A fused
+event states its observation using only what a stream recorded, and carries
+hypotheses in a separate list, each scored and attributed to the rule that
+drew it. "The coupon calculation failed" is never quotable as though a camera
+had recorded it.
+
+Writing the tests found a real gap: `[object Object]` was folded into a
+word-boundary alternation, and `` cannot anchor a bracket — so the most
+common way a broken value reaches a screen never matched.
+
+Entity tracks decay with staleness, because something last seen thirty seconds
+ago is not evidence about now. Disappearances are marked absent rather than
+deleted, so "did the total vanish?" stays answerable.
+
+New surfaces: `watch-skill live aligned|timeline`, `aligned_evidence` and
+`fused_timeline` MCP tools, `GET /v1/live/{id}/aligned` and `/fused`. 36 MCP
+tools.
+
 ### Watching something while it is still happening
 
 Watch Skill could watch a video. It could not watch an ongoing one and say
