@@ -25,8 +25,9 @@ from watch_skill.answer.ladder import (
     zoom_crops_reocr,
 )
 from watch_skill.answer.localize import (
+    LanguageGuess,
     answer_language_directive,
-    detect_lang,
+    detect_language,
     is_rtl,
     isolate,
     messages,
@@ -137,7 +138,7 @@ def _try_model_verify(
     frames: list[str],
     lessons: str,
     tier: str,
-    lang: str = "en",
+    lang: str | LanguageGuess = "en",
 ) -> tuple[bool, float, str] | None:
     """One structured verify/answer call; None when no model is reachable.
 
@@ -231,7 +232,15 @@ def answer_question(
             cache.record_spend({"cache": 0}, 0.0)  # served from cache: count it, spend nothing
             return hit
 
-    lang = detect_lang(question)
+    # Two values, deliberately. `guess` carries whether detection resolved and
+    # goes to the directive, so an unresolved question tells the model to
+    # mirror the user's wording instead of being silently rendered as English.
+    # `lang` is the code the message tables and RTL check need, and for an
+    # unresolved guess that is English — our own fixed strings have to be in
+    # *some* language, and defaulting those is not the same as instructing the
+    # model to answer in one.
+    guess = detect_language(question)
+    lang = guess.lang if guess.resolved else "en"
     lessons = _lesson_lines(question, video)
     profile = _profile_for(video)
     target = min(0.95, settings.answer_confidence_target + profile.get("confidence_target_bump", 0.0))
@@ -286,7 +295,7 @@ def answer_question(
             if spent + call_cost > budget:
                 budget_stopped = True
                 break
-            result = _try_model_verify(question, evidence, frames, lessons, tier, lang)
+            result = _try_model_verify(question, evidence, frames, lessons, tier, guess)
             if result is None:
                 break  # no provider reachable — degrade gracefully, model-free
             spent += call_cost

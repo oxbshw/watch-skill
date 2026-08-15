@@ -207,18 +207,35 @@ def isolate(text: str) -> str:
     return f"{LRI}{text}{PDI}"
 
 
-def answer_language_directive(lang: str | LanguageGuess) -> str:
-    """A one-line instruction telling the vision model which language to write in.
+def answer_language_directive(
+    lang: str | LanguageGuess, fallback: str | None = None
+) -> str:
+    """A one-line instruction telling the model which language to write in.
 
-    Accepts an unresolved :class:`LanguageGuess` and writes English rather
-    than naming the coin-toss winner: instructing a model to answer in
-    Portuguese because a detector was 51% sure is worse than defaulting, since
-    the user gets a confidently wrong language instead of a familiar one.
+    When the guess is **unresolved**, this does not name a language. Naming
+    English would be as wrong as naming the coin-toss winner: an Arabic
+    question whose script we somehow failed to classify would be answered in
+    English, which is the one outcome the whole module exists to prevent.
+
+    Instead the model is told to mirror the user's own wording. It can see the
+    question; it does not need us to guess at what we could not classify.
+
+    ``fallback`` is honoured only when a caller deliberately configured one —
+    a default nobody chose is not a preference.
     """
     if isinstance(lang, LanguageGuess):
-        code = lang.lang if lang.resolved else "en"
+        if not lang.resolved:
+            if fallback:
+                name = _LANG_NAMES.get(fallback, fallback)
+                return (f"Write all human-readable text in {name}, the "
+                        "configured default language.")
+            return (
+                "Write all human-readable text in the same language the user "
+                "wrote their request in. Do not translate their words."
+            )
+        code = lang.lang
     else:
-        code = lang or "en"
+        code = lang or fallback or "en"
     name = _LANG_NAMES.get(code, "English")
     return f"Write all human-readable text in {name}, the language of the request."
 

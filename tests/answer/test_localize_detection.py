@@ -182,12 +182,33 @@ def test_the_directive_names_a_resolved_language() -> None:
     assert "Portuguese" in directive
 
 
-def test_the_directive_defaults_to_english_when_unresolved() -> None:
-    """A model told to answer in Portuguese on a 51% guess produces a
-    confidently wrong language; defaulting produces a familiar one."""
+def test_an_unresolved_guess_names_no_language_at_all() -> None:
+    """Not English either.
+
+    Naming English would be as wrong as naming the coin-toss winner: an
+    Arabic question we somehow failed to classify would come back in English,
+    which is the one outcome this module exists to prevent. The model can see
+    the question; it is told to mirror it.
+    """
     guess = detect_language("zzzz qqqq")
     assert guess.resolved is False
-    assert "English" in answer_language_directive(guess)
+    directive = answer_language_directive(guess)
+    assert "English" not in directive
+    assert "same language the user wrote" in directive
+    assert "Do not translate" in directive
+
+
+def test_an_explicitly_configured_fallback_is_honoured() -> None:
+    """A default nobody chose is not a preference; one they set is."""
+    guess = detect_language("zzzz qqqq")
+    directive = answer_language_directive(guess, fallback="es")
+    assert "Spanish" in directive
+    assert "configured default" in directive
+
+
+def test_no_fallback_is_applied_to_a_resolved_guess() -> None:
+    guess = detect_language("Que montre l'écran de la vidéo ?")
+    assert "French" in answer_language_directive(guess, fallback="es")
 
 
 def test_the_directive_still_accepts_a_bare_code() -> None:
@@ -217,3 +238,67 @@ def test_a_shared_word_is_worth_less_than_a_distinctive_one() -> None:
 def test_every_language_has_stopwords() -> None:
     for lang, words in _LATIN_STOP.items():
         assert words, f"{lang} has no stopwords"
+
+
+# --- the preflight corrections -------------------------------------------------
+
+
+@pytest.mark.parametrize("text", [
+    "ماذا يظهر على الشاشة؟",
+    "هل يتفقون؟",
+    "متى يظهر الخطأ في الفيديو؟",
+])
+def test_arabic_is_never_answered_in_english(text: str) -> None:
+    """Script is unambiguous, so this must resolve — and stay Arabic."""
+    guess = detect_language(text)
+    assert guess.resolved is True
+    assert guess.lang == "ar"
+    assert "Arabic" in answer_language_directive(guess)
+
+
+@pytest.mark.parametrize("text", [
+    "ᚦᚨᛏ ᛁᛊ ᚱᚢᚾᛁᚲ",          # Runic — no script range covers it
+    "🙂 🙃 🎬 📺",              # emoji only
+    "⠓⠑⠇⠇⠕",                  # Braille
+])
+def test_an_unsupported_script_is_unresolved_not_english(text: str) -> None:
+    """We cannot classify it, so we must not assert a language for it."""
+    guess = detect_language(text)
+    assert guess.resolved is False
+    assert "English" not in answer_language_directive(guess)
+
+
+def test_a_mixed_language_question_does_not_get_a_confident_answer() -> None:
+    """Two languages in one sentence is exactly when a forced pick misleads."""
+    guess = detect_language("O que the screen muestra?")
+    if guess.resolved:
+        # If the evidence really is lopsided, fine — but it must be the
+        # language with the distinctive words, not dictionary order.
+        assert guess.confidence > 0.0
+    else:
+        assert "English" not in answer_language_directive(guess)
+
+
+def test_a_script_question_wins_over_latin_stopwords() -> None:
+    """Mixed script and Latin: the script is the stronger signal."""
+    guess = detect_language("the video: ماذا يظهر على الشاشة؟")
+    assert guess.lang == "ar"
+
+
+@pytest.mark.parametrize("text", ["una", "video", "no", "por"])
+def test_low_evidence_latin_text_is_unresolved(text: str) -> None:
+    """One shared word is not evidence for any of the languages sharing it."""
+    guess = detect_language(text)
+    assert guess.resolved is False
+    assert "English" not in answer_language_directive(guess)
+
+
+def test_the_question_is_never_rewritten_before_detection() -> None:
+    """Detection reads the user's words as typed.
+
+    Normalising or translating first would destroy the very signal the
+    detector needs, and would change what the model is asked to mirror.
+    """
+    original = "  ¿Qué   muestra la PANTALLA?  "
+    assert detect_language(original).lang == "es"
+    assert original == "  ¿Qué   muestra la PANTALLA?  ", "input was mutated"
