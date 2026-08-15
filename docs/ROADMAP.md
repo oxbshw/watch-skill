@@ -20,11 +20,13 @@ MCP tool names stable, forward migrations only.
 Stated plainly rather than left implicit. Each of these is a design that is
 not built yet, not a feature that half-works.
 
-- **Live sessions have no audio.** `AudioChunk` is a defined contract and
-  nothing produces one. There is no audio capture stage, no streaming
-  transcription, and no `speech` events in a live session; `audio_chunks` and
-  `audio_gap_seconds` are always zero. Recorded watching transcribes normally
-  — this gap is live-only. See [live.md](live.md).
+- **Live speech recognition needs the optional model.** Audio capture,
+  chunking, timestamping and event publication are real and tested on every
+  run. Recognition itself uses faster-whisper, which is an optional extra;
+  without it a session reports `asr: degraded, model_unavailable` and
+  continues visually. The recognition-quality test is gated on the model
+  being installed and is **not** run in CI — the always-on tests use a fixture
+  backend that proves the transport and nothing about accuracy.
 - **Live triggers and the Observer Loop are not built.** No deterministic or
   semantic trigger evaluation exists, so nothing watches a live session for a
   declared condition.
