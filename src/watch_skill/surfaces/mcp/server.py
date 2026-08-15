@@ -852,6 +852,26 @@ def aligned_evidence(session_id: str, media_ts: float, window: float = 2.0) -> s
 
 
 @mcp.tool
+def fused_timeline(session_id: str, window: float = 2.0) -> str:
+    """A correlated account of a live session: what was seen, read and heard,
+    joined into single happenings rather than three parallel logs.
+
+    Each entry separates `observation` (what a stream actually recorded) from
+    `inferences` (what it might mean, individually scored and attributed to
+    the rule that drew them). They never share a sentence, so a hypothesis is
+    never quotable as though a camera had recorded it.
+
+    Correlation is deterministic timestamp overlap — no model runs."""
+    from watch_skill.live.fusion import fuse_session
+
+    try:
+        return json.dumps(fuse_session(session_id, window=window),
+                          ensure_ascii=False, indent=2)
+    except WatchSkillError as exc:
+        return _error_payload(exc)
+
+
+@mcp.tool
 def get_live_status(session_id: str = "") -> str:
     """How a live session is doing: state, frames captured vs analyzed,
     dropped frames, queue depths, buffer size. Omit session_id to list every

@@ -411,6 +411,23 @@ def live_aligned_cmd(
     print(json.dumps(payload, indent=2, ensure_ascii=False))
 
 
+@live_app.command("timeline")
+def live_timeline_cmd(
+    session_id: str = typer.Argument(...),
+    window: float = typer.Option(2.0, "--window"),
+) -> None:
+    """A correlated account of the session: observation and inference, apart."""
+    from watch_skill.errors import WatchSkillError
+    from watch_skill.live.fusion import fuse_session
+
+    try:
+        payload = fuse_session(session_id, window=window)
+    except WatchSkillError as exc:
+        print(json.dumps(exc.to_dict(), indent=2))
+        raise typer.Exit(code=1) from None
+    print(json.dumps(payload, indent=2, ensure_ascii=False))
+
+
 @live_app.command("status")
 def live_status_cmd(session_id: str = typer.Argument("")) -> None:
     """One session's health, or every live session on this machine."""

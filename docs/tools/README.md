@@ -1,6 +1,6 @@
 # MCP tool reference
 
-All 35 tools exposed by the `watch-skill` MCP server
+All 36 tools exposed by the `watch-skill` MCP server
 (`src/watch_skill/surfaces/mcp/server.py`), with parameters, defaults, and
 what comes back. Every tool has a REST twin — the mapping table is at the
 bottom.
@@ -383,6 +383,36 @@ path.
 
 Answers cite the media timestamps they came from. When nothing observed
 supports an answer, it says so rather than inventing one.
+
+### `fused_timeline`
+
+A correlated account of a live session — what was seen, read and heard joined
+into single happenings rather than three parallel logs.
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `session_id` | str | required | |
+| `window` | float | `2.0` | Seconds within which events count as one happening |
+
+Every entry keeps two fields strictly apart:
+
+```json
+{"sequence": 3, "type": "multimodal",
+ "start_media_ts": 7.0, "end_media_ts": 7.2,
+ "observation": "total changed from '$125.00' to 'NaN'; someone said \"the total is wrong\"",
+ "inferences": [{"text": "total became a non-value, which usually means the calculation or fetch behind it failed",
+                 "confidence": 0.74, "basis": "rule:broken_value"}],
+ "provisional": false}
+```
+
+`observation` is only what a stream actually recorded. `inferences` are what
+it might mean — individually scored, each attributed to the rule that drew it.
+They never share a sentence, so a hypothesis is never quotable as though a
+camera had recorded it.
+
+Correlation is deterministic timestamp overlap; no model runs. Also reports
+`active_entities` (confidence decayed by staleness) and `vanished_entities`,
+so "did X disappear?" stays answerable after the fact.
 
 ### `aligned_evidence`
 

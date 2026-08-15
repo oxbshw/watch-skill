@@ -289,6 +289,16 @@ def create_app() -> FastAPI:
         except WatchSkillError as exc:
             raise _http_error(exc) from exc
 
+    @app.get("/v1/live/{session_id}/fused", tags=["live"])
+    def live_fused(session_id: str, window: float = 2.0) -> dict[str, Any]:
+        """Correlated multimodal timeline; observation and inference kept apart."""
+        from watch_skill.live.fusion import fuse_session
+
+        try:
+            return fuse_session(session_id, window=window)
+        except WatchSkillError as exc:
+            raise _http_error(exc) from exc
+
     @app.post("/v1/live/{session_id}/ask", tags=["live"])
     def live_ask(session_id: str, body: dict[str, Any]) -> dict[str, Any]:
         from watch_skill.live import ask_live

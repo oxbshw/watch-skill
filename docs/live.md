@@ -179,6 +179,53 @@ question was refused the allocation.
 A failed model degrades only itself, is retried on a cooldown rather than at
 the frame rate, and is announced once rather than on every frame.
 
+## Fusing what was seen, read and heard
+
+Three event streams are not understanding. A scene change at 7.0 s and the
+words "the total is wrong" at 7.2 s are almost certainly the same happening,
+and an agent that cannot join them has to guess.
+
+```bash
+watch-skill live timeline <session_id> --window 2
+```
+
+Also `fused_timeline` over MCP and `GET /v1/live/{id}/fused`.
+
+Joining is **deterministic** — timestamp overlap, shared entities, declared
+state transitions. No model runs. Correlation an operator cannot reproduce by
+hand is correlation they cannot check, and this layer decides what gets cited.
+
+### Observation and inference never share a sentence
+
+This is the rule the whole layer exists to enforce:
+
+```json
+{"observation": "total changed from '$125.00' to 'NaN'; someone said \"the total is wrong\"",
+ "inferences": [{"text": "total became a non-value, which usually means the calculation or fetch behind it failed",
+                 "confidence": 0.74, "basis": "rule:broken_value"}]}
+```
+
+`observation` contains only what a stream actually recorded. `inferences` are
+what it might mean, each scored and attributed to the rule that produced it —
+so a wrong conclusion is traceable, and "the coupon calculation failed" is
+never quotable as though a camera had recorded it.
+
+The rules are pattern matches, not judgements: a value becoming `NaN` /
+`undefined` / `[object Object]`, a number vanishing, an error word or HTTP
+status appearing, speech sharing vocabulary with what is on screen. Each is
+cheap, explainable, and individually disableable.
+
+### Entities
+
+Entity tracks record when something appeared, when it was last seen, and
+whether it is still present. Confidence **decays** with staleness — an entity
+last seen thirty seconds ago is not evidence about now, and letting its
+confidence stay at 1.0 would let stale state answer a question about the
+present.
+
+Disappearances are marked absent rather than deleted, so "did the checkout
+total vanish?" stays answerable after the fact.
+
 ## The rolling buffer
 
 A session retains a configurable recent window (`--buffer`, default 120 s).
