@@ -112,15 +112,16 @@ class RunningSession:
         capture.start()
         self._threads.append(capture)
 
-        # Warm slow models off the critical path. The first OCR or ASR call
-        # loads weights and can take tens of seconds; doing it here means
+        if spec.audio:
+            self._start_audio()
+
+        # Warm slow models off the critical path, AFTER audio exists so the
+        # warm step can see which ASR backend to load. The first OCR or ASR
+        # call loads weights and can take tens of seconds; doing it here means
         # those stages are merely behind for a while instead of the session
         # appearing to have no such detector at all.
         threading.Thread(target=self._warm_models, name="ws-live-warm",
                          daemon=True).start()
-
-        if spec.audio:
-            self._start_audio()
 
         db.update_session(self.session.session_id, state=LiveState.RUNNING)
         self.session.state = LiveState.RUNNING
@@ -301,6 +302,16 @@ class RunningSession:
 
         registry = register_builtin_models()
         wanted = ["ocr"] if get_settings().ocr_enabled else []
+        # Warm ASR too, and separately. Its weights load on first use, which
+        # for a short source means the first utterance is still waiting for
+        # the model when the stream ends — the session would then produce no
+        # speech at all, for a reason that looks like silence.
+        if self._audio is not None and self._audio.backend is not None:
+            backend = self._audio.backend
+            if hasattr(backend, "_load") and "asr" not in registry.registered():
+                registry.register("asr", backend._load, estimated_mb=500)
+            if "asr" in registry.registered():
+                wanted.append("asr")
         registry.warm(*wanted)
 
     def detector_status(self) -> dict[str, Any]:

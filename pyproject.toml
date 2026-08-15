@@ -104,6 +104,11 @@ addopts = "-q"
 timeout = 300
 markers = [
     "network: hits the real network (excluded from CI's merge gate)",
+    # Runs a real model rather than a deterministic stand-in. Off by default:
+    # the weights are large, the runtime is slow, and a suite that silently
+    # downloads half a gigabyte is not a suite anyone can trust to be offline.
+    # Opt in with WATCHSKILL_TEST_REAL_ASR=1 / WATCHSKILL_TEST_REAL_VLM=1.
+    "real_model: exercises a real local model (opt-in; see docs/testing.md)",
 ]
 
 [tool.ruff]

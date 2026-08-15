@@ -134,8 +134,14 @@ decision.
 The fixture backend exists to test the *transport* — chunking, timestamps,
 event shape, finalisation — on machines without the model. It recognises
 nothing, it names itself in every event it produces, and a test using it
-proves nothing about recognition quality. Real recognition has its own test,
-gated on the model actually being installed.
+proves nothing about recognition quality.
+
+Real recognition has its own opt-in gate against a locally synthesized speech
+fixture with a known transcript, measuring word error rate with its
+normalization stated. See [testing.md](testing.md). Measured on this machine
+with `faster-whisper tiny (int8, cpu)`: **WER 0.0 over 20 reference words,
+0.27x realtime** — on clean synthetic speech, which is an easier problem than
+a real recording and is reported as such.
 
 Whisper is wrapped in a streaming adapter over bounded spans. It is not a
 streaming model, and whole-file transcription relabelled as real-time would be
