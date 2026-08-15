@@ -254,3 +254,21 @@ def sweep_if_needed(session_id: str, keep_seconds: float, now_media_ts: float,
         return last_sweep
     evict(session_id, keep_seconds, now_media_ts)
     return now
+
+
+def newest_frame_media_ts(session_id: str) -> float | None:
+    """The media timestamp of the most recent buffered frame, or None.
+
+    Used to tell whether the media after an event has actually been captured
+    yet — a clip cannot contain frames the source has not produced.
+    """
+    conn = connect()
+    try:
+        row = conn.execute(
+            "SELECT MAX(media_ts) AS newest FROM live_segments "
+            "WHERE session_id = ? AND kind = 'frame' AND expired = 0",
+            (session_id,),
+        ).fetchone()
+        return None if row is None or row["newest"] is None else float(row["newest"])
+    finally:
+        conn.close()
