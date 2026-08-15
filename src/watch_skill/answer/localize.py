@@ -48,27 +48,106 @@ _SCRIPTS: tuple[tuple[str, tuple[tuple[int, int], ...]], ...] = (
     ("th", ((0x0E00, 0x0E7F),)),
 )
 
-# Distinctive function words for the Latin-script languages (script can't tell
-# them apart). Accented forms are strong signals.
-_LATIN_STOP = {
+# Function words for the Latin-script languages (script cannot tell them
+# apart). Words shared between languages are deliberately listed in *every*
+# language that uses them: the scorer weights a token by how many languages
+# claim it, so declaring a shared word only once would silently hand it to
+# whichever language happened to list it.
+#
+# Portuguese carries accented and unaccented spellings, because people type
+# "nao" and "voce" constantly and a detector that only knows "não" fails the
+# users most likely to need it.
+_LATIN_STOP: dict[str, set[str]] = {
     "es": {"el", "la", "los", "las", "qué", "cómo", "cuándo", "dónde", "por", "para",
-           "una", "cuando", "muestra", "aparece", "vídeo", "está", "pantalla"},
+           "una", "cuando", "muestra", "aparece", "vídeo", "video", "está", "esta",
+           "pantalla", "es", "no", "son", "cuál", "sobre", "tiene", "ella", "eso"},
     "fr": {"le", "les", "que", "qui", "quand", "où", "comment", "pour", "une", "est",
-           "dans", "quel", "quelle", "apparaît", "vidéo", "écran", "montre"},
+           "dans", "quel", "quelle", "apparaît", "vidéo", "écran", "montre", "sur",
+           "pas", "elle", "cela"},
     "de": {"der", "die", "das", "und", "wann", "wie", "wo", "was", "ein", "eine",
            "zeigt", "warum", "bildschirm", "erscheint", "video"},
     "pt": {"os", "as", "que", "quando", "onde", "como", "para", "uma", "aparece",
-           "vídeo", "mostra", "tela", "está"},
+           "vídeo", "video", "mostra", "tela", "está", "esta", "é", "não", "nao",
+           "são", "sao", "qual", "quais", "do", "da", "dos", "das", "você", "voce",
+           "ele", "ela", "isso", "sobre", "tem", "na", "no", "com", "por"},
     "it": {"il", "le", "che", "di", "quando", "dove", "come", "per", "una", "mostra",
-           "video", "appare", "schermo"},
-    "en": {"the", "what", "when", "where", "how", "why", "is", "does", "show",
-           "video", "at", "of", "screen", "appear"},
+           "video", "appare", "schermo", "non", "sono", "quale", "questo", "sul"},
+    # English is listed as fully as the others on purpose. It used to carry a
+    # handful of words, so an English question with no listed token scored zero
+    # everywhere and any single foreign-looking word won outright.
+    "en": {"the", "what", "when", "where", "how", "why", "is", "does", "do", "show",
+           "video", "at", "of", "screen", "appear", "they", "agree", "are", "and",
+           "to", "in", "on", "it", "this", "that", "with", "about", "who", "which",
+           "was", "did", "no", "not", "a", "an"},
 }
 
+# How much stronger the winner must be before we call it resolved. A margin
+# rather than a threshold: "some evidence for Portuguese" means nothing if
+# there is equal evidence for Spanish.
+_MIN_SCORE = 0.75
+_MIN_MARGIN = 0.35
 
-def detect_lang(text: str) -> str:
-    """Best-effort language of ``text``. Script first (unambiguous), then a
-    stopword vote for Latin scripts. Falls back to English."""
+
+class LanguageGuess:
+    """A detection result that can admit it does not know.
+
+    The previous detector always returned a language, so "no idea" and
+    "definitely Spanish" were the same type and the caller could not tell them
+    apart. Weak evidence now says so, and callers fall back deliberately
+    instead of acting on a coin toss.
+    """
+
+    __slots__ = ("lang", "confidence", "resolved", "candidates")
+
+    def __init__(self, lang: str, confidence: float, resolved: bool,
+                 candidates: tuple[str, ...] = ()) -> None:
+        self.lang = lang
+        self.confidence = confidence
+        self.resolved = resolved
+        self.candidates = candidates
+
+    def __repr__(self) -> str:  # pragma: no cover - debugging aid
+        return (f"LanguageGuess({self.lang!r}, confidence={self.confidence:.2f}, "
+                f"resolved={self.resolved}, candidates={self.candidates})")
+
+    def __eq__(self, other: object) -> bool:
+        if isinstance(other, str):  # keeps `detect(...) == "pt"` readable
+            return self.lang == other
+        return NotImplemented
+
+    def __hash__(self) -> int:
+        return hash(self.lang)
+
+
+def _token_weights() -> dict[str, float]:
+    """How much each token is worth: 1 / (languages that claim it).
+
+    A word only Portuguese uses is worth a full point; one shared by
+    Portuguese, Spanish and Italian is worth a third to each. This is what
+    replaces PR #16's tie-break — there is nothing left to break a tie *with*
+    when distinctiveness is already priced in.
+    """
+    claims: dict[str, int] = {}
+    for words in _LATIN_STOP.values():
+        for word in words:
+            claims[word] = claims.get(word, 0) + 1
+    return {word: 1.0 / count for word, count in claims.items()}
+
+
+_WEIGHTS = _token_weights()
+
+
+def detect_language(text: str) -> LanguageGuess:
+    """Detect the language of ``text``, or say plainly that it could not.
+
+    Script first — an Arabic character settles the question. For Latin script
+    it is a weighted stopword vote where a token's weight falls off with the
+    number of languages that use it.
+
+    Ordering never decides anything: ties are broken by sorted name only after
+    being declared unresolved, so the result does not depend on how the
+    dictionaries above happen to be written.
+    """
     counts: dict[str, int] = {}
     for ch in text:
         cp = ord(ch)
@@ -77,12 +156,46 @@ def detect_lang(text: str) -> str:
                 counts[lang] = counts.get(lang, 0) + 1
                 break
     if counts:
-        return max(counts, key=counts.get)  # type: ignore[arg-type]
+        top = max(counts.values())
+        winners = sorted(lang for lang, n in counts.items() if n == top)
+        return LanguageGuess(winners[0], 1.0, True, tuple(winners))
 
-    tokens = {t.strip(".,!?¿¡:;\"'()").lower() for t in text.split()}
-    scores = {lang: len(tokens & words) for lang, words in _LATIN_STOP.items()}
-    best = max(scores, key=scores.get)  # type: ignore[arg-type]
-    return best if scores[best] > 0 else "en"
+    tokens = {t.strip(".,!?¿¡:;\"'()«»…").lower() for t in text.split()}
+    tokens.discard("")
+    scores = {
+        lang: round(sum(_WEIGHTS.get(token, 0.0) for token in tokens & words), 6)
+        for lang, words in _LATIN_STOP.items()
+    }
+    best_score = max(scores.values(), default=0.0)
+    if best_score < _MIN_SCORE:
+        return LanguageGuess("en", 0.0, False, ())
+
+    leaders = sorted(lang for lang, score in scores.items() if score == best_score)
+    runner_up = max(
+        (score for lang, score in scores.items() if lang not in leaders),
+        default=0.0,
+    )
+    margin = best_score - runner_up
+    if len(leaders) > 1 or margin < _MIN_MARGIN:
+        ambiguous = tuple(sorted(
+            lang for lang, score in scores.items()
+            if best_score - score < _MIN_MARGIN
+        ))
+        return LanguageGuess("en", round(margin / best_score, 3), False, ambiguous)
+
+    return LanguageGuess(
+        leaders[0], round(min(1.0, margin / best_score), 3), True, (leaders[0],)
+    )
+
+
+def detect_lang(text: str) -> str:
+    """Best-effort language code, English when undecided.
+
+    Kept as the simple string API every existing caller uses. Reach for
+    :func:`detect_language` when the difference between "English" and "no
+    idea, defaulting to English" actually matters.
+    """
+    return detect_language(text).lang
 
 
 def is_rtl(lang: str) -> bool:
@@ -94,9 +207,19 @@ def isolate(text: str) -> str:
     return f"{LRI}{text}{PDI}"
 
 
-def answer_language_directive(lang: str) -> str:
-    """A one-line instruction telling the vision model which language to write in."""
-    name = _LANG_NAMES.get(lang, "English")
+def answer_language_directive(lang: str | LanguageGuess) -> str:
+    """A one-line instruction telling the vision model which language to write in.
+
+    Accepts an unresolved :class:`LanguageGuess` and writes English rather
+    than naming the coin-toss winner: instructing a model to answer in
+    Portuguese because a detector was 51% sure is worse than defaulting, since
+    the user gets a confidently wrong language instead of a familiar one.
+    """
+    if isinstance(lang, LanguageGuess):
+        code = lang.lang if lang.resolved else "en"
+    else:
+        code = lang or "en"
+    name = _LANG_NAMES.get(code, "English")
     return f"Write all human-readable text in {name}, the language of the request."
 
 
