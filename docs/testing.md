@@ -56,10 +56,30 @@ Two ways to reach a model, both deliberate:
 consent to spend it, so nothing is read unless the provider was named on
 purpose.
 
-> **Status on this machine: BLOCKED.** No local Ollama vision model is
-> running and no provider was named, so no real-VLM result exists. The
-> adapter and harness are implemented and the gate names the blocker rather
-> than passing vacuously. The semantic pipeline is
+A third route exists: one explicit bootstrap of a single free local model.
+
+```bash
+watch-skill models status          # what this machine could run
+watch-skill models bootstrap-vlm   # explicit, opt-in, one model
+```
+
+It downloads `HuggingFaceTB/SmolVLM2-500M-Video-Instruct` (Apache-2.0) into
+the project's own cache, fetching only the files inference needs. It refuses
+rather than fills the disk — a half-downloaded model on a full disk is worse
+than no model.
+
+> **Status on this machine: BLOCKED, with numbers.** `watch-skill models
+> status` reports:
+>
+> - free disk **3.5 GiB**, below the required 8 GiB;
+> - available RAM **1.6 GiB**, below the required 3 GiB;
+> - `torch` not installed (~2.5 GiB, deliberately not a base dependency);
+> - `transformers` not installed.
+>
+> No local Ollama vision model is running and no provider was named either.
+> **No real-VLM result exists.** The bootstrap, the adapter and the harness
+> are implemented and tested; the gate names the blocker rather than passing
+> vacuously. The semantic pipeline remains
 > **deterministic-backend-tested only.**
 
 ### Setting up the ASR gate

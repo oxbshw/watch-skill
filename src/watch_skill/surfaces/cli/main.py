@@ -303,6 +303,40 @@ def plan(
     ))
 
 
+models_app = typer.Typer(help="Local model cache: inspect and bootstrap.")
+app.add_typer(models_app, name="models")
+
+
+@models_app.command("status")
+def models_status_cmd() -> None:
+    """What this machine could run, and what is already downloaded."""
+    from watch_skill.models.bootstrap import preflight, receipt
+
+    payload = preflight().to_dict()
+    payload["receipt"] = receipt()
+    print(json.dumps(payload, indent=2, ensure_ascii=False))
+
+
+@models_app.command("bootstrap-vlm")
+def models_bootstrap_vlm_cmd(
+    force: bool = typer.Option(False, "--force", help="Re-download if present."),
+    dry_run: bool = typer.Option(False, "--dry-run", help="Check only."),
+) -> None:
+    """Download the local vision model. Explicit, opt-in, one model.
+
+    Nothing else in Watch Skill downloads a model. This refuses rather than
+    fills the disk: a half-downloaded model on a full disk is worse than none.
+    """
+    from watch_skill.errors import WatchSkillError
+    from watch_skill.models.bootstrap import bootstrap
+
+    try:
+        print(json.dumps(bootstrap(force=force, dry_run=dry_run), indent=2))
+    except WatchSkillError as exc:
+        print(json.dumps(exc.to_dict(), indent=2))
+        raise typer.Exit(code=1) from None
+
+
 live_app = typer.Typer(help="Watch something as it happens.")
 app.add_typer(live_app, name="live")
 
