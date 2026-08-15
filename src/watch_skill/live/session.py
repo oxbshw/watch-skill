@@ -71,6 +71,8 @@ class RunningSession:
         self._start_wall = time.time()
         self._lock = threading.Lock()
         self.stats = session.stats
+        self._audio: Any = None
+        self._asr_backend: Any = None
 
     # --- lifecycle ---------------------------------------------------------
 
@@ -105,12 +107,15 @@ class RunningSession:
         capture.start()
         self._threads.append(capture)
 
-        # Warm the OCR model off the critical path. The first call loads
-        # weights and can take tens of seconds; doing it here means the OCR
-        # stage is merely behind for a while instead of the session appearing
-        # to have no text detector at all.
-        threading.Thread(target=self._warm_ocr, name="ws-live-warm-ocr",
+        # Warm slow models off the critical path. The first OCR or ASR call
+        # loads weights and can take tens of seconds; doing it here means
+        # those stages are merely behind for a while instead of the session
+        # appearing to have no such detector at all.
+        threading.Thread(target=self._warm_models, name="ws-live-warm",
                          daemon=True).start()
+
+        if spec.audio:
+            self._start_audio()
 
         db.update_session(self.session.session_id, state=LiveState.RUNNING)
         self.session.state = LiveState.RUNNING
@@ -206,26 +211,136 @@ class RunningSession:
                 (time.monotonic() - started) * 1000, 1
             )
 
-    def _warm_ocr(self) -> None:
-        if not get_settings().ocr_enabled:
-            return
-        try:
-            from watch_skill.perceive.ocr import _get_engine  # noqa: PLC0415
+    def _start_audio(self) -> None:
+        """Bring up the audio half, or record why there is none.
 
-            _get_engine()
-        except Exception:  # noqa: BLE001 - warming is best effort
+        Failure here never fails the session: a video with no audio track, or
+        a machine with no local ASR, is still perfectly watchable. What is not
+        acceptable is silence with no explanation, so both paths leave a
+        reason in `detectors.asr`.
+        """
+        from watch_skill.live.audio_pipeline import build_audio_runtime  # noqa: PLC0415
+
+        spec = self.session.spec
+        try:
+            runtime = build_audio_runtime(
+                self.session.session_id, spec.kind.value, spec.target,
+                on_speech=self._on_speech, on_gap=self._on_audio_gap,
+                backend=self._asr_backend,
+            )
+        except WatchSkillError as exc:
+            self._emit(LiveEventType.PROVIDER_DEGRADED, 0.0,
+                       f"live audio unavailable: {exc}", detector="audio")
             return
+        if runtime is None:
+            return
+        self._audio = runtime
+        runtime.start()
+
+    def _on_speech(self, piece: Any) -> None:
+        """Publish recognised speech as a citable event."""
+        self._append(LiveEvent(
+            session_id=self.session.session_id, seq=0,
+            media_ts=piece.media_ts, wall_ts=time.time(),
+            type=LiveEventType.SPEECH,
+            final=piece.final,
+            confidence=piece.confidence,
+            summary=piece.text,
+            detector=piece.backend,
+            evidence=[EvidenceReference(
+                kind="transcript", artifact_id=f"utt_{piece.media_ts:.2f}",
+                media_ts=piece.media_ts, end_media_ts=piece.end_media_ts,
+            )],
+            detail={"language": piece.language,
+                    "end_media_ts": round(piece.end_media_ts, 3)},
+        ))
+        # Speech is worth keeping the picture for: "what was on screen when
+        # they said that" is the question this makes answerable later.
+        buf.pin_window(self.session.session_id, piece.media_ts, before=2.0, after=2.0)
+
+    def _on_audio_gap(self, start: float, end: float) -> None:
+        self._append(LiveEvent(
+            session_id=self.session.session_id, seq=0,
+            media_ts=start, wall_ts=time.time(),
+            type=LiveEventType.CAPTURE_GAP,
+            summary=f"audio gap of {end - start:.2f}s",
+            detector="audio",
+            detail={"start": round(start, 3), "end": round(end, 3),
+                    "stream": "audio"},
+        ))
+
+    def _warm_models(self) -> None:
+        """Start slow models loading beside the fast detectors, not in front."""
+        from watch_skill.models import register_builtin_models  # noqa: PLC0415
+
+        registry = register_builtin_models()
+        wanted = ["ocr"] if get_settings().ocr_enabled else []
+        registry.warm(*wanted)
+
+    def detector_status(self) -> dict[str, Any]:
+        """Readiness per detector, for live status.
+
+        `scene_change` is always ready because it is arithmetic over pixels —
+        there is no model to wait for. Saying so explicitly is the point: an
+        operator seeing no text events needs to know whether OCR is warming,
+        degraded, or simply looking at a screen with no text on it.
+        """
+        from watch_skill.models import ModelState, get_registry  # noqa: PLC0415
+
+        status: dict[str, Any] = {"scene_change": {"status": "ready"}}
+        registry = get_registry()
+        settings = get_settings()
+
+        if not settings.ocr_enabled:
+            status["ocr"] = {"status": "degraded", "reason": "disabled_by_config"}
+        elif "ocr" in registry.registered():
+            status["ocr"] = registry.status("ocr").to_dict()
+        else:
+            status["ocr"] = {"status": ModelState.UNLOADED.value}
+
+        status["asr"] = self._asr_status()
+        return status
+
+    def _asr_status(self) -> dict[str, Any]:
+        if not self.session.spec.audio:
+            return {"status": "degraded", "reason": "audio_disabled_for_this_session"}
+        if self._audio is None:
+            return {"status": "degraded", "reason": "no_audio_track_in_source"}
+        return self._audio.status()
 
     def _ocr(self, path: Path) -> str | None:
+        """Read a frame, or degrade. Never raise into the pipeline.
+
+        Uses the lifecycle registry so a still-loading model is a wait rather
+        than a duplicate load, and a permanently missing one is announced once
+        instead of at the frame rate.
+        """
         if not get_settings().ocr_enabled:
+            return None
+        from watch_skill.models import ModelState, get_registry  # noqa: PLC0415
+
+        registry = get_registry()
+        if "ocr" not in registry.registered():
+            return None
+        model = registry.get("ocr")
+        if model.status.state in (ModelState.FAILED, ModelState.INITIALIZING):
+            # Not an error: the frame is simply skipped while the model is not
+            # ready, and the status already says which of the two it is.
+            if model.status.state is ModelState.FAILED and model.announce_once("ocr_failed"):
+                self._emit(LiveEventType.PROVIDER_DEGRADED, 0.0,
+                           f"OCR unavailable: {model.status.reason}",
+                           detector="ocr")
             return None
         try:
             from watch_skill.perceive.ocr import ocr_frame  # noqa: PLC0415
 
             blocks = ocr_frame(path)
-        except Exception:  # noqa: BLE001 - OCR is best effort in a live loop
+        except Exception as exc:  # noqa: BLE001 - OCR is best effort in a live loop
             with self._lock:
                 self.stats.provider_failures += 1
+            if model.announce_once("ocr_runtime_error"):
+                self._emit(LiveEventType.PROVIDER_DEGRADED, 0.0,
+                           f"OCR is failing: {str(exc)[:120]}", detector="ocr")
             return None
         return "\n".join(block.text for block in blocks)
 
@@ -249,6 +364,11 @@ class RunningSession:
         with self._lock:
             self.stats.frames_dropped = sum(self.pipeline.dropped().values())
             self.stats.queue_depths = self.pipeline.depths()
+            if self._audio is not None:
+                audio = self._audio.stats()
+                self.stats.audio_chunks = audio["chunks_captured"]
+                self.stats.audio_gap_seconds = audio["gap_seconds"]
+                self.stats.queue_depths.update(audio["queue_depths"])
         db.update_session(self.session.session_id, stats=self.stats)
 
     # --- stopping ----------------------------------------------------------
@@ -260,6 +380,10 @@ class RunningSession:
         db.update_session(self.session.session_id, state=LiveState.STOPPING)
         if self._source is not None:
             self._source.stop()
+        if self._audio is not None:
+            # Stopped first so its flush lands before the event log closes —
+            # the trailing utterance is usually why someone hit stop.
+            self._audio.stop()
         # Drain before tearing down: frames already captured deserve to be
         # persisted, and a stop that discards them loses evidence for the
         # moment the operator most likely stopped to look at.
@@ -302,6 +426,7 @@ def start_live(
     buffer_seconds: float = 120.0,
     max_duration_seconds: float = 3600.0,
     audio: bool = True,
+    asr_backend: Any = None,
 ) -> LiveSession:
     """Begin watching something live.
 
@@ -346,6 +471,10 @@ def start_live(
 
     db.insert_session(session)
     runner = RunningSession(session, source)
+    # Injected rather than discovered so CI can prove the audio *transport*
+    # without the optional model. The backend names itself in every event it
+    # produces, so a fixture transcript is never mistaken for recognition.
+    runner._asr_backend = asr_backend
     try:
         runner.start()
     except WatchSkillError as exc:
@@ -420,6 +549,10 @@ def status(session_id: str) -> dict[str, Any]:
     payload["queue_depths"] = runner.pipeline.depths() if runner else {}
     payload["dropped"] = runner.pipeline.dropped() if runner else {}
     payload["in_this_process"] = runner is not None
+    if runner is not None:
+        payload["detectors"] = runner.detector_status()
+        if runner._audio is not None:
+            payload["audio"] = runner._audio.stats()
     return payload
 
 

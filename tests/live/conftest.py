@@ -58,6 +58,47 @@ def _draw_frames(out_dir: Path, halves: list[tuple[str, str]], seconds: float,
 
 
 @pytest.fixture(scope="session")
+def audiovisual_clip(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    """A 14 s clip with both a visual state change and a real audio track.
+
+    The audio is a generated tone pattern, not speech: this fixture exists to
+    prove the audio *transport* — that real PCM bytes flow through the
+    production ffmpeg path with correct timestamps. Recognition is proved
+    separately, by the deterministic backend for the transport and by the
+    local-whisper test when the optional model is installed.
+    """
+    pytest.importorskip("PIL", reason="Pillow renders the fixture's on-screen text")
+    out_dir = tmp_path_factory.mktemp("live av")
+    frames_dir = out_dir / "src"
+    frames_dir.mkdir()
+    fps = 10
+    _draw_frames(frames_dir, [("darkgreen", "READY"), ("darkred", "ERROR 502")],
+                 seconds=7.0, fps=fps, size=(640, 360))
+
+    silent = out_dir / "silent.mp4"
+    subprocess.run(
+        [_ffmpeg(), "-y", "-loglevel", "error", "-framerate", str(fps),
+         "-i", str(frames_dir / "src_%05d.png"),
+         "-c:v", "libx264", "-pix_fmt", "yuv420p", "-r", str(fps), str(silent)],
+        check=True, capture_output=True,
+    )
+
+    combined = out_dir / "with audio.mp4"
+    # Two tones so the two halves differ in sound as well as in picture,
+    # which makes an audio/video correlation assertion meaningful.
+    subprocess.run(
+        [_ffmpeg(), "-y", "-loglevel", "error", "-i", str(silent),
+         "-f", "lavfi", "-i", "sine=frequency=440:duration=7:sample_rate=16000",
+         "-f", "lavfi", "-i", "sine=frequency=880:duration=7:sample_rate=16000",
+         "-filter_complex", "[1:a][2:a]concat=n=2:v=0:a=1[a]",
+         "-map", "0:v", "-map", "[a]", "-c:v", "copy",
+         "-c:a", "aac", "-shortest", str(combined)],
+        check=True, capture_output=True,
+    )
+    return combined
+
+
+@pytest.fixture(scope="session")
 def state_change_clip(tmp_path_factory: pytest.TempPathFactory) -> Path:
     """A 14 s clip that says READY for 7 s, then ERROR 502 for 7 s.
 

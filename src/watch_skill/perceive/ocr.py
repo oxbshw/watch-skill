@@ -12,6 +12,7 @@ rendered-ground-truth benchmark on real images — see docs/DECISIONS.md.
 """
 from __future__ import annotations
 
+import threading
 from pathlib import Path
 
 from watch_skill.config import get_settings
@@ -75,10 +76,26 @@ def _script_params(script: str) -> dict:
     return table[script]
 
 
+_engine_lock = threading.Lock()
+
+
 def _get_engine(lang: str = "default"):
-    """Lazy per-language engine cache — models load once per process."""
+    """Lazy per-language engine cache — models load once per process.
+
+    The lock matters because the check and the construction are far apart in
+    time: RapidOCR takes tens of seconds to build, so without it two live
+    detector threads both miss the cache and both pay. Double-checked inside
+    the lock so the fast path stays a dict lookup.
+    """
     if lang in _engines:
         return _engines[lang]
+    with _engine_lock:
+        if lang in _engines:
+            return _engines[lang]
+        return _build_engine(lang)
+
+
+def _build_engine(lang: str):
     try:
         from rapidocr import RapidOCR  # noqa: PLC0415
     except ImportError as exc:

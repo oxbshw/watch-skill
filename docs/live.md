@@ -60,10 +60,17 @@ it exists. See [the capture matrix](capture-capabilities.md).
 ## How a session is built
 
 ```text
-                    ┌─ fast_vision  (bounded, drop-oldest) → scene changes
-capture (ffmpeg) ───┼─ ocr          (bounded, drop-oldest) → text changes
+video (ffmpeg -re) ─┬─ fast_vision  (bounded, drop-oldest) → scene changes
+                    ├─ ocr          (bounded, drop-oldest) → text changes
                     └─ persist      (bounded, blocking)    → rolling buffer
+
+audio (ffmpeg -re) ─┬─ assemble     (bounded, BLOCKING)    → overlapping utterances
+                    └─ transcribe   (bounded, BLOCKING)    → speech events
 ```
+
+Audio and video share nothing but the session clock and the event log —
+separate ffmpeg processes, separate queues, separate threads. Vision falling
+behind cannot cost a syllable.
 
 Three properties this shape exists to guarantee:
 
@@ -72,6 +79,14 @@ can take tens of seconds. When it shared a stage with perceptual hashing, no
 scene change was reported until OCR had finished warming up — the live view
 was blind for as long as its slowest detector took to start. They are separate
 stages so that cannot happen.
+
+**Audio is never dropped to relieve pressure.** The video stages shed frames
+when they fall behind, because a frame from four seconds ago has been
+superseded. The audio stages *block* instead: speech is continuous and
+unrepeatable, and a queue that sheds audio to keep up is a queue that loses
+words. Anything the capture genuinely missed is recorded as a `capture_gap`
+event, because a transcript with an unmarked hole invites the reader to
+conclude nobody spoke — a different claim from "we were not listening".
 
 **Perception may skip; persistence may not.** The analysis stages take the
 *newest* frame and count what they discarded, because catching up by analysing
@@ -92,6 +107,77 @@ event every frame). Both run on your machine and cost nothing.
 Semantic interpretation happens later, on *selected* frames, driven by a
 question. A live session that called an LLM once per frame would be
 unaffordable within a minute and still slower than the video.
+
+## Hearing as well as seeing
+
+A live session captures audio through its own ffmpeg process, normalizes it to
+mono 16 kHz signed 16-bit PCM at the boundary, and assembles it into short
+**overlapping** utterances before transcription.
+
+The overlap is not incidental. Cutting audio into adjacent blocks and
+transcribing each independently reliably loses the word sitting on the seam;
+carrying half a second of the previous block into the next is what stops
+"checkout total" becoming "…total".
+
+Silence is gated arithmetically — a mean-amplitude check — rather than by a
+VAD model, because this runs on every utterance and the expensive thing it is
+protecting against is exactly the model we would have to load to make the
+decision.
+
+### Backends
+
+| Backend | What it does | When it runs |
+|---|---|---|
+| `faster-whisper` | Real recognition, locally | The default when the `transcribe` extra is installed |
+| `deterministic-fixture` | Returns text from a fixture manifest | Only when constructed explicitly, by tests |
+
+The fixture backend exists to test the *transport* — chunking, timestamps,
+event shape, finalisation — on machines without the model. It recognises
+nothing, it names itself in every event it produces, and a test using it
+proves nothing about recognition quality. Real recognition has its own test,
+gated on the model actually being installed.
+
+Whisper is wrapped in a streaming adapter over bounded spans. It is not a
+streaming model, and whole-file transcription relabelled as real-time would be
+the same dishonesty as batch processing called live.
+
+### When there is no audio
+
+`detectors.asr` always says which of these is true, because silence with no
+explanation is indistinguishable from a room where nobody spoke:
+
+| `reason` | Meaning |
+|---|---|
+| `no_audio_track_in_source` | The media has no audio stream |
+| `audio_disabled_for_this_session` | Started with `audio=false` |
+| `model_unavailable` | No local ASR installed |
+| A failure message | ASR broke mid-session; visual detectors continue |
+
+Live ASR is local-only in this build. A configured cloud key is not consent
+and does not change that — the boundary asks the execution policy, so if a
+cloud backend is ever added, the policy is already what decides.
+
+## Detector readiness
+
+`get_live_status` reports each detector separately:
+
+```json
+{"detectors": {
+  "scene_change": {"status": "ready"},
+  "ocr": {"status": "initializing"},
+  "asr": {"status": "degraded", "reason": "no_audio_track_in_source"}
+}}
+```
+
+Models load through a lifecycle registry that makes loading **single-flight**:
+a plain cache checked before a slow constructor is a race, not a cache — every
+thread misses and every thread builds. The registry also releases idle models,
+which is what the earlier end-to-end run needed: a parent process holding OCR
+and embedding weights it had finished with, while a child trying to answer a
+question was refused the allocation.
+
+A failed model degrades only itself, is retried on a cooldown rather than at
+the frame rate, and is announced once rather than on every frame.
 
 ## The rolling buffer
 
@@ -170,10 +256,6 @@ zero dollars unless raised explicitly.
 Named plainly, because a roadmap entry presented as a feature is worse than
 an absent feature:
 
-- **Live audio and streaming transcription.** `AudioChunk` is a defined
-  contract; there is no audio capture stage yet, and `audio_chunks` /
-  `audio_gap_seconds` are always zero. Speech events do not occur in a live
-  session today.
 - **Live triggers and the Observer Loop.** No trigger evaluation exists yet.
 - **Browser/screen/window/camera live capture.** Recorded capture for these
   works (`capture`, `loop_start`); *live sessions* on them do not.
