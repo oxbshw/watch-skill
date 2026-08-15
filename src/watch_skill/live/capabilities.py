@@ -216,8 +216,14 @@ def _window() -> CaptureCapability:
     if platform.system() == "Windows":
         return screen.model_copy(update={
             "kind": "window",
+            # machine_tested: tests/integration/test_windows_window_capture.py
+            # creates a real window and captures it through this exact
+            # backend on every run that has an interactive display.
+            "verified": "machine_tested" if screen.status == "available"
+                        else screen.verified,
             "limitations": [*screen.limitations,
-                            "matches on exact window title",
+                            "matches on exact window title — never a substring",
+                            "never falls back to whole-desktop capture",
                             "a minimised window cannot be captured"],
         })
     return CaptureCapability(

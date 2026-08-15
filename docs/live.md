@@ -41,7 +41,8 @@ watch-skill live stop <session_id>
 |---|---|---|
 | `file_replay` | A local file paced at real time by `ffmpeg -re` | Implemented, machine-tested |
 | `stream` | RTSP / RTMP / HLS / DASH — anything ffmpeg opens | Implemented; needs network egress |
-| `browser`, `screen`, `window`, `camera`, `microphone`, `webrtc` | — | **Not implemented as live sources.** `capture_capabilities` reports them honestly |
+| `window` | One window by exact title, via `gdigrab` | Implemented, **machine-tested on Windows**; never falls back to the desktop |
+| `browser`, `screen`, `camera`, `microphone`, `webrtc` | — | **Not implemented as live sources.** `capture_capabilities` reports them honestly |
 
 A file replayed in real time is a *real* live source, not a shortcut: the
 pipeline cannot tell it from a camera. It is also what makes the test suite

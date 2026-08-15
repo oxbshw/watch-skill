@@ -9,6 +9,7 @@ a camera.
 """
 from __future__ import annotations
 
+import platform
 import subprocess
 import threading
 import time
@@ -196,6 +197,82 @@ def stream_source(spec: LiveSourceSpec, out_dir: Path) -> FfmpegFrameSource:
     )
 
 
+
+def window_source(spec: LiveSourceSpec, out_dir: Path) -> FfmpegFrameSource:
+    """A specific window, captured live by gdigrab.
+
+    The title is matched exactly and passed as ``title=<name>``. There is
+    deliberately **no fallback to the whole desktop**: a request to watch one
+    window that quietly becomes a recording of everything on screen is a
+    privacy failure, not a graceful degradation. If the window is not there,
+    this raises.
+
+    Not real time in the ``-re`` sense — a window produces frames as fast as
+    it is asked to — so the frame rate is the cap and the source is live by
+    nature.
+    """
+    if platform.system() != "Windows":
+        raise CaptureError(
+            "live window capture is implemented for Windows (gdigrab) only",
+            code="live.source_unsupported",
+            fix="capture the browser instead, or run this on Windows; "
+            "`watch-skill capture-capabilities` reports what works here",
+            details={"platform": platform.system()},
+        )
+    title = spec.target.split(":", 1)[1] if spec.target.startswith("window:")         else spec.target
+    if not title.strip():
+        raise CaptureError(
+            "no window title was given",
+            code="live.source_not_found",
+            fix='pass `window:<exact title>`',
+        )
+    if not window_exists(title):
+        raise CaptureError(
+            f"no window titled {title!r} is open",
+            code="live.source_not_found",
+            fix="check the exact title (it is matched exactly, not by "
+            "substring); capture never falls back to the whole desktop",
+            details={"title": title},
+        )
+    fps = min(spec.fps, 15.0)
+    return FfmpegFrameSource(
+        [_ffmpeg(), "-hide_banner", "-loglevel", "warning",
+         "-f", "gdigrab", "-framerate", f"{fps:g}",
+         "-i", f"title={title}",
+         "-vf", f"fps={fps:g}", "-q:v", "3", str(out_dir / "f_%06d.jpg")],
+        out_dir, fps, label="window",
+    )
+
+
+def window_exists(title: str) -> bool:
+    """Whether a window with this exact title is currently open.
+
+    Checked before a session row is created, so a typo fails immediately
+    rather than producing a session that silently never emits anything.
+    """
+    if platform.system() != "Windows":
+        return False
+    import ctypes
+    from ctypes import wintypes
+
+    found = ctypes.c_bool(False)
+    target = title.strip()
+
+    @ctypes.WINFUNCTYPE(ctypes.c_bool, wintypes.HWND, wintypes.LPARAM)
+    def visit(hwnd, _lparam):  # noqa: ANN001
+        length = ctypes.windll.user32.GetWindowTextLengthW(hwnd)
+        if length:
+            buffer = ctypes.create_unicode_buffer(length + 1)
+            ctypes.windll.user32.GetWindowTextW(hwnd, buffer, length + 1)
+            if buffer.value == target:
+                found.value = True
+                return False
+        return True
+
+    ctypes.windll.user32.EnumWindows(visit, 0)
+    return bool(found.value)
+
+
 def open_source(spec: LiveSourceSpec, out_dir: Path) -> FfmpegFrameSource:
     """Build the source for a spec, or say plainly that it is not supported.
 
@@ -208,6 +285,16 @@ def open_source(spec: LiveSourceSpec, out_dir: Path) -> FfmpegFrameSource:
 
     if spec.kind is LiveSourceKind.FILE_REPLAY:
         return file_replay_source(spec, out_dir)
+    if spec.kind is LiveSourceKind.WINDOW:
+        capability = capability_for("window")
+        if capability.status not in ("available", "degraded"):
+            raise CaptureError(
+                f"window capture is {capability.status} on this machine",
+                code="live.capture_unavailable",
+                fix=capability.repair or "run `watch-skill capture-capabilities`",
+                details=capability.model_dump(),
+            )
+        return window_source(spec, out_dir)
     if spec.kind is LiveSourceKind.STREAM:
         capability = capability_for("stream")
         if capability.status != "available":

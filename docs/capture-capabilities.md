@@ -52,7 +52,7 @@ A kind reported `available` for recorded capture is not thereby a live source.
 | `stream` | ffmpeg | ffmpeg | ffmpeg | ffmpeg |
 | `browser` | Playwright | Playwright | Playwright | Playwright |
 | `screen` | `gdigrab` | `avfoundation`, **degraded** | `x11grab` | **unavailable** |
-| `window` | `gdigrab`, exact title | **unavailable** | **unavailable** | **unavailable** |
+| `window` | `gdigrab`, exact title, **machine-tested** | **unavailable** | **unavailable** | **unavailable** |
 | `camera` | `dshow`, **degraded** | `avfoundation`, **degraded** | `v4l2`, **degraded** | `v4l2`, **degraded** |
 | `microphone` | `dshow`, **degraded** | `avfoundation`, **degraded** | `alsa`, **degraded** | `alsa`, **degraded** |
 | `webrtc` | **unavailable** | **unavailable** | **unavailable** | **unavailable** |
@@ -97,5 +97,12 @@ Actual hardware capture is not tested in CI — there is no camera, no
 microphone, and no desktop session on the runners. That is why `verified`
 exists as a field: it distinguishes what was probed from what was proved.
 
-`file_replay` is the one kind marked `machine_tested`, because the live
-end-to-end suite really does capture through it on every run.
+Two kinds are marked `machine_tested`. `file_replay`, because the live
+end-to-end suite captures through it on every run. And `window` on Windows,
+because `tests/integration/test_windows_window_capture.py` creates a real Tk
+window showing only generated content and captures it through the production
+gdigrab path — skipped, with a reason, where there is no interactive display.
+
+Window capture matches the title **exactly** and never falls back to the whole
+desktop. A request to watch one window that quietly becomes a recording of
+everything on screen is a privacy failure, not graceful degradation.
