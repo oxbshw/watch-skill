@@ -22,9 +22,11 @@ from __future__ import annotations
 
 from watch_skill.live.ask import ask_live
 from watch_skill.live.capabilities import capability_for, capability_matrix
+from watch_skill.live.clock import SessionClock, correlate
 from watch_skill.live.finalize import finalize_session
 from watch_skill.live.session import (
     LiveError,
+    aligned_evidence,
     frame_for,
     get_session,
     list_live,
@@ -56,6 +58,7 @@ __all__ = [
     "EvidenceReference",
     "LiveCursor",
     "LiveError",
+    "SessionClock",
     "LiveEvent",
     "LiveEventType",
     "LiveProfile",
@@ -65,7 +68,9 @@ __all__ = [
     "LiveState",
     "StateChange",
     "TemporalEntity",
+    "aligned_evidence",
     "ask_live",
+    "correlate",
     "capability_for",
     "capability_matrix",
     "finalize_session",

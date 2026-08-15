@@ -46,7 +46,7 @@ uvx --from "watch-skill[standard]" watch-skill setup
 | **Remember** | A persistent, searchable index with timestamp citations, hybrid retrieval, cross-video synthesis, and reusable lessons. |
 | **Verify** | A capture → critique → fix → re-capture loop for browser flows, interfaces, generated video, gameplay, and monitored streams — with deterministic contracts deciding pass or fail. |
 
-Available as Claude Code skills, 34 MCP tools, a CLI, a REST API, and native adapters for
+Available as Claude Code skills, 35 MCP tools, a CLI, a REST API, and native adapters for
 LangChain/LangGraph, CrewAI, the OpenAI Agents SDK, LlamaIndex, and AutoGen.
 
 Three things it will not do, because each one is a way of being confidently wrong:
@@ -243,7 +243,7 @@ MCP.
 
 ### Why both skills and MCP
 
-MCP gives an agent 34 tools. Skills give it the judgement about when to use them —
+MCP gives an agent 35 tools. Skills give it the judgement about when to use them —
 that a screen recording in the conversation is worth watching, that a follow-up
 question should hit the index instead of re-processing, that a UI change deserves a
 verification pass. An agent with only the tools waits to be told; an agent with the
@@ -264,7 +264,7 @@ npx skills add oxbshw/watch-skill --list
 | **HTTP** | Vercel AI SDK, n8n, and any client that can call REST/OpenAPI |
 
 Skills and MCP complement each other: skills carry the judgement about when video
-is worth watching, MCP carries the 34 tools. Installing both is the full setup, and
+is worth watching, MCP carries the 35 tools. Installing both is the full setup, and
 `watch-skill setup` does it.
 
 The [full compatibility matrix](docs/agents/README.md) separates machine-tested,
@@ -361,7 +361,7 @@ extension points.
 |---|---|
 | [Documentation index](docs/README.md) | Choose a guide by task or audience |
 | [Getting started](docs/getting-started.md) | Installation, first watch, and first agent connection |
-| [Tool reference](docs/tools/README.md) | All 34 MCP tools and their REST/CLI counterparts |
+| [Tool reference](docs/tools/README.md) | All 35 MCP tools and their REST/CLI counterparts |
 | [Configuration](docs/configuration.md) | Storage, privacy, models, limits, and environment variables |
 | [Agent matrix](docs/agents/README.md) | Per-client setup and verification status |
 | [Verification](docs/verification.md) | Contracts, deterministic checks, assurance levels, attestations |

@@ -151,7 +151,7 @@ agent are in [agents/README.md](agents/README.md).
 
 - [Configuration](configuration.md) — every environment variable, config
   key, and CLI flag.
-- [Tool reference](tools/README.md) — all 34 MCP tools with parameters,
+- [Tool reference](tools/README.md) — all 35 MCP tools with parameters,
   defaults, and their REST twins.
 - [Guides](guides/) — YouTube analysis, Arabic in / Arabic out, THE LOOP,
   and the lessons + savings workflow.

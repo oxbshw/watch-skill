@@ -208,7 +208,7 @@ response neither loses nor double-counts anything. A cursor belonging to a
 two sessions got mixed up, and starting from zero would flood the caller with
 events they already saw.
 
-## Two clocks
+## Two clocks, and one session clock
 
 Every event carries both, kept deliberately apart:
 
@@ -220,6 +220,46 @@ Every event carries both, kept deliberately apart:
 Ordering internally uses a monotonic clock that is never displayed or
 persisted, because it is meaningless across processes and using it for either
 of the above breaks event ordering the moment the system clock steps.
+
+Audio and video come from *independent* ffmpeg processes, each counting its
+own bytes. Their media clocks drift, and neither knows the other exists. The
+session clock is the shared reference that makes them comparable:
+
+```json
+{"clock": {
+  "streams": {
+    "video": {"samples": 28, "last_media_ts": 13.5, "lag_seconds": 0.4,
+              "discontinuities": 0, "gap_seconds": 0.0},
+    "audio": {"samples": 14, "last_media_ts": 13.2, "gap_seconds": 0.0}
+  },
+  "av_drift_seconds": 0.3,
+  "in_sync": true
+}}
+```
+
+Three things it deliberately does not do:
+
+- **It does not rewrite timestamps.** A media timestamp is what the source
+  said; silently correcting it would make a citation point at something the
+  viewer will not find there.
+- **It does not report zero drift for a missing stream.** A video with no
+  audio track gives `av_drift_seconds: null` — an absent stream is not a
+  synchronisation, and claiming it is would be a measurement nobody made.
+- **It does not average a reconnect into the drift.** A stream whose timeline
+  jumps backwards has *reset*, not drifted; that is a separate discontinuity
+  event, and it is not counted as lost time the way a forward gap is.
+
+### Asking what was visible when something was said
+
+```bash
+watch-skill live aligned <session_id> 7.4 --window 2
+```
+
+Also `aligned_evidence` over MCP and `GET /v1/live/{id}/aligned`. Give it the
+media timestamp of a speech event; it returns everything every stream observed
+within the window, grouped by stream, nearest first. Correlation is
+deterministic timestamp overlap — nothing learned, nothing guessed — so the
+ranking can be reproduced by hand.
 
 ## Finalising into permanent memory
 

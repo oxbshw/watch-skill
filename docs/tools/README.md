@@ -1,6 +1,6 @@
 # MCP tool reference
 
-All 34 tools exposed by the `watch-skill` MCP server
+All 35 tools exposed by the `watch-skill` MCP server
 (`src/watch_skill/surfaces/mcp/server.py`), with parameters, defaults, and
 what comes back. Every tool has a REST twin — the mapping table is at the
 bottom.
@@ -384,10 +384,26 @@ path.
 Answers cite the media timestamps they came from. When nothing observed
 supports an answer, it says so rather than inventing one.
 
+### `aligned_evidence`
+
+What **every** stream observed around one moment — the answer to "what was on
+screen when they said that".
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `session_id` | str | required | |
+| `media_ts` | float | required | The moment to anchor on, usually a speech event's timestamp |
+| `window` | float | `2.0` | Seconds either side that count as simultaneous |
+
+Returns events grouped by stream, nearest first. Correlation is deterministic
+timestamp overlap — nothing learned, nothing guessed, so an operator can
+reproduce the ranking by hand.
+
 ### `get_live_status`
 
-State, frames captured vs analyzed, **dropped frames**, queue depths, and
-buffer size. Omit `session_id` to list every live session on this machine.
+State, frames captured vs analyzed, **dropped frames**, queue depths,
+buffer size, per-detector readiness, audio statistics, and the session clock
+(including measured audio/video drift). Omit `session_id` to list every live session on this machine.
 Dropped frames are counted and reported, never hidden — a live view that
 silently skips is a live view you cannot trust.
 

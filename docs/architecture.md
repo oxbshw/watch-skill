@@ -70,7 +70,7 @@ a watch.
 
 | Surface | Entry point | Transport | Notes |
 |---|---|---|---|
-| MCP | `watch-skill serve` | stdio (default) or streamable HTTP (`--http`, port 8747, endpoint `/mcp`) | 34 tools ([reference](tools/README.md)); responses are text + real image blocks capped at `response_frame_cap`. Structured errors serialize as `{error, message, fix, details}`. |
+| MCP | `watch-skill serve` | stdio (default) or streamable HTTP (`--http`, port 8747, endpoint `/mcp`) | 35 tools ([reference](tools/README.md)); responses are text + real image blocks capped at `response_frame_cap`. Structured errors serialize as `{error, message, fix, details}`. |
 | CLI | `watch-skill <command>` | terminal | Progress to stderr, results to stdout — pipes cleanly. `--json` flags where output is machine-consumed. |
 | REST | `watch-skill api` | HTTP (port 8748) | Every MCP tool has a REST twin; OpenAPI at `/openapi.json`. Engine error codes map to HTTP statuses by prefix (`acquire.*`/`vision.*`/`transcribe.*` → 502, `perceive.*`/`loop.*` → 422, `index.*` and `*.not_found` → 404, `config.*` → 400) with the structured body preserved in `detail`. Refuses non-loopback binds without `WATCHSKILL_API_BEARER_TOKEN`. |
 

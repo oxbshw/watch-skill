@@ -393,6 +393,24 @@ def live_ask_cmd(
         raise typer.Exit(code=1) from None
 
 
+@live_app.command("aligned")
+def live_aligned_cmd(
+    session_id: str = typer.Argument(...),
+    media_ts: float = typer.Argument(..., help="The moment to anchor on."),
+    window: float = typer.Option(2.0, "--window"),
+) -> None:
+    """What every stream observed around one moment."""
+    from watch_skill.errors import WatchSkillError
+    from watch_skill.live import aligned_evidence
+
+    try:
+        payload = aligned_evidence(session_id, media_ts, window=window)
+    except WatchSkillError as exc:
+        print(json.dumps(exc.to_dict(), indent=2))
+        raise typer.Exit(code=1) from None
+    print(json.dumps(payload, indent=2, ensure_ascii=False))
+
+
 @live_app.command("status")
 def live_status_cmd(session_id: str = typer.Argument("")) -> None:
     """One session's health, or every live session on this machine."""

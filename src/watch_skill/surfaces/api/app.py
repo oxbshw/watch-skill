@@ -277,6 +277,18 @@ def create_app() -> FastAPI:
         except WatchSkillError as exc:
             raise _http_error(exc) from exc
 
+    @app.get("/v1/live/{session_id}/aligned", tags=["live"])
+    def live_aligned(
+        session_id: str, media_ts: float, window: float = 2.0
+    ) -> dict[str, Any]:
+        """Everything every stream observed around one moment."""
+        from watch_skill.live import aligned_evidence
+
+        try:
+            return aligned_evidence(session_id, media_ts, window=window)
+        except WatchSkillError as exc:
+            raise _http_error(exc) from exc
+
     @app.post("/v1/live/{session_id}/ask", tags=["live"])
     def live_ask(session_id: str, body: dict[str, Any]) -> dict[str, Any]:
         from watch_skill.live import ask_live

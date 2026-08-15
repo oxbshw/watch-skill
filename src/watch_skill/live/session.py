@@ -20,6 +20,7 @@ from watch_skill.config import get_settings
 from watch_skill.errors import WatchSkillError
 from watch_skill.live import buffer as buf
 from watch_skill.live import db
+from watch_skill.live.clock import SessionClock, correlate
 from watch_skill.live.detect import (
     DetectorState,
     build_event,
@@ -73,6 +74,10 @@ class RunningSession:
         self.stats = session.stats
         self._audio: Any = None
         self._asr_backend: Any = None
+        # One origin for both streams. They come from independent ffmpeg
+        # processes whose media clocks drift, so "what was on screen when
+        # they said that" needs a shared reference rather than an assumption.
+        self.clock = SessionClock(session_id=session.session_id)
 
     # --- lifecycle ---------------------------------------------------------
 
@@ -133,6 +138,10 @@ class RunningSession:
             for frame in self._source.frames():
                 if self.stop_event.is_set() or time.time() > deadline:
                     break
+                discontinuity = self.clock.observe("video", frame.media_ts,
+                                                   frame.wall_ts)
+                if discontinuity is not None:
+                    self._on_discontinuity("video", discontinuity, frame.media_ts)
                 with self._lock:
                     self.stats.frames_captured += 1
                     elapsed = max(1e-6, time.time() - self._start_wall)
@@ -239,6 +248,7 @@ class RunningSession:
 
     def _on_speech(self, piece: Any) -> None:
         """Publish recognised speech as a citable event."""
+        self.clock.observe("audio", piece.media_ts)
         self._append(LiveEvent(
             session_id=self.session.session_id, seq=0,
             media_ts=piece.media_ts, wall_ts=time.time(),
@@ -257,6 +267,22 @@ class RunningSession:
         # Speech is worth keeping the picture for: "what was on screen when
         # they said that" is the question this makes answerable later.
         buf.pin_window(self.session.session_id, piece.media_ts, before=2.0, after=2.0)
+
+    def _on_discontinuity(self, stream: str, kind: str, media_ts: float) -> None:
+        """Report a jump in a stream's timeline.
+
+        A reconnect resets the source's clock, and averaging that into a
+        drift figure would report a synchronisation problem that is really a
+        new timeline. It gets its own event so a reader can tell them apart.
+        """
+        self._append(LiveEvent(
+            session_id=self.session.session_id, seq=0,
+            media_ts=media_ts, wall_ts=time.time(),
+            type=LiveEventType.CAPTURE_GAP,
+            summary=f"{stream} timeline {kind} at {media_ts:.2f}s",
+            detector="clock",
+            detail={"stream": stream, "discontinuity": kind},
+        ))
 
     def _on_audio_gap(self, start: float, end: float) -> None:
         self._append(LiveEvent(
@@ -551,9 +577,37 @@ def status(session_id: str) -> dict[str, Any]:
     payload["in_this_process"] = runner is not None
     if runner is not None:
         payload["detectors"] = runner.detector_status()
+        payload["clock"] = runner.clock.to_dict()
         if runner._audio is not None:
             payload["audio"] = runner._audio.stats()
     return payload
+
+
+def aligned_evidence(
+    session_id: str, media_ts: float, window: float = 2.0, limit: int = 8
+) -> dict[str, Any]:
+    """What every stream observed around one moment.
+
+    The answer to "what was on screen when they said that": one anchor
+    timestamp, everything within a window of it from any stream, nearest
+    first. Correlation is deterministic — timestamp overlap, nothing learned —
+    so an operator can reproduce the result by hand.
+    """
+    get_session(session_id)  # raises a structured error for an unknown session
+    events = db.read_events(session_id, limit=500)
+    nearby = correlate(media_ts, events, window=window)[:limit]
+    by_stream: dict[str, list[dict[str, Any]]] = {}
+    for event in nearby:
+        stream = "audio" if event.type is LiveEventType.SPEECH else "video"
+        by_stream.setdefault(stream, []).append(event.to_public())
+    return {
+        "schema_version": 1,
+        "session_id": session_id,
+        "anchor_media_ts": round(media_ts, 3),
+        "window_seconds": window,
+        "streams": by_stream,
+        "count": len(nearby),
+    }
 
 
 def stop_live(session_id: str, reason: str = "stopped by request") -> dict[str, Any]:

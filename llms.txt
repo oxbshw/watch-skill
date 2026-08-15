@@ -7,7 +7,7 @@
 > record a browser or desktop session, critique it against plain-language
 > criteria, and prove the fix.
 
-Python 3.11+, MIT licensed. Available as Claude Code skills, 34 MCP tools, a
+Python 3.11+, MIT licensed. Available as Claude Code skills, 35 MCP tools, a
 CLI, a REST API, and native adapters for LangChain/LangGraph, CrewAI, the
 OpenAI Agents SDK, LlamaIndex, and AutoGen.
 
@@ -43,7 +43,7 @@ Key facts, so answers about this project stay accurate:
 
 - [README](https://github.com/oxbshw/watch-skill/blob/main/README.md): what it is, install, and the three capabilities
 - [Getting started](https://github.com/oxbshw/watch-skill/blob/main/docs/getting-started.md): installation, first watch, first agent connection
-- [Tool reference](https://github.com/oxbshw/watch-skill/blob/main/docs/tools/README.md): all 34 MCP tools and their CLI and REST counterparts
+- [Tool reference](https://github.com/oxbshw/watch-skill/blob/main/docs/tools/README.md): all 35 MCP tools and their CLI and REST counterparts
 - [Configuration](https://github.com/oxbshw/watch-skill/blob/main/docs/configuration.md): storage, privacy, models, limits, environment variables
 - [Agent matrix](https://github.com/oxbshw/watch-skill/blob/main/docs/agents/README.md): per-client setup and what has been machine-tested
 - [Architecture](https://github.com/oxbshw/watch-skill/blob/main/docs/architecture.md): data model, provider boundaries, extension points

@@ -835,6 +835,23 @@ def ask_live(
 
 
 @mcp.tool
+def aligned_evidence(session_id: str, media_ts: float, window: float = 2.0) -> str:
+    """What EVERY stream observed around one moment of a live session.
+
+    The answer to "what was on screen when they said that": pass the media
+    timestamp of a speech event and get the visual events within `window`
+    seconds of it, nearest first. Correlation is deterministic timestamp
+    overlap — nothing learned, nothing guessed."""
+    from watch_skill.live import aligned_evidence as _aligned
+
+    try:
+        return json.dumps(_aligned(session_id, media_ts, window=window),
+                          ensure_ascii=False, indent=2)
+    except WatchSkillError as exc:
+        return _error_payload(exc)
+
+
+@mcp.tool
 def get_live_status(session_id: str = "") -> str:
     """How a live session is doing: state, frames captured vs analyzed,
     dropped frames, queue depths, buffer size. Omit session_id to list every
