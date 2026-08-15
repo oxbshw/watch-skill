@@ -117,3 +117,188 @@ def test_audio_only_downloads_are_untouched() -> None:
 
     source = ytdlp._download_once.__doc__ or ""
     assert "height" not in source
+
+
+# --- legitimately silent sources ----------------------------------------------
+
+
+def test_the_audio_required_selector_never_ends_video_only() -> None:
+    """The default path must not be able to produce a silent file."""
+    assert _rungs(_video_format())[-1] == "b"
+    assert not any(rung.startswith("bv") and "+ba" not in rung
+                   for rung in _rungs(_video_format()))
+
+
+def test_a_known_silent_source_may_be_downloaded_video_only() -> None:
+    """A screen recording made without sound is not a broken download.
+
+    Refusing it would be its own bug — but the video-only rung is last, so it
+    is reached only after every audio-bearing option has failed.
+    """
+    rungs = _rungs(_video_format(allow_video_only=True))
+    assert rungs[-1].startswith("bv*")
+    assert "+ba" not in rungs[-1]
+    assert rungs[:-1] == _rungs(_video_format()), (
+        "enabling the silent path must not weaken the audio-bearing rungs"
+    )
+
+
+def test_the_video_only_rung_still_carries_the_height_cap() -> None:
+    for value in re.findall(r"height<=(\d+)", _video_format(allow_video_only=True)):
+        assert int(value) <= MAX_VIDEO_HEIGHT
+
+
+@pytest.mark.parametrize(("formats", "expected"), [
+    # Combined media: one format carrying both.
+    ([{"acodec": "aac", "vcodec": "h264"}], True),
+    # Split streams: separate video-only and audio-only formats.
+    ([{"acodec": "none", "vcodec": "h264"}, {"acodec": "opus", "vcodec": "none"}], True),
+    # Genuinely silent: every format says so.
+    ([{"acodec": "none", "vcodec": "h264"}, {"acodec": "none", "vcodec": "vp9"}], False),
+    # Older payloads describe audio by bitrate/sample rate instead.
+    ([{"vcodec": "h264", "abr": 128}], True),
+    ([{"vcodec": "h264", "asr": 44100}], True),
+])
+def test_audio_presence_is_read_from_the_real_format_list(
+    formats: list[dict], expected: bool, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import json as _json
+
+    from watch_skill.acquire import ytdlp
+
+    class Result:
+        stdout = _json.dumps({"formats": formats})
+        stderr = ""
+        returncode = 0
+
+    monkeypatch.setattr(ytdlp, "_run_yt_dlp", lambda *a, **k: Result())
+    assert ytdlp.probe_has_audio("https://example.com/v") is expected
+
+
+@pytest.mark.parametrize("payload", ["", "not json", "{}", '{"formats": []}'])
+def test_an_unanswerable_probe_is_unknown_not_silent(
+    payload: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Unknown is not the same as no.
+
+    Treating an unanswerable probe as "no audio" would quietly authorise a
+    video-only download for a source that had audio all along.
+    """
+    from watch_skill.acquire import ytdlp
+
+    class Result:
+        stdout = payload
+        stderr = ""
+        returncode = 0
+
+    monkeypatch.setattr(ytdlp, "_run_yt_dlp", lambda *a, **k: Result())
+    assert ytdlp.probe_has_audio("https://example.com/v") is None
+
+
+def test_a_failing_probe_is_unknown(monkeypatch: pytest.MonkeyPatch) -> None:
+    from watch_skill.acquire import ytdlp
+
+    def explode(*_a, **_k):
+        raise OSError("yt-dlp is gone")
+
+    monkeypatch.setattr(ytdlp, "_run_yt_dlp", explode)
+    assert ytdlp.probe_has_audio("https://example.com/v") is None
+
+
+def test_the_probe_is_only_consulted_after_an_audio_download_fails(
+    tmp_path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A successful normal download must never pay for a second round trip."""
+    from watch_skill.acquire import ytdlp
+
+    probes: list[str] = []
+    monkeypatch.setattr(ytdlp, "probe_has_audio",
+                        lambda url: probes.append(url) or True)
+
+    class Result:
+        stdout = ""
+        stderr = ""
+        returncode = 0
+
+    def fake_run(args, url, **_k):
+        (tmp_path / "media.mp4").write_bytes(b"video")
+        return Result()
+
+    monkeypatch.setattr(ytdlp, "_run_yt_dlp", fake_run)
+    payload = ytdlp._download_once("https://example.com/v", tmp_path, audio_only=False)
+    assert probes == [], "the probe ran even though the download succeeded"
+    assert payload["audio_status"] == "audio_expected"
+
+
+def test_a_silent_source_reports_audio_unavailable(
+    tmp_path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The status is the point: it distinguishes silence from a lost track."""
+    from watch_skill.acquire import ytdlp
+
+    monkeypatch.setattr(ytdlp, "probe_has_audio", lambda url: False)
+    selectors: list[str] = []
+
+    class Result:
+        stdout = ""
+        stderr = ""
+        returncode = 0
+
+    def fake_run(args, url, **_k):
+        selector = args[args.index("-f") + 1]
+        selectors.append(selector)
+        if "+ba" not in selector.split("/")[0] or len(selectors) > 1:
+            (tmp_path / "media.mp4").write_bytes(b"video")
+        return Result()
+
+    monkeypatch.setattr(ytdlp, "_run_yt_dlp", fake_run)
+    payload = ytdlp._download_once("https://example.com/v", tmp_path, audio_only=False)
+    assert payload["audio_status"] == "audio_unavailable"
+    assert len(selectors) == 2, "the video-only retry did not happen"
+    assert selectors[1].split("/")[-1].startswith("bv*")
+
+
+def test_an_unknown_probe_does_not_authorise_a_video_only_retry(
+    tmp_path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from watch_skill.acquire import ytdlp
+
+    monkeypatch.setattr(ytdlp, "probe_has_audio", lambda url: None)
+    selectors: list[str] = []
+
+    class Result:
+        stdout = ""
+        stderr = ""
+        returncode = 1
+
+    def fake_run(args, url, **_k):
+        selectors.append(args[args.index("-f") + 1])
+        return Result()
+
+    monkeypatch.setattr(ytdlp, "_run_yt_dlp", fake_run)
+    with pytest.raises(Exception) as raised:
+        ytdlp._download_once("https://example.com/v", tmp_path, audio_only=False)
+    assert len(selectors) == 1, "a video-only retry ran on an unknown probe"
+    assert raised.value.details["audio_status"] == "audio_unknown"
+
+
+def test_audio_only_downloads_never_gain_a_video_only_rung(
+    tmp_path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from watch_skill.acquire import ytdlp
+
+    selectors: list[str] = []
+
+    class Result:
+        stdout = ""
+        stderr = ""
+        returncode = 0
+
+    def fake_run(args, url, **_k):
+        selectors.append(args[args.index("-f") + 1])
+        (tmp_path / "media.m4a").write_bytes(b"audio")
+        return Result()
+
+    monkeypatch.setattr(ytdlp, "_run_yt_dlp", fake_run)
+    ytdlp._download_once("https://example.com/v", tmp_path, audio_only=True)
+    assert selectors == ["ba/bestaudio"]

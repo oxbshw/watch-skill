@@ -160,46 +160,105 @@ says: 4K costs minutes of transfer and gigabytes of disk to answer a question
 that 720p answers just as well."""
 
 
-def _video_format() -> str:
+def _capped_height() -> int:
+    from watch_skill.config import get_settings  # noqa: PLC0415
+
+    requested = getattr(get_settings(), "max_video_height", 720) or 720
+    return max(144, min(int(requested), MAX_VIDEO_HEIGHT))
+
+
+def _video_format(allow_video_only: bool = False) -> str:
     """The yt-dlp format selector for a video download.
 
-    Two properties this string exists to guarantee, both of which the previous
-    selector broke:
+    Three properties, and the third is why this takes an argument:
 
-    **Every rung carries audio.** The old tail was ``/bv+ba/b`` and, in the
-    proposed patch, ``/bv*[height<=N]`` — a *video-only* stream. A site that
-    does not offer the preferred combined format would silently yield a file
-    with no audio track, and the failure surfaces much later as a transcript
-    that is mysteriously empty.
+    **Every rung carries audio — unless we know there is none.** The old tail
+    was ``/bv+ba/b`` and, in the proposed patch, ``/bv*[height<=N]`` — a
+    video-only stream. A site that does not offer the preferred combined
+    format would silently yield a file with no audio track, and the failure
+    surfaces much later as a transcript that is mysteriously empty.
+
+    But a silent video is a real thing: a screen recording made without audio
+    is not broken, and refusing to download it would be its own bug. So
+    ``allow_video_only`` exists, and the *only* caller that sets it is the one
+    that has already asked the source and been told there is no audio stream.
+    "The source has no audio" and "our selector dropped the audio" are
+    different facts, and only the first one earns a video-only download.
 
     **The height cap is never dropped.** The old tail had no ``height``
     predicate at all, so the fallback rung could select 4K precisely when the
     preferred rung had failed.
     """
-    from watch_skill.config import get_settings  # noqa: PLC0415
+    height = _capped_height()
+    rungs = [
+        f"bv*[height<={height}]+ba",   # best video under the cap, plus audio
+        f"b[height<={height}]",        # a combined stream under the cap
+        "b",                           # last resort that still carries audio
+    ]
+    if allow_video_only:
+        # Appended last, so it is reached only after every audio-bearing rung
+        # has failed on a source we already know is silent.
+        rungs.append(f"bv*[height<={height}]")
+    return "/".join(rungs)
 
-    requested = getattr(get_settings(), "max_video_height", 720) or 720
-    height = max(144, min(int(requested), MAX_VIDEO_HEIGHT))
-    return (
-        f"bv*[height<={height}]+ba/"      # best video under the cap, plus audio
-        f"b[height<={height}]/"           # a combined stream under the cap
-        f"bv*[height<={height}]+ba/"      # any video under the cap, plus audio
-        f"b"                              # last resort: a combined stream
-    )
+
+def probe_has_audio(url: str) -> bool | None:
+    """Does the remote source carry an audio stream?
+
+    Returns None when yt-dlp cannot tell us — unknown is not the same as no,
+    and treating it as no would quietly authorise a video-only download for a
+    source that had audio all along.
+    """
+    try:
+        result = _run_yt_dlp(["-J", "--no-warnings", "--skip-download"], url)
+    except Exception:  # noqa: BLE001 - an unanswerable probe is not a failure
+        return None
+    try:
+        info = json.loads(result.stdout or "{}")
+    except json.JSONDecodeError:
+        return None
+    formats = info.get("formats")
+    if not isinstance(formats, list) or not formats:
+        return None
+    for fmt in formats:
+        if not isinstance(fmt, dict):
+            continue
+        acodec = fmt.get("acodec")
+        if acodec and acodec != "none":
+            return True
+        if fmt.get("abr") or fmt.get("asr"):
+            return True
+    return False
 
 
 def _download_once(url: str, out_dir: Path, audio_only: bool) -> dict[str, Any]:
     """One yt-dlp download attempt. Raises AcquisitionError with captured stderr."""
     out_dir.mkdir(parents=True, exist_ok=True)
-    fmt = "ba/bestaudio" if audio_only else _video_format()
-    args = [
-        "-N", "8",
-        "-f", fmt,
-        "--merge-output-format", "mp4",
-        *_common_subtitle_args(),
-        "-o", str(out_dir / "media.%(ext)s"),
-    ]
-    result = _run_yt_dlp(args, url)
+
+    def attempt(selector: str):
+        return _run_yt_dlp(
+            ["-N", "8", "-f", selector, "--merge-output-format", "mp4",
+             *_common_subtitle_args(), "-o", str(out_dir / "media.%(ext)s")],
+            url,
+        )
+
+    audio_status = "audio_expected"
+    if audio_only:
+        result = attempt("ba/bestaudio")
+    else:
+        result = attempt(_video_format())
+        if _pick_video(out_dir) is None:
+            # Every rung wanted audio and none matched. Before giving up, ask
+            # whether this source has audio at all — a screen recording made
+            # without sound is not a broken download, and refusing it would be
+            # its own bug. Only a definite "no" authorises a video-only retry.
+            has_audio = probe_has_audio(url)
+            if has_audio is False:
+                result = attempt(_video_format(allow_video_only=True))
+                audio_status = "audio_unavailable"
+            elif has_audio is None:
+                audio_status = "audio_unknown"
+
     video = _pick_video(out_dir)
     # yt-dlp may exit non-zero on a subtitle 429 even when the media landed;
     # "media file present" is the success test (reference-proven behavior).
@@ -208,7 +267,8 @@ def _download_once(url: str, out_dir: Path, audio_only: bool) -> dict[str, Any]:
             f"yt-dlp produced no media file (exit {result.returncode})",
             code="acquire.ytdlp_failed",
             fix="the resolver will try auto-update and fallback acquirers",
-            details={"url": url, "stderr_tail": result.stderr[-2000:]},
+            details={"url": url, "stderr_tail": result.stderr[-2000:],
+                     "audio_status": audio_status},
         )
     info = _read_info(out_dir, url)
     _ensure_original_subs(out_dir, url, info)
@@ -216,6 +276,10 @@ def _download_once(url: str, out_dir: Path, audio_only: bool) -> dict[str, Any]:
         "video_path": video,
         "subtitle_path": _pick_subtitle(out_dir, original_lang=info.get("language")),
         "info": info,
+        # Carried forward so downstream can tell "nobody spoke" from "we lost
+        # the audio track" — an empty transcript means something different in
+        # each case.
+        "audio_status": audio_status,
     }
 
 
