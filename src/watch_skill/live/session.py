@@ -28,6 +28,7 @@ from watch_skill.live.detect import (
     detect_text_change,
 )
 from watch_skill.live.pipeline import Overflow, Pipeline
+from watch_skill.live.semantic import FrameCandidate as SemanticCandidate
 from watch_skill.live.source import CapturedFrame, open_source
 from watch_skill.live.types import (
     EvidenceReference,
@@ -39,6 +40,7 @@ from watch_skill.live.types import (
     LiveSourceSpec,
     LiveState,
     LiveStats,
+    Provenance,
 )
 
 
@@ -74,6 +76,8 @@ class RunningSession:
         self.stats = session.stats
         self._audio: Any = None
         self._asr_backend: Any = None
+        self._semantic: Any = None
+        self._semantic_backend: Any = None
         # One origin for both streams. They come from independent ffmpeg
         # processes whose media clocks drift, so "what was on screen when
         # they said that" needs a shared reference rather than an assumption.
@@ -114,6 +118,7 @@ class RunningSession:
 
         if spec.audio:
             self._start_audio()
+        self._start_semantic()
 
         # Warm slow models off the critical path, AFTER audio exists so the
         # warm step can see which ASR backend to load. The first OCR or ASR
@@ -192,6 +197,14 @@ class RunningSession:
             self.stats.queue_depths = self.pipeline.depths()
         if detection is not None:
             self._publish(detection, frame, started)
+        # Scene change is a primary selection signal and must not depend on
+        # OCR: OCR takes tens of seconds to warm, and routing every semantic
+        # offer through it meant no interpretation happened until it did.
+        if self._semantic is not None:
+            self._semantic.consider(SemanticCandidate(
+                path=frame.path, media_ts=frame.media_ts,
+                scene_changed=detection is not None,
+            ))
 
     def _analyze_ocr(self, frame: CapturedFrame) -> None:
         """Read on-screen text. Slow to start, so it lives on its own thread."""
@@ -202,6 +215,17 @@ class RunningSession:
         detection = detect_text_change(self.state, text, frame.media_ts)
         if detection is not None:
             self._publish(detection, frame, started)
+        # Offer the frame for interpretation. The selector decides; this is
+        # the only place a model can be reached from the capture path, and it
+        # never blocks — a frame arriving while a call is in flight is
+        # skipped, because by the time a backlog cleared the answer would
+        # describe a screen that has moved on.
+        if self._semantic is not None:
+            self._semantic.consider(SemanticCandidate(
+                path=frame.path, media_ts=frame.media_ts,
+                scene_changed=False, text_changed=detection is not None,
+                visible_text=text,
+            ))
 
     def _publish(self, detection: Any, frame: CapturedFrame, started: float) -> None:
         """Pin the media around a detection and append the event."""
@@ -268,6 +292,56 @@ class RunningSession:
         # Speech is worth keeping the picture for: "what was on screen when
         # they said that" is the question this makes answerable later.
         buf.pin_window(self.session.session_id, piece.media_ts, before=2.0, after=2.0)
+
+    def _start_semantic(self) -> None:
+        """Bring up semantic interpretation, if anything is configured.
+
+        Off unless asked for. Interpreting frames costs money or GPU on every
+        session, and a feature that quietly starts spending is one nobody
+        consented to.
+        """
+        from watch_skill.live.semantic import (  # noqa: PLC0415
+            SemanticRuntime,
+            build_semantic_backend,
+        )
+
+        backend = self._semantic_backend
+        if backend is None:
+            detail = self.session.spec.detail or {}
+            backend = build_semantic_backend(
+                enabled=bool(detail.get("semantic")),
+                provider=detail.get("semantic_provider"),
+                model=detail.get("semantic_model"),
+            )
+        if backend is None:
+            return
+        self._semantic = SemanticRuntime(
+            backend=backend, on_observation=self._on_semantic,
+            budget=int((self.session.spec.detail or {}).get("semantic_budget", 60)),
+        )
+
+    def _on_semantic(self, observation: Any, reason: str) -> None:
+        """Publish a model reading as an explicitly advisory event.
+
+        `provenance: model_inference` and `advisory: true` travel with it, so
+        nothing downstream can mistake a description of a picture for a
+        measurement of one.
+        """
+        summary = observation.scene or observation.ui_state or "(no description)"
+        if observation.degraded:
+            summary = f"semantic reading unavailable: {observation.degraded_reason}"
+        self._append(LiveEvent(
+            session_id=self.session.session_id, seq=0,
+            media_ts=observation.media_ts, wall_ts=time.time(),
+            type=(LiveEventType.ANOMALY if observation.anomaly
+                  else LiveEventType.UI_STATE_CHANGE),
+            confidence=observation.confidence,
+            provenance=Provenance.INFERENCE,
+            summary=summary,
+            detector=f"semantic:{observation.model or observation.provider}",
+            final=not observation.degraded,
+            detail={"semantic": observation.to_public(), "selected_because": reason},
+        ))
 
     def _on_discontinuity(self, stream: str, kind: str, media_ts: float) -> None:
         """Report a jump in a stream's timeline.
@@ -336,6 +410,10 @@ class RunningSession:
             status["ocr"] = {"status": ModelState.UNLOADED.value}
 
         status["asr"] = self._asr_status()
+        status["semantic"] = (
+            self._semantic.status() if self._semantic is not None
+            else {"status": "degraded", "reason": "no_semantic_backend"}
+        )
         return status
 
     def _asr_status(self) -> dict[str, Any]:

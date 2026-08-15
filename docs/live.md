@@ -232,6 +232,70 @@ present.
 Disappearances are marked absent rather than deleted, so "did the checkout
 total vanish?" stays answerable after the fact.
 
+## Semantic vision, on selected frames only
+
+A model that runs once per frame is unaffordable within a minute and slower
+than the video it is watching. So the expensive question is not "what does
+this frame show" but **"which handful of frames are worth asking about"**, and
+most of the semantic layer is that selector.
+
+Off by default. Interpreting frames costs money or GPU on every session, and a
+feature that quietly starts spending is one nobody consented to.
+
+### What earns a model call
+
+| Signal | Effect |
+|---|---|
+| Scene change | Interpret, unless the view is unchanged |
+| On-screen text change | Interpret, unless the view is unchanged |
+| A question waiting | Interpret |
+| Trigger interest | Interpret |
+| Nothing, for 30 s | Interpret anyway — a static screen is worth one reading, and silence for minutes is indistinguishable from being broken |
+
+Two floors sit above all of it:
+
+- **A 3-second minimum interval**, which beats every interest signal
+  including a pending question. An agent asking repeatedly must not become a
+  way around the cadence floor.
+- **A per-session budget.** When it runs out, status says
+  `budget_exhausted` — because "nothing changed" and "we ran out of money"
+  look identical from outside and are very different problems.
+
+Duplicate views are skipped by comparing the on-screen text rather than
+pixels: two frames of a blinking cursor differ pixel-wise and mean the same
+thing.
+
+### Output is advisory, and says so
+
+```json
+{"observation": "a checkout page showing an error banner",
+ "anomaly": "the total reads NaN",
+ "uncertainty": "cannot read the tax line",
+ "confidence": 0.8,
+ "provenance": {"provider": "ollama", "model": "llava", "kind": "model_inference"},
+ "advisory": true}
+```
+
+Semantic events carry `provenance: inference`, never `observation`. A model's
+reading of a picture is an inference about a picture, and **a model verdict is
+never deterministic verification** — it informs, it does not decide.
+
+Malformed output becomes a *degraded* reading with the reason attached, not an
+exception and not a plausible-looking guess. A model that returns prose where
+JSON was asked for has told us it is not usable here, and that belongs in the
+record.
+
+### Never blocking, never going backwards
+
+A frame arriving while a call is in flight is **skipped, not queued** — by the
+time a backlog cleared, the answer would describe a screen that has moved on.
+A slow answer about an older frame cannot overwrite a newer reading, because
+out-of-order completion is normal when provider latency varies and publishing
+it would make the session's current state travel backwards in time.
+
+Three failures open a circuit breaker; the session degrades to OCR, scene
+change and motion, and says so in `detectors.semantic`.
+
 ## The rolling buffer
 
 A session retains a configurable recent window (`--buffer`, default 120 s).
