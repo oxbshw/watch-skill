@@ -30,9 +30,15 @@ not built yet, not a feature that half-works.
   an easier problem than a real recording — see [testing.md](testing.md).
 - **Semantic live vision has no real-model result.** The selector, schema
   validation, circuit breaker, staleness guard and advisory labelling are
-  tested with a deterministic backend. No VLM has been run against it on this
-  machine, so "the agent understands what it sees" is **not** a claim this
-  build has earned.
+  tested with a deterministic backend. `watch-skill models bootstrap-vlm` will
+  fetch SmolVLM2-500M-Video-Instruct on a machine that can hold it; this one
+  cannot — 3.5 GiB free disk against 8 required, 1.6 GiB available RAM against
+  3, and neither torch nor transformers installed. No VLM has been run here,
+  so "the agent understands what it sees" is **not** a claim this build has
+  earned.
+- **The live browser source is not built.** Recorded browser capture works
+  (`capture`, `loop_start`); a live browser session emitting synchronized
+  pixel and structured (DOM/console/network) evidence does not exist yet.
 - **Live triggers and the Observer Loop are not built.** No deterministic or
   semantic trigger evaluation exists, so nothing watches a live session for a
   declared condition.
