@@ -154,10 +154,44 @@ def fetch_captions(url: str, out_dir: Path) -> dict[str, Any]:
     }
 
 
+MAX_VIDEO_HEIGHT = 1080
+"""The hard ceiling. Nothing above this is downloaded whatever the setting
+says: 4K costs minutes of transfer and gigabytes of disk to answer a question
+that 720p answers just as well."""
+
+
+def _video_format() -> str:
+    """The yt-dlp format selector for a video download.
+
+    Two properties this string exists to guarantee, both of which the previous
+    selector broke:
+
+    **Every rung carries audio.** The old tail was ``/bv+ba/b`` and, in the
+    proposed patch, ``/bv*[height<=N]`` — a *video-only* stream. A site that
+    does not offer the preferred combined format would silently yield a file
+    with no audio track, and the failure surfaces much later as a transcript
+    that is mysteriously empty.
+
+    **The height cap is never dropped.** The old tail had no ``height``
+    predicate at all, so the fallback rung could select 4K precisely when the
+    preferred rung had failed.
+    """
+    from watch_skill.config import get_settings  # noqa: PLC0415
+
+    requested = getattr(get_settings(), "max_video_height", 720) or 720
+    height = max(144, min(int(requested), MAX_VIDEO_HEIGHT))
+    return (
+        f"bv*[height<={height}]+ba/"      # best video under the cap, plus audio
+        f"b[height<={height}]/"           # a combined stream under the cap
+        f"bv*[height<={height}]+ba/"      # any video under the cap, plus audio
+        f"b"                              # last resort: a combined stream
+    )
+
+
 def _download_once(url: str, out_dir: Path, audio_only: bool) -> dict[str, Any]:
     """One yt-dlp download attempt. Raises AcquisitionError with captured stderr."""
     out_dir.mkdir(parents=True, exist_ok=True)
-    fmt = "ba/bestaudio" if audio_only else "bv*[height<=720]+ba/b[height<=720]/bv+ba/b"
+    fmt = "ba/bestaudio" if audio_only else _video_format()
     args = [
         "-N", "8",
         "-f", fmt,

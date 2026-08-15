@@ -40,6 +40,14 @@ class Settings(BaseSettings):
 
     # --- perception (defaults inherited from the reference project) ------
     frame_width: int = Field(default=512, description="Extracted frame width in px.")
+    max_video_height: int = Field(
+        default=720,
+        ge=144,
+        le=1080,
+        description="Ceiling for downloaded video height. 720p answers almost "
+        "every question a video can answer; 4K costs minutes of transfer and "
+        "gigabytes of disk to answer it no better. Hard-capped at 1080.",
+    )
     frame_cap: int = Field(default=100, description="Hard cap on frames per analysis.")
     max_fps: float = Field(default=2.0, description="Universal sampling rate cap.")
     phash_distance: int = Field(

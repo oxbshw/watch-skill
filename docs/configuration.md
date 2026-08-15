@@ -45,6 +45,7 @@ cases), `<data_dir>/health.jsonl` (incident log),
 
 | Variable | Type | Default | Effect |
 |---|---|---|---|
+| `WATCHSKILL_MAX_VIDEO_HEIGHT` | int | `720` | Ceiling for downloaded video height, 144–1080. 720p answers almost every question a video can answer; 4K costs minutes of transfer and gigabytes of disk to answer it no better. Every rung of the format selector carries this cap **and** an audio stream — a video-only fallback surfaces later as a mysteriously empty transcript. |
 | `WATCHSKILL_FRAME_WIDTH` | int | `512` | Extracted frame width in pixels. Higher = sharper OCR, more tokens per frame if sent to a vision model. |
 | `WATCHSKILL_FRAME_CAP` | int | `100` | Hard cap on frames per analysis, regardless of duration. |
 | `WATCHSKILL_MAX_FPS` | float | `2.0` | Universal sampling-rate ceiling; even focused mode never samples denser than this. |
