@@ -21,12 +21,18 @@ Stated plainly rather than left implicit. Each of these is a design that is
 not built yet, not a feature that half-works.
 
 - **Live speech recognition needs the optional model.** Audio capture,
-  chunking, timestamping and event publication are real and tested on every
-  run. Recognition itself uses faster-whisper, which is an optional extra;
-  without it a session reports `asr: degraded, model_unavailable` and
-  continues visually. The recognition-quality test is gated on the model
-  being installed and is **not** run in CI — the always-on tests use a fixture
-  backend that proves the transport and nothing about accuracy.
+  chunking, timestamping and event publication run on every test. Recognition
+  uses faster-whisper, an optional extra; without it a session reports
+  `asr: degraded, model_unavailable` and continues visually. Real recognition
+  now has an opt-in gate (`WATCHSKILL_TEST_REAL_ASR=1`) measured against a
+  locally synthesized fixture: **WER 0.0 over 20 reference words, 0.27x
+  realtime, faster-whisper tiny int8 on CPU.** That is clean synthetic speech,
+  an easier problem than a real recording — see [testing.md](testing.md).
+- **Semantic live vision has no real-model result.** The selector, schema
+  validation, circuit breaker, staleness guard and advisory labelling are
+  tested with a deterministic backend. No VLM has been run against it on this
+  machine, so "the agent understands what it sees" is **not** a claim this
+  build has earned.
 - **Live triggers and the Observer Loop are not built.** No deterministic or
   semantic trigger evaluation exists, so nothing watches a live session for a
   declared condition.
