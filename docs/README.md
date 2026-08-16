@@ -30,6 +30,8 @@ then connect your client through the [agent matrix](agents/README.md).
   cross-language retrieval.
 - [Live browser](guides/live-browser.md) — pixels and structured page evidence at once,
   navigation policy, redaction, and what a page is never allowed to say.
+- [The Observer Loop](guides/observer-loop.md) — declare success first, correct under
+  explicit approval, and let a separate process decide whether it worked.
 - [THE LOOP](guides/the-loop.md) — capture, criteria, iteration, and proof artifacts.
 - [Lessons and savings](guides/lessons-and-savings.md) — corrections, evaluation, caching,
   and token accounting.

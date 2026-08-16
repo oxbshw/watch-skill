@@ -11,6 +11,7 @@ from __future__ import annotations
 import hashlib
 import ipaddress
 import json
+import re
 import socket
 import sqlite3
 import subprocess
@@ -367,9 +368,233 @@ def _visual_absent(check: Check, ctx: CheckContext) -> tuple[CheckStatus, Any, A
     )
 
 
+def _directory_manifest(check: Check, ctx: CheckContext) -> tuple[CheckStatus, Any, Any, str]:
+    """A directory contains exactly the files it is supposed to.
+
+    Two failures are distinguished because they mean different things: a
+    missing file is work that did not happen, an unexpected file is work that
+    happened and nobody described. ``exact`` decides whether the second one
+    counts against the verdict.
+    """
+    root = _resolve_within(str(check.params["path"]), ctx)
+    if not root.is_dir():
+        return (CheckStatus.FAIL, str(check.params.get("expected_files", [])),
+                None, f"{root} is not a directory")
+    expected = sorted(str(name) for name in check.params.get("expected_files", []))
+    found = sorted(
+        p.relative_to(root).as_posix() for p in root.rglob("*") if p.is_file()
+    )
+    missing = [name for name in expected if name not in found]
+    unexpected = [name for name in found if name not in expected]
+    exact = bool(check.params.get("exact", False))
+    ok = not missing and (not unexpected or not exact)
+    summary = f"{len(found)} file(s)"
+    if missing:
+        summary += f"; missing {missing[:5]}"
+    if unexpected and exact:
+        summary += f"; unexpected {unexpected[:5]}"
+    return (CheckStatus.PASS if ok else CheckStatus.FAIL,
+            {"expected_files": expected, "exact": exact},
+            {"found": found[:200], "missing": missing, "unexpected": unexpected},
+            summary)
+
+
+_DOM_MODES = ("exists", "absent", "text", "attribute", "value", "visible", "enabled")
+
+
+def _browser_dom(check: Check, ctx: CheckContext) -> tuple[CheckStatus, Any, Any, str]:
+    """Read one fact out of a live page, in this verifier's own browser.
+
+    This is the oracle that makes "the agent fixed the UI" checkable rather
+    than asserted. Three properties make it independent of the agent that did
+    the work:
+
+    * it opens its **own** browser, in the verifier process, against the URL
+      named in the frozen contract — not the agent's session, whose state the
+      agent controls;
+    * it is **read-only**. There is no click, no fill, no evaluate. The only
+      operations are locate-and-read, so verification cannot become the thing
+      that makes the postcondition true;
+    * the same origin allowlist and address checks as every other network
+      check apply, so a contract cannot be used as an SSRF primitive.
+    """
+    url = str(check.params["url"])
+    _assert_public_origin(url, ctx)
+    selector = str(check.params["selector"])
+    mode = str(check.params.get("mode", "exists"))
+    if mode not in _DOM_MODES:
+        raise ValueError(f"mode must be one of {_DOM_MODES}, got {mode!r}")
+    expected = check.params.get("expected")
+    match = str(check.params.get("match", "exact"))
+    timeout_ms = int(check.params.get("timeout_ms", 10_000))
+
+    try:
+        from playwright.sync_api import sync_playwright  # noqa: PLC0415
+    except ImportError:
+        return (CheckStatus.INCONCLUSIVE, expected, None,
+                "playwright is not installed, so a DOM postcondition cannot be "
+                "evaluated; install watch-skill[loop] and `playwright install "
+                "chromium`")
+
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True, args=[
+            "--disable-background-networking", "--no-first-run",
+            "--disable-component-update", "--disable-sync",
+        ])
+        try:
+            page = browser.new_page()
+            page.goto(url, wait_until="domcontentloaded", timeout=timeout_ms)
+            locator = page.locator(selector).first
+            if mode == "absent":
+                count = page.locator(selector).count()
+                return (CheckStatus.PASS if count == 0 else CheckStatus.FAIL,
+                        f"absent: {selector}", f"{count} match(es)",
+                        f"{selector!r} matched {count} element(s)")
+            try:
+                locator.wait_for(state="attached", timeout=timeout_ms)
+            except Exception:  # noqa: BLE001 - a missing element is a FAIL, not an error
+                return (CheckStatus.FAIL, expected, None,
+                        f"{selector!r} never appeared within {timeout_ms} ms")
+            observed = _read_dom(locator, mode, check)
+        finally:
+            browser.close()
+
+    if mode in ("exists", "visible", "enabled"):
+        want = bool(expected) if expected is not None else True
+        return (CheckStatus.PASS if bool(observed) is want else CheckStatus.FAIL,
+                want, observed, f"{selector} {mode} = {observed}")
+    ok = _text_matches(str(observed), expected, match)
+    return (CheckStatus.PASS if ok else CheckStatus.FAIL, expected, observed,
+            f"{selector} {mode} = {str(observed)[:200]!r}")
+
+
+def _read_dom(locator: Any, mode: str, check: Check) -> Any:
+    if mode == "exists":
+        return True
+    if mode == "visible":
+        return locator.is_visible()
+    if mode == "enabled":
+        return locator.is_enabled()
+    if mode == "attribute":
+        return locator.get_attribute(str(check.params["attribute"]))
+    if mode == "value":
+        return locator.input_value()
+    return (locator.text_content() or "").strip()
+
+
+def _text_matches(observed: str, expected: Any, match: str) -> bool:
+    if expected is None:
+        return bool(observed)
+    want = str(expected)
+    if match == "contains":
+        return want.lower() in observed.lower()
+    if match == "regex":
+        return re.search(want, observed) is not None
+    return observed == want
+
+
+def _live_console(check: Check, ctx: CheckContext) -> tuple[CheckStatus, Any, Any, str]:
+    """Assert about browser errors recorded in a live session's event log.
+
+    Reads the persisted log rather than the running session, so the answer is
+    the same from any process and cannot be changed by whatever is still
+    executing. With no browser evidence at all the verdict is INCONCLUSIVE:
+    an empty log is not proof a page threw nothing, it is proof nobody looked.
+    """
+    from watch_skill.live import db  # noqa: PLC0415
+
+    session_id = str(check.params["session_id"])
+    events = db.read_events(session_id, limit=500)
+    browser_events = [e for e in events if e.detector.startswith("browser:")]
+    if not browser_events:
+        return (CheckStatus.INCONCLUSIVE, check.params.get("expect", "no_errors"),
+                None, f"no browser evidence was recorded for {session_id}")
+
+    errors = [
+        e for e in browser_events
+        if e.detector in ("browser:page_error", "browser:request_failed",
+                          "browser:target_crashed")
+        or (e.detector == "browser:console"
+            and (e.detail.get("browser", {}).get("detail", {}).get("level")
+                 == "error"))
+    ]
+    since = check.params.get("since_media_ts")
+    if since is not None:
+        errors = [e for e in errors if e.media_ts >= float(since)]
+
+    expect = str(check.params.get("expect", "none"))
+    texts = [e.summary[:200] for e in errors[:10]]
+    if expect == "none":
+        return (CheckStatus.PASS if not errors else CheckStatus.FAIL,
+                "no browser errors", f"{len(errors)} error(s)",
+                texts[0] if texts else "no browser errors were recorded")
+    pattern = str(check.params.get("pattern", ""))
+    hits = [t for t in texts if re.search(pattern, t)] if pattern else texts
+    return (CheckStatus.PASS if hits else CheckStatus.FAIL,
+            f"an error matching {pattern!r}", f"{len(errors)} error(s)",
+            hits[0] if hits else f"no recorded error matched {pattern!r}")
+
+
+def _live_evidence(check: Check, ctx: CheckContext) -> tuple[CheckStatus, Any, Any, str]:
+    """A named clip or frame exists and still hashes to what it did.
+
+    Evidence that cannot be re-hashed is evidence nobody can rely on later, so
+    the artifact is read off disk and digested here rather than trusting the
+    row that describes it.
+    """
+    from watch_skill.live import buffer as buf  # noqa: PLC0415
+
+    session_id = str(check.params["session_id"])
+    artifact_id = str(check.params["artifact_id"])
+    segment = buf.resolve(session_id, artifact_id)
+    if segment is None:
+        return (CheckStatus.FAIL, artifact_id, None,
+                f"no artifact {artifact_id!r} in session {session_id}")
+    if segment.expired or not segment.path.is_file():
+        return (CheckStatus.FAIL, artifact_id, "expired",
+                f"{artifact_id} has aged out of the rolling buffer")
+    from watch_skill.verify.evidence import digest_file  # noqa: PLC0415
+
+    actual = digest_file(segment.path)
+    wanted = check.params.get("digest")
+    if wanted is None:
+        return (CheckStatus.PASS, artifact_id, actual,
+                f"{artifact_id} present, {segment.path.stat().st_size} bytes")
+    return (CheckStatus.PASS if actual == wanted else CheckStatus.FAIL,
+            wanted, actual,
+            "digest matches" if actual == wanted else "digest does NOT match")
+
+
+def _human_approval(check: Check, ctx: CheckContext) -> tuple[CheckStatus, Any, Any, str]:
+    """A named side effect was explicitly approved by a human.
+
+    The approval is read from the durable approval store, which the acting
+    agent has no write path into. An agent that could satisfy this by
+    asserting it had been approved would make every other control decorative,
+    so nothing in the evidence dict is consulted — only the store.
+    """
+    from watch_skill.actions.approvals import approval_state  # noqa: PLC0415
+
+    approval_id = str(check.params["approval_id"])
+    state = approval_state(approval_id)
+    if state is None:
+        return (CheckStatus.FAIL, f"approved: {approval_id}", None,
+                f"no approval record exists for {approval_id!r}")
+    if state["status"] != "approved":
+        return (CheckStatus.FAIL, f"approved: {approval_id}", state["status"],
+                f"{approval_id} is {state['status']}")
+    if state.get("expired"):
+        return (CheckStatus.FAIL, f"approved: {approval_id}", "expired",
+                f"the approval for {approval_id} expired before it was used")
+    return (CheckStatus.PASS, f"approved: {approval_id}", state["status"],
+            f"approved by {state.get('actor', 'unknown')} "
+            f"at {state.get('decided_at', 'unknown')}")
+
+
 _RUNNERS: dict[str, Callable[[Check, CheckContext], tuple[CheckStatus, Any, Any, str]]] = {
     "file_exists": _file_exists,
     "file_digest": _file_digest,
+    "directory_manifest": _directory_manifest,
     "json_value": _json_value,
     "json_schema": _json_schema,
     "sqlite_query": _sqlite_query,
@@ -377,6 +602,10 @@ _RUNNERS: dict[str, Callable[[Check, CheckContext], tuple[CheckStatus, Any, Any,
     "command_exit": _command_exit,
     "numeric_invariant": _numeric_invariant,
     "visual_absent": _visual_absent,
+    "browser_dom": _browser_dom,
+    "live_console": _live_console,
+    "live_evidence": _live_evidence,
+    "human_approval": _human_approval,
 }
 
 SUPPORTED_CHECK_TYPES = tuple(sorted(_RUNNERS))
@@ -392,7 +621,14 @@ def _sanitized_env() -> dict[str, str]:
     import os  # noqa: PLC0415
 
     keep = ("PATH", "SYSTEMROOT", "WINDIR", "COMSPEC", "TEMP", "TMP", "TMPDIR",
-            "HOME", "LANG", "LC_ALL", "PATHEXT", "NUMBER_OF_PROCESSORS")
+            "LANG", "LC_ALL", "PATHEXT", "NUMBER_OF_PROCESSORS",
+            # A home directory, under whichever name this platform uses.
+            # Windows sets USERPROFILE and not HOME, and without one httpx
+            # raises "Could not determine home directory" while looking for a
+            # .netrc — which turned every isolated http_request check on
+            # Windows into an ERROR, and therefore every contract containing
+            # one into `inconclusive`.
+            "HOME", "USERPROFILE", "HOMEDRIVE", "HOMEPATH")
     env = {name: os.environ[name] for name in keep if name in os.environ}
     env["WATCH_SKILL_VERIFIER"] = "1"
     return env

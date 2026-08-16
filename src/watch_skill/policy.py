@@ -68,6 +68,12 @@ class Channel(str, Enum):  # noqa: UP042 — matches SourceKind
     VERIFICATION_HTTP = "verification_http"
     """HTTP assertions made by a verification contract."""
 
+    ACTION = "action_effect"
+    """A governed side effect leaving this machine — an approved correction
+    calling an endpoint, for instance. Separate from every channel above
+    because those all *read*: this one changes something in the world, and an
+    operator who permitted a model call has not permitted that."""
+
 
 class SceneDescriptionMode(str, Enum):  # noqa: UP042 — matches SourceKind
     """Where indexing-time scene descriptions may be computed."""
@@ -118,6 +124,8 @@ _FIXES: dict[Channel, str] = {
     Channel.TELEMETRY: "Watch Skill sends no telemetry; this channel is "
                        "permanently denied",
     Channel.VERIFICATION_HTTP: "add the host to the contract's allowed_origins",
+    Channel.ACTION: "governed side effects are disabled by the current policy; "
+                    "unset WATCHSKILL_OFFLINE, or run the correction yourself",
 }
 
 
@@ -139,6 +147,11 @@ class ExecutionPolicy(BaseModel):
     allow_local_models: bool = True
     allow_webhooks: bool = True
     allow_telemetry: bool = False
+    allow_actions: bool = True
+    """Whether an approved correction may reach the network at all. Approval
+    and policy are separate gates on purpose: a human saying yes does not
+    override an operator's decision that this machine performs no outbound
+    side effects, and offline mode closes this channel like every other."""
     provider_allowlist: tuple[str, ...] | None = Field(
         default=None,
         description="When set, only these providers may be called. None = any "
@@ -180,6 +193,7 @@ class ExecutionPolicy(BaseModel):
             Channel.WEBHOOK: self.allow_webhooks,
             Channel.TELEMETRY: self.allow_telemetry,
             Channel.VERIFICATION_HTTP: not self.offline,
+            Channel.ACTION: self.allow_actions,
         }[channel]
         if not flag:
             return Decision(False, channel, "disabled by policy", provider)
@@ -245,6 +259,7 @@ def _from_settings() -> ExecutionPolicy:
         allow_local_models=True,
         allow_webhooks=not offline,
         allow_telemetry=False,
+        allow_actions=not offline,
         provider_allowlist=allowlist,
         scene_descriptions=scene_mode,
         max_usd_per_call=settings.cost_ceiling_usd,

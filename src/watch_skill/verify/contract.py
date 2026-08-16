@@ -69,6 +69,7 @@ def assurance_at_least(actual: Assurance, required: Assurance) -> bool:
 CheckType = Literal[
     "file_exists",
     "file_digest",
+    "directory_manifest",
     "json_value",
     "json_schema",
     "sqlite_query",
@@ -76,6 +77,13 @@ CheckType = Literal[
     "command_exit",
     "numeric_invariant",
     "visual_absent",
+    # Oracles that read a running world rather than a file. Each one is
+    # evaluated in the verifier process, read-only, against a target named in
+    # the frozen contract — never against state the acting agent hands over.
+    "browser_dom",
+    "live_console",
+    "live_evidence",
+    "human_approval",
 ]
 
 

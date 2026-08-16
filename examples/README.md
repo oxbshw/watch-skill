@@ -38,6 +38,8 @@ active environment, invoke `python` and `watch-skill` directly instead.
 | 17 | [Freshness and offline](17-freshness-and-offline/) | ffmpeg | An overwritten video becomes a new revision; offline stays offline with keys set; an empty critique is `inconclusive`. |
 | 18 | [Live watch](18-live-watch/) | ffmpeg, Pillow | A state change reported **while the source is still playing**, then finalised into ordinary indexed memory. |
 | 19 | [Live browser](19-live-browser/) | Playwright chromium | Page pixels **and** console/network/DOM evidence, both **before the page closes**, against a broken local fixture. |
+| 20 | [Observer Loop](20-observer-loop/) | Playwright chromium | A postcondition frozen first, a correction that waits for a named human, and a verdict from a **separate process**. |
+| 20 | [Observer Loop](20-observer-loop/) | Playwright chromium | Success declared first, a correction that **waits for a human**, and a verdict from a **separate verifier process**. |
 
 ## Useful commands
 
