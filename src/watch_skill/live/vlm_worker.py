@@ -325,6 +325,16 @@ class VlmWorker:
                 "inference_seconds", 0.0)
             return reply
 
+    def env_audit(self) -> dict[str, Any]:
+        """Ask the running child which credential-shaped variables it can see.
+
+        Stripping keys in ``_spawn`` is an intention. This is the check, taken
+        from inside the process that would have leaked them.
+        """
+        with self._lock:
+            self._ensure_process()
+            return self._call({"command": "env_audit"}, PING_TIMEOUT_S)
+
     def diagnostics(self) -> dict[str, Any]:
         return {
             "schema_version": 1,

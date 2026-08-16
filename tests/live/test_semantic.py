@@ -23,6 +23,23 @@ def _candidate(media_ts: float, **kwargs) -> FrameCandidate:
     return FrameCandidate(path=Path("f.jpg"), media_ts=media_ts, **kwargs)
 
 
+def _settle(runtime: SemanticRuntime, timeout: float = 10.0) -> None:
+    """Wait until the queue is empty and no call is in flight.
+
+    Interpretation moved onto one worker thread behind a queue, so polling
+    `_inflight` alone races: immediately after `consider` the worker may not
+    have picked the frame up yet, and the poll falls straight through.
+    """
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        with runtime._lock:
+            idle = not runtime._queue and not runtime._inflight
+        if idle:
+            return
+        time.sleep(0.02)
+    raise AssertionError("the semantic runtime never went idle")
+
+
 # --- selection: the module's whole reason for existing -------------------------
 
 
@@ -194,36 +211,77 @@ def test_the_runtime_never_blocks_the_caller() -> None:
     assert time.monotonic() - started < 0.3, "consider() blocked on the model"
 
 
-def test_a_frame_arriving_mid_call_is_skipped_not_queued() -> None:
-    """A queued answer would describe a screen that has moved on."""
+def test_the_keyframe_queue_is_small_and_bounded() -> None:
+    """Backpressure is a short queue, never an unbounded one."""
     backend = DeterministicSemanticBackend(
-        [{"start": 0, "end": 100, "scene": "x"}], delay=1.0
+        [{"start": 0, "end": 1000, "scene": "x"}], delay=1.0
     )
-    runtime = SemanticRuntime(backend=backend, on_observation=lambda *_: None)
-    assert runtime.consider(_candidate(10.0, scene_changed=True, visible_text="a"))
-    assert runtime.consider(_candidate(20.0, scene_changed=True, visible_text="b")) is False
-    assert runtime.last_skip_reason == "already_running"
+    runtime = SemanticRuntime(backend=backend, on_observation=lambda *_: None,
+                              queue_limit=2)
+    # Far enough apart to clear the cadence floor every time, so what is being
+    # measured is the queue and not the selector.
+    accepted = [runtime.consider(
+        _candidate(i * 10.0, scene_changed=True, visible_text=f"v{i}"))
+        for i in range(6)]
+    assert any(accepted), "nothing was ever queued"
+    with runtime._lock:
+        assert len(runtime._queue) <= 2, "the queue grew past its limit"
+    stats = runtime.stats()
+    assert stats["queue_limit"] == 2
+    # Every frame that was selected and then not interpreted is accounted for.
+    assert stats["dropped_queue_full"] + stats["dropped_superseded"] > 0
+    assert all("dropped_because" in drop for drop in stats["drops"])
 
 
-def test_a_stale_answer_cannot_overwrite_a_newer_one() -> None:
-    """Out-of-order completion is normal; going backwards in time is not."""
-    published: list = []
+def test_a_more_informative_frame_takes_the_slot_and_the_loser_is_recorded() -> None:
+    """When frames compete, the better one wins — visibly, not silently."""
+    backend = DeterministicSemanticBackend(
+        [{"start": 0, "end": 1000, "scene": "x"}], delay=1.0
+    )
+    runtime = SemanticRuntime(backend=backend, on_observation=lambda *_: None,
+                              queue_limit=1)
+    runtime.consider(_candidate(10.0, scene_changed=True, visible_text="a"))
+    runtime.consider(_candidate(20.0, trigger_interest=True, visible_text="b"))
+    # A waiting question outranks a bare trigger nudge, so it evicts it.
+    runtime.consider(_candidate(30.0, question_pending=True, visible_text="c"))
+    drops = runtime.stats()["drops"]
+    assert any(d["dropped_because"] == "superseded_by_better_frame"
+               for d in drops), f"no supersede recorded: {drops}"
+
+
+def test_a_late_answer_is_published_as_evidence_not_discarded() -> None:
+    """Lateness costs the present tense, never the evidence.
+
+    The old contract dropped an out-of-order result outright. That threw away
+    a true statement about a real frame for the sole crime of arriving after a
+    newer one, which is exactly what makes a slow model useless.
+    """
+    from watch_skill.live.semantic import Freshness, SemanticObservation
+
+    published: list[SemanticObservation] = []
+
+    class Backend:
+        name = "late"
+
+        def interpret(self, frames, media_ts, question=""):
+            return SemanticObservation(media_ts=media_ts, scene="an old frame")
+
     runtime = SemanticRuntime(
-        backend=DeterministicSemanticBackend([{"start": 0, "end": 999, "scene": "s"}]),
-        on_observation=lambda obs, reason: published.append(obs.media_ts),
+        backend=Backend(),
+        on_observation=lambda obs, reason: published.append(obs),
     )
+    # A newer reading has already been applied.
     runtime._latest_applied_ts = 50.0
-    from watch_skill.live.semantic import SemanticObservation
+    runtime.consider(_candidate(10.0, scene_changed=True, visible_text="old"))
+    _settle(runtime)
 
-    runtime._inflight = False
-    with runtime._lock:
-        pass
-    # Simulate a late arrival for an older frame.
-    observation = SemanticObservation(media_ts=10.0)
-    with runtime._lock:
-        stale = observation.media_ts < runtime._latest_applied_ts
-    assert stale, "the guard would not have rejected this"
-    assert published == []
+    assert len(published) == 1, "the late observation was discarded"
+    late = published[0]
+    assert late.media_ts == 10.0
+    assert late.superseded is True
+    assert late.freshness == Freshness.STALE_FOR_ACTION
+    assert late.may_trigger_current_state_action is False
+    assert late.to_public()["freshness"] == "stale_for_action"
 
 
 def test_a_failing_backend_opens_the_circuit_and_degrades() -> None:
@@ -237,9 +295,7 @@ def test_a_failing_backend_opens_the_circuit_and_degrades() -> None:
     for i in range(4):
         runtime.consider(_candidate(i * 10.0, scene_changed=True,
                                     visible_text=f"t{i}"))
-        deadline = time.time() + 5
-        while runtime._inflight and time.time() < deadline:
-            time.sleep(0.02)
+        _settle(runtime)
 
     assert runtime.failures >= 3
     assert runtime.breaker.open

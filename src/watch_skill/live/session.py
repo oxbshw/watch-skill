@@ -215,6 +215,8 @@ class RunningSession:
             self._semantic.consider(SemanticCandidate(
                 path=frame.path, media_ts=frame.media_ts,
                 scene_changed=detection is not None,
+                frame_seq=frame.index, captured_wall_ts=frame.wall_ts,
+                capture_kind=self.session.spec.kind.value,
             ))
 
     def _analyze_ocr(self, frame: CapturedFrame) -> None:
@@ -236,6 +238,8 @@ class RunningSession:
                 path=frame.path, media_ts=frame.media_ts,
                 scene_changed=False, text_changed=detection is not None,
                 visible_text=text,
+                frame_seq=frame.index, captured_wall_ts=frame.wall_ts,
+                capture_kind=self.session.spec.kind.value,
             ))
 
     def _publish(self, detection: Any, frame: CapturedFrame, started: float) -> None:
@@ -316,9 +320,20 @@ class RunningSession:
             build_semantic_backend,
         )
 
+        detail = self.session.spec.detail or {}
         backend = self._semantic_backend
+        if backend is None and detail.get("semantic_vlm"):
+            # The external real-model worker, when the operator asked for it
+            # by name. Never discovered: loading it costs seconds of CPU and
+            # over a gigabyte, and a session must not decide that on its own.
+            from watch_skill.live.vlm_backend import build_vlm_backend  # noqa: PLC0415
+
+            backend = build_vlm_backend(
+                interpreter=detail.get("vlm_interpreter"),
+                model=detail.get("vlm_model", ""),
+                revision=detail.get("vlm_revision", ""),
+            )
         if backend is None:
-            detail = self.session.spec.detail or {}
             backend = build_semantic_backend(
                 enabled=bool(detail.get("semantic")),
                 provider=detail.get("semantic_provider"),
@@ -328,8 +343,17 @@ class RunningSession:
             return
         self._semantic = SemanticRuntime(
             backend=backend, on_observation=self._on_semantic,
-            budget=int((self.session.spec.detail or {}).get("semantic_budget", 60)),
+            budget=int(detail.get("semantic_budget", 60)),
+            # Freshness is decided when the answer lands, and by then the
+            # source may have ended. Reading it live is what separates "too
+            # late to act on" from "historical evidence".
+            source_running=lambda: bool(
+                getattr(self._source, "running", False)),
         )
+        # Warm alongside startup, not at the first interesting frame. Loading
+        # is seconds of CPU; paying it lazily means the first thing worth
+        # interpreting is also the thing that waits for the loader.
+        self._semantic.warm()
 
     def _on_semantic(self, observation: Any, reason: str) -> None:
         """Publish a model reading as an explicitly advisory event.
@@ -341,6 +365,13 @@ class RunningSession:
         summary = observation.scene or observation.ui_state or "(no description)"
         if observation.degraded:
             summary = f"semantic reading unavailable: {observation.degraded_reason}"
+        elif observation.freshness != "current_state":
+            # The lateness goes in the sentence a human reads, not only in a
+            # field they have to go looking for. A minute-old reading
+            # presented as plain narration is the whole failure mode this
+            # season exists to avoid.
+            summary = (f"[{observation.freshness}, "
+                       f"{observation.late_by_seconds:.0f}s late] {summary}")
         self._append(LiveEvent(
             session_id=self.session.session_id, seq=0,
             media_ts=observation.media_ts, wall_ts=time.time(),
@@ -351,7 +382,12 @@ class RunningSession:
             summary=summary,
             detector=f"semantic:{observation.model or observation.provider}",
             final=not observation.degraded,
-            detail={"semantic": observation.to_public(), "selected_because": reason},
+            detail={"semantic": observation.to_public(),
+                    "selected_because": reason,
+                    "freshness": observation.freshness,
+                    "late_by_seconds": round(observation.late_by_seconds, 3),
+                    "may_trigger_current_state_action":
+                        observation.may_trigger_current_state_action},
         ))
 
     def _start_browser_events(self) -> None:
@@ -597,6 +633,12 @@ class RunningSession:
             # Stopped first so its flush lands before the event log closes —
             # the trailing utterance is usually why someone hit stop.
             self._audio.stop()
+        if self._semantic is not None:
+            # Stops accepting frames and releases the model process. Stop must
+            # not wait tens of seconds for an in-flight interpretation, so the
+            # worker is torn down rather than drained — the frames it was
+            # holding are already recorded as dropped.
+            self._semantic.stop()
         # Drain before tearing down: frames already captured deserve to be
         # persisted, and a stop that discards them loses evidence for the
         # moment the operator most likely stopped to look at.

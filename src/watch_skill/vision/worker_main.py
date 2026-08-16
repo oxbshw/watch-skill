@@ -161,6 +161,31 @@ def _interpret(request: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _env_audit() -> dict[str, Any]:
+    """Report which credential-shaped variables this process can see.
+
+    The parent strips provider keys before spawning. That claim is only worth
+    something if it can be checked from *inside* the child, so this reports
+    what actually arrived rather than what was intended.
+
+    Names only, never values. A variable name is not a secret; its contents
+    are, and this must never become a way to read one back out over the pipe.
+    """
+    import os  # noqa: PLC0415
+
+    tokens = ("API_KEY", "APIKEY", "_TOKEN", "SECRET", "PASSWORD",
+              "ANTHROPIC", "OPENAI", "GEMINI", "GROQ", "HF_TOKEN")
+    seen = sorted(name for name in os.environ
+                  if any(token in name.upper() for token in tokens))
+    return {
+        "ok": True,
+        "credential_like_names": seen,
+        "credential_like_count": len(seen),
+        "hf_hub_offline": os.environ.get("HF_HUB_OFFLINE", ""),
+        "transformers_offline": os.environ.get("TRANSFORMERS_OFFLINE", ""),
+    }
+
+
 def _release() -> dict[str, Any]:
     """Drop the model and give the memory back."""
     STATE.model = None
@@ -200,6 +225,8 @@ def main() -> int:
                 _reply(_load(request))
             elif command == "interpret":
                 _reply(_interpret(request))
+            elif command == "env_audit":
+                _reply(_env_audit())
             elif command == "release":
                 _reply(_release())
             elif command == "shutdown":
