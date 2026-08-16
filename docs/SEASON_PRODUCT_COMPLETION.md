@@ -236,7 +236,47 @@ and the ones that forgot would report that a firing proposed nothing.
 stable and tested; exposing it publicly is deliberately deferred rather than
 half-wired.
 
-## Final gate on `ec2e775`
+## Season 2 final gate on `7198165`
+
+| Gate | Result |
+| --- | --- |
+| Ruff (`src`, `tests`, `examples`) | clean |
+| Full offline Python suite | **1376 passed, 18 skipped, 0 failed, 0 errors** |
+| Full suite, two consecutive runs | 1370/18/0 twice on `c34ff41`, then 1376/18/0 on `7198165` — **no `MemoryError` in any run** |
+| Browser suite, three consecutive runs | 73 passed each time, exit 0 |
+| Skips with a specific reason | 18/18, unchanged from season 1 |
+| Pushed / merged / tagged / released / published | none |
+| Working tree | clean |
+
+Up from season 1's 1339: **+37 tests**, no new skips.
+
+Measured on this machine at the end of the run: free memory 1868 MB against a
+700 MB browser floor; browser limit 2 per process; best establishable
+assurance `isolated_local`.
+
+## Season 2 — what was not started
+
+Named rather than quietly omitted. Season 2 spent its capacity on the audit
+slice, which was ordered first and which found three real defects. The
+following are untouched and must not be read as partially done:
+
+| Slice | Status |
+| --- | --- |
+| 2 — MCP App / live workspace | **Not started.** No `@modelcontextprotocol/ext-apps` dependency, no TypeScript, no React, no UI of any kind. There are no screenshots and no demo artifact, because there is nothing to screenshot. |
+| 3 — Plugin protocol | **Not started.** No entry-point protocol, no reference plugins. |
+| 4 — TypeScript SDK | **Not started.** No `package.json`, no `npm pack`. |
+| 5 — Skill consolidation | **Not started.** Still ten skills; the 1,259-token discovery baseline is unchanged. |
+| 6 — Pulse observability | **Not started.** Counters exist on `LiveStats`, `Spend` and the browser pool; there is no metrics endpoint, no OTel exporter, and no `telemetry` command. |
+| 7 — Security release gate | **Per-slice only.** Individual controls are implemented and tested (redaction, SSRF, path traversal, approval replay, forged receipts, resource exhaustion, browser process leaks). The consolidated scans — secret scan, dependency audit, package-content inspection — were **not run**. |
+| 8 — Packaging | **Not started.** No wheel, no sdist, no clean-environment install, no offline smoke test. |
+
+The definitive release proof described in the brief — the full fixture run
+*through the UI*, with reconnect and reopening — **did not run**, because the
+UI does not exist. The equivalent proof through the Python API does pass and
+is unchanged from season 1
+(`tests/observer/test_observer_loop.py::test_broken_app_observed_corrected_and_independently_verified`).
+
+## Season 1 final gate on `ec2e775`
 
 | Gate | Result |
 | --- | --- |
@@ -455,5 +495,26 @@ verification core with the release gates outstanding**. The distinction from
 the VLM blocker matters and should not be blurred: semantic vision is blocked
 by this environment, whereas packaging is simply not yet done. The first is a
 limitation to state; the second is work to finish.
+
+### Still not `2.0.0rc1` after season 2
+
+Season 2 made the core more trustworthy — three real concurrency defects
+fixed, browsers governed, entities implemented, assurance stated honestly —
+but it did not close any release gate. There is still no UI, no TypeScript
+SDK, no plugin protocol, no packaging, and no consolidated security scan.
+
+Three distinct categories, which should stay distinct:
+
+1. **Environmentally blocked** — the real VLM proof. Nothing in the code is
+   missing; this machine cannot run it. Also `external_read_only` assurance:
+   no container runtime, and no authority to create an OS identity.
+2. **Deterministic infrastructure, proved** — live browser, entities,
+   triggers, actions and approvals, oracles, Observer Loop, browser
+   governance. Machine-tested here, with the receipts to re-check.
+3. **Not written** — MCP App, plugin SDK, TypeScript SDK, skill
+   consolidation, Pulse, packaging.
+
+A version number that implied (3) was done would be false regardless of how
+well (2) went.
 </content>
 </invoke>
