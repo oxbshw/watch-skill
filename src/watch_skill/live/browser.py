@@ -284,6 +284,7 @@ class BrowserSource:
         self._profile_dir = out_dir.parent / f"profile_{self.session_id}"
         self._closed_cleanly = False
         self._lease: pool.Lease | None = None
+        self._lease_reclaimed = False
         self._stragglers_killed: list[int] = []
         self._tree_gone: bool | None = None
 
@@ -365,6 +366,22 @@ class BrowserSource:
                     detail={"killed_pids": killed},
                 ))
         self._tree_gone = self._remove_profile()
+        # The lease is released by `_run`'s finally clause, on the browser
+        # thread. If that thread had to be killed rather than joined, nobody
+        # ran it — and a lease nothing will ever release makes the budget
+        # permanently one smaller for the life of the process. Every later
+        # session then fails for a reason that has nothing to do with it.
+        #
+        # Bounded wait, then reclaim. Waiting forever would trade a leak for a
+        # hang, which is not an improvement.
+        deadline = time.monotonic() + 5.0
+        while self._lease is not None and not self._lease.released:
+            if time.monotonic() > deadline:
+                pool.release(self._lease)
+                self._lease_reclaimed = True
+                break
+            time.sleep(0.05)
+        self._lease = None
         try:
             self._frames.put_nowait(None)
         except queue.Full:  # pragma: no cover - a full queue already unblocks
@@ -409,6 +426,7 @@ class BrowserSource:
             "failure": self.failure.to_dict() if self.failure else None,
             "resources": pool.diagnostics(),
             "holds_lease": self._lease is not None and not self._lease.released,
+            "lease_reclaimed_by_stop": self._lease_reclaimed,
         }
 
     def process_tree_gone(self) -> bool:

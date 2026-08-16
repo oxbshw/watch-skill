@@ -82,6 +82,22 @@ class LocalIsolatedVerifier:
             self.timeout_seconds,
             sum(check.timeout_seconds for check in checks) + 30.0,
         )
+        # The verifier subprocess may launch its own Chromium — a `browser_dom`
+        # check opens a browser to read the page. The pool is per process, so
+        # that instance was invisible to the parent's budget: the parent
+        # believed one browser was running while two existed. Under a live
+        # session plus a verification that is already the ceiling, and the
+        # third Chromium is what pushed the machine over.
+        #
+        # The parent holds the lease on the child's behalf for the lifetime of
+        # the subprocess. Accounting for a browser we cause but do not own is
+        # the honest reading of a budget; raising the limit so the arithmetic
+        # stops complaining would only move the failure to the OS.
+        lease = None
+        if any(check.type.startswith("browser_") for check in checks):
+            from watch_skill.live import browser_pool as pool  # noqa: PLC0415
+
+            lease = pool.acquire("verifier:isolated", timeout=deadline)
         try:
             completed = subprocess.run(  # noqa: S603 - argv list, shell=False
                 [sys.executable, "-m", "watch_skill.verify.worker"],
@@ -99,6 +115,15 @@ class LocalIsolatedVerifier:
                 _inconclusive(check, f"the verifier exceeded its {deadline:.0f}s deadline")
                 for check in checks
             ]
+        finally:
+            # Released whether the child succeeded, failed, or timed out. A
+            # lease that survives a timeout is the one that makes the *next*
+            # run fail, which is how a single slow verification turns into a
+            # suite that degrades run after run.
+            if lease is not None:
+                from watch_skill.live import browser_pool as pool  # noqa: PLC0415
+
+                pool.release(lease)
 
         try:
             payload = json.loads(completed.stdout)
