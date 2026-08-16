@@ -68,15 +68,22 @@ class _Handler(BaseHTTPRequestHandler):
         """Quiet. A request log per frame poll buries everything else."""
 
     def _send(self, status: int, body: bytes, content_type: str) -> None:
-        self.send_response(status)
-        self.send_header("Content-Type", content_type)
-        self.send_header("Content-Length", str(len(body)))
-        self.send_header("Cache-Control", "no-store")
-        # The same restrictions the MCP resource declares, so what is proved
-        # here is proved under the policy the real thing runs under.
-        self.send_header("Content-Security-Policy", _csp())
-        self.end_headers()
-        self.wfile.write(body)
+        try:
+            self.send_response(status)
+            self.send_header("Content-Type", content_type)
+            self.send_header("Content-Length", str(len(body)))
+            self.send_header("Cache-Control", "no-store")
+            # The same restrictions the MCP resource declares, so what is
+            # proved here is proved under the policy the real thing runs
+            # under.
+            self.send_header("Content-Security-Policy", _csp())
+            self.end_headers()
+            self.wfile.write(body)
+        except (ConnectionAbortedError, ConnectionResetError, BrokenPipeError):
+            # The client went away mid-response — a reload, a navigation, or a
+            # closing browser. Ordinary, and not worth a traceback: printed on
+            # every teardown it buries the failures a proof run cares about.
+            return
 
     def _json(self, status: int, payload: Any) -> None:
         self._send(status, json.dumps(payload, default=str).encode("utf-8"),

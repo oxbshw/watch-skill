@@ -18,12 +18,25 @@
   --accent-soft: color-mix(in srgb, var(--accent) 14%, transparent);
   --accent-text: #ffffff;
 
+  /* The accent, deep enough to carry white text.
+   *
+   * Measured, not guessed: white on `--accent` is 4.27:1, which axe reports
+   * as a serious violation and which is genuinely hard to read. This is
+   * 5.9:1. `--accent` stays as it is for rules, focus rings and marks, where
+   * nothing sits on top of it and the brighter blue is the better colour.
+   * Not redefined for dark — a lighter blue there scores worse, not better,
+   * because the text on it is still white. */
+  --accent-strong: #3d55d8;
+
   --bg: #f7f8fa;
   --panel: #ffffff;
   --panel-2: #f2f4f7;
   --ink: #14161c;
   --ink-2: #4a5162;
-  --ink-3: #767e92;
+  /* 5.6:1 on the panel. Was #767e92, which is 4.0:1 — under the 4.5 floor,
+   * and this is the colour every "nothing here yet" message uses. The state
+   * a panel spends most of its life in should not be the least readable. */
+  --ink-3: #5f6779;
   --line: #e3e6ed;
   --line-strong: #cfd4e0;
 
@@ -266,12 +279,12 @@ button:hover:not(:disabled) { background: var(--panel-2); }
 button:disabled { opacity: 0.45; cursor: not-allowed; }
 
 button.primary {
-  background: var(--accent);
-  border-color: var(--accent);
+  background: var(--accent-strong);
+  border-color: var(--accent-strong);
   color: var(--accent-text);
 }
 button.primary:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--accent) 88%, black);
+  background: color-mix(in srgb, var(--accent-strong) 88%, black);
 }
 button.danger { color: var(--bad); border-color: color-mix(in srgb, var(--bad) 40%, transparent); }
 button.ghost { background: transparent; border-color: transparent; }
