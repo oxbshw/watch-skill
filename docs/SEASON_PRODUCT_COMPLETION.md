@@ -254,6 +254,85 @@ Measured on this machine at the end of the run: free memory 1868 MB against a
 700 MB browser floor; browser limit 2 per process; best establishable
 assurance `isolated_local`.
 
+---
+
+# Season 3 — the MCP App and live workspace
+
+## Preflight — the governor's fail-open hole
+
+Two admission bugs, both of which let the governor stay satisfied right up
+until the host was not.
+
+It compared free memory against a reserve **without subtracting what the new
+session would take**. 800 MB free clears a 700 MB reserve; a 450 MB Chromium
+then consumes the reserve entirely. And when memory could not be read at all
+it failed open — the guarantee evaporating on exactly the platforms where
+nobody can check it.
+
+Now: reserve **plus** estimated session cost, resident model weights counted
+against the budget, a conservative single session when memory is
+unmeasurable, `memory_measurement_unavailable` reported, and fail-open
+reachable only through `WATCHSKILL_ALLOW_UNMEASURED_BROWSERS`. Leases release
+at interpreter exit. 14 tests in `tests/live/test_browser_pool.py`.
+
+## The MCP App
+
+**SDK**: `@modelcontextprotocol/ext-apps@1.7.5`, pinned exactly. Both official
+constants (`text/html;profile=mcp-app`, `ui/resourceUri`) are asserted against
+the installed package's own type declarations, so an SDK bump that moves them
+fails the suite rather than producing a workspace that silently never renders.
+
+**One new discovery-facing tool**: `watch_workspace`. Everything the UI does
+goes through the canonical tools that already existed.
+
+**Canonical state stays in Python** (`watch_skill.workspace`): bounded
+snapshot for first render and every reconnect, cursor-based deltas with an
+explicit gap signal. The observation/inference split and timeline lane
+assignment are decided in the core, not re-derived by the client.
+
+**Stack**: React 19.2 + TypeScript 5.9 (strict, plus `noUncheckedIndexedAccess`
+and `exactOptionalPropertyTypes`) built by Vite 7.3.6 into one 564 KB
+self-contained file. `npm audit`: 0 vulnerabilities. Bundle inspected for
+remote origins and `eval` — none.
+
+### Three bugs only a rendered UI could find
+
+1. **The approval panel leaked the correction's bearer token.** Fixed in the
+   read model, not at render — a client that redacts on display has already
+   received the secret, and so has any screenshot or bug report of it.
+2. **Approving anywhere but the loop's own helper left the run stuck
+   forever.** `advance` now consults the approval store rather than a private
+   flag, so a decision taken in the UI, the CLI or REST all mean the same
+   thing.
+3. **The receipt strip rendered on top of the approve button.** Visible,
+   correctly labelled, completely unclickable. One missing `flex: 0 0 auto`;
+   the same shape had clipped the stage controls and compressed the evidence
+   tabs. A defect that looks like nothing in a screenshot and like a broken
+   product in a hand.
+
+A fourth — the header stacking into a tall centred column because `.panel`
+won `flex-direction` — was caught by *looking at the screenshot*, and is now
+asserted.
+
+### The definitive UI proof
+
+`tests/surfaces/test_workspace_ui.py` runs the whole scenario against the real
+bundle in a real browser: live browser fixture → LIVE badge while genuinely
+running → browser evidence rendered → page text fenced as UNTRUSTED →
+observations and inferences never in one card → failed verification →
+approval showing the exact effect with the token redacted → approved **through
+the UI** → applied exactly once (`fix_attempts == 1`) → verified, naming the
+deterministic oracle and `isolated_local` → reload and recover from canonical
+state without duplicate markers → reopened from a fresh process.
+
+Artifacts in `docs/assets/workspace/`: light, dark, approval, verified, narrow
+(420 px). All generated from fixture content only.
+
+**Not done in this season**: no run inside a production MCP host (Claude
+Desktop and others untested); media is snapshot-only; pause/resume is not
+implemented in the live core and the UI says so; no MP4/GIF demo; no formal
+axe-style accessibility audit beyond the keyboard-reachability test.
+
 ## Season 2 — what was not started
 
 Named rather than quietly omitted. Season 2 spent its capacity on the audit

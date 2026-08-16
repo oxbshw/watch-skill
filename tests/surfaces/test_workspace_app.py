@@ -8,6 +8,7 @@ the UI is a *view*: everything it draws exists in a durable store first.
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 
 import pytest
@@ -99,10 +100,34 @@ def test_the_policy_forbids_remote_code_and_eval() -> None:
 
 
 def test_the_bundled_document_loads_nothing_remote() -> None:
+    """No remote *loadable* reference — which is not the same as no URL.
+
+    An earlier version of this test rejected the string "http://" anywhere in
+    the bundle and failed on `http://www.w3.org/2000/svg`. An XML namespace is
+    an identifier, never fetched, and a link inside a React error message is
+    documentation. Banning them proves nothing and trains people to weaken the
+    check. What matters is whether the document can pull code or assets from
+    somewhere else at run time.
+    """
     html = workspace_resource()["resource"]["text"]
-    for remote in ("http://", "https://cdn", "unpkg.com", "jsdelivr",
-                   "googleapis.com"):
-        assert remote not in html, remote
+
+    quote = "[\"']"
+    for pattern, what in (
+        (rf"<script[^>]+src\s*=\s*{quote}https?://", "remote script"),
+        (rf"<link[^>]+href\s*=\s*{quote}https?://", "remote stylesheet"),
+        (rf"<img[^>]+src\s*=\s*{quote}https?://", "remote image"),
+        (rf"@import\s+(?:url\()?{quote}?https?://", "remote CSS import"),
+        (r"importScripts\(", "worker script import"),
+    ):
+        assert not re.search(pattern, html, re.IGNORECASE), what
+
+    for host in ("cdn.jsdelivr", "unpkg.com", "cdnjs.", "fonts.googleapis",
+                 "fonts.gstatic", "ajax.googleapis"):
+        assert host not in html, host
+
+    # And no dynamic evaluation, which is the other way remote code arrives.
+    for construct in ("eval(", "new Function("):
+        assert construct not in html, construct
 
 
 # --- canonical state ---------------------------------------------------------

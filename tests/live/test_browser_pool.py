@@ -78,6 +78,11 @@ def test_the_reserve_must_survive_the_new_session_not_merely_exist(
     subtracted first.
     """
     monkeypatch.setattr(pool, "available_memory_mb", lambda: 800.0)
+    # Resident models are pinned to zero so this test measures the reserve
+    # arithmetic and nothing else. Without it, a model another test happened
+    # to load changes the expected total and the failure looks like a bug in
+    # the governor rather than in the fixture.
+    monkeypatch.setattr(BrowserPool, "_worker_cost_locked", lambda self: 0.0)
     # 800 free is comfortably above a 700 reserve, and nowhere near enough
     # once a 450 MB session is accounted for.
     budget = BrowserPool(max_browsers=2, min_available_mb=700.0,
@@ -102,6 +107,7 @@ def test_resident_models_count_against_the_budget(monkeypatch) -> None:
     the governor stays satisfied right up until the host is not.
     """
     monkeypatch.setattr(pool, "available_memory_mb", lambda: 1300.0)
+    monkeypatch.setattr(BrowserPool, "_worker_cost_locked", lambda self: 0.0)
     budget = BrowserPool(max_browsers=2, min_available_mb=700.0,
                          session_cost_mb=450.0)
     lease = budget.acquire("no-models", timeout=0.2)
