@@ -351,12 +351,21 @@ def capture_capabilities_cmd() -> None:
 
 @live_app.command("start")
 def live_start_cmd(
-    target: str = typer.Argument(..., help="File path (replayed live) or stream URL."),
-    kind: str = typer.Option("file_replay", "--kind", help="file_replay | stream"),
+    target: str = typer.Argument(
+        ..., help="File path (replayed live), stream URL, or page URL for --kind browser."),
+    kind: str = typer.Option("file_replay", "--kind",
+                             help="file_replay | stream | browser | window"),
     profile: str = typer.Option("local-lite", "--profile"),
     fps: float = typer.Option(2.0, "--fps", help="Analysis frame rate."),
     buffer_seconds: float = typer.Option(120.0, "--buffer"),
     follow: bool = typer.Option(False, "--follow", help="Stream events until it ends."),
+    allow_local: bool = typer.Option(
+        False, "--allow-local",
+        help="Let a browser session open loopback URLs — your own dev server. "
+             "Off by default; cloud metadata endpoints stay refused either way."),
+    allowed_host: list[str] = typer.Option(
+        [], "--allowed-host",
+        help="Restrict a browser session to these hosts. Repeatable."),
 ) -> None:
     """Start a live session. --follow prints events as they happen."""
     from watch_skill.errors import WatchSkillError
@@ -364,7 +373,9 @@ def live_start_cmd(
 
     try:
         session = start_live(target, kind=kind, profile=profile, fps=fps,
-                             buffer_seconds=buffer_seconds)
+                             buffer_seconds=buffer_seconds,
+                             allow_local=allow_local,
+                             allowed_hosts=list(allowed_host) or None)
     except WatchSkillError as exc:
         print(json.dumps(exc.to_dict(), indent=2))
         raise typer.Exit(code=1) from None

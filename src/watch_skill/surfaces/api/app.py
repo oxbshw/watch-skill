@@ -244,6 +244,8 @@ def create_app() -> FastAPI:
                 profile=body.get("profile", "local-lite"),
                 fps=float(body.get("fps", 2.0)),
                 buffer_seconds=float(body.get("buffer_seconds", 120.0)),
+                allow_local=bool(body.get("allow_local", False)),
+                allowed_hosts=body.get("allowed_hosts") or None,
             )
         except WatchSkillError as exc:
             raise _http_error(exc) from exc

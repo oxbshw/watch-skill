@@ -28,6 +28,8 @@ then connect your client through the [agent matrix](agents/README.md).
   windows, and follow-up questions.
 - [Arabic in, Arabic out](guides/arabic-in-arabic-out.md) — script-aware OCR and
   cross-language retrieval.
+- [Live browser](guides/live-browser.md) — pixels and structured page evidence at once,
+  navigation policy, redaction, and what a page is never allowed to say.
 - [THE LOOP](guides/the-loop.md) — capture, criteria, iteration, and proof artifacts.
 - [Lessons and savings](guides/lessons-and-savings.md) — corrections, evaluation, caching,
   and token accounting.
@@ -57,6 +59,7 @@ Runnable counterparts live in the [example catalog](../examples/README.md).
 - [Capture capabilities](capture-capabilities.md) — what this machine can actually record, and how each answer was established
 - [Architecture](architecture.md) describes boundaries, data flow, and extension points.
 - [Engineering decisions](DECISIONS.md) records the trade-offs behind those boundaries.
+- [Product completion ledger](SEASON_PRODUCT_COMPLETION.md) — what each slice built, what proved it, and what is still blocked.
 - [Benchmarks](../benchmarks/) contains methods, fixtures, and committed results.
 
 ## Documentation standards

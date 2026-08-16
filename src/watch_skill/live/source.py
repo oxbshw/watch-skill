@@ -273,7 +273,8 @@ def window_exists(title: str) -> bool:
     return bool(found.value)
 
 
-def open_source(spec: LiveSourceSpec, out_dir: Path) -> FfmpegFrameSource:
+def open_source(spec: LiveSourceSpec, out_dir: Path,
+                session_id: str = "") -> LiveSource:
     """Build the source for a spec, or say plainly that it is not supported.
 
     Unsupported kinds fail here, before a session exists, rather than
@@ -285,6 +286,18 @@ def open_source(spec: LiveSourceSpec, out_dir: Path) -> FfmpegFrameSource:
 
     if spec.kind is LiveSourceKind.FILE_REPLAY:
         return file_replay_source(spec, out_dir)
+    if spec.kind is LiveSourceKind.BROWSER:
+        capability = capability_for("browser")
+        if capability.status != "available":
+            raise CaptureError(
+                f"browser capture is {capability.status} on this machine",
+                code="live.capture_unavailable",
+                fix=capability.repair or "playwright install chromium",
+                details=capability.model_dump(),
+            )
+        from watch_skill.live.browser import browser_source  # noqa: PLC0415
+
+        return browser_source(spec, out_dir, session_id=session_id)
     if spec.kind is LiveSourceKind.WINDOW:
         capability = capability_for("window")
         if capability.status not in ("available", "degraded"):

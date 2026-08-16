@@ -76,6 +76,12 @@ class LiveEventType(str, Enum):  # noqa: UP042 — matches SourceKind
     CAPTURE_GAP = "capture_gap"
     PROVIDER_DEGRADED = "provider_degraded"
 
+    BROWSER_EVENT = "browser_event"
+    """Structured evidence from a watched browser — navigation, DOM and
+    accessibility changes, request metadata, downloads, popups. Errors from a
+    browser are reported as ``ERROR`` instead, so an operator filtering for
+    failures sees them without knowing which source produced them."""
+
 
 class Provenance(str, Enum):  # noqa: UP042 — matches SourceKind
     """Whether an event is something we SAW or something we concluded.
@@ -192,6 +198,12 @@ class LiveEvent(BaseModel):
                 for c in self.state_changes
             ],
             "detector": self.detector,
+            # The structured payload a detector attached — a browser's
+            # navigation epoch and redaction status, a semantic reading's
+            # model and confidence. Producers bound it before it gets here;
+            # withholding it would leave every surface able to see that
+            # something happened and unable to say what.
+            "detail": self.detail,
         }
 
 

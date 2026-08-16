@@ -119,6 +119,7 @@ class RunningSession:
         if spec.audio:
             self._start_audio()
         self._start_semantic()
+        self._start_browser_events()
 
         # Warm slow models off the critical path, AFTER audio exists so the
         # warm step can see which ASR backend to load. The first OCR or ASR
@@ -172,8 +173,18 @@ class RunningSession:
             return
         finally:
             self._flush_stats()
-        if not self.stop_event.is_set():
-            self.stop(reason="source ended")
+        if self.stop_event.is_set():
+            return
+        # A source that ended on its own may have ended *badly*. Asking it
+        # before declaring a clean stop is what keeps "the browser was killed"
+        # from being recorded as "the recording finished" — the two look
+        # identical from the capture loop's side, and only one of them means
+        # the evidence is complete.
+        failure = getattr(self._source, "failure", None)
+        if failure is not None:
+            self.stop(reason=failure.message, failed=True, error=failure.to_dict())
+            return
+        self.stop(reason="source ended")
 
     # --- stages ------------------------------------------------------------
 
@@ -343,6 +354,92 @@ class RunningSession:
             detail={"semantic": observation.to_public(), "selected_because": reason},
         ))
 
+    def _start_browser_events(self) -> None:
+        """Drain the source's structured channel into the session event log.
+
+        Its own thread, and a short poll, because the point of the structured
+        channel is that it is *fast*: a console error is available the instant
+        the page throws, and making it wait for the next screenshot would give
+        away the one advantage it has over pixels.
+        """
+        if not hasattr(self._source, "drain_events"):
+            return
+        threading.Thread(target=self._browser_event_loop,
+                         name="ws-live-browser-events", daemon=True).start()
+
+    def _browser_event_loop(self) -> None:
+        source = self._source
+        while not self.stop_event.is_set():
+            events = source.drain_events()
+            for event in events:
+                self._publish_safely(event)
+            if not events:
+                if not getattr(source, "running", False):
+                    break
+                time.sleep(0.05)
+        # One last drain: the events explaining *why* a page stopped are
+        # produced during shutdown, and losing them would make every crash
+        # look like a clean exit.
+        for event in source.drain_events(limit=1024):
+            self._publish_safely(event)
+        failure = getattr(source, "failure", None)
+        if failure is not None and self.session.state is not LiveState.FAILED:
+            db.update_session(self.session.session_id, state=LiveState.FAILED,
+                              error=failure.to_dict(), stopped_at=time.time())
+            self.session.state = LiveState.FAILED
+
+    def _publish_safely(self, event: Any) -> None:
+        """Publish one browser event, surviving a bad one.
+
+        The structured channel runs on its own thread, and an exception there
+        would kill it outright — leaving a session that still captures pixels
+        and silently stops reporting console errors. A dropped event is a
+        small loss; a dead channel that nothing announces is a large one, so
+        the failure is counted and the loop continues.
+        """
+        try:
+            self._publish_browser_event(event)
+        except Exception:  # noqa: BLE001 - one bad event must not end the channel
+            with self._lock:
+                self.stats.provider_failures += 1
+
+    def _publish_browser_event(self, event: Any) -> None:
+        """Turn one structured browser fact into a citable live event.
+
+        Errors keep ``ERROR`` so anything filtering for failures finds them
+        without having to know a browser produced them; everything else lands
+        as ``BROWSER_EVENT`` with the full structured payload under
+        ``detail.browser``. The page-authored flag rides along untouched.
+        """
+        payload = event.to_public()
+        kind = payload["kind"]
+        is_error = (
+            kind in ("page_error", "request_failed", "navigation_failed",
+                     "target_crashed")
+            or (kind == "console" and payload["detail"].get("level")
+                in ("error", "warning"))
+            or (kind == "response" and int(payload["detail"].get("status", 0)) >= 400)
+        )
+        media_ts = payload["media_ts"]
+        self._append(LiveEvent(
+            session_id=self.session.session_id, seq=0,
+            media_ts=media_ts, wall_ts=payload["wall_ts"],
+            type=LiveEventType.ERROR if is_error else LiveEventType.BROWSER_EVENT,
+            confidence=1.0,
+            # Structured browser evidence is observed, not inferred: the
+            # browser reported it happening. What the page *said* in it is
+            # another matter, which is what `page_authored` records.
+            provenance=Provenance.OBSERVATION,
+            summary=payload["summary"],
+            detector=f"browser:{kind}",
+            detail={"browser": payload},
+        ))
+        # Anything worth an event is worth the picture around it. Errors get a
+        # wider window because the cause is usually visible before the symptom.
+        window = 5.0 if is_error else 2.0
+        buf.pin_window(self.session.session_id, media_ts,
+                       before=window, after=window)
+
     def _on_discontinuity(self, stream: str, kind: str, media_ts: float) -> None:
         """Report a jump in a stream's timeline.
 
@@ -488,7 +585,8 @@ class RunningSession:
 
     # --- stopping ----------------------------------------------------------
 
-    def stop(self, reason: str = "stopped by request") -> LiveSession:
+    def stop(self, reason: str = "stopped by request", *, failed: bool = False,
+             error: dict[str, Any] | None = None) -> LiveSession:
         if self.stop_event.is_set():
             return self.session
         self.stop_event.set()
@@ -510,9 +608,10 @@ class RunningSession:
         )
         self._emit(LiveEventType.SESSION_STOPPED, last_ts, reason, detector="session")
         self._flush_stats()
-        db.update_session(self.session.session_id, state=LiveState.STOPPED,
-                          stopped_at=time.time(), stats=self.stats)
-        self.session.state = LiveState.STOPPED
+        final_state = LiveState.FAILED if failed else LiveState.STOPPED
+        db.update_session(self.session.session_id, state=final_state,
+                          stopped_at=time.time(), stats=self.stats, error=error)
+        self.session.state = final_state
         return self.session
 
 
@@ -542,12 +641,21 @@ def start_live(
     max_duration_seconds: float = 3600.0,
     audio: bool = True,
     asr_backend: Any = None,
+    detail: dict[str, Any] | None = None,
+    allow_local: bool = False,
+    allowed_hosts: list[str] | None = None,
 ) -> LiveSession:
     """Begin watching something live.
 
     Fails before creating a session when the source cannot be captured on
     this machine, rather than producing a session that never emits anything —
     an empty live view is indistinguishable from a quiet one.
+
+    ``allow_local`` and ``allowed_hosts`` are the only browser-navigation
+    knobs surfaces expose, and they are deliberately narrow. A free-form
+    options dict on a public surface would let an agent acting on text it
+    read from a webpage widen its own network reach; two named booleans
+    cannot be talked into anything.
     """
     from watch_skill.policy import get_policy
 
@@ -565,7 +673,11 @@ def start_live(
     spec = LiveSourceSpec(
         kind=source_kind, target=target, profile=live_profile, fps=fps,
         buffer_seconds=buffer_seconds, max_duration_seconds=max_duration_seconds,
-        audio=audio,
+        # A browser has no audio track to capture — the page's sound is not
+        # routed anywhere this process can read — so asking for it would only
+        # produce a degraded-audio event on every browser session.
+        audio=audio and source_kind is not LiveSourceKind.BROWSER,
+        detail=_source_detail(detail, allow_local, allowed_hosts),
     )
     session = LiveSession(
         session_id=f"live_{uuid.uuid4().hex[:12]}",
@@ -579,7 +691,12 @@ def start_live(
     media_dir = buf.session_dir(session.session_id) / "frames"
     media_dir.mkdir(parents=True, exist_ok=True)
     try:
-        source = open_source(spec, media_dir)
+        source = open_source(spec, media_dir, session_id=session.session_id)
+        # Sources that own a process launch it here, still before the session
+        # row exists, so a missing chromium or a refused URL leaves nothing
+        # behind to explain in `live list`.
+        if hasattr(source, "start") and source_kind is LiveSourceKind.BROWSER:
+            source.start()
     except WatchSkillError:
         buf.cleanup(session.session_id)
         raise
@@ -599,6 +716,23 @@ def start_live(
         raise
     _register(runner)
     return session
+
+
+def _source_detail(detail: dict[str, Any] | None, allow_local: bool,
+                   allowed_hosts: list[str] | None) -> dict[str, Any]:
+    """Fold the narrow public knobs into the spec's detail bag.
+
+    The explicit arguments win over anything already in ``detail``, so a
+    caller cannot smuggle a wider policy past the named parameters that a
+    surface actually validates.
+    """
+    merged = dict(detail or {})
+    if allow_local:
+        merged["allow_loopback"] = True
+    if allowed_hosts:
+        merged["allowed_hosts"] = [str(host).strip().lower()
+                                   for host in allowed_hosts if str(host).strip()]
+    return merged
 
 
 def observe(
@@ -669,6 +803,8 @@ def status(session_id: str) -> dict[str, Any]:
         payload["clock"] = runner.clock.to_dict()
         if runner._audio is not None:
             payload["audio"] = runner._audio.stats()
+        if hasattr(runner._source, "diagnostics"):
+            payload["browser"] = runner._source.diagnostics()
     return payload
 
 
