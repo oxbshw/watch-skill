@@ -29,18 +29,27 @@ npm 11.8.0, Playwright 1.61.0 with Chromium 1228 present.
 
 | # | Slice | Status | Commit | Proof |
 | --- | --- | --- | --- | --- |
-| 1 | Production live browser source | **done** | `8825f07`, `HEAD` | machine-tested |
-| 2 | Persistent temporal entities and actions | **actions done**, entities pending | `HEAD` | machine-tested |
-| 3 | Durable deterministic triggers | **done** | `HEAD` | deterministic-tested |
-| 4 | Verification Oracle SDK | **done** | `HEAD` | machine-tested |
-| 5 | Observer Loop | **done** | `HEAD` | machine-tested |
-| 6 | MCP App / live workspace | pending | — | — |
-| 7 | Plugin protocol and adapters | pending | — | — |
-| 8 | Typed SDKs | pending | — | — |
-| 9 | Skill consolidation | pending | — | — |
-| 10 | Pulse and observability | pending | — | — |
-| 11 | Security and privacy hardening | pending | — | — |
-| 12 | Documentation, examples, packaging | pending | — | — |
+| 1 | Production live browser source | **done** | `8825f07`, `472e594` | machine-tested |
+| 2 | Persistent temporal entities and actions | **actions done**, entities not started | `0df7450` | machine-tested |
+| 3 | Durable deterministic triggers | **done** | `ec2e775` | deterministic-tested |
+| 4 | Verification Oracle SDK | **done** | `0df7450` | machine-tested |
+| 5 | Observer Loop | **done** | `0df7450` | machine-tested |
+| 6 | MCP App / live workspace | not started | — | — |
+| 7 | Plugin protocol and adapters | not started | — | — |
+| 8 | Typed SDKs | not started | — | — |
+| 9 | Skill consolidation | not started | — | — |
+| 10 | Pulse and observability | not started | — | — |
+| 11 | Security and privacy hardening | per-slice only | — | see below |
+| 12 | Documentation, examples, packaging | docs + examples done, packaging not started | `472e594`, `0df7450` | — |
+
+Four commits this season, on top of the 24 inherited:
+
+| Commit | What |
+| --- | --- |
+| `8825f07` | fix(live): a second detector thread no longer eats the first one's event |
+| `472e594` | feat(live): a browser watched as pixels and as structure, at the same time |
+| `0df7450` | feat(observer): declare success first, and let something else decide it happened |
+| `ec2e775` | feat(triggers): fire on the evidence, and never on a model's opinion |
 
 ## Slice 1 — production live browser source
 
@@ -227,10 +236,61 @@ and the ones that forgot would report that a firing proposed nothing.
 stable and tested; exposing it publicly is deliberately deferred rather than
 half-wired.
 
+## Final gate on `ec2e775`
+
+| Gate | Result |
+| --- | --- |
+| Ruff (`src`, `tests`, `examples`) | clean |
+| Full offline Python suite | **1339 passed, 18 skipped, 0 failed, 0 errors** |
+| Skips with a specific reason | 18/18 — 7 real-model ASR, 4 real-model VLM, 5 uninstalled framework extras, 1 POSIX-only permission test, 1 local-ASR recognition |
+| Definitive end-to-end product proof | passes |
+| Pushed / merged / tagged / released / published | none |
+| Working tree | clean |
+
+Up from the inherited 1218 passed / 18 skipped: **+121 tests**, no new skips.
+
+Not run this season, and therefore not claimed: TypeScript strict check and
+tests, MCP App build and reference-host Playwright tests, Python wheel and
+sdist, clean-environment install, `npm pack`, secret scan, dependency
+vulnerability scan. The zero-egress test with provider keys present is part of
+the suite above and passed.
+
+## Not started in this season
+
+Named rather than quietly omitted. None of these is blocked; the season ran
+out of room, and each is a coherent next slice.
+
+| # | Slice | Why it is not here |
+| --- | --- | --- |
+| 2 (entities) | Persistent temporal entities | The action half of Slice 2 shipped. Bi-temporal entity storage — `valid_from`/`valid_to`, aliases, conflicting observations, superseded facts — is untouched. |
+| 6 | MCP App / Kimi-inspired live workspace | Needs the official `@modelcontextprotocol/ext-apps` package read and pinned first. Inventing that API rather than reading it would have produced a plausible-looking app that does not run in a real host. |
+| 7 | Plugin protocol | Entry-point protocol for sources, backends, oracles, executors. The executor and oracle registries it would build on now exist. |
+| 8 | Typed TypeScript SDK | Blocked on nothing but time; the canonical schemas it would generate from are stable. |
+| 9 | Skill consolidation | Ten skills → four. Needs the discovery-token measurement redone after the new surfaces settle. |
+| 10 | Pulse / observability | Counters exist on `LiveStats` and `Spend`; no metrics endpoint, no OTel export, no `telemetry` commands. |
+| 11 | Security hardening pass | Individual controls are implemented and tested per slice (redaction, SSRF, path traversal, approval replay, forged receipts). The consolidated scan — secret scan, dependency vulnerability scan, wheel/npm content inspection — has not been run this season. |
+| 12 | Packaging and release gates | No wheel/sdist build, clean-env install, or npm pack run this season. |
+
 ## Blockers
 
 | Blocker | Detail | Effect |
 | --- | --- | --- |
-| Real VLM proof | Insufficient disk/RAM for a local VLM download; inherited from the previous season and not retried in this environment. | Semantic vision remains deterministic-tested only. |
+| Real VLM proof | Insufficient disk/RAM for a local VLM download; inherited from the previous season and not retried in this environment, per instruction. | Semantic vision remains deterministic-tested only. |
+| Machine RAM under load | One full-suite run died with `MemoryError` at test setup while several Chromium instances were live. The same test passes in isolation, and a later full run passed. | Browser-heavy suites are memory-sensitive on this machine. Not a code defect, but it means the suite is not comfortably parallelisable here. |
+
+## Version recommendation
+
+**Not `2.0.0rc1`.** The critical end-to-end product proof passes, and that is
+the single most important gate — but a release candidate implies the release
+gates have been run, and Slices 11 and 12 have not been: no secret scan, no
+dependency vulnerability scan, no wheel or sdist build, no clean-environment
+install, no npm package. Calling this a release candidate would be claiming
+those passed rather than that they were skipped.
+
+The honest description of this HEAD is **a feature-complete observation and
+verification core with the release gates outstanding**. The distinction from
+the VLM blocker matters and should not be blurred: semantic vision is blocked
+by this environment, whereas packaging is simply not yet done. The first is a
+limitation to state; the second is work to finish.
 </content>
 </invoke>
