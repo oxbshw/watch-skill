@@ -330,6 +330,46 @@ def _triggers_for(session_id: str) -> list[dict[str, Any]]:
         return []
 
 
+def redact_effect(inputs: dict[str, Any]) -> dict[str, Any]:
+    """Strip credentials from an action payload before anyone can see it.
+
+    An approval must show the operator *exactly* what will happen — that is
+    the entire point of showing it — but "exactly what will happen" does not
+    include the bearer token that makes it work. Header names are kept,
+    because "it sends an X-Approval-Token" is a fact worth judging; the values
+    are replaced.
+
+    Done here, in the read model, rather than in the UI. A front end that
+    redacted on render would still have received the secret, and anything
+    holding the payload — a devtools panel, a screenshot, a bug report — would
+    have it too.
+    """
+    from watch_skill.live.browser_events import (
+        REDACTION_PLACEHOLDER,
+        Redaction,
+        redact_text,
+        redact_url,
+    )
+
+    redaction = Redaction()
+    clean: dict[str, Any] = {}
+    for key, value in inputs.items():
+        lowered = str(key).lower()
+        if lowered in ("headers", "cookies", "auth", "credentials"):
+            clean[key] = {str(name): REDACTION_PLACEHOLDER
+                          for name in (value or {})} if isinstance(value, dict) \
+                else REDACTION_PLACEHOLDER
+        elif lowered in ("token", "secret", "password", "api_key", "apikey"):
+            clean[key] = REDACTION_PLACEHOLDER
+        elif lowered == "url":
+            clean[key] = redact_url(str(value), redaction, "url")
+        elif isinstance(value, str):
+            clean[key] = redact_text(value, redaction, key, limit=400)
+        else:
+            clean[key] = value
+    return clean
+
+
 def _observer_for(session_id: str) -> dict[str, Any] | None:
     """The Observer run attached to this session, if any.
 
@@ -346,6 +386,9 @@ def _observer_for(session_id: str) -> dict[str, Any] | None:
                 payload["assurance"] = (
                     run.attempts[-1].assurance if run.attempts else "")
                 payload["oracle"] = "deterministic"
+                correction = payload.get("correction")
+                if correction and isinstance(correction.get("inputs"), dict):
+                    correction["inputs"] = redact_effect(correction["inputs"])
                 return payload
         return None
     except Exception:  # noqa: BLE001

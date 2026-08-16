@@ -99,8 +99,19 @@ def advance(run_id: str, contract: VerificationContract) -> ObserverRun:
     _assert_same_contract(run, contract)
 
     while True:
-        if run.finished or run.waiting:
+        if run.finished:
             return run
+        if run.waiting:
+            # The approval may have been granted through any governed path —
+            # the CLI, the REST surface, the workspace UI — not only through
+            # this module's own helper. Consulting the approval store rather
+            # than a private flag is what stops a run being stuck forever
+            # because a human said yes somewhere else.
+            if not _approval_granted(run):
+                return run
+            run.state = ObserverState.CORRECTION_PROPOSED
+            run.stop_reason = ""
+            db.save_run(run)
         exceeded = _budget_exceeded(run)
         if exceeded:
             return _finish(run, ObserverState.EXHAUSTED, exceeded)
@@ -335,6 +346,21 @@ def _finish(run: ObserverRun, state: ObserverState, reason: str,
     if error is not None:
         run.error = error
     return db.save_run(run)
+
+
+def _approval_granted(run: ObserverRun) -> bool:
+    """Whether the approval this run is waiting on has been granted.
+
+    Read from the approval store, never inferred. A run with no approval id
+    is not waiting on one, and an expired or rejected decision is not a yes —
+    both leave the loop where it is rather than letting it proceed.
+    """
+    if not run.approval_id:
+        return False
+    from watch_skill.actions import approval_state
+
+    state = approval_state(run.approval_id)
+    return bool(state and state["status"] == "approved" and not state.get("expired"))
 
 
 def _load(run_id: str) -> ObserverRun:
