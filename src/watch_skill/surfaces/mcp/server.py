@@ -942,6 +942,34 @@ def doctor() -> str:
     return json.dumps(run_doctor(fix=True).to_dict(), indent=2)
 
 
+@mcp.tool(output_schema=None)
+def watch_workspace(session: str | None = None, mode: str = "auto") -> list[Any]:
+    """Open the Watch Skill live workspace — the visual view of a session.
+
+    Shows live pixels, evidence separated into observed/heard/browser/inferred,
+    the unified timeline, trigger firings, and the Observer Loop's frozen
+    postcondition with its verification receipt.
+
+    `session`: a session id, or omit for the most recent active one.
+    `mode`: "auto" (default) opens the resolved session; "new" opens the
+    start-a-watch view.
+
+    This tool only opens the view. Every real operation — starting a session,
+    approving a correction, running verification — goes through the existing
+    canonical tools, so nothing about what the UI can do is decided here.
+    """
+    from watch_skill.surfaces.mcp.workspace_app import open_workspace
+
+    return open_workspace(session, mode=mode)
+
+
+def workspace_snapshot(session: str | None = None) -> str:
+    """Canonical workspace state as JSON. Used by the app and by tests."""
+    from watch_skill.surfaces.mcp.workspace_app import workspace_snapshot_json
+
+    return workspace_snapshot_json(session)
+
+
 def main(http: bool = False, host: str = "127.0.0.1", port: int = 8747) -> None:
     """Entry point used by `watch-skill serve`."""
     prepend_bin_dir_to_path()
