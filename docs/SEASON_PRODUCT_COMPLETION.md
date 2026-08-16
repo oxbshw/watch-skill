@@ -378,6 +378,46 @@ its own documented rule and required a *higher score* for a newer
 measurement, which would have frozen the first reading of any attribute
 forever.
 
+## Season 2, Slice 1 — assurance levels stated honestly
+
+`isolated_local` was being described as though it were external. It is not,
+and the gap matters: a sanitized child process runs **as the same user** as
+the agent that did the work, so that agent can still write the target, the
+evidence, and the receipt store between runs.
+
+The ladder now has six rungs, ordered by independence from the actor:
+
+| Level | Proves | Does **not** prove |
+| --- | --- | --- |
+| `visual_advisory` | Something plausible was said | Anything; never a pass alone |
+| `deterministic_local` | Reproducible, no model involved | Independence — same interpreter as the judge |
+| `isolated_local` | No access to parent keys/state, bounded deadline | Independence from an agent running as the same user |
+| `external_read_only` | The actor lacked permission to write what the verifier read | That the target itself is trustworthy |
+| `human_attested` | A named person with context agreed | Reproducibility |
+| `remote_attested` | An independent machine signed the result | Nothing here — unimplemented, and the level exists so nothing can claim it |
+
+The semantics are held as **data** (`ASSURANCE_SEMANTICS`), not prose, because
+a string literal after an enum member is not that member's docstring — a test
+that read `__doc__` silently passed against the class docstring instead. A new
+rung added without stating its limits now fails the suite.
+
+`watch_skill.verify.isolation` probes for a real boundary and refuses the
+label when there is none. Presence of a `docker` binary on PATH is explicitly
+not enough: a CLI with an unreachable daemon is the common developer case, and
+reporting it as available would move the failure from an honest refusal to a
+run-time crash.
+
+**Result on this machine: `external_read_only` cannot be established.** No
+container runtime is installed (`docker` and `podman` both absent), and
+creating a separate Windows identity needs administrator authority this
+process does not have and will not request. A contract requiring
+`external_read_only` is therefore refused with
+`verify.assurance_unavailable`, naming both the required and available levels
+— it is never silently downgraded to `isolated_local`.
+
+7 tests in `tests/verify/test_assurance.py`, including the negative that
+matters: `assurance_at_least(ISOLATED_LOCAL, EXTERNAL_READ_ONLY)` is false.
+
 ## Not started in this season
 
 Named rather than quietly omitted. None of these is blocked; the season ran

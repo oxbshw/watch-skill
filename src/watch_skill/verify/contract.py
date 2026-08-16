@@ -38,16 +38,53 @@ class CheckStatus(str, Enum):  # noqa: UP042 — matches SourceKind
 
 
 class Assurance(str, Enum):  # noqa: UP042 — matches SourceKind
-    """How much a verdict is worth. Ordered weakest to strongest."""
+    """How much a verdict is worth. Ordered weakest to strongest.
+
+    The ladder measures one thing: **how independent the judge was from the
+    thing being judged**. Each rung states what it proves and, more usefully,
+    what it does not — a level whose limits are unstated will be read as
+    stronger than it is, which is the whole failure mode this enum exists to
+    prevent.
+    """
 
     VISUAL_ADVISORY = "visual_advisory"
-    """A model looked at pictures and formed an opinion."""
+    """A model looked at pictures and formed an opinion.
+
+    Proves: something plausible was said about the evidence.
+    Does not prove: anything. Never a passing verdict on its own."""
 
     DETERMINISTIC_LOCAL = "deterministic_local"
-    """Deterministic checks ran, in this process, as this user."""
+    """Deterministic checks ran in the acting process, as the acting user.
+
+    This is the *same-process* level. Proves: the checks are reproducible and
+    did not involve a model. Does not prove: independence — the code under
+    test shares an interpreter with its own judge and could have altered it."""
 
     ISOLATED_LOCAL = "isolated_local"
-    """Deterministic checks ran in a separate, sanitized process."""
+    """Deterministic checks ran in a separate, sanitized child process.
+
+    Proves: the checks could not read the parent's provider keys, could not
+    corrupt its interpreter state, and could not outlive their deadline.
+    Does not prove: independence from an agent running **as the same user** on
+    the same machine. That agent can still write the target, the evidence, and
+    the receipt store between runs. This is the strongest level Watch Skill
+    can establish without new authority, and it is not "external"."""
+
+    EXTERNAL_READ_ONLY = "external_read_only"
+    """Checks ran under a *different* identity with read-only target access.
+
+    Proves: the acting agent could not have written what the verifier read,
+    because it lacks permission to. Requires a real boundary — a container
+    with a read-only mount, or a separate OS user — and is refused rather
+    than approximated when one cannot be established."""
+
+    HUMAN_ATTESTED = "human_attested"
+    """A named person inspected the evidence and signed off.
+
+    Proves: a human with context agreed. Does not prove: reproducibility.
+    Strong precisely where machines are weak, and weak where they are strong,
+    which is why it sits above the machine levels rather than replacing
+    them."""
 
     REMOTE_ATTESTED = "remote_attested"
     """Checks ran on an independent machine and signed the result. Watch Skill
@@ -58,8 +95,49 @@ _ORDER = [
     Assurance.VISUAL_ADVISORY,
     Assurance.DETERMINISTIC_LOCAL,
     Assurance.ISOLATED_LOCAL,
+    Assurance.EXTERNAL_READ_ONLY,
+    Assurance.HUMAN_ATTESTED,
     Assurance.REMOTE_ATTESTED,
 ]
+
+# What each rung is worth, as data rather than prose. A string literal after
+# an enum member is not that member's docstring — Python leaves `__doc__`
+# pointing at the class — so anything that needs these semantics at runtime
+# (the `assurance` CLI, the ladder description, the tests that keep every
+# level honest) has to read them from here.
+ASSURANCE_SEMANTICS: dict[Assurance, dict[str, str]] = {
+    Assurance.VISUAL_ADVISORY: {
+        "proves": "something plausible was said about the evidence",
+        "does_not_prove": "anything at all; never a passing verdict alone",
+    },
+    Assurance.DETERMINISTIC_LOCAL: {
+        "proves": "the checks are reproducible and involved no model",
+        "does_not_prove": "independence — the code under test shares an "
+                          "interpreter with its own judge",
+    },
+    Assurance.ISOLATED_LOCAL: {
+        "proves": "the checks could not read the parent's keys, corrupt its "
+                  "state, or outlive their deadline",
+        "does_not_prove": "independence from an agent running as the same "
+                          "user, which can still write the target, the "
+                          "evidence and the receipt store between runs",
+    },
+    Assurance.EXTERNAL_READ_ONLY: {
+        "proves": "the acting agent lacked permission to write what the "
+                  "verifier read",
+        "does_not_prove": "that the target itself is trustworthy, only that "
+                          "the actor did not author the reading",
+    },
+    Assurance.HUMAN_ATTESTED: {
+        "proves": "a named person with context inspected the evidence",
+        "does_not_prove": "reproducibility; a second person may disagree",
+    },
+    Assurance.REMOTE_ATTESTED: {
+        "proves": "an independent machine ran the checks and signed the result",
+        "does_not_prove": "anything here — Watch Skill does not implement it, "
+                          "and the level exists so nothing can claim it",
+    },
+}
 
 
 def assurance_at_least(actual: Assurance, required: Assurance) -> bool:
