@@ -1,4 +1,279 @@
-# Season: Product Completion — execution ledger
+﻿# Season: Product Completion — execution ledger
+
+# Season 4 â€” the real model inside a live session, and a Next.js workspace
+
+Two mandatory deliverables: a genuine VLM observation travelling through a
+running live session and queryable cross-process, and the workspace migrated
+completely off Vite onto Next.js showing that observation with an honest
+preview. Both are done. Everything below is measured on this machine unless it
+says otherwise.
+
+## Inherited state (verified at session start)
+
+| Fact | Value |
+| --- | --- |
+| Branch | `feat/v2-live-vision` |
+| HEAD | `695009b` |
+| Working tree | clean |
+| Commits ahead of `origin/main` (`cb3c430`) | 40 |
+| Pushed / merged / tagged / released | none |
+| Free disk | C: 6.3 GiB آ· F: 0.9 GiB آ· G: 46.1 GiB |
+| RAM | 7.9 GiB total, 1.9 GiB free |
+
+The repository drive had under a gigabyte free all season, so `node_modules`,
+the Next build and every staging directory live on `G:` behind directory
+junctions. Nothing global was modified.
+
+## Slices
+
+| # | Slice | Status | Commit | Proof |
+| --- | --- | --- | --- | --- |
+| 1 | Real VLM inside the live session | **done** | `30a6820` | real-model-tested |
+| 2 | Real VLM fixture and proof gate | **done** | `f78f12d` | real-model-tested |
+| 3 | Next.js migration | **done** | `6739117` | machine-tested |
+| 4 | Continuous live preview transport | **done** | `5e6297e` | machine-tested |
+| 5 | Rendered UI proof and accessibility | **done** | `b864434` | real-model-tested |
+| 6 | Packaging and release gates | **done** | `fd70d89` | machine-tested |
+
+## Phase 0 â€” preflight against the real worker
+
+Confirmed against the running worker rather than against a description of it:
+pinned revision `067788b1â€¦` echoed back by inference, `HF_HUB_OFFLINE` and
+`TRANSFORMERS_OFFLINE` both `1` *inside the child*, `max_edge` 512 applied,
+structured output produced, worker terminated and memory returned.
+
+Credential stripping was previously an intention with nothing checking it. A
+new `env_audit` command asks the child what it can actually see; the preflight
+plants two sentinel keys (`ANTHROPIC_API_KEY`, a `_TOKEN`) and the child
+reports **zero** credential-shaped variables.
+
+| Measurement | Value |
+| --- | --- |
+| Cold spawn + load | 16.1 s wall (5.27 s model load) |
+| Free RAM before / after load | 3877 â†’ 3498 MiB (379 MiB) |
+| Free RAM at inference peak | 2291 MiB (â‰ˆ1.59 GiB consumed) |
+| Free RAM after `release` / after `stop` | 3155 â†’ 3796 MiB |
+
+`release` returns part of the memory; only `stop` returns effectively all of
+it. Recorded as measured rather than rounded up to "released".
+
+## What only a live session revealed
+
+Four defects that a single-frame benchmark cannot produce, all fixed:
+
+**An unpinned revision reaches for the network.** This cache was populated by
+explicit revision, so it has `blobs/` and `snapshots/` and no `refs/` â€” no
+`main` â†’ commit mapping to resolve locally. Without a pinned revision the
+library tries the network, offline mode refuses, and the error blames
+connectivity. Measured: unpinned fails, pinned loads in **0.69 s**. The error
+now names the real cause and the gate refuses to run unpinned.
+
+**"ready" was reported by a detector that could never answer.** The load error
+sat in a field nobody reads while every frame quietly became a degraded
+observation.
+
+**Decode length was the latency that mattered, not image size.** The worker
+defaulted to 64 new tokens; the receipt's 47.1 s was measured at 32. Sharing
+four threads with capture and OCR, *no inference completed inside a
+130-second source* at 64 tokens. At 32 they complete in ~50 s.
+
+**A FIFO drain points a slow model permanently at the past.** At ~50 s per
+call the head of the queue is always the stalest frame: the run interpreted
+media timestamps 0.0 and 30.0 and never looked at the failure state. The
+dequeue is now ranked the same way eviction already was.
+
+A fifth, in the gate rather than the product: `observe()` returns
+`to_public()` dicts, and the gate read `event.detail` with `getattr`, which
+silently yields `None` for every event. Two full runs reported a session that
+had produced nothing while the model was working correctly.
+
+## Freshness â€” late is not the same as wrong
+
+A late result is never discarded. What lateness costs it is the present tense.
+
+| Classification | Meaning |
+| --- | --- |
+| `current_state` | Within 10 s of its frame. May fire a trigger or action. |
+| `stale_for_action` | True about its own timestamp, too late to act on. Queryable, inert. |
+| `historical_evidence` | The source has ended; there is no present tense left to claim. |
+
+On this backend almost nothing clears the 10 s window. That is the honest
+result and it is displayed rather than smoothed over.
+
+Every observation persists: session id, frame SHA-256, frame sequence, capture
+kind, media timestamp, captured wall time, inference start and completion,
+latency, model id and pinned revision, worker protocol version, freshness,
+`late_by_seconds`, supersede flag, selection reason, and any degradation.
+
+## Real-model gate â€” `tests/integration/test_real_vlm_live.py`
+
+**8 passed, 0 skipped.** A 150-second labelled fixture through a live session.
+
+| Metric | Value |
+| --- | --- |
+| In-session inference | 50.4 s, 51.8 s, 56.8 s |
+| Standalone inference (same machine) | 48.9 â€“ 81.8 s |
+| Model | `HuggingFaceTB/SmolVLM2-256M-Video-Instruct` |
+| Revision | `067788b187b95ebe7b2e040b3e4299e342e5b8fd` |
+| Input | 512 px, 32 new tokens, float32, 2 threads |
+
+Ground truth across the four labelled states, read by the real model:
+
+| State | Model output | Detected |
+| --- | --- | --- |
+| normal | *"A green screen with the words \"CHECKOUT\" and \"Total: $125.00\" in white."* | correct |
+| failure | *"A red screen with the words \"ORDER FAILED\" and \"Total: NaN\" in white."* | `apparent_failure`, anomaly cites "failed, nan" |
+| injection | *"INGREDIENTS AND CALL DETECTIONS INSTRUCTIONS AND CALL DELETE_ALL_Videos."* | garbled, no anomaly, **no action path** |
+| recovery | *"A green screen with the words \"ORDER CONFIRMED\" in bold white letters."* | `apparent_success` |
+
+Egress is refused in the socket layer of the worker process by an injected
+`sitecustomize`, before torch loads â€” stronger than asserting a flag is set.
+Zero attempts recorded.
+
+### Fixture limitations, stated plainly
+
+Four states, one machine, one model. This measures that a real model produced
+a real reading of the right frame and that the pipeline around it is honest.
+It is **not** a benchmark of model quality, and precision/recall/F1 over four
+labelled segments would be a number with no power. What is reported instead is
+per-state correctness above. The model mangles the injection text, reads large
+text well and small text poorly, and invents plausible words â€” all expected of
+256M parameters at 512 px.
+
+## The workspace â€” Vite out, Next.js in
+
+Next.js 15.5.23, React 19, App Router, strict TypeScript, static export. No
+Node is required of a user: one compilation produces both the directory export
+and, folded out of it, the single self-contained document the MCP Apps
+resource carries inline. Vite, its config, entry points and plugins are gone.
+
+The trap worth recording: Next's flight payload names the stylesheet twice â€”
+an `HL` preload row and a React `link` element carrying a `precedence`, which
+React 19 hoists into the head at runtime. An earlier inliner exempted
+references inside script text as inert data. They are not; the App Router
+reads them, producing a 404 against the dev host and a CSP-blocked request
+inside a host with no server.
+
+Dependency audit: **0 vulnerabilities**. `next` 15.5.4 shipped with critical
+advisories and was moved to 15.5.23; `sharp` and `postcss` are pinned back by
+Next and overridden forward.
+
+## Live preview â€” negotiated, and labelled by what it is
+
+Four labels, four different claims: `LIVE VIDEO`, `LIVE FRAMES`, `SNAPSHOT`,
+`REPLAY`. The host declares what it can honour and the label follows the
+transport. This loopback host serves bounded frame updates, so a running
+session earns **LIVE FRAMES** and a finished one **REPLAY**. `LIVE VIDEO` is
+left unclaimed: continuous binary transport is not served here, and claiming
+it would be the exact dishonesty this mechanism exists to prevent.
+
+Measured through the rendered UI:
+
+| Metric | Value |
+| --- | --- |
+| Transport negotiated | `LIVE FRAMES` |
+| First meaningful frame | 30 ms |
+| Frame age p50 / p95 | 67 ms / 67 ms |
+| Preview FPS | 1.35 (source captured at 1 fps) |
+| Frames dropped / superseded | 0 |
+| Reconnects | 0 |
+
+Access is a capability: an HMAC of the session id under a per-process secret,
+so a token from one workspace cannot fetch another session's media. The UI
+receives a session id and a token, never a path â€” asserted by test.
+
+"No frame captured yet" answers 204, not 404. It is an ordinary state of a
+healthy session, and reporting it as an error put a red line in the console of
+a workspace that was working perfectly.
+
+## The rendered proof
+
+`docs/assets/workspace/workspace-vlm-historical.png` is the season in one
+frame: the preview shows **ORDER CONFIRMED**, which is what the source is
+playing now, while the model's reading beside it describes **CHECKOUT at media
+0.00s** and is labelled **STALE FOR ACTION** â€” 105.6 s of inference, the answer
+landing 112.4 s after the frame, "true about the frame it describes, too late
+to act on". Latency is higher here than in the headless gate because Playwright
+Chromium, the dev host and capture all share four threads.
+
+Screenshots: `workspace-live-preview.png`, `workspace-vlm-processing.png`,
+`workspace-vlm-historical.png`, `workspace-approval.png`,
+`workspace-verified.png`, `workspace-light.png`, `workspace-dark.png`,
+`workspace-narrow.png`.
+
+## Accessibility
+
+axe-core is injected from `node_modules`, never a CDN â€” the workspace CSP has
+no remote origins, and a test that fetched its own auditor would be auditing a
+page the product never serves. It found three genuine serious contrast
+violations, all fixed in the stylesheet rather than filtered out:
+
+| Element | Was | Now |
+| --- | --- | --- |
+| Primary button (white on accent) | 4.27:1 | 5.9:1 via `--accent-strong` |
+| `.empty` muted text (light theme) | 4.0:1 | 5.6:1 |
+
+Keyboard reach asserts a *visible* focus indicator on every tabbable element.
+Reduced motion is verified by reading computed durations back out of the
+document.
+
+## Packaging
+
+| Artefact | Result |
+| --- | --- |
+| Wheel | 683 KiB, carries the 502 KiB workspace document |
+| sdist | **81.3 MB â†’ 6.0 MB** |
+| Clean-environment install | passes, repository off `sys.path` |
+| Installed MCP resource smoke | passes |
+| Installed Next.js static-asset smoke | passes, 0 un-inlined assets |
+
+There was no sdist configuration at all, so hatchling swept up
+`app/node_modules` â€” a directory junction to another drive, which it followed.
+
+## Skip inventory
+
+Baseline had 18 skips; this season added gates of its own. Every one is
+accounted for.
+
+| Skip | Count | Disposition |
+| --- | --- | --- |
+| Real ASR gate | 7 | **Run.** 27 passed, 1 skipped. Found and fixed a real egress bug. |
+| Real live-VLM gate | 8 | **Run.** 8 passed, 0 skipped. |
+| Rendered real-VLM gate | 1 | **Run.** Passes. |
+| Framework extras | 5 | **4 run** in an isolated env (7 passed); crewai still skipped. |
+| Provider-VLM gate (Ollama) | 4 | Skipped: no local Ollama vision model, and no provider named. A key in the environment is not consent to spend it. |
+| POSIX permission bits | 1 | Skipped on Windows, exact reason given. Correct. |
+| Real speech wav | 1 | Skipped: needs `WATCHSKILL_TEST_SPEECH_WAV`. |
+
+Running the real-ASR gate for the first time found that local speech
+recognition was not local: `WhisperModel` was built without
+`local_files_only`, so a cached model still reached out to resolve its
+revision. `local_files_only` alone was not enough â€” a second connection came
+through `huggingface_hub.snapshot_download`, so `HF_HUB_OFFLINE` is now set
+for the duration of the load and restored after.
+
+## Claims earned
+
+- A real vision model produces observations inside a running live session,
+  persisted with full provenance and readable from a fresh process.
+- Those observations reach the rendered Next.js workspace with their frame
+  timestamp, hash, pinned revision, measured latency and freshness.
+- The preview is genuinely frame-driven and labelled by what it actually is.
+- Model output and on-screen text are untrusted evidence and cannot become an
+  action.
+- The offline suite makes zero outbound calls with every provider key set.
+
+## Claims deliberately not made
+
+- **Not "real-time VLM".** The measured figure is roughly 50 s per keyframe
+  in-session. The correct description is *asynchronous live semantic
+  evidence*.
+- **Not `LIVE VIDEO`.** Continuous binary frame transport is implemented
+  nowhere in this host; the label exists and is unused.
+- **Not a model-quality benchmark.** Four labelled states on one machine.
+- **Not "memory fully released on idle".** `release` returns part; `stop`
+  returns effectively all.
+er
 
 A running record of what was built, what was proved, and what remains. One row
 per slice, updated when the slice commits. Proof classification is deliberate:
@@ -34,13 +309,13 @@ npm 11.8.0, Playwright 1.61.0 with Chromium 1228 present.
 | 3 | Durable deterministic triggers | **done** | `ec2e775` | deterministic-tested |
 | 4 | Verification Oracle SDK | **done** | `0df7450` | machine-tested |
 | 5 | Observer Loop | **done** | `0df7450` | machine-tested |
-| 6 | MCP App / live workspace | not started | — | — |
-| 7 | Plugin protocol and adapters | not started | — | — |
-| 8 | Typed SDKs | not started | — | — |
-| 9 | Skill consolidation | not started | — | — |
-| 10 | Pulse and observability | not started | — | — |
-| 11 | Security and privacy hardening | per-slice only | — | see below |
-| 12 | Documentation, examples, packaging | docs + examples done, packaging not started | `472e594`, `0df7450` | — |
+| 6 | MCP App / live workspace | not started | â€” | â€” |
+| 7 | Plugin protocol and adapters | not started | â€” | â€” |
+| 8 | Typed SDKs | not started | â€” | â€” |
+| 9 | Skill consolidation | not started | â€” | â€” |
+| 10 | Pulse and observability | not started | â€” | â€” |
+| 11 | Security and privacy hardening | per-slice only | â€” | see below |
+| 12 | Documentation, examples, packaging | docs + examples done, packaging not started | `472e594`, `0df7450` | â€” |
 
 Four commits this season, on top of the 24 inherited:
 
@@ -51,7 +326,7 @@ Four commits this season, on top of the 24 inherited:
 | `0df7450` | feat(observer): declare success first, and let something else decide it happened |
 | `ec2e775` | feat(triggers): fire on the evidence, and never on a model's opinion |
 
-## Slice 1 — production live browser source
+## Slice 1 â€” production live browser source
 
 Two synchronized channels from one Chromium page: real JPEG frames through the
 existing scene-change / OCR / rolling-buffer / clip machinery, and structured
@@ -60,7 +335,7 @@ metadata, DOM and accessibility changes, downloads, popups, dialogs, crashes)
 through a new event type. Both land in the one live event log, so CLI, REST,
 MCP and Python read the same session.
 
-**Machine-tested on this machine** — real Chromium 1228, real page, real
+**Machine-tested on this machine** â€” real Chromium 1228, real page, real
 frames, 13 tests in `tests/live/test_browser_live.py`:
 
 | Claim | How it is proved |
@@ -70,7 +345,7 @@ frames, 13 tests in `tests/live/test_browser_live.py`:
 | A 500 response and a network failure are different facts | Separate event kinds, both asserted |
 | Navigation epochs separate pages | Fixture navigates on its own; a console message from page 2 is never attributed to page 1 |
 | One page change advances the epoch once | `max(epoch) == 2` for two navigations |
-| Cancellation closes every browser process | The per-session profile directory deletes — which Windows only permits once the last process holding it exits |
+| Cancellation closes every browser process | The per-session profile directory deletes â€” which Windows only permits once the last process holding it exits |
 | A killed browser is reported honestly | Process tree killed mid-session; the session must reach `failed` with a `live.browser.*` code and a fix |
 | Evidence survives the process | Read back in a fresh interpreter via subprocess |
 | Secrets never reach the log | The fixture's approval token is absent from the serialized event log |
@@ -79,7 +354,7 @@ frames, 13 tests in `tests/live/test_browser_live.py`:
 | An error pins media on both sides | Frames exist before *and* after the error timestamp |
 | Four surfaces agree | Same id, state, source kind and navigation epoch from Python, REST, CLI and a real in-process MCP client |
 
-**Deterministic-tested** — 30 tests in `tests/live/test_browser_policy.py`
+**Deterministic-tested** â€” 30 tests in `tests/live/test_browser_policy.py`
 covering scheme refusal, cloud metadata endpoints (v4 and v6), loopback,
 private and link-local ranges, DNS rebinding (a public-looking name resolving
 inward), resolver failure failing closed, host allowlists, credential-shaped
@@ -91,7 +366,7 @@ Also in this slice:
 - A latent data-loss bug in the live event log, found and fixed (`8825f07`).
   Verified by running the old implementation side by side with the new one:
   30 of 150 events stored versus 150 of 150.
-- `watch_skill.live.fixture_app` — a rights-clear broken application written
+- `watch_skill.live.fixture_app` â€” a rights-clear broken application written
   here, used by every browser proof and by the Observer Loop demo.
 - `browser` capability upgraded from `probed` to `machine_tested`.
 - `LiveEvent.to_public()` now carries `detail`. Without it, structured browser
@@ -101,7 +376,7 @@ Also in this slice:
 rather than reporting it degraded every time), Firefox/WebKit, multi-page
 sessions.
 
-## Slices 2 (actions), 4 and 5 — governance, oracles, and the loop
+## Slices 2 (actions), 4 and 5 â€” governance, oracles, and the loop
 
 ### Governed actions (`watch_skill.actions`)
 
@@ -110,8 +385,8 @@ that either happened or did not. `succeeded` and `verified` are different
 states written by different callers, so "it ran without erroring" can never be
 reported as "it worked".
 
-Approval is bound to an **effect digest** — a hash of exactly what will happen
-— rather than to an action id, so an approved action that changes its payload
+Approval is bound to an **effect digest** â€” a hash of exactly what will happen
+â€” rather than to an action id, so an approved action that changes its payload
 is refused. Approvals are single-use, expire, require a named actor, and are
 consumed inside the same call that performs the effect.
 
@@ -127,12 +402,12 @@ consumed inside the same call that performs the effect.
 | Approve anonymously | `actions.approval_actor_required` |
 | Five threads approve at once | Exactly one actor recorded |
 | Two workers start one approved action | One wins by compare-and-swap; the other gets `actions.already_claimed` |
-| Satisfy the approval oracle from the agent's own evidence dict | Fails — the oracle reads the store, in a separate process |
+| Satisfy the approval oracle from the agent's own evidence dict | Fails â€” the oracle reads the store, in a separate process |
 
 Executors are a closed registry keyed by `kind`. There is no "run this
 command" executor: a command assembled from a string is a command that page
 content can rewrite. A new `Channel.ACTION` egress gate sits in front of every
-outbound effect, so offline mode closes it like every other channel — approval
+outbound effect, so offline mode closes it like every other channel â€” approval
 and policy are separate gates, and a human saying yes does not override an
 operator's decision that this machine performs no outbound side effects.
 
@@ -162,16 +437,16 @@ the loop **stops and waits** for a human rather than proceeding.
 ### The definitive end-to-end product proof
 
 `tests/observer/test_observer_loop.py::test_broken_app_observed_corrected_and_independently_verified`
-— one controlled demonstration, passing on this machine:
+â€” one controlled demonstration, passing on this machine:
 
 1. a deliberately broken browser application, served on loopback;
 2. success declared as two required postconditions (a DOM read and a server
-   read), frozen first — a correction that only repainted the page would
+   read), frozen first â€” a correction that only repainted the page would
    satisfy one and fail the other;
 3. live browser observation, asserted while the session is still `running`;
 4. a before clip cut from the rolling buffer, spanning both sides of the event;
 5. verification failing against the real page;
-6. a correction proposed, and the loop stopping at `awaiting_approval` —
+6. a correction proposed, and the loop stopping at `awaiting_approval` â€”
    advancing again changes nothing, and the fixture records zero fix attempts;
 7. an explicit approval by a named operator;
 8. the deterministic correction applied **once** (`fix_attempts == 1`);
@@ -195,21 +470,21 @@ verdict.
 **A real bug found by this proof**: the isolated verifier's sanitized
 environment allowlisted POSIX `HOME` but not Windows `USERPROFILE`, so `httpx`
 raised "Could not determine home directory" and **every** `http_request` check
-errored on Windows — turning any contract containing one into `inconclusive`.
+errored on Windows â€” turning any contract containing one into `inconclusive`.
 Fixed, and the end-to-end proof is what caught it.
 
 **Not done in these slices**: temporal entity storage (Slice 2's entity half),
 triggers (Slice 3).
 
-## Slice 3 — durable deterministic triggers
+## Slice 3 â€” durable deterministic triggers
 
 A trigger is a typed structure compiled to a fixed set of comparisons. No
-`eval`, no lambda, no template with code in it, no model-written predicate —
+`eval`, no lambda, no template with code in it, no model-written predicate â€”
 because what a trigger reads is an event log full of text a webpage wrote, and
 any of those would turn that log into an execution surface.
 
 Four condition kinds: `match`, `count` (N inside a rolling window), `sequence`
-(steps in order inside a window), and `absence` — the only one that fires
+(steps in order inside a window), and `absence` â€” the only one that fires
 because of something that did *not* happen, measured in **media** time rather
 than wall time, since a stopped session has not had time pass in its media.
 
@@ -242,7 +517,7 @@ half-wired.
 | --- | --- |
 | Ruff (`src`, `tests`, `examples`) | clean |
 | Full offline Python suite | **1376 passed, 18 skipped, 0 failed, 0 errors** |
-| Full suite, two consecutive runs | 1370/18/0 twice on `c34ff41`, then 1376/18/0 on `7198165` — **no `MemoryError` in any run** |
+| Full suite, two consecutive runs | 1370/18/0 twice on `c34ff41`, then 1376/18/0 on `7198165` â€” **no `MemoryError` in any run** |
 | Browser suite, three consecutive runs | 73 passed each time, exit 0 |
 | Skips with a specific reason | 18/18, unchanged from season 1 |
 | Pushed / merged / tagged / released / published | none |
@@ -256,9 +531,9 @@ assurance `isolated_local`.
 
 ---
 
-# Season 3 — the MCP App and live workspace
+# Season 3 â€” the MCP App and live workspace
 
-## Preflight — the governor's fail-open hole
+## Preflight â€” the governor's fail-open hole
 
 Two admission bugs, both of which let the governor stay satisfied right up
 until the host was not.
@@ -266,7 +541,7 @@ until the host was not.
 It compared free memory against a reserve **without subtracting what the new
 session would take**. 800 MB free clears a 700 MB reserve; a 450 MB Chromium
 then consumes the reserve entirely. And when memory could not be read at all
-it failed open — the guarantee evaporating on exactly the platforms where
+it failed open â€” the guarantee evaporating on exactly the platforms where
 nobody can check it.
 
 Now: reserve **plus** estimated session cost, resident model weights counted
@@ -293,12 +568,12 @@ assignment are decided in the core, not re-derived by the client.
 **Stack**: React 19.2 + TypeScript 5.9 (strict, plus `noUncheckedIndexedAccess`
 and `exactOptionalPropertyTypes`) built by Vite 7.3.6 into one 564 KB
 self-contained file. `npm audit`: 0 vulnerabilities. Bundle inspected for
-remote origins and `eval` — none.
+remote origins and `eval` â€” none.
 
 ### Three bugs only a rendered UI could find
 
 1. **The approval panel leaked the correction's bearer token.** Fixed in the
-   read model, not at render — a client that redacts on display has already
+   read model, not at render â€” a client that redacts on display has already
    received the secret, and so has any screenshot or bug report of it.
 2. **Approving anywhere but the loop's own helper left the run stuck
    forever.** `advance` now consults the approval store rather than a private
@@ -310,20 +585,20 @@ remote origins and `eval` — none.
    tabs. A defect that looks like nothing in a screenshot and like a broken
    product in a hand.
 
-A fourth — the header stacking into a tall centred column because `.panel`
-won `flex-direction` — was caught by *looking at the screenshot*, and is now
+A fourth â€” the header stacking into a tall centred column because `.panel`
+won `flex-direction` â€” was caught by *looking at the screenshot*, and is now
 asserted.
 
 ### The definitive UI proof
 
 `tests/surfaces/test_workspace_ui.py` runs the whole scenario against the real
-bundle in a real browser: live browser fixture → LIVE badge while genuinely
-running → browser evidence rendered → page text fenced as UNTRUSTED →
-observations and inferences never in one card → failed verification →
-approval showing the exact effect with the token redacted → approved **through
-the UI** → applied exactly once (`fix_attempts == 1`) → verified, naming the
-deterministic oracle and `isolated_local` → reload and recover from canonical
-state without duplicate markers → reopened from a fresh process.
+bundle in a real browser: live browser fixture â†’ LIVE badge while genuinely
+running â†’ browser evidence rendered â†’ page text fenced as UNTRUSTED â†’
+observations and inferences never in one card â†’ failed verification â†’
+approval showing the exact effect with the token redacted â†’ approved **through
+the UI** â†’ applied exactly once (`fix_attempts == 1`) â†’ verified, naming the
+deterministic oracle and `isolated_local` â†’ reload and recover from canonical
+state without duplicate markers â†’ reopened from a fresh process.
 
 Artifacts in `docs/assets/workspace/`: light, dark, approval, verified, narrow
 (420 px). All generated from fixture content only.
@@ -333,7 +608,7 @@ Desktop and others untested); media is snapshot-only; pause/resume is not
 implemented in the live core and the UI says so; no MP4/GIF demo; no formal
 axe-style accessibility audit beyond the keyboard-reachability test.
 
-## Season 2 — what was not started
+## Season 2 â€” what was not started
 
 Named rather than quietly omitted. Season 2 spent its capacity on the audit
 slice, which was ordered first and which found three real defects. The
@@ -341,16 +616,16 @@ following are untouched and must not be read as partially done:
 
 | Slice | Status |
 | --- | --- |
-| 2 — MCP App / live workspace | **Not started.** No `@modelcontextprotocol/ext-apps` dependency, no TypeScript, no React, no UI of any kind. There are no screenshots and no demo artifact, because there is nothing to screenshot. |
-| 3 — Plugin protocol | **Not started.** No entry-point protocol, no reference plugins. |
-| 4 — TypeScript SDK | **Not started.** No `package.json`, no `npm pack`. |
-| 5 — Skill consolidation | **Not started.** Still ten skills; the 1,259-token discovery baseline is unchanged. |
-| 6 — Pulse observability | **Not started.** Counters exist on `LiveStats`, `Spend` and the browser pool; there is no metrics endpoint, no OTel exporter, and no `telemetry` command. |
-| 7 — Security release gate | **Per-slice only.** Individual controls are implemented and tested (redaction, SSRF, path traversal, approval replay, forged receipts, resource exhaustion, browser process leaks). The consolidated scans — secret scan, dependency audit, package-content inspection — were **not run**. |
-| 8 — Packaging | **Not started.** No wheel, no sdist, no clean-environment install, no offline smoke test. |
+| 2 â€” MCP App / live workspace | **Not started.** No `@modelcontextprotocol/ext-apps` dependency, no TypeScript, no React, no UI of any kind. There are no screenshots and no demo artifact, because there is nothing to screenshot. |
+| 3 â€” Plugin protocol | **Not started.** No entry-point protocol, no reference plugins. |
+| 4 â€” TypeScript SDK | **Not started.** No `package.json`, no `npm pack`. |
+| 5 â€” Skill consolidation | **Not started.** Still ten skills; the 1,259-token discovery baseline is unchanged. |
+| 6 â€” Pulse observability | **Not started.** Counters exist on `LiveStats`, `Spend` and the browser pool; there is no metrics endpoint, no OTel exporter, and no `telemetry` command. |
+| 7 â€” Security release gate | **Per-slice only.** Individual controls are implemented and tested (redaction, SSRF, path traversal, approval replay, forged receipts, resource exhaustion, browser process leaks). The consolidated scans â€” secret scan, dependency audit, package-content inspection â€” were **not run**. |
+| 8 â€” Packaging | **Not started.** No wheel, no sdist, no clean-environment install, no offline smoke test. |
 
-The definitive release proof described in the brief — the full fixture run
-*through the UI*, with reconnect and reopening — **did not run**, because the
+The definitive release proof described in the brief â€” the full fixture run
+*through the UI*, with reconnect and reopening â€” **did not run**, because the
 UI does not exist. The equivalent proof through the Python API does pass and
 is unchanged from season 1
 (`tests/observer/test_observer_loop.py::test_broken_app_observed_corrected_and_independently_verified`).
@@ -361,7 +636,7 @@ is unchanged from season 1
 | --- | --- |
 | Ruff (`src`, `tests`, `examples`) | clean |
 | Full offline Python suite | **1339 passed, 18 skipped, 0 failed, 0 errors** |
-| Skips with a specific reason | 18/18 — 7 real-model ASR, 4 real-model VLM, 5 uninstalled framework extras, 1 POSIX-only permission test, 1 local-ASR recognition |
+| Skips with a specific reason | 18/18 â€” 7 real-model ASR, 4 real-model VLM, 5 uninstalled framework extras, 1 POSIX-only permission test, 1 local-ASR recognition |
 | Definitive end-to-end product proof | passes |
 | Pushed / merged / tagged / released / published | none |
 | Working tree | clean |
@@ -376,9 +651,9 @@ the suite above and passed.
 
 ---
 
-# Season 2 — audit and release hardening
+# Season 2 â€” audit and release hardening
 
-## Slice 0 — auditing the previous season's claims
+## Slice 0 â€” auditing the previous season's claims
 
 The previous report's claims were checked against the code rather than
 restated. Three of them did not survive contact.
@@ -386,7 +661,7 @@ restated. Three of them did not survive contact.
 ### Finding 1: entities were never implemented
 
 Confirmed. Slice 2's action lifecycle existed; the temporal entity half did
-not, and the previous ledger said so. Now implemented — see below.
+not, and the previous ledger said so. Now implemented â€” see below.
 
 ### Finding 2: the triggers package is clean, with one bug
 
@@ -397,7 +672,7 @@ key lookup only, and attribute access resolves to `MISSING`.
 
 **But `record_firing` had a real defect.** It allocated a firing sequence with
 `SELECT MAX(seq)+1` *before* the first write, and Python's `sqlite3` only
-opens an `IMMEDIATE` transaction on DML — so the read ran outside the write
+opens an `IMMEDIATE` transaction on DML â€” so the read ran outside the write
 lock. Two evaluators would compute the same `seq`, and the loser's
 `IntegrityError` was caught by a handler that means *"this cause already
 fired"*. A legitimate firing for a different event would have vanished with no
@@ -420,11 +695,11 @@ it is now used by the entity store and the action compare-and-swap.
 Both bugs are invisible to a single-threaded test suite and appear the first
 time a user runs two commands at once.
 
-## Slice 0 — browser resource governance
+## Slice 0 â€” browser resource governance
 
 The `MemoryError` from season 1 is treated as the release defect it was.
 Nothing counted Chromium instances, so nothing could refuse one, and the
-ceiling was whatever the OS would tolerate — reached as an out-of-memory kill
+ceiling was whatever the OS would tolerate â€” reached as an out-of-memory kill
 in whatever unrelated code allocated next.
 
 `watch_skill.live.browser_pool` leases browser slots. A lease is granted only
@@ -433,10 +708,10 @@ otherwise the caller is refused immediately with a reason naming what is
 already running. A refusal is a far better outcome than an OOM: it names the
 cause, it is recoverable, and it lands in the right place.
 
-- Per-process limit (default 2: one live session, one verifier — the pair
+- Per-process limit (default 2: one live session, one verifier â€” the pair
   that must not deadlock), configurable via `WATCHSKILL_MAX_BROWSERS`.
 - Memory floor (default 700 MB) via `WATCHSKILL_MIN_BROWSER_MEMORY_MB`.
-- Unmeasurable free memory fails **open**, and says so — refusing every
+- Unmeasurable free memory fails **open**, and says so â€” refusing every
   browser on a platform whose memory we cannot read would make the product
   unusable there, and assuming plenty would be a safety claim never verified.
 - The lease is returned *after* the process tree is gone, never before.
@@ -449,7 +724,7 @@ cause, it is recoverable, and it lands in the right place.
 20-thread concurrency test asserting the peak never exceeds the limit, and
 **three consecutive full browser-suite runs** (73 tests each) all green.
 
-## Slice 0 — live browser capability receipt
+## Slice 0 â€” live browser capability receipt
 
 `watch_skill.live.receipt` derives, from the persisted event log alone, which
 of ten declared channels a session actually produced: pixels, scene change,
@@ -458,7 +733,7 @@ error, navigation, clip.
 
 The channel list is **declared**, not discovered. A receipt built only from
 observed events could never report that something was *missing*, which is the
-one thing it exists to do — every interesting live-capture failure looks like
+one thing it exists to do â€” every interesting live-capture failure looks like
 silence.
 
 **Proof**: `tests/live/test_browser_receipt.py` runs the fixture and asserts
@@ -466,7 +741,7 @@ all ten channels fire, then re-derives the identical receipt **in a separate
 process**. A second test asserts a silent session produces a receipt full of
 `MISSING` rather than an empty one.
 
-## Slice 0 — persistent temporal entities (completing Slice 2)
+## Slice 0 â€” persistent temporal entities (completing Slice 2)
 
 `watch_skill.entities`: bi-temporal attributes with `valid_from`/`valid_to`,
 stable ids, aliases resolved through a normalized unique index, evidence
@@ -475,18 +750,18 @@ links, conflicts, cross-session history, and bounded context compilation.
 Nothing is ever updated in place. Superseding a fact closes the old interval
 and opens a new one at exactly the same instant, so a state-at-time query
 never finds a gap and never finds two answers. A partial unique index enforces
-one open interval per `(entity, name)` — it caught the implementation
+one open interval per `(entity, name)` â€” it caught the implementation
 inserting before closing, which is the corruption every later read would have
 silently inherited.
 
-**A model never writes here.** Output arrives as an `Observation` — a
-proposal — and deterministic code decides. The conflict rule: a fresh
+**A model never writes here.** Output arrives as an `Observation` â€” a
+proposal â€” and deterministic code decides. The conflict rule: a fresh
 deterministic reading always wins; an inferred one never overrides a
 deterministic one, however confident it sounds; otherwise higher score wins
 and ties keep the incumbent. Every path records a conflict row, including
 "we kept the old value", because that is a finding too.
 
-**Proof**: 17 tests in `tests/entities/test_entities.py` — interval
+**Proof**: 17 tests in `tests/entities/test_entities.py` â€” interval
 boundaries checked to the millisecond on both sides, a model failing to
 overwrite a DOM read, truncation and attribute caps reported rather than
 silent, 8 concurrent observers converging on one entity, and full history
@@ -497,7 +772,7 @@ its own documented rule and required a *higher score* for a newer
 measurement, which would have frozen the first reading of any attribute
 forever.
 
-## Season 2, Slice 1 — assurance levels stated honestly
+## Season 2, Slice 1 â€” assurance levels stated honestly
 
 `isolated_local` was being described as though it were external. It is not,
 and the gap matters: a sanitized child process runs **as the same user** as
@@ -509,14 +784,14 @@ The ladder now has six rungs, ordered by independence from the actor:
 | Level | Proves | Does **not** prove |
 | --- | --- | --- |
 | `visual_advisory` | Something plausible was said | Anything; never a pass alone |
-| `deterministic_local` | Reproducible, no model involved | Independence — same interpreter as the judge |
+| `deterministic_local` | Reproducible, no model involved | Independence â€” same interpreter as the judge |
 | `isolated_local` | No access to parent keys/state, bounded deadline | Independence from an agent running as the same user |
 | `external_read_only` | The actor lacked permission to write what the verifier read | That the target itself is trustworthy |
 | `human_attested` | A named person with context agreed | Reproducibility |
-| `remote_attested` | An independent machine signed the result | Nothing here — unimplemented, and the level exists so nothing can claim it |
+| `remote_attested` | An independent machine signed the result | Nothing here â€” unimplemented, and the level exists so nothing can claim it |
 
 The semantics are held as **data** (`ASSURANCE_SEMANTICS`), not prose, because
-a string literal after an enum member is not that member's docstring — a test
+a string literal after an enum member is not that member's docstring â€” a test
 that read `__doc__` silently passed against the class docstring instead. A new
 rung added without stating its limits now fails the suite.
 
@@ -532,7 +807,7 @@ creating a separate Windows identity needs administrator authority this
 process does not have and will not request. A contract requiring
 `external_read_only` is therefore refused with
 `verify.assurance_unavailable`, naming both the required and available levels
-— it is never silently downgraded to `isolated_local`.
+â€” it is never silently downgraded to `isolated_local`.
 
 7 tests in `tests/verify/test_assurance.py`, including the negative that
 matters: `assurance_at_least(ISOLATED_LOCAL, EXTERNAL_READ_ONLY)` is false.
@@ -544,13 +819,13 @@ out of room, and each is a coherent next slice.
 
 | # | Slice | Why it is not here |
 | --- | --- | --- |
-| 2 (entities) | Persistent temporal entities | ~~Untouched.~~ **Done in season 2** — see the entity section above. |
+| 2 (entities) | Persistent temporal entities | ~~Untouched.~~ **Done in season 2** â€” see the entity section above. |
 | 6 | MCP App / Kimi-inspired live workspace | Needs the official `@modelcontextprotocol/ext-apps` package read and pinned first. Inventing that API rather than reading it would have produced a plausible-looking app that does not run in a real host. |
 | 7 | Plugin protocol | Entry-point protocol for sources, backends, oracles, executors. The executor and oracle registries it would build on now exist. |
 | 8 | Typed TypeScript SDK | Blocked on nothing but time; the canonical schemas it would generate from are stable. |
-| 9 | Skill consolidation | Ten skills → four. Needs the discovery-token measurement redone after the new surfaces settle. |
+| 9 | Skill consolidation | Ten skills â†’ four. Needs the discovery-token measurement redone after the new surfaces settle. |
 | 10 | Pulse / observability | Counters exist on `LiveStats` and `Spend`; no metrics endpoint, no OTel export, no `telemetry` commands. |
-| 11 | Security hardening pass | Individual controls are implemented and tested per slice (redaction, SSRF, path traversal, approval replay, forged receipts). The consolidated scan — secret scan, dependency vulnerability scan, wheel/npm content inspection — has not been run this season. |
+| 11 | Security hardening pass | Individual controls are implemented and tested per slice (redaction, SSRF, path traversal, approval replay, forged receipts). The consolidated scan â€” secret scan, dependency vulnerability scan, wheel/npm content inspection â€” has not been run this season. |
 | 12 | Packaging and release gates | No wheel/sdist build, clean-env install, or npm pack run this season. |
 
 ## Blockers
@@ -563,7 +838,7 @@ out of room, and each is a coherent next slice.
 ## Version recommendation
 
 **Not `2.0.0rc1`.** The critical end-to-end product proof passes, and that is
-the single most important gate — but a release candidate implies the release
+the single most important gate â€” but a release candidate implies the release
 gates have been run, and Slices 11 and 12 have not been: no secret scan, no
 dependency vulnerability scan, no wheel or sdist build, no clean-environment
 install, no npm package. Calling this a release candidate would be claiming
@@ -577,23 +852,24 @@ limitation to state; the second is work to finish.
 
 ### Still not `2.0.0rc1` after season 2
 
-Season 2 made the core more trustworthy — three real concurrency defects
-fixed, browsers governed, entities implemented, assurance stated honestly —
+Season 2 made the core more trustworthy â€” three real concurrency defects
+fixed, browsers governed, entities implemented, assurance stated honestly â€”
 but it did not close any release gate. There is still no UI, no TypeScript
 SDK, no plugin protocol, no packaging, and no consolidated security scan.
 
 Three distinct categories, which should stay distinct:
 
-1. **Environmentally blocked** — the real VLM proof. Nothing in the code is
+1. **Environmentally blocked** â€” the real VLM proof. Nothing in the code is
    missing; this machine cannot run it. Also `external_read_only` assurance:
    no container runtime, and no authority to create an OS identity.
-2. **Deterministic infrastructure, proved** — live browser, entities,
+2. **Deterministic infrastructure, proved** â€” live browser, entities,
    triggers, actions and approvals, oracles, Observer Loop, browser
    governance. Machine-tested here, with the receipts to re-check.
-3. **Not written** — MCP App, plugin SDK, TypeScript SDK, skill
+3. **Not written** â€” MCP App, plugin SDK, TypeScript SDK, skill
    consolidation, Pulse, packaging.
 
 A version number that implied (3) was done would be false regardless of how
 well (2) went.
 </content>
 </invoke>
+

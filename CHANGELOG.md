@@ -2,6 +2,58 @@
 
 ## Unreleased
 
+### A real model inside a live session, and late is not the same as wrong
+
+The external vision worker proved a model could read a picture. It can now say
+something about a *running* session. On this hardware an interpretation takes
+roughly 50 seconds, and taking that number seriously is most of the change.
+
+- **A late result is never discarded.** It is persisted, queryable, and citable
+  against the frame it describes. What lateness costs it is the present tense:
+  `current_state` may drive an action, `stale_for_action` is queryable and
+  inert, `historical_evidence` is what everything becomes once the source ends.
+  Almost nothing clears the ten-second window on this backend, and the
+  interface says so rather than smoothing it over.
+- **Backpressure is a short ranked queue, never an unbounded one.** Two frames
+  deep; a waiting question outranks a scene change; the frame that loses the
+  slot is recorded with its reason. Both ends are ranked — dequeuing FIFO
+  pointed the model permanently at the past and made it miss the failure state
+  entirely.
+- Every observation carries the frame's SHA-256, sequence, capture and
+  inference timestamps, latency, and the **pinned** model revision. An
+  observation that cannot name the revision that produced it is not
+  reproducible evidence, so the live gate refuses to run unpinned.
+- The model is asked a question it can answer — one sentence of prose — and the
+  schema around it is derived by code that cannot hallucinate. Measured: given
+  a format example, this model copies the example's *contents*, so the prompt
+  carries no sample content at all.
+- Credential stripping is now checked from inside the worker rather than
+  asserted from outside it.
+
+### The workspace is a Next.js app
+
+Next.js 15, React 19, App Router, strict TypeScript, static export. Vite and
+its plugins are gone. One compilation produces both the directory export and
+the single self-contained document the MCP Apps resource carries, so the two
+cannot disagree. **No Node.js is required of a user.**
+
+- The preview is frame-driven with a cursor, latest-frame-wins, monotonic, and
+  labelled by what it actually is: `LIVE VIDEO`, `LIVE FRAMES`, `SNAPSHOT`,
+  `REPLAY`. `LIVE VIDEO` is deliberately unclaimed here.
+- Frame access is a session-scoped capability, not an origin check. The UI is
+  given a session id and a token, never a path.
+- Three serious colour-contrast defects found by an offline axe-core audit and
+  fixed in the stylesheet.
+
+### Fixed
+
+- Local speech recognition was not local: a cached Whisper model still reached
+  the network to resolve its revision. It now loads cache-only and says exactly
+  how to fetch a missing model deliberately.
+- The sdist was 81.3 MB because there was no sdist configuration and hatchling
+  followed the `node_modules` junction. It is 6.0 MB.
+- A vision detector that had failed to load reported itself `ready`.
+
 ### The session can hear
 
 `AudioChunk` was a contract nothing produced. Live audio is now a real path:
