@@ -22,6 +22,7 @@ the diagnostics say so rather than implying a machine-wide guarantee.
 """
 from __future__ import annotations
 
+import atexit
 import os
 import threading
 import time
@@ -36,9 +37,23 @@ verifier opening its own browser to check that session's postcondition, which
 is precisely the pair that must not deadlock against each other."""
 
 MIN_AVAILABLE_MB = 700.0
-"""Refuse a new browser below this much free memory. Chromium's own resident
-set for a simple page runs 250-400 MB, and leaving no headroom means the
-*next* allocation anywhere in the process is the one that fails."""
+"""Headroom that must survive *after* the new browser has taken its share.
+Reserved for everything else on the machine — the next allocation anywhere in
+this process is the one that fails when it runs out."""
+
+SESSION_COST_MB = 450.0
+"""What a new Chromium session is assumed to cost. A simple page's resident
+set runs 250-400 MB across the process tree, and the estimate is deliberately
+at the top of that range: under-estimating admits a session the machine
+cannot hold, which is the failure this module exists to prevent."""
+
+UNMEASURED_MAX_BROWSERS = 1
+"""The ceiling when free memory cannot be read at all.
+
+One, not two. Without a measurement there is no way to notice pressure
+building, so the only safe posture is to keep a single session — enough to
+work, few enough that a second one cannot be the thing that tips the host
+over. Raising it is an explicit operator decision, not a default."""
 
 
 class BrowserUnavailable(WatchSkillError):
@@ -106,16 +121,20 @@ class BrowserPool:
     """The process's browser budget, and everything currently spending it."""
 
     def __init__(self, max_browsers: int | None = None,
-                 min_available_mb: float | None = None) -> None:
+                 min_available_mb: float | None = None,
+                 session_cost_mb: float | None = None,
+                 allow_unmeasured: bool | None = None) -> None:
         self._lock = threading.Lock()
         self._leases: dict[str, Lease] = {}
         self._counter = 0
         self._max = max_browsers
         self._min_mb = min_available_mb
+        self._cost_mb = session_cost_mb
+        self._allow_unmeasured = allow_unmeasured
         self.refusals = 0
 
     @property
-    def max_browsers(self) -> int:
+    def configured_max(self) -> int:
         if self._max is not None:
             return self._max
         raw = os.environ.get("WATCHSKILL_MAX_BROWSERS", "")
@@ -123,6 +142,34 @@ class BrowserPool:
             return max(1, int(raw))
         except ValueError:
             return DEFAULT_MAX_BROWSERS
+
+    @property
+    def max_browsers(self) -> int:
+        """The concurrency ceiling actually in force right now.
+
+        Lower than the configured one when memory cannot be read: an
+        unmeasurable machine gets a single session, because nothing can watch
+        pressure build there and the second session is the one that would tip
+        the host over.
+        """
+        configured = self.configured_max
+        if self.allow_unmeasured or available_memory_mb() is not None:
+            return configured
+        return min(configured, UNMEASURED_MAX_BROWSERS)
+
+    @property
+    def allow_unmeasured(self) -> bool:
+        """Whether to proceed normally when memory cannot be measured.
+
+        Off by default. Failing open here was the safety gap: an unmeasurable
+        machine is not a machine with plenty of memory, and treating it as one
+        means the governor's guarantee quietly evaporates on exactly the
+        platforms where it cannot be checked.
+        """
+        if self._allow_unmeasured is not None:
+            return self._allow_unmeasured
+        raw = os.environ.get("WATCHSKILL_ALLOW_UNMEASURED_BROWSERS", "")
+        return raw.strip().lower() in ("1", "true", "yes", "on")
 
     @property
     def min_available_mb(self) -> float:
@@ -133,6 +180,16 @@ class BrowserPool:
             return max(0.0, float(raw))
         except ValueError:
             return MIN_AVAILABLE_MB
+
+    @property
+    def session_cost_mb(self) -> float:
+        if self._cost_mb is not None:
+            return self._cost_mb
+        raw = os.environ.get("WATCHSKILL_BROWSER_SESSION_MB", "")
+        try:
+            return max(0.0, float(raw))
+        except ValueError:
+            return SESSION_COST_MB
 
     def acquire(self, owner: str, *, timeout: float = 60.0) -> Lease:
         """Wait for a slot, then check pressure. Refuse rather than OOM.
@@ -168,23 +225,67 @@ class BrowserPool:
             time.sleep(0.1)
 
     def _reject_if_starved(self, owner: str) -> None:
-        """Refuse when memory is measurably short. Called holding the lock."""
-        floor = self.min_available_mb
-        if floor <= 0:
-            return
+        """Refuse unless the machine can afford this session. Holds the lock.
+
+        Two quantities, not one. The reserve is what must remain free
+        *afterwards*, for everything else on the host; the session cost is
+        what this browser is about to take. Checking only the reserve admits a
+        session that consumes it entirely and leaves the next allocation —
+        anywhere, in any process — to fail instead.
+        """
         free = available_memory_mb()
-        if free is None or free >= floor:
+        if free is None:
+            if self.allow_unmeasured:
+                return
+            # The count-based ceiling has already been enforced against the
+            # reduced `max_browsers`, so reaching here with a lease available
+            # means we are within the conservative single-session budget.
+            return
+        cost = self.session_cost_mb + self._worker_cost_locked()
+        needed = self.min_available_mb + cost
+        if free >= needed:
             return
         self.refusals += 1
         raise BrowserUnavailable(
-            f"only {free:.0f} MB of memory is free and a browser needs at "
-            f"least {floor:.0f} MB of headroom",
+            f"{free:.0f} MB is free; this session needs about {cost:.0f} MB "
+            f"and {self.min_available_mb:.0f} MB must remain for everything "
+            f"else",
             code="live.browser.memory_pressure",
-            fix="close something, or lower WATCHSKILL_MIN_BROWSER_MEMORY_MB "
-                "if you accept the risk of the OS killing the process",
-            details={"available_mb": round(free, 1), "required_mb": floor,
+            fix="stop another session or a loaded model, or lower "
+                "WATCHSKILL_MIN_BROWSER_MEMORY_MB if you accept the risk of "
+                "the OS killing the process",
+            details={"available_mb": round(free, 1),
+                     "required_mb": round(needed, 1),
+                     "session_cost_mb": round(cost, 1),
+                     "reserve_mb": self.min_available_mb,
                      "owner": owner, "active": self._describe_locked()},
         )
+
+    def _worker_cost_locked(self) -> float:
+        """Memory already committed to loaded models, as they estimate it.
+
+        A browser is not the only thing competing for this machine — OCR, ASR
+        and vision weights are resident too, and admitting a session while
+        ignoring them is how the governor stays satisfied right up until the
+        host is not. Best effort: a registry that cannot be read contributes
+        nothing rather than raising, because a missing estimate must not stop
+        a browser from starting.
+        """
+        try:
+            from watch_skill.models import ModelState, get_registry  # noqa: PLC0415
+
+            registry = get_registry()
+            total = 0.0
+            for name in registry.registered():
+                model = registry.get(name)
+                # Only what is actually resident. A registered-but-unloaded
+                # model costs nothing, and counting it would refuse browsers
+                # on a machine with plenty of room.
+                if model.status.state is ModelState.READY:
+                    total += float(model.estimated_mb or 0)
+            return total
+        except Exception:  # noqa: BLE001 - accounting is advisory, never fatal
+            return 0.0
 
     def release(self, lease: Lease | None) -> None:
         """Give a slot back. Safe to call twice, and on a lease that failed."""
@@ -200,20 +301,34 @@ class BrowserPool:
                 for lease in self._leases.values()]
 
     def diagnostics(self) -> dict[str, Any]:
-        """What is running, what the limits are, and how much room is left."""
+        """What is running, what the limits are, and how much room is left.
+
+        Owners are lease labels like ``live:live_ab12cd``, never URLs, paths,
+        or anything a page authored — diagnostics get pasted into issues.
+        """
         with self._lock:
             active = self._describe_locked()
             refusals = self.refusals
+            workers_mb = self._worker_cost_locked()
+        free = available_memory_mb()
+        measured = free is not None
         return {
             "schema_version": 1,
             "active": active,
             "active_count": len(active),
             "limit": self.max_browsers,
+            "configured_limit": self.configured_max,
             "refusals": refusals,
-            "available_memory_mb": (
-                round(available_memory_mb(), 1)
-                if available_memory_mb() is not None else None),
+            "available_memory_mb": round(free, 1) if measured else None,
             "min_available_mb": self.min_available_mb,
+            "session_cost_mb": self.session_cost_mb,
+            "resident_model_mb": round(workers_mb, 1),
+            "memory_measurement_unavailable": not measured,
+            "allow_unmeasured": self.allow_unmeasured,
+            "admission": (
+                "count_and_memory" if measured
+                else ("count_only_override" if self.allow_unmeasured
+                      else "count_only_conservative")),
             # Said plainly: this is a per-process budget, and two Python
             # processes each get their own. Implying otherwise would be a
             # safety claim nothing here enforces.
@@ -237,6 +352,14 @@ def get_pool() -> BrowserPool:
     return _pool
 
 
+# A lease that outlives its interpreter is a slot nobody can ever reclaim.
+# Normal shutdown, cancellation, a failed fixture and an uncaught exception
+# all end up here; a hard crash or SIGKILL does not, which is the honest
+# limit of an in-process registry and the reason the budget is per process
+# and rebuilt on start rather than persisted.
+atexit.register(_pool.release_all)
+
+
 def acquire(owner: str, *, timeout: float = 60.0) -> Lease:
     return _pool.acquire(owner, timeout=timeout)
 
@@ -252,6 +375,8 @@ def diagnostics() -> dict[str, Any]:
 __all__ = [
     "DEFAULT_MAX_BROWSERS",
     "MIN_AVAILABLE_MB",
+    "SESSION_COST_MB",
+    "UNMEASURED_MAX_BROWSERS",
     "BrowserPool",
     "BrowserUnavailable",
     "Lease",
