@@ -77,6 +77,51 @@ dev = ["pytest>=9.1,<10", "pytest-timeout>=2.4,<3", "ruff>=0.15,<0.16"]
 [tool.hatch.build.targets.wheel]
 packages = ["src/watch_skill"]
 
+# The workspace ships as the single self-contained document the MCP Apps
+# resource carries. `next build` also emits a directory export, which the
+# build gate checks and which a plain web host could serve, but nothing in the
+# product serves it — including it would duplicate the same compilation twice
+# for no reader.
+[tool.hatch.build.targets.sdist]
+include = [
+    "/src",
+    "/tests",
+    "/scripts",
+    "/docs",
+    "/examples",
+    "/adapters",
+    "/skills",
+    "/commands",
+    "/templates",
+    "/benchmarks",
+    "/app/src",
+    "/app/scripts",
+    "/app/package.json",
+    "/app/package-lock.json",
+    "/app/tsconfig.json",
+    "/app/next.config.mjs",
+    "/app/next-env.d.ts",
+    "README.md",
+    "CHANGELOG.md",
+    "CONTRIBUTING.md",
+    "SECURITY.md",
+    "LICENSE",
+    "pyproject.toml",
+    "llms.txt",
+]
+# Belt and braces. `app/node_modules` is a directory junction to task-scoped
+# storage on another drive, and hatchling follows it: without this the sdist
+# came out at 81 MB across 4238 files, 3728 of them somebody else's
+# JavaScript. The include list above already excludes it; this makes a future
+# addition of "/app" not silently undo that.
+exclude = [
+    "**/node_modules",
+    "**/.next",
+    "**/out",
+    "**/__pycache__",
+    "**/*.tsbuildinfo",
+]
+
 # PyPI renders the long description on its own, so every relative path in
 # README.md would be a broken image or a dead link there. Rewrite them to
 # absolute GitHub URLs at build time and leave the file itself relative,

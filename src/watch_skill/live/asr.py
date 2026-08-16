@@ -108,7 +108,43 @@ class LocalWhisperASR:
             ) from exc
 
         size = self.model_size or self._auto_size()
-        return WhisperModel(size, device="auto", compute_type="int8")
+        # Cache only. A live session must never be the thing that starts a
+        # download — the same rule the vision worker follows, and for the same
+        # reason: capture is already running, the network may be off by
+        # policy, and a surprise fetch mid-session is both a stall and an
+        # egress nobody consented to.
+        #
+        # This is not theoretical. Without `local_files_only` the loader
+        # reached out to resolve the repo revision *even with the model
+        # already cached*, and the offline test caught it connecting to
+        # 443 on the way to transcribing a local wav.
+        # Belt as well as braces. `local_files_only=True` is the loader's own
+        # promise; `HF_HUB_OFFLINE` is the hub library's, and the offline test
+        # caught a connection through `snapshot_download` that the first flag
+        # alone did not stop. Restored afterwards so this stays a property of
+        # the load rather than of the process.
+        import os  # noqa: PLC0415
+
+        previous = os.environ.get("HF_HUB_OFFLINE")
+        os.environ["HF_HUB_OFFLINE"] = "1"
+        try:
+            return WhisperModel(size, device="auto", compute_type="int8",
+                                local_files_only=True)
+        except Exception as exc:  # noqa: BLE001 - reported, never a download
+            raise WatchSkillError(
+                f"the local speech model {size!r} is not in the cache",
+                code="models.not_cached",
+                fix="fetch it once, deliberately, before watching: "
+                    f'`python -c "from faster_whisper import WhisperModel; '
+                    f"WhisperModel('{size}')\"`. A live session will not "
+                    "download it for you.",
+                details={"model": size, "error": str(exc)[:200]},
+            ) from exc
+        finally:
+            if previous is None:
+                os.environ.pop("HF_HUB_OFFLINE", None)
+            else:
+                os.environ["HF_HUB_OFFLINE"] = previous
 
     @staticmethod
     def _auto_size() -> str:
