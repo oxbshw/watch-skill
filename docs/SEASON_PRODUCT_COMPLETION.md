@@ -31,7 +31,7 @@ npm 11.8.0, Playwright 1.61.0 with Chromium 1228 present.
 | --- | --- | --- | --- | --- |
 | 1 | Production live browser source | **done** | `8825f07`, `HEAD` | machine-tested |
 | 2 | Persistent temporal entities and actions | **actions done**, entities pending | `HEAD` | machine-tested |
-| 3 | Durable deterministic triggers | pending | — | — |
+| 3 | Durable deterministic triggers | **done** | `HEAD` | deterministic-tested |
 | 4 | Verification Oracle SDK | **done** | `HEAD` | machine-tested |
 | 5 | Observer Loop | **done** | `HEAD` | machine-tested |
 | 6 | MCP App / live workspace | pending | — | — |
@@ -191,6 +191,41 @@ Fixed, and the end-to-end proof is what caught it.
 
 **Not done in these slices**: temporal entity storage (Slice 2's entity half),
 triggers (Slice 3).
+
+## Slice 3 — durable deterministic triggers
+
+A trigger is a typed structure compiled to a fixed set of comparisons. No
+`eval`, no lambda, no template with code in it, no model-written predicate —
+because what a trigger reads is an event log full of text a webpage wrote, and
+any of those would turn that log into an execution surface.
+
+Four condition kinds: `match`, `count` (N inside a rolling window), `sequence`
+(steps in order inside a window), and `absence` — the only one that fires
+because of something that did *not* happen, measured in **media** time rather
+than wall time, since a stopped session has not had time pass in its media.
+
+**The ceiling on what a trigger can do**: propose. A firing creates an action
+in `awaiting_approval`; there is no code path from a predicate to an
+execution. That is what makes it safe to evaluate rules over page-authored
+text at all.
+
+**Deterministic-tested**, 19 tests in `tests/triggers/test_triggers.py`:
+replay safety (re-evaluating fires nothing; a rewound cursor proposes one
+action, not two), cursor resumption, once-only, cooldown recording the match
+it declined to act on, a firing-rate budget capping a 12-event storm at 2
+actionable firings, expiry, disabled state, window edges, sequence ordering,
+absence arming and re-arming, bounded evaluation state over 400 events
+(capped at 256 entries), explainability, and the predicate language refusing
+attribute access (`detail.__class__` and friends resolve to `MISSING`, which
+is itself distinct from `None`).
+
+Fixed while testing: a firing persisted its proposed `action_id` but did not
+set it on the object returned to the caller, so every caller had to re-query
+and the ones that forgot would report that a firing proposed nothing.
+
+**Not done**: no CLI/REST/MCP surface for triggers yet. The Python API is
+stable and tested; exposing it publicly is deliberately deferred rather than
+half-wired.
 
 ## Blockers
 
