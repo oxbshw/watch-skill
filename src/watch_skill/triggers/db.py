@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Any
 
 from watch_skill.config import get_settings
+from watch_skill.sqlite_util import apply_migrations
 from watch_skill.triggers.types import (
     Firing,
     Trigger,
@@ -97,16 +98,13 @@ def connect(db_path: Path | None = None) -> sqlite3.Connection:
 
 
 def migrate(conn: sqlite3.Connection) -> int:
-    conn.execute("CREATE TABLE IF NOT EXISTS schema_version (version INTEGER NOT NULL)")
-    row = conn.execute("SELECT MAX(version) AS v FROM schema_version").fetchone()
-    current = int(row["v"]) if row and row["v"] is not None else 0
-    for version, migration in enumerate(MIGRATIONS, start=1):
-        if version <= current:
-            continue
-        with conn:
-            conn.executescript(migration)
-            conn.execute("INSERT INTO schema_version (version) VALUES (?)", (version,))
-    return len(MIGRATIONS)
+    """Bring this database up to date, safely under concurrency.
+
+    Delegated so the write lock is taken before the version is read; doing it
+    inline meant two processes both saw version 0 and the loser died with
+    "table already exists".
+    """
+    return apply_migrations(conn, MIGRATIONS)
 
 
 def _row_to_trigger(row: sqlite3.Row) -> Trigger:
@@ -254,22 +252,32 @@ def record_firing(firing: Firing) -> Firing | None:
     conn = connect()
     try:
         with conn:
-            row = conn.execute(
-                "SELECT COALESCE(MAX(seq), 0) + 1 AS n FROM trigger_firings "
-                "WHERE trigger_id = ?", (firing.trigger_id,)).fetchone()
-            seq = int(row["n"])
+            # The sequence is allocated by a subquery *inside* the INSERT, not
+            # by a SELECT before it. Python's sqlite3 opens the IMMEDIATE
+            # transaction on the first DML statement, so a preceding SELECT
+            # would run outside the write lock — two processes would then read
+            # the same MAX(seq), and the loser's IntegrityError is
+            # indistinguishable from the cause_seq clash below. It would be
+            # reported as "this cause already fired" and the firing would
+            # vanish. Allocating inside the statement serializes on the lock,
+            # which leaves the cause_seq index as the only way to fail here.
             try:
                 conn.execute(
                     "INSERT INTO trigger_firings (trigger_id, seq, session_id, "
                     "cause_seq, media_ts, wall_ts, reason, trace_json, action_id, "
-                    "suppressed) VALUES (?,?,?,?,?,?,?,?,?,?)",
-                    (firing.trigger_id, seq, firing.session_id, firing.cause_seq,
-                     firing.media_ts, firing.wall_ts, firing.reason,
-                     json.dumps(firing.trace, default=str), firing.action_id,
-                     firing.suppressed),
+                    "suppressed) VALUES (?, (SELECT COALESCE(MAX(seq), 0) + 1 "
+                    "FROM trigger_firings WHERE trigger_id = ?), ?,?,?,?,?,?,?,?)",
+                    (firing.trigger_id, firing.trigger_id, firing.session_id,
+                     firing.cause_seq, firing.media_ts, firing.wall_ts,
+                     firing.reason, json.dumps(firing.trace, default=str),
+                     firing.action_id, firing.suppressed),
                 )
             except sqlite3.IntegrityError:
-                return None
+                return None  # this cause already fired; redelivery must not duplicate
+            seq = int(conn.execute(
+                "SELECT seq FROM trigger_firings WHERE trigger_id = ? "
+                "AND cause_seq = ?",
+                (firing.trigger_id, firing.cause_seq)).fetchone()["seq"])
             if not firing.suppressed:
                 conn.execute(
                     "UPDATE triggers SET fire_count = fire_count + 1, "

@@ -23,11 +23,20 @@ def _ffmpeg() -> str:
 
 @pytest.fixture(autouse=True)
 def stop_live_sessions():
-    """No live session may outlive its test."""
+    """No live session — and no browser slot — may outlive its test.
+
+    The lease release is not belt-and-braces. A test that fails midway leaves
+    its session unstopped, and without this the browser budget would be
+    permanently short by one for the rest of the run: every later browser
+    test would then fail for a reason that has nothing to do with what it is
+    testing, and the real failure would be buried under the cascade.
+    """
     yield
+    from watch_skill.live.browser_pool import get_pool
     from watch_skill.live.session import stop_all
 
     stop_all()
+    get_pool().release_all()
 
 
 def _draw_frames(out_dir: Path, halves: list[tuple[str, str]], seconds: float,

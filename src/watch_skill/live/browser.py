@@ -39,6 +39,7 @@ from pathlib import Path
 from typing import Any
 
 from watch_skill.errors import WatchSkillError
+from watch_skill.live import browser_pool as pool
 from watch_skill.live.browser_events import (
     MAX_SNAPSHOT_NODES,
     BrowserEvent,
@@ -209,6 +210,12 @@ class BrowserOptions:
     screenshot_timeout_ms: int = 5_000
     evaluate_timeout_ms: int = 5_000
     shutdown_timeout_s: float = 45.0
+    lease_timeout_s: float = 60.0
+    """How long to wait for a browser slot before refusing. Refusing is a real
+    outcome here rather than a failure mode to tune away: a caller told "the
+    machine is busy" can retry, where a caller killed by the OOM killer
+    cannot."""
+
     """Generous on purpose. A cold Chromium — first launch on a machine, empty
     profile, cold page cache — takes several seconds to close, and a tight
     budget here would turn an ordinary slow shutdown into a spurious "the
@@ -276,6 +283,7 @@ class BrowserSource:
         # checkable answer to "did every browser process actually exit".
         self._profile_dir = out_dir.parent / f"profile_{self.session_id}"
         self._closed_cleanly = False
+        self._lease: pool.Lease | None = None
         self._stragglers_killed: list[int] = []
         self._tree_gone: bool | None = None
 
@@ -399,6 +407,8 @@ class BrowserSource:
             "killed_pids": list(self._stragglers_killed),
             "policy": self.options.policy.to_dict(),
             "failure": self.failure.to_dict() if self.failure else None,
+            "resources": pool.diagnostics(),
+            "holds_lease": self._lease is not None and not self._lease.released,
         }
 
     def process_tree_gone(self) -> bool:
@@ -457,6 +467,13 @@ class BrowserSource:
         context = None
         playwright = None
         try:
+            # Lease a slot before spending any memory. Refusing here — with a
+            # reason naming what else is running — is a far better outcome
+            # than the OS killing this process, or some unrelated allocation
+            # elsewhere failing because a browser took the last of the RAM.
+            self._lease = pool.acquire(
+                f"live:{self.session_id}",
+                timeout=self.options.lease_timeout_s)
             playwright = sync_playwright().start()
             context = self._launch(playwright)
             page = context.pages[0] if context.pages else context.new_page()
@@ -484,6 +501,12 @@ class BrowserSource:
                             "events_emitted": self._event_seq},
                 ))
             self._shutdown(context, playwright)
+            # The lease goes back after the processes are actually gone, not
+            # before: releasing it earlier would let the next browser start
+            # while this one's memory is still resident, which is exactly the
+            # overlap the budget exists to prevent.
+            pool.release(self._lease)
+            self._lease = None
             self._frames.put(None)
 
     def _launch(self, playwright: Any) -> Any:

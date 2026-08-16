@@ -21,6 +21,7 @@ from watch_skill.observer.types import (
     Spend,
     VerificationAttempt,
 )
+from watch_skill.sqlite_util import apply_migrations
 
 MIGRATIONS: list[str] = [
     """
@@ -69,16 +70,13 @@ def connect(db_path: Path | None = None) -> sqlite3.Connection:
 
 
 def migrate(conn: sqlite3.Connection) -> int:
-    conn.execute("CREATE TABLE IF NOT EXISTS schema_version (version INTEGER NOT NULL)")
-    row = conn.execute("SELECT MAX(version) AS v FROM schema_version").fetchone()
-    current = int(row["v"]) if row and row["v"] is not None else 0
-    for version, migration in enumerate(MIGRATIONS, start=1):
-        if version <= current:
-            continue
-        with conn:
-            conn.executescript(migration)
-            conn.execute("INSERT INTO schema_version (version) VALUES (?)", (version,))
-    return len(MIGRATIONS)
+    """Bring this database up to date, safely under concurrency.
+
+    Delegated so the write lock is taken before the version is read; doing it
+    inline meant two processes both saw version 0 and the loser died with
+    "table already exists".
+    """
+    return apply_migrations(conn, MIGRATIONS)
 
 
 def _row_to_run(row: sqlite3.Row) -> ObserverRun:

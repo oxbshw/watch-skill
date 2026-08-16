@@ -26,6 +26,7 @@ from watch_skill.live.types import (
     LiveState,
     Provenance,
 )
+from watch_skill.sqlite_util import apply_migrations
 
 MIGRATIONS: list[str] = [
     # v1 — sessions and their append-only events.
@@ -114,14 +115,13 @@ def schema_version(conn: sqlite3.Connection) -> int:
 
 
 def migrate(conn: sqlite3.Connection) -> int:
-    current = schema_version(conn)
-    for version, migration in enumerate(MIGRATIONS, start=1):
-        if version <= current:
-            continue
-        with conn:
-            conn.executescript(migration)
-            conn.execute("INSERT INTO schema_version (version) VALUES (?)", (version,))
-    return schema_version(conn)
+    """Bring this database up to date, safely under concurrency.
+
+    Delegated so the write lock is taken before the version is read; doing it
+    inline meant two processes both saw version 0 and the loser died with
+    "table already exists".
+    """
+    return apply_migrations(conn, MIGRATIONS)
 
 
 # --- sessions ---------------------------------------------------------------

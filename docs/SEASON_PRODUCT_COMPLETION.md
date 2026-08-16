@@ -30,7 +30,7 @@ npm 11.8.0, Playwright 1.61.0 with Chromium 1228 present.
 | # | Slice | Status | Commit | Proof |
 | --- | --- | --- | --- | --- |
 | 1 | Production live browser source | **done** | `8825f07`, `472e594` | machine-tested |
-| 2 | Persistent temporal entities and actions | **actions done**, entities not started | `0df7450` | machine-tested |
+| 2 | Persistent temporal entities and actions | **done** | `0df7450`, season 2 | machine-tested |
 | 3 | Durable deterministic triggers | **done** | `ec2e775` | deterministic-tested |
 | 4 | Verification Oracle SDK | **done** | `0df7450` | machine-tested |
 | 5 | Observer Loop | **done** | `0df7450` | machine-tested |
@@ -255,6 +255,129 @@ sdist, clean-environment install, `npm pack`, secret scan, dependency
 vulnerability scan. The zero-egress test with provider keys present is part of
 the suite above and passed.
 
+---
+
+# Season 2 — audit and release hardening
+
+## Slice 0 — auditing the previous season's claims
+
+The previous report's claims were checked against the code rather than
+restated. Three of them did not survive contact.
+
+### Finding 1: entities were never implemented
+
+Confirmed. Slice 2's action lifecycle existed; the temporal entity half did
+not, and the previous ledger said so. Now implemented — see below.
+
+### Finding 2: the triggers package is clean, with one bug
+
+Provenance audit of all four files: no `eval`, `exec`, `compile`,
+`__import__`, `getattr`, `subprocess` or `pickle`; no TODO/FIXME/placeholder
+text; one broad `except`, on the dead-letter path, documented. Predicates are
+key lookup only, and attribute access resolves to `MISSING`.
+
+**But `record_firing` had a real defect.** It allocated a firing sequence with
+`SELECT MAX(seq)+1` *before* the first write, and Python's `sqlite3` only
+opens an `IMMEDIATE` transaction on DML — so the read ran outside the write
+lock. Two evaluators would compute the same `seq`, and the loser's
+`IntegrityError` was caught by a handler that means *"this cause already
+fired"*. A legitimate firing for a different event would have vanished with no
+error. Fixed by allocating inside the `INSERT`, which leaves the `cause_seq`
+index as the only way that handler can be reached.
+
+### Finding 3: the same race was in all five databases
+
+Every `migrate()` read the schema version outside the write lock. Two threads
+both saw version 0 and the loser died with `table entities already exists`.
+Proved by the new concurrent-observer test, which failed exactly that way.
+
+Fixed once, in `watch_skill.sqlite_util.apply_migrations`, and applied to all
+five stores. A second, deeper instance surfaced immediately after: a
+transaction that reads then writes cannot upgrade its lock, and SQLite does
+**not** honour `busy_timeout` for that case because the read snapshot is
+already stale. `sqlite_util.immediate()` starts such transactions as writers;
+it is now used by the entity store and the action compare-and-swap.
+
+Both bugs are invisible to a single-threaded test suite and appear the first
+time a user runs two commands at once.
+
+## Slice 0 — browser resource governance
+
+The `MemoryError` from season 1 is treated as the release defect it was.
+Nothing counted Chromium instances, so nothing could refuse one, and the
+ceiling was whatever the OS would tolerate — reached as an out-of-memory kill
+in whatever unrelated code allocated next.
+
+`watch_skill.live.browser_pool` leases browser slots. A lease is granted only
+if the process is under its limit *and* free memory is above a floor;
+otherwise the caller is refused immediately with a reason naming what is
+already running. A refusal is a far better outcome than an OOM: it names the
+cause, it is recoverable, and it lands in the right place.
+
+- Per-process limit (default 2: one live session, one verifier — the pair
+  that must not deadlock), configurable via `WATCHSKILL_MAX_BROWSERS`.
+- Memory floor (default 700 MB) via `WATCHSKILL_MIN_BROWSER_MEMORY_MB`.
+- Unmeasurable free memory fails **open**, and says so — refusing every
+  browser on a platform whose memory we cannot read would make the product
+  unusable there, and assuming plenty would be a safety claim never verified.
+- The lease is returned *after* the process tree is gone, never before.
+- `tests/live/conftest.py` releases leases in teardown, so one failing test
+  cannot starve every later browser test.
+- Diagnostics report `scope: "process"` rather than implying a machine-wide
+  guarantee nothing enforces.
+
+**Proof**: 8 tests in `tests/live/test_browser_pool.py`, including a
+20-thread concurrency test asserting the peak never exceeds the limit, and
+**three consecutive full browser-suite runs** (73 tests each) all green.
+
+## Slice 0 — live browser capability receipt
+
+`watch_skill.live.receipt` derives, from the persisted event log alone, which
+of ten declared channels a session actually produced: pixels, scene change,
+DOM mutation, accessibility change, console, page error, request failed, HTTP
+error, navigation, clip.
+
+The channel list is **declared**, not discovered. A receipt built only from
+observed events could never report that something was *missing*, which is the
+one thing it exists to do — every interesting live-capture failure looks like
+silence.
+
+**Proof**: `tests/live/test_browser_receipt.py` runs the fixture and asserts
+all ten channels fire, then re-derives the identical receipt **in a separate
+process**. A second test asserts a silent session produces a receipt full of
+`MISSING` rather than an empty one.
+
+## Slice 0 — persistent temporal entities (completing Slice 2)
+
+`watch_skill.entities`: bi-temporal attributes with `valid_from`/`valid_to`,
+stable ids, aliases resolved through a normalized unique index, evidence
+links, conflicts, cross-session history, and bounded context compilation.
+
+Nothing is ever updated in place. Superseding a fact closes the old interval
+and opens a new one at exactly the same instant, so a state-at-time query
+never finds a gap and never finds two answers. A partial unique index enforces
+one open interval per `(entity, name)` — it caught the implementation
+inserting before closing, which is the corruption every later read would have
+silently inherited.
+
+**A model never writes here.** Output arrives as an `Observation` — a
+proposal — and deterministic code decides. The conflict rule: a fresh
+deterministic reading always wins; an inferred one never overrides a
+deterministic one, however confident it sounds; otherwise higher score wins
+and ties keep the incumbent. Every path records a conflict row, including
+"we kept the old value", because that is a finding too.
+
+**Proof**: 17 tests in `tests/entities/test_entities.py` — interval
+boundaries checked to the millisecond on both sides, a model failing to
+overwrite a DOM read, truncation and attribute caps reported rather than
+silent, 8 concurrent observers converging on one entity, and full history
+read back from a fresh interpreter.
+
+Implementation bug found and fixed by these tests: `_supersedes` contradicted
+its own documented rule and required a *higher score* for a newer
+measurement, which would have frozen the first reading of any attribute
+forever.
+
 ## Not started in this season
 
 Named rather than quietly omitted. None of these is blocked; the season ran
@@ -262,7 +385,7 @@ out of room, and each is a coherent next slice.
 
 | # | Slice | Why it is not here |
 | --- | --- | --- |
-| 2 (entities) | Persistent temporal entities | The action half of Slice 2 shipped. Bi-temporal entity storage — `valid_from`/`valid_to`, aliases, conflicting observations, superseded facts — is untouched. |
+| 2 (entities) | Persistent temporal entities | ~~Untouched.~~ **Done in season 2** — see the entity section above. |
 | 6 | MCP App / Kimi-inspired live workspace | Needs the official `@modelcontextprotocol/ext-apps` package read and pinned first. Inventing that API rather than reading it would have produced a plausible-looking app that does not run in a real host. |
 | 7 | Plugin protocol | Entry-point protocol for sources, backends, oracles, executors. The executor and oracle registries it would build on now exist. |
 | 8 | Typed TypeScript SDK | Blocked on nothing but time; the canonical schemas it would generate from are stable. |

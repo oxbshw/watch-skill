@@ -24,6 +24,7 @@ from watch_skill.actions.types import (
     ApprovalStatus,
 )
 from watch_skill.config import get_settings
+from watch_skill.sqlite_util import apply_migrations, immediate
 
 MIGRATIONS: list[str] = [
     # v1 — actions, approvals, and the transition log that explains both.
@@ -117,14 +118,13 @@ def schema_version(conn: sqlite3.Connection) -> int:
 
 
 def migrate(conn: sqlite3.Connection) -> int:
-    current = schema_version(conn)
-    for version, migration in enumerate(MIGRATIONS, start=1):
-        if version <= current:
-            continue
-        with conn:
-            conn.executescript(migration)
-            conn.execute("INSERT INTO schema_version (version) VALUES (?)", (version,))
-    return schema_version(conn)
+    """Bring this database up to date, safely under concurrency.
+
+    Delegated so the write lock is taken before the version is read; doing it
+    inline meant two processes both saw version 0 and the loser died with
+    "table already exists".
+    """
+    return apply_migrations(conn, MIGRATIONS)
 
 
 # --- actions ----------------------------------------------------------------
@@ -250,7 +250,10 @@ def transition(
     """
     conn = connect()
     try:
-        with conn:
+        # Write-first: the compare-and-swap reads the current state and then
+        # writes, and a deferred transaction cannot upgrade that read lock
+        # once another worker has committed in between.
+        with immediate(conn):
             row = conn.execute("SELECT * FROM actions WHERE action_id = ?",
                                (action_id,)).fetchone()
             if row is None:
