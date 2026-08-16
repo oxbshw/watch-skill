@@ -7,10 +7,13 @@
  * rendered as prose the workspace appears to be asserting — it goes through
  * {@link Untrusted}, which fences and quotes it.
  */
+"use client";
+
 import { useMemo, useState } from "react";
 import type {
   Approval,
   EvidenceTab,
+  MediaTransport,
   ObserverRun,
   RailSession,
   SessionReceipt,
@@ -18,8 +21,8 @@ import type {
   Snapshot,
   TriggerView,
   WorkspaceEvent,
-} from "./types";
-import { EVIDENCE_TABS } from "./types";
+} from "@/types";
+import { EVIDENCE_TABS } from "@/types";
 
 type Tone = "ok" | "bad" | "warn" | "info" | "mute";
 
@@ -28,14 +31,16 @@ export function Chip({
   dot = false,
   children,
   title,
+  "data-testid": testId,
 }: {
   tone?: Tone;
   dot?: boolean;
   children: React.ReactNode;
   title?: string;
+  "data-testid"?: string;
 }) {
   return (
-    <span className="chip" data-tone={tone} title={title}>
+    <span className="chip" data-tone={tone} title={title} data-testid={testId}>
       {dot ? <span className="dot" aria-hidden="true" /> : null}
       {children}
     </span>
@@ -259,6 +264,36 @@ export function Rail({
   );
 }
 
+/** How each delivery mode is named, and what the name promises.
+ *
+ * These strings are load-bearing. "LIVE VIDEO" and "SNAPSHOT" are different
+ * claims about whether what you are looking at is happening now, and the one
+ * bug this table exists to prevent is a still image wearing the word LIVE.
+ */
+export const TRANSPORT_LABEL: Record<MediaTransport, string> = {
+  stream: "LIVE VIDEO",
+  frames: "LIVE FRAMES",
+  snapshot: "SNAPSHOT",
+  replay: "REPLAY",
+  none: "NO PREVIEW",
+};
+
+const TRANSPORT_TONE: Record<MediaTransport, Tone> = {
+  stream: "ok",
+  frames: "ok",
+  snapshot: "warn",
+  replay: "info",
+  none: "mute",
+};
+
+const TRANSPORT_MEANING: Record<MediaTransport, string> = {
+  stream: "continuous session-scoped frames — you are watching this now",
+  frames: "bounded throttled frame updates — live, but not every frame",
+  snapshot: "a periodic still, not continuous video — this is what it looked like a moment ago",
+  replay: "a finished session being reviewed — nothing here is happening now",
+  none: "no preview is available for this session",
+};
+
 /** The live stage.
  *
  * A periodic still is labelled SNAPSHOT, never LIVE. The difference between
@@ -272,29 +307,40 @@ export function Stage({
   selected,
   onCommand,
   busy,
+  frameAgeMs,
+  fps,
 }: {
   session: SessionStatus | null;
   frameUrl: string | null;
-  transport: "stream" | "snapshot" | "none";
+  transport: MediaTransport;
   selected: WorkspaceEvent | null;
   onCommand: (command: string) => void;
   busy: string | null;
+  frameAgeMs?: number | null;
+  fps?: number | null;
 }) {
   const running = session?.state === "running";
   return (
     <section className="panel stage" aria-label="Live stage">
       <div className="panel-head">
         <span>Live stage</span>
-        {transport === "snapshot" ? (
-          <Chip tone="warn" title="periodic stills, not continuous video">
-            SNAPSHOT
-          </Chip>
-        ) : transport === "stream" ? (
-          <Chip tone="ok" dot>
-            STREAMING
-          </Chip>
-        ) : null}
+        <Chip
+          tone={TRANSPORT_TONE[transport]}
+          dot={transport === "stream" || transport === "frames"}
+          title={TRANSPORT_MEANING[transport]}
+          data-testid="transport-label"
+        >
+          {TRANSPORT_LABEL[transport]}
+        </Chip>
         <span className="spacer" />
+        {typeof fps === "number" && fps > 0 ? (
+          <span className="subtle" style={{ fontSize: 11.5 }}>
+            {fps.toFixed(1)} fps
+            {typeof frameAgeMs === "number"
+              ? ` · frame ${(frameAgeMs / 1000).toFixed(1)}s old`
+              : ""}
+          </span>
+        ) : null}
         {session ? (
           <span className="subtle" style={{ fontSize: 11.5 }}>
             {session.events_total} events · seq {session.last_seq}

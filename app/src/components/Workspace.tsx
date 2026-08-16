@@ -1,3 +1,5 @@
+"use client";
+
 /**
  * The workspace shell: fetch canonical state, render it, send commands back.
  *
@@ -14,6 +16,8 @@
  *   has ended — there is nothing further to learn about a finished session.
  * - Mutations carry a session version and an idempotency key, so a
  *   double-click is safe and a stale command is refused visibly.
+ * - The preview transport is whatever the host says it can honour, and the
+ *   label follows the transport rather than the other way around.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -24,15 +28,18 @@ import {
   ReceiptStrip,
   Stage,
   Timeline,
-} from "./components";
+} from "./parts";
+import VisionPanel from "./VisionPanel";
 import type {
   ConnectionState,
   EvidenceTab,
   MediaTransport,
   Snapshot,
   WorkspaceEvent,
-} from "./types";
-import type { WorkspaceTransport } from "./transport";
+} from "@/types";
+import type { WorkspaceTransport } from "@/transport";
+import { PreviewDriver, percentile } from "@/preview";
+import type { PreviewCapability } from "@/preview";
 
 const MAX_EVENTS_IN_STATE = 1500;
 const POLL_ACTIVE_MS = 700;
@@ -61,7 +68,11 @@ function mergeEvents(
     : merged;
 }
 
-export default function App({ transport }: { transport: WorkspaceTransport }) {
+export default function Workspace({
+  transport,
+}: {
+  transport: WorkspaceTransport;
+}) {
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
   const [events, setEvents] = useState<WorkspaceEvent[]>([]);
   const [cursor, setCursor] = useState(0);
@@ -73,14 +84,25 @@ export default function App({ transport }: { transport: WorkspaceTransport }) {
   const [busy, setBusy] = useState<string | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [theme, setTheme] = useState<"light" | "dark" | null>(null);
+  const [frameUrl, setFrameUrl] = useState<string | null>(null);
+  const [frameAgeMs, setFrameAgeMs] = useState<number | null>(null);
+  const [fps, setFps] = useState<number>(0);
 
   const failures = useRef(0);
   const mounted = useRef(true);
+  const driver = useRef<PreviewDriver | null>(null);
 
   useEffect(() => () => { mounted.current = false; }, []);
 
   useEffect(() => {
-    if (theme) document.documentElement.setAttribute("data-theme", theme);
+    if (theme) {
+      document.documentElement.setAttribute("data-theme", theme);
+      try {
+        localStorage.setItem("ws-theme", theme);
+      } catch {
+        // A host that blocks storage still gets the theme for this session.
+      }
+    }
   }, [theme]);
 
   const reload = useCallback(
@@ -156,7 +178,10 @@ export default function App({ transport }: { transport: WorkspaceTransport }) {
 
     // A finished session has nothing further to say; poll slowly so a
     // reopened tab still notices a finalize, then stop.
-    timer = window.setTimeout(() => void tick(), finished ? POLL_HIDDEN_MS : POLL_ACTIVE_MS);
+    timer = window.setTimeout(
+      () => void tick(),
+      finished ? POLL_HIDDEN_MS : POLL_ACTIVE_MS,
+    );
     return () => {
       cancelled = true;
       if (timer) window.clearTimeout(timer);
@@ -171,6 +196,81 @@ export default function App({ transport }: { transport: WorkspaceTransport }) {
     }, 2500);
     return () => window.clearInterval(id);
   }, [reload, sessionId]);
+
+  // --- the preview ---------------------------------------------------------
+
+  const capability = (snapshot as unknown as { preview?: PreviewCapability })
+    ?.preview;
+  const capabilityKey = capability
+    ? `${capability.transport}:${capability.session ?? ""}`
+    : "none";
+
+  useEffect(() => {
+    driver.current?.stop();
+    driver.current = null;
+    setFrameUrl(null);
+
+    const base = transport.kind === "standalone" ? standaloneOrigin() : null;
+    if (
+      base === null ||
+      !capability ||
+      (capability.transport !== "frames" && capability.transport !== "stream")
+    ) {
+      return undefined;
+    }
+
+    const instance = new PreviewDriver(
+      base,
+      capability,
+      (frame) => {
+        if (!mounted.current) return;
+        setFrameUrl(frame.url);
+        setFrameAgeMs(instance.stats.frameAgeMs);
+        setFps(instance.stats.fps);
+      },
+      () => {
+        // A preview that cannot fetch is a degraded preview, not a broken
+        // workspace. The evidence path is unaffected and keeps running.
+        if (mounted.current) setFps(0);
+      },
+    );
+    driver.current = instance;
+    instance.start();
+    return () => {
+      instance.stop();
+      driver.current = null;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [capabilityKey, transport.kind]);
+
+  // Exposed for the rendered proof: the numbers the preview is actually
+  // delivering, read from the driver rather than recomputed from React state.
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      const stats = driver.current?.stats;
+      if (!stats) return;
+      (window as unknown as Record<string, unknown>)["__watchSkillPreview"] = {
+        framesDrawn: stats.framesDrawn,
+        framesDropped: stats.framesDropped,
+        reconnects: stats.reconnects,
+        fps: Number(stats.fps.toFixed(2)),
+        frameAgeMs: stats.frameAgeMs,
+        frameAgeP50: percentile(stats.ageSamples, 50),
+        frameAgeP95: percentile(stats.ageSamples, 95),
+        firstFrameMs: stats.firstFrameMs,
+      };
+    }, 500);
+    return () => window.clearInterval(id);
+  }, []);
+
+  const mediaTransport: MediaTransport = useMemo(() => {
+    if (!snapshot?.session) return "none";
+    if (capability?.transport === "replay") return "replay";
+    if (frameUrl !== null && capability?.transport === "frames") return "frames";
+    if (frameUrl !== null && capability?.transport === "stream") return "stream";
+    if (frameUrl !== null) return "snapshot";
+    return "none";
+  }, [snapshot?.session, capability?.transport, frameUrl]);
 
   const command = useCallback(
     async (name: string, args: Record<string, unknown> = {}) => {
@@ -222,13 +322,6 @@ export default function App({ transport }: { transport: WorkspaceTransport }) {
     [transport, reload, sessionId],
   );
 
-  const frameUrl = useMemo(() => {
-    if (!snapshot?.session) return null;
-    return transport.frameUrl(snapshot.session.session_id, snapshot.session.last_seq);
-  }, [transport, snapshot?.session]);
-
-  const mediaTransport: MediaTransport = frameUrl ? "snapshot" : "none";
-
   if (!snapshot) {
     return (
       <div className="shell">
@@ -271,6 +364,12 @@ export default function App({ transport }: { transport: WorkspaceTransport }) {
             selected={selected}
             onCommand={(name) => void command(name)}
             busy={busy}
+            frameAgeMs={frameAgeMs}
+            fps={fps}
+          />
+          <VisionPanel
+            events={events}
+            vision={snapshot.session?.detectors?.["semantic"]}
           />
           <ObserverPanel
             observer={snapshot.observer}
@@ -313,4 +412,16 @@ export default function App({ transport }: { transport: WorkspaceTransport }) {
       )}
     </div>
   );
+}
+
+/** The origin the standalone build was served from.
+ *
+ * Read from the document rather than compiled in, for the same reason the API
+ * base is: the bundle inside the Python package must contain no origin at all.
+ */
+function standaloneOrigin(): string | null {
+  if (typeof document === "undefined") return null;
+  const tag = document.querySelector('meta[name="watch-skill-api"]');
+  if (tag === null) return null;
+  return (tag.getAttribute("content") ?? "").replace(/\/$/, "");
 }

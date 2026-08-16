@@ -1,30 +1,31 @@
 {
   "name": "watch-skill-workspace",
-  "version": "0.1.0",
-  "description": "Watch Skill MCP App \u2014 live observation and verification workspace",
-  "main": "index.js",
+  "version": "0.2.0",
+  "description": "Watch Skill MCP App — live observation and verification workspace",
   "scripts": {
-    "build": "tsc --noEmit && vite build",
     "typecheck": "tsc --noEmit",
-    "dev": "vite",
-    "preview": "vite preview"
+    "build": "tsc --noEmit && next build && node scripts/inline.mjs",
+    "build:export": "next build",
+    "inline": "node scripts/inline.mjs",
+    "dev": "next dev"
   },
-  "keywords": [],
-  "author": "",
   "license": "ISC",
   "type": "module",
   "dependencies": {
     "@modelcontextprotocol/ext-apps": "1.7.5",
+    "next": "15.5.23",
     "react": "19.2.0",
     "react-dom": "19.2.0"
   },
   "devDependencies": {
+    "@types/node": "22.10.2",
     "@types/react": "19.2.2",
     "@types/react-dom": "19.2.1",
-    "@vitejs/plugin-react": "5.0.4",
-    "typescript": "5.9.3",
-    "vite": "7.3.6",
-    "vite-plugin-singlefile": "2.3.0"
+    "typescript": "5.9.3"
+  },
+  "overrides": {
+    "sharp": ">=0.35.0",
+    "postcss": ">=8.5.23"
   },
   "private": true
 }

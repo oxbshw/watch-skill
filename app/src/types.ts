@@ -79,7 +79,13 @@ export interface SessionStatus {
   buffer_bytes: number;
   in_this_process: boolean;
   stats: Record<string, number | Record<string, number>>;
-  detectors?: Record<string, { status: string; reason?: string }>;
+  /** Readiness per detector, `semantic` among them.
+   *
+   * Populated only for a session running in *this* process — the core says so
+   * with `in_this_process`. A session read back from the store reports its
+   * observations through the event log instead, which is the path that
+   * survives a restart and the one the UI must not confuse for live state. */
+  detectors?: Record<string, VisionStatus>;
   browser?: Record<string, unknown>;
   error?: { error: string; message: string; fix?: string } | null;
   finalized_video_id?: string | null;
@@ -229,10 +235,91 @@ export interface Delta {
   session_version: number;
 }
 
-/** How the preview is actually being delivered. A snapshot is never labelled
- *  as continuous video: the distinction is the difference between "you are
- *  watching this" and "this is what it looked like a moment ago". */
-export type MediaTransport = "stream" | "snapshot" | "none";
+/** How the preview is actually being delivered.
+ *
+ * A snapshot is never labelled as continuous video: the distinction is the
+ * difference between "you are watching this" and "this is what it looked like
+ * a moment ago", and it matters most exactly when someone is deciding whether
+ * to intervene.
+ *
+ * `stream` continuous session-scoped binary frames — LIVE VIDEO
+ * `frames` bounded throttled frame updates — LIVE FRAMES
+ * `snapshot` a periodic still — SNAPSHOT
+ * `replay`  a finished session being reviewed — REPLAY
+ * `none`    nothing to show, said plainly
+ */
+export type MediaTransport =
+  | "stream"
+  | "frames"
+  | "snapshot"
+  | "replay"
+  | "none";
+
+/** How fresh a model reading is, and therefore what it may be used for.
+ *  Mirrors `watch_skill.live.semantic.Freshness` exactly. */
+export type Freshness =
+  | "current_state"
+  | "stale_for_action"
+  | "historical_evidence";
+
+/** A model's reading of one frame, with everything needed to judge it.
+ *
+ * The timing block is not diagnostics. On a CPU backend an interpretation
+ * takes tens of seconds, and a reading shown without its latency and its
+ * frame timestamp is a claim about the present that is quietly about the
+ * past. */
+export interface SemanticObservation {
+  media_ts: number;
+  observation: string;
+  entities: string[];
+  actions: string[];
+  ui_state: string;
+  anomaly: string;
+  uncertainty: string;
+  confidence: number;
+  provenance: {
+    provider: string;
+    model: string;
+    kind: string;
+    revision: string;
+    worker_protocol_version: number;
+    capture_kind: string;
+  };
+  frame: {
+    sha256: string;
+    seq: number;
+    media_ts: number;
+    captured_wall_ts: number;
+  };
+  timing: {
+    inference_started_wall_ts: number;
+    inference_completed_wall_ts: number;
+    latency_ms: number;
+    late_by_seconds: number;
+  };
+  freshness: Freshness;
+  may_trigger_current_state_action: boolean;
+  superseded: boolean;
+  selected_because: string;
+  evidence: string[];
+  advisory: boolean;
+  degraded: boolean;
+  degraded_reason: string;
+}
+
+/** What the vision model is doing right now, as the session reports it. */
+export interface VisionStatus {
+  status: string;
+  backend?: string;
+  reason?: string;
+  warm_state?: string;
+  queued?: number;
+  inflight?: boolean;
+  interpreted?: number;
+  budget_remaining?: number;
+  last_skip_reason?: string;
+  failures?: number;
+}
 
 export type ConnectionState =
   | "connecting"

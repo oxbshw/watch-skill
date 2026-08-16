@@ -1,2 +1,6 @@
 node_modules/
-dist/
+# Next.js build output. Both are directory junctions to task-scoped storage
+# off the repository drive; neither belongs in the tree.
+.next/
+out/
+*.tsbuildinfo

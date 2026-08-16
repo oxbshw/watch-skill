@@ -606,3 +606,38 @@ details.raw pre {
 .evidence .cards { flex: 1 1 auto; min-height: 0; }
 .rail .rail-list { flex: 1 1 auto; min-height: 0; }
 .observer { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+
+/* --- the vision panel ------------------------------------------------------
+ *
+ * A model reading is styled to look like evidence under review, not like a
+ * verdict. The freshness stripe on the left is the fastest way to see, before
+ * reading a word, whether what you are looking at is allowed to describe the
+ * present — and it is a stripe *plus* a text label, never colour alone.
+ */
+
+.vision { flex: 0 0 auto; }
+
+.observation {
+  padding: 10px 12px 12px;
+  border-left: 3px solid var(--ink-3);
+  background: var(--panel-2);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  margin: 0 12px 12px;
+}
+
+.observation[data-freshness="current_state"] { border-left-color: var(--ok); }
+.observation[data-freshness="stale_for_action"] { border-left-color: var(--warn); }
+.observation[data-freshness="historical_evidence"] { border-left-color: var(--info); }
+
+.observation .kv { margin: 0; }
+.observation .untrusted { margin: 0; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+  .chip .dot { animation: none !important; }
+}
