@@ -15,11 +15,37 @@ fine for anything else.
 """
 from __future__ import annotations
 
+import hashlib
+import hmac
 import json
+import secrets
 import threading
+import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any
 from urllib.parse import parse_qs, urlsplit
+
+# One secret per host process, never written down and never sent to the UI.
+# What the UI receives is a token derived from it for one session, which is
+# what makes preview access session-scoped rather than host-wide.
+_SECRET = secrets.token_bytes(32)
+
+
+def preview_token(session_id: str) -> str:
+    """A capability to read one session's frames, and nothing else.
+
+    Derived rather than stored so there is no table to leak or to keep in
+    sync, and scoped to the session so a token seen in one workspace cannot
+    fetch another session's media.
+    """
+    return hmac.new(_SECRET, session_id.encode("utf-8"),
+                    hashlib.sha256).hexdigest()[:32]
+
+
+def _token_ok(session_id: str, supplied: str) -> bool:
+    if not session_id or not supplied:
+        return False
+    return hmac.compare_digest(preview_token(session_id), supplied)
 
 
 def _bundle() -> str:
@@ -64,10 +90,24 @@ class _Handler(BaseHTTPRequestHandler):
             if parts.path in ("/", "/index.html"):
                 self._send(200, _bundle().encode("utf-8"),
                            "text/html; charset=utf-8")
+            elif parts.path == "/favicon.ico":
+                # Answered rather than 404'd. Every browser asks for this
+                # unprompted, and a 404 becomes a console error that buries
+                # the real ones the rendered proof is watching for.
+                self._send(204, b"", "image/x-icon")
             elif parts.path == "/api/snapshot":
                 from watch_skill import workspace
 
-                self._json(200, workspace.snapshot(session))
+                payload = workspace.snapshot(session)
+                self._json(200, _with_preview(payload))
+            elif parts.path == "/api/preview/meta":
+                self._preview_meta(str(session),
+                                   (query.get("token") or [""])[0],
+                                   float((query.get("after") or ["-1"])[0]))
+            elif parts.path == "/api/preview/frame":
+                self._preview_frame(str(session),
+                                    (query.get("token") or [""])[0],
+                                    float((query.get("at") or ["-1"])[0]))
             elif parts.path == "/api/delta":
                 from watch_skill import workspace
 
@@ -104,6 +144,66 @@ class _Handler(BaseHTTPRequestHandler):
                 return
         self._json(404, {"error": "no_frame"})
 
+    # --- continuous preview -------------------------------------------------
+
+    def _preview_meta(self, session_id: str, token: str, after: float) -> None:
+        """What the newest frame is, without sending it.
+
+        Metadata first, bytes second, so the client can decide whether it
+        already has this frame. Polling the image directly would re-download
+        an unchanged frame forever and make "how old is what I am looking at"
+        unanswerable.
+
+        `after` is a cursor on media time. A client that reconnects sends the
+        last frame it drew and resumes from there, which is what stops a
+        reload from re-rendering frames it already has.
+        """
+        from watch_skill.live import buffer as buf
+
+        if not _token_ok(session_id, token):
+            self._json(403, {"error": "bad_preview_token"})
+            return
+        newest = buf.newest_frame_media_ts(session_id)
+        if newest is None:
+            self._json(200, {"available": False, "session": session_id,
+                             "wall_ts": time.time()})
+            return
+        # Latest-frame-wins: the client is told about the newest frame only.
+        # A queue of stale frames is exactly what a live preview must not
+        # deliver — by the time it drained, none of it would be live.
+        self._json(200, {
+            "available": True,
+            "session": session_id,
+            "media_ts": round(newest, 3),
+            "wall_ts": time.time(),
+            "is_new": newest > after,
+        })
+
+    def _preview_frame(self, session_id: str, token: str, at: float) -> None:
+        """One frame's bytes, named by media time rather than by path.
+
+        The client never sees a filesystem path, and cannot ask for one: the
+        only addressable thing is a timestamp inside a session it holds a
+        token for.
+        """
+        from watch_skill.live import buffer as buf
+
+        if not _token_ok(session_id, token):
+            self._json(403, {"error": "bad_preview_token"})
+            return
+        target = at if at >= 0 else buf.newest_frame_media_ts(session_id)
+        if target is not None:
+            frames = buf.frames_between(session_id, max(0.0, target - 1.0),
+                                        target + 0.001, limit=4)
+            for segment in reversed(frames):
+                if segment.path.is_file():
+                    self._send(200, segment.path.read_bytes(), "image/jpeg")
+                    return
+        # 204, not 404. "No frame has been captured yet" is an ordinary state
+        # of a healthy starting session, and reporting it as an error puts a
+        # red line in the console of a workspace that is working correctly.
+        self._send(204, b"", "image/jpeg")
+
     def do_POST(self) -> None:  # noqa: N802
         parts = urlsplit(self.path)
         length = int(self.headers.get("Content-Length", "0") or 0)
@@ -121,6 +221,45 @@ class _Handler(BaseHTTPRequestHandler):
                                       dict(body.get("arguments") or {})))
         except Exception as exc:  # noqa: BLE001
             self._json(400, {"error": type(exc).__name__, "message": str(exc)})
+
+
+def _with_preview(payload: dict[str, Any]) -> dict[str, Any]:
+    """Attach the preview capability this host can actually honour.
+
+    Negotiated rather than assumed, and negotiated *down* by default. The
+    label the UI shows is derived from this block, so choosing the wrong tier
+    here is how a still image ends up wearing the word LIVE.
+
+    Added by the host rather than by `workspace.snapshot` because a preview
+    token is a property of this transport, not of the canonical read model —
+    the MCP surface serves the same snapshot and must not carry one.
+    """
+    session = payload.get("session")
+    if not session:
+        payload["preview"] = {"transport": "none",
+                              "reason": "no session is open"}
+        return payload
+    session_id = str(session.get("session_id"))
+    state = str(session.get("state"))
+    if state in ("stopped", "finalized", "failed"):
+        # Nothing here is happening now, and the interface must not imply it
+        # is. A finished session is reviewed, not watched.
+        payload["preview"] = {"transport": "replay", "session": session_id,
+                              "token": preview_token(session_id),
+                              "endpoint": "/api/preview",
+                              "reason": f"session is {state}"}
+        return payload
+    payload["preview"] = {
+        # Bounded throttled frame updates: every captured frame is offered,
+        # the newest always wins, and the client is told how old it is. Not
+        # claimed as continuous binary video, which this host does not serve.
+        "transport": "frames",
+        "session": session_id,
+        "token": preview_token(session_id),
+        "endpoint": "/api/preview",
+        "reason": "loopback host serves bounded frame updates",
+    }
+    return payload
 
 
 def _csp() -> str:
