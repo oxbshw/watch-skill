@@ -694,7 +694,23 @@ class SemanticRuntime:
                     self._wake.wait(timeout=1.0)
                 if self._stopping and not self._queue:
                     return
-                candidate, reason = self._queue.pop(0)
+                # Take the *best* waiting frame, not the oldest.
+                #
+                # This was FIFO, and FIFO is wrong here for a reason worth
+                # spelling out: at fifty seconds per inference, the frame at
+                # the head of the queue is always the one furthest in the
+                # past. Measured on the 150-second fixture, a FIFO drain
+                # interpreted only media timestamps 0.0 and 30.0 and never
+                # looked at the failure state at all — the model spent the
+                # whole run describing a screen that had already changed
+                # twice. Ranking the dequeue the same way the eviction is
+                # ranked keeps the model pointed at the present.
+                best = max(
+                    range(len(self._queue)),
+                    key=lambda i: (self._queue[i][0].interest,
+                                   self._queue[i][0].media_ts),
+                )
+                candidate, reason = self._queue.pop(best)
                 self._inflight = True
             try:
                 self._run(candidate, reason)
@@ -766,6 +782,16 @@ class SemanticRuntime:
         if self.breaker.open:
             return {"status": "degraded", "reason": self.degraded_reason
                     or "circuit_open", "backend": self.backend.name}
+        if self.warm_state == "failed":
+            # A model that could not load will not interpret anything, and
+            # every frame offered to it becomes a degraded observation. Saying
+            # "ready" here was the most misleading line in the status payload:
+            # it reported a healthy detector that could never produce a
+            # reading, and hid the load error in a field nobody reads.
+            return {"status": "degraded",
+                    "reason": self.warm_error or "the model failed to load",
+                    "backend": self.backend.name,
+                    "warm_state": self.warm_state}
         with self._lock:
             queued, inflight = len(self._queue), self._inflight
         return {

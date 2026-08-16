@@ -68,19 +68,44 @@ the project's own cache, fetching only the files inference needs. It refuses
 rather than fills the disk — a half-downloaded model on a full disk is worse
 than no model.
 
-> **Status on this machine: BLOCKED, with numbers.** `watch-skill models
-> status` reports:
->
-> - free disk **3.5 GiB**, below the required 8 GiB;
-> - available RAM **1.6 GiB**, below the required 3 GiB;
-> - `torch` not installed (~2.5 GiB, deliberately not a base dependency);
-> - `transformers` not installed.
->
-> No local Ollama vision model is running and no provider was named either.
-> **No real-VLM result exists.** The bootstrap, the adapter and the harness
-> are implemented and tested; the gate names the blocker rather than passing
-> vacuously. The semantic pipeline remains
-> **deterministic-backend-tested only.**
+> **Status on this machine: UNBLOCKED.** A dedicated workspace on a drive
+> with room, plus a CPU-only torch build in an interpreter outside the base
+> environment, made this run. `HuggingFaceTB/SmolVLM2-256M-Video-Instruct` at
+> revision `067788b1…` is cached offline; measurements are in
+> [VLM_RECEIPT.md](VLM_RECEIPT.md). The 500M variant was never downloaded.
+
+### The live real-VLM gate
+
+The gate above interprets a single extracted frame. This one runs the model
+**inside a live session** and is the only thing that can say the semantic path
+works end to end:
+
+```bash
+python scripts/make_live_vlm_fixture.py --out tests/fixtures/live_vlm
+WATCHSKILL_TEST_REAL_VLM_LIVE=1 \
+WATCHSKILL_VLM_PYTHON=/path/to/env/python.exe \
+  uv run pytest tests/integration/test_real_vlm_live.py
+```
+
+It is slow by construction. The fixture plays for **130 seconds in real time**
+and one interpretation costs tens of seconds, so the run takes several
+minutes. That is the point: a fixture shorter than a single inference could
+never show a reading arriving while its source was still running.
+
+The fixture has four labelled states — normal, an explicit failure with
+readable text, a prompt-injection segment, and a recovery — with ground truth
+beside them. Two details are load-bearing and were both learned the hard way:
+
+- **Text is drawn with a scalable font at 76px.** The model sees a 512px
+  downscale. Pillow's bare `ImageDraw.text` uses an ~11px bitmap font, which
+  lands at about five pixels and is unreadable — a frame with a large red
+  banner came back as "a webpage with a red and blue button".
+- **512px is a floor, not a tuning knob.** At 384px the same model read
+  "Order Status Failed" as a button labelled "Submitter". It did not fail; it
+  produced a confident wrong answer.
+
+Egress is not merely asserted — a `sitecustomize` is injected into the worker
+process that raises on any non-loopback `connect`, before torch loads.
 
 ### Setting up the ASR gate
 

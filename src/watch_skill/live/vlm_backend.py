@@ -42,7 +42,17 @@ as a button labelled "Submitter" — it did not fail, it produced a confident
 wrong answer. Downscaling is the cheapest latency lever available and also the
 one that silently costs comprehension, so this does not move."""
 
-MAX_NEW_TOKENS = 64
+MAX_NEW_TOKENS = 32
+"""Decode length, and the only latency lever that does not cost accuracy.
+
+Measured: the receipt's 47.1 s p50 was taken at 32 tokens. Raising it to 64
+roughly doubles decode time for output this backend never uses — the answer
+wanted here is one sentence, which lands in about 20 tokens. In a live session
+the model also shares a four-thread CPU with capture and OCR, and at 64 tokens
+not one inference completed inside a 130-second source. At 32 they do.
+
+Unlike `MAX_EDGE`, lowering this does not make the model read the screen worse;
+it only stops it writing more than was asked for."""
 
 _QUESTION = (
     "Describe this screen in one short sentence. "

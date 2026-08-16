@@ -285,12 +285,25 @@ class VlmWorker:
         if not reply.get("ok"):
             self._failed_until = time.time() + FAILURE_COOLDOWN_S
             self.stats["failures"] += 1
+            # An unpinned revision is the most common cause and the least
+            # obvious one. Without a revision the library has to resolve the
+            # `main` ref, and a cache populated by an explicit revision has no
+            # `refs/` directory to resolve it from — so it reaches for the
+            # network, which offline mode then refuses. The error that comes
+            # back talks about connectivity, which sends everyone looking in
+            # the wrong place.
+            unpinned = not self.revision
             raise VlmWorkerError(
                 f"the VLM worker could not load the model: {reply.get('message')}",
                 code="vision.worker_load_failed",
-                fix="check the model is present in the worker's cache; "
-                    "runtime download is disabled on purpose",
-                details={"model": self.model, "revision": self.revision},
+                fix=("no model revision is pinned, so the library tried to "
+                     "resolve 'main' over the network; set "
+                     "WATCHSKILL_VLM_REVISION to the exact commit in the "
+                     "cache" if unpinned else
+                     "check the model is present in the worker's cache; "
+                     "runtime download is disabled on purpose"),
+                details={"model": self.model, "revision": self.revision,
+                         "revision_pinned": not unpinned},
             )
         self._loaded = True
         self.stats["loads"] += 1

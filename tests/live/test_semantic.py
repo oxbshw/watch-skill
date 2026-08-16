@@ -249,6 +249,40 @@ def test_a_more_informative_frame_takes_the_slot_and_the_loser_is_recorded() -> 
                for d in drops), f"no supersede recorded: {drops}"
 
 
+def test_the_model_is_handed_the_newest_waiting_frame_not_the_oldest() -> None:
+    """FIFO points a slow model permanently at the past.
+
+    Measured on the 150s fixture: a FIFO drain interpreted only media
+    timestamps 0.0 and 30.0 and never reached the failure state, because at
+    ~50s per inference the head of the queue is always the stalest frame.
+    """
+    seen: list[float] = []
+
+    class Recording:
+        name = "recording"
+
+        def interpret(self, frames, media_ts, question=""):
+            seen.append(media_ts)
+            from watch_skill.live.semantic import SemanticObservation
+
+            return SemanticObservation(media_ts=media_ts)
+
+    runtime = SemanticRuntime(backend=Recording(),
+                              on_observation=lambda *_: None, queue_limit=3)
+    # Fill the queue before the drain thread can start on anything.
+    with runtime._lock:
+        for ts in (10.0, 40.0, 70.0):
+            runtime._queue.append(
+                (_candidate(ts, scene_changed=True, visible_text=f"v{ts}"),
+                 "scene_change"))
+        runtime._ensure_worker()
+        runtime._wake.notify()
+    _settle(runtime)
+
+    assert seen[0] == 70.0, (
+        f"the oldest frame was interpreted first: {seen}")
+
+
 def test_a_late_answer_is_published_as_evidence_not_discarded() -> None:
     """Lateness costs the present tense, never the evidence.
 
@@ -302,6 +336,36 @@ def test_a_failing_backend_opens_the_circuit_and_degrades() -> None:
     assert runtime.status()["status"] == "degraded"
     assert runtime.consider(_candidate(100.0, scene_changed=True)) is False
     assert runtime.last_skip_reason == "circuit_open"
+
+
+def test_a_model_that_cannot_load_is_never_reported_as_ready() -> None:
+    """A detector that can never produce a reading must not claim readiness.
+
+    This was real: a session whose model failed to load reported
+    `status: ready` with the load error tucked into a field nobody reads,
+    while every frame quietly became a degraded observation. "Ready" has to
+    mean a reading is possible.
+    """
+    class Unloadable:
+        name = "unloadable"
+
+        def warm(self):
+            raise RuntimeError("the model cache is missing the revision")
+
+        def interpret(self, frames, media_ts, question=""):
+            raise AssertionError("must not be reached")
+
+    runtime = SemanticRuntime(backend=Unloadable(),
+                              on_observation=lambda *_: None)
+    runtime.warm()
+    deadline = time.time() + 5
+    while runtime.warm_state == "warming" and time.time() < deadline:
+        time.sleep(0.02)
+
+    assert runtime.warm_state == "failed"
+    status = runtime.status()
+    assert status["status"] == "degraded"
+    assert "revision" in status["reason"]
 
 
 def test_no_backend_is_degraded_not_broken() -> None:

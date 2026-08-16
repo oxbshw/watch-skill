@@ -77,6 +77,116 @@ latency lever available, and it is also the one that silently costs
 comprehension — the smaller input did not fail, it produced a confident wrong
 answer. **512 px is the floor for reading on-screen text with this model.**
 
+## Three things measured while wiring the model into a live session
+
+### An unpinned revision is a network call
+
+The cache holds `blobs/` and `snapshots/` and **no `refs/` directory**, because
+it was populated by explicit revision. Without `revision=` the library has to
+resolve the `main` ref, finds nothing local to resolve it from, and reaches for
+the network — which offline mode then refuses. The error it returns talks about
+connectivity, which sends everyone looking in the wrong place.
+
+| revision | result |
+| --- | --- |
+| `""` (unpinned) | fails: "couldn't connect to huggingface.co" |
+| `067788b1…` (pinned) | loads offline in **0.69 s** |
+
+Pinning is therefore not merely good practice here, it is the difference
+between working and not. It is also what makes an observation reproducible: a
+reading that cannot name the revision that produced it is not evidence.
+
+### The model copies the example you give it
+
+Asked for JSON with `{"scene": "a login page", "confidence": 0.5}` shown as a
+*format* sample, it replied:
+
+```json
+{"scene": "a login page", "confidence": 0.5}
+```
+
+about a checkout screen. Valid JSON, entirely invented. The production prompt
+therefore contains no sample content at all, and the schema around the model's
+prose is derived by deterministic code rather than filled in by the model.
+
+### Font size decides whether the fixture is readable
+
+The model sees a 512 px downscale. Pillow's bare `ImageDraw.text` uses an
+~11 px bitmap font, which lands at roughly five pixels:
+
+| drawing | model's reading |
+| --- | --- |
+| default bitmap font, 1024 px canvas | "A screenshot of a webpage with a red and blue button." |
+| scalable font at 76 px, 960 px canvas | "A red screen with the words \"ORDER FAILED\" and \"Total: NaN\" in white." |
+
+The second is verbatim. The first missed a full-width red banner entirely.
+
+### Latency under a loaded machine
+
+The 47.1 s p50 in the table above was measured on an otherwise idle machine.
+With a test suite running alongside it, the same calls took **48.9–81.8 s**.
+Nothing about the model changed; the CPU it was sharing did. Both numbers are
+reported rather than averaged, because the second is what a real session on a
+working laptop actually experiences.
+
+## Four things that only showed up in a live session
+
+The standalone worker measurements above are all correct and all optimistic.
+Putting the same model inside a running session surfaced four failures that a
+single-frame benchmark cannot produce.
+
+### An unpinned revision reaches for the network
+
+`WATCHSKILL_VLM_REVISION` was treated as a nicety. It is load-bearing. This
+cache was populated by explicit revision, so it contains `blobs/` and
+`snapshots/` and **no `refs/` directory** — there is no `main` → commit
+mapping to resolve locally. Without a pinned revision the library therefore
+tries to resolve `main` over the network, offline mode refuses, and the error
+returned talks about connectivity:
+
+> We couldn't connect to 'https://huggingface.co' to load the files, and
+> couldn't find them in the cached files.
+
+which sends the reader looking at their firewall rather than at their config.
+Measured side by side: unpinned fails, pinned loads in **0.69 s**. The error
+now names the real cause, and the live gate refuses to run unpinned — an
+observation that cannot state the revision that produced it is not
+reproducible evidence.
+
+### "ready" was reported by a detector that could never answer
+
+When the load failed, the session reported `semantic: {"status": "ready"}`
+with the load error tucked into a `warm_error` field nobody reads, while every
+frame quietly became a degraded observation. Readiness now means a reading is
+actually possible.
+
+### Decode length, not image size, was the latency that mattered
+
+The worker defaulted to 64 new tokens; the 47.1 s measurement above was taken
+at 32. In a live session the model shares four threads with capture and OCR,
+and at 64 tokens **not one inference completed inside a 130-second source** —
+the very thing the gate exists to demonstrate. Reduced to 32, which is more
+than the ~20 tokens a one-sentence answer needs. Unlike `max_edge`, this costs
+no comprehension: it stops the model writing more than was asked for.
+
+### The fixture has to outlast an inference
+
+A 20-second clip is shorter than one interpretation on this backend. A model
+asked about its first frame would answer after the video ended, and nothing
+could be shown about a *running* source. The live fixture is 150 s, with each
+segment longer than a single inference so a reading can be attributed to the
+state it was taken from.
+
+### The text has to survive the downscale
+
+Pillow's bare `ImageDraw.text` uses an ~11 px bitmap font. At 512 px input
+that lands around five pixels and is unreadable: a generated frame with a
+large red "ORDER STATUS FAILED" banner came back as *"A screenshot of a
+webpage with a red and blue button."* Drawn instead with a scalable font at
+76 px, the same model read it exactly:
+
+> A red screen with the words "ORDER FAILED" and "Total: NaN" in white.
+
 ## Honest assessment
 
 This is a **real model producing real observations**, not a stand-in. It is
