@@ -1,0 +1,132 @@
+# Real local VLM — model receipt
+
+The first real vision-model run in this project. Three previous seasons
+recorded it as environmentally blocked; a dedicated workspace on a drive with
+room, plus a CPU-only build, unblocked it.
+
+Paths are recorded as **logical cache roles**, never machine paths. The
+workspace root is operator-chosen and passed through environment variables to
+child processes only — nothing global was modified, and nothing in this
+repository hard-codes a drive.
+
+## Model
+
+| | |
+| --- | --- |
+| Identifier | `HuggingFaceTB/SmolVLM2-256M-Video-Instruct` |
+| Revision (pinned) | `067788b187b95ebe7b2e040b3e4299e342e5b8fd` |
+| License | Apache-2.0 |
+| Download | 983.10 MiB, 12 files |
+| Largest file | `model.safetensors` — 978.47 MiB |
+| Other required files | `tokenizer.json` 3.38, `vocab.json` 0.76, `merges.txt` 0.44, plus config/preprocessor/chat-template JSON |
+| Download time | 213.4 s |
+
+The 500 M variant was **not** downloaded. Only one model exists in the cache.
+
+## Runtime
+
+| | |
+| --- | --- |
+| Interpreter | dedicated environment, separate from the Watch Skill base env |
+| torch | `2.9.1+cpu` (CPU index — no CUDA wheels pulled) |
+| torchvision | `0.24.1+cpu` |
+| transformers | `4.57.1` |
+| Device | CPU |
+| dtype | `float32` |
+| Threads | 2 (of 4 logical) |
+| Backend | `AutoModelForImageTextToText`, `do_sample=False` |
+
+`float32` is chosen deliberately. This CPU has no AVX-512, so bfloat16 falls
+back to an emulated path; and there is no CUDA at all. The safe dtype is the
+one that is always correct rather than the one that is sometimes faster.
+
+Two threads, not four: the default grabs every logical core, which starves the
+capture pipeline the model is supposed to be observing — it would be
+interpreting a session it had itself made stutter.
+
+## Measurements
+
+| Metric | Value |
+| --- | --- |
+| Worker spawn + model load (cold process) | **8.4 s** |
+| Model load alone (warm process) | 0.8 s |
+| Warm-up inference | 45.1 s |
+| Inference p50 | **47.1 s** |
+| Inference range (3 calls @ 32 tokens, 384 px) | 43.4 / 47.1 / 50.1 s |
+| Free RAM before load | 2524 MiB |
+| Free RAM during inference | 1211–1487 MiB |
+| Peak working set (inferred) | ≈ 1.0–1.3 GiB |
+| Structured-output success | 3/3 |
+| Failures | 0 |
+| Calls per minute | ≈ 1.3 |
+
+## Resolution changes what it understands
+
+At `max_edge=512` the model read the screen correctly:
+
+> A webpage with a red button that says "Order Status Failed" and a blue
+> button that says "Submitder".
+
+At `max_edge=384` on the same image it lost the status entirely:
+
+> A screen with a red and blue button labeled "Submitter" and a blue button
+> labeled "Submitter".
+
+That is worth recording rather than tuning away. Downscaling is the cheapest
+latency lever available, and it is also the one that silently costs
+comprehension — the smaller input did not fail, it produced a confident wrong
+answer. **512 px is the floor for reading on-screen text with this model.**
+
+## Honest assessment
+
+This is a **real model producing real observations**, not a stand-in. It is
+not production-quality on this hardware:
+
+- ~47 s per keyframe means it cannot follow raw capture at 2–3 fps. It can
+  follow *selected keyframes* at roughly one per minute, which is what the
+  keyframe selector already exists to produce.
+- Output quality at 256 M is loose. It reads large text, gets colours and
+  rough layout, and invents plausible words for small text ("Submitder",
+  "Submitter" for "Submit order").
+- No ground-truth precision/recall/F1 was computed — that needs the labelled
+  fixture run, which has not been executed yet.
+
+## Architecture
+
+The model runs in an interpreter the operator nominates via
+`WATCHSKILL_VLM_PYTHON`. Torch is over half a gigabyte and platform-specific;
+making it a Watch Skill dependency would tax every install for a feature most
+sessions never use, and would put a library famous for its memory appetite
+inside the process doing real-time capture.
+
+Controls implemented in `watch_skill.live.vlm_worker`:
+
+- interpreter path validated before execution (exists, is a file, looks like Python)
+- protocol version checked on connect (mismatch refuses rather than guesses)
+- request ≤ 8 MiB, response ≤ 4 MiB, model text ≤ 8000 chars
+- load deadline 300 s, inference deadline 180 s, enforced by killing the process tree
+- single-flight: one inference at a time, the lock *is* the backpressure
+- failure cooldown 120 s, so a model that fails is not retried at frame rate
+- idle release after 600 s
+- `HF_HUB_OFFLINE` / `TRANSFORMERS_OFFLINE` forced on — a live session can
+  never be the thing that starts a download
+- provider-credential environment variables stripped from the child: a
+  subprocess that cannot see a key cannot leak one
+
+The worker is launched as a **file**, not `-m watch_skill.vision.worker_main`.
+A module launch imports the parent package first, and `watch_skill.vision`
+pulls in httpx — which the model environment has no reason to carry. The
+worker's premise is that it imports nothing from Watch Skill, and `-m` quietly
+broke that.
+
+## Workspace footprint
+
+| Category | Size |
+| --- | --- |
+| Model environment (torch + torchvision + transformers) | 617.1 MiB |
+| Model cache | 983.1 MiB |
+| Build/package temp | 589.2 MiB |
+| **Total** | **2189.4 MiB** |
+
+Repository drive free space is unchanged at 0.94 GiB — nothing was installed
+on it. Unrelated content on the workspace drive was not inspected or modified.
