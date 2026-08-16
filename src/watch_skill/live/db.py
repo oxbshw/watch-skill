@@ -266,20 +266,30 @@ def recover_orphaned_sessions(stale_after: float = 120.0) -> int:
 def append_event(event: LiveEvent) -> int:
     """Append one event, allocating its sequence number atomically.
 
-    The allocation and the insert are one transaction, so two detector
-    threads emitting at the same instant get distinct, gapless sequence
-    numbers — a duplicate seq would make cursors ambiguous.
+    The allocation is an ``UPDATE``, not a ``SELECT`` followed by arithmetic,
+    and that distinction is the whole correctness argument. Python's sqlite3
+    does not open a transaction for a bare ``SELECT``, so reading ``last_seq``
+    and then inserting left a window in which two threads could read the same
+    number and race to insert it — the second one hitting the primary-key
+    constraint and losing its event entirely. Writing first takes SQLite's
+    write lock before the number is read, so concurrent appenders serialize
+    on it and every event gets a distinct, gapless seq.
     """
     conn = connect()
     try:
         with conn:
+            cursor = conn.execute(
+                "UPDATE live_sessions SET last_seq = last_seq + 1, "
+                "heartbeat_at = ? WHERE session_id = ?",
+                (time.time(), event.session_id),
+            )
+            if cursor.rowcount == 0:
+                return 0
             row = conn.execute(
                 "SELECT last_seq FROM live_sessions WHERE session_id = ?",
                 (event.session_id,),
             ).fetchone()
-            if row is None:
-                return 0
-            seq = row["last_seq"] + 1
+            seq = int(row["last_seq"])
             payload = {
                 "evidence": [ref.model_dump() for ref in event.evidence],
                 "entities": [e.model_dump() for e in event.entities],
@@ -294,11 +304,6 @@ def append_event(event: LiveEvent) -> int:
                  event.type.value, int(event.final), event.confidence,
                  event.provenance.value, event.summary, event.detector,
                  event.trace_id, json.dumps(payload, default=str)),
-            )
-            conn.execute(
-                "UPDATE live_sessions SET last_seq = ?, heartbeat_at = ? "
-                "WHERE session_id = ?",
-                (seq, time.time(), event.session_id),
             )
             return seq
     finally:

@@ -238,3 +238,57 @@ def test_an_unreadable_policy_is_not_treated_as_permission(
 
     monkeypatch.setattr("watch_skill.policy.get_policy", explode)
     assert caps._source_network_allowed() is False
+
+
+# --- the event log is safe to write from many threads ------------------------
+
+
+def test_concurrent_appends_get_distinct_sequence_numbers() -> None:
+    """Regression: two threads could allocate the same seq and one event died.
+
+    A live session writes from several threads at once — capture, OCR, audio,
+    and the browser's structured channel. The sequence used to be read with a
+    bare SELECT, which python's sqlite3 does not wrap in a transaction, so two
+    appenders could read the same last_seq and race to insert it. The loser hit
+    the primary key and its event was lost silently: cursors stayed consistent,
+    so nothing looked wrong except that evidence was missing.
+    """
+    from watch_skill.live import db
+    from watch_skill.live.types import LiveEvent, LiveEventType, LiveSession, LiveSourceKind
+    from watch_skill.live.types import LiveSourceSpec as Spec
+
+    session = LiveSession(
+        session_id="live_concurrency",
+        spec=Spec(kind=LiveSourceKind.FILE_REPLAY, target="x"),
+    )
+    db.insert_session(session)
+
+    workers, per_worker = 6, 25
+    errors: list[BaseException] = []
+
+    def append(worker: int) -> None:
+        try:
+            for n in range(per_worker):
+                db.append_event(LiveEvent(
+                    session_id=session.session_id, seq=0,
+                    media_ts=float(n), wall_ts=time.time(),
+                    type=LiveEventType.MOTION,
+                    summary=f"w{worker}-{n}", detector="test",
+                ))
+        except BaseException as exc:  # noqa: BLE001 - reported, not swallowed
+            errors.append(exc)
+
+    threads = [threading.Thread(target=append, args=(i,)) for i in range(workers)]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join(timeout=120)
+
+    assert not errors, f"appending raced: {errors[:3]}"
+    expected = workers * per_worker
+    assert db.count_events(session.session_id) == expected, (
+        "events were lost to a sequence collision")
+    stored = db.read_events(session.session_id, limit=expected + 10)
+    seqs = [event.seq for event in stored]
+    assert len(set(seqs)) == expected, "a sequence number was reused"
+    assert seqs == list(range(1, expected + 1)), "the sequence has holes"
