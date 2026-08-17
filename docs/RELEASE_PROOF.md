@@ -262,11 +262,60 @@ consistent with the project's stated rule that a live session must never start
 a download, and it fails loudly rather than silently — but it is a behaviour
 change, and a release note must say so.
 
-## 8. Remaining work before a public release
+## 8. Final gates on frozen HEAD `21c8124`
 
-- Linux CI coverage for the POSIX-only test (row 12).
-- The two-browser scenario needs a host with ~1.6 GB genuinely free; this one
-  does not have it while another application holds 2.6 GB.
-- `crewai` extra never exercised.
-- The v2 ecosystem and remote-platform matrix, which is why no `2.0.0`
-  designation is claimed.
+Tree clean at freeze.
+
+| Gate | Result |
+| --- | --- |
+| Full suite, run 1 | **1439 passed, 30 skipped, 1 failed** |
+| Full suite, run 2 | **1441 passed, 29 skipped, 0 failed** |
+| Two *consecutive* clean runs | **NOT ACHIEVED** |
+| Ruff | clean |
+| Security + accessibility suites | 125 passed, 0 skipped, 0 failed |
+| Accessibility (6 gates) | all pass |
+| Leaked Chromium / ffmpeg / VLM / ASR workers | none |
+| Leaked browser leases | none (0 active) |
+| Wheel / sdist | 683 KiB / 6.0 MB (unchanged) |
+| Python audit / npm audit / secret scans / SBOMs | all pass (§5) |
+
+Run 1's single failure was
+`tests/entities/test_entities::test_concurrent_observers_converge_on_one_entity`
+— `OperationalError: database is locked`. Worth stating plainly: the store is
+already configured for concurrent access (WAL, `busy_timeout=30000`,
+`timeout=30.0`, `isolation_level="IMMEDIATE"`), so a lock surviving 30 seconds
+means the machine was starved, not that the configuration is wrong. It is a
+different failure from the browser one and has **not** been root-caused.
+
+Skips differ between the two runs (30 vs 29) because the resource skips added
+in §3 depend on free memory at the moment they are evaluated. That is the
+intended behaviour — the count moving is the precondition working — but it
+means the skip total is a property of the host, not a constant.
+
+**The gate is not met.** The brief requires two consecutive clean full suites
+on one HEAD; this is one clean and one failed. No further commits were made
+after `21c8124`, so a re-run starts from this same HEAD.
+
+## 9. Remaining work before a public release
+
+Ordered by what blocks a release first.
+
+1. **Two consecutive clean full suites on one HEAD.** Not achieved (§8).
+2. **Root-cause the `database is locked` failure** in
+   `test_concurrent_observers_converge_on_one_entity`. Seen once in two runs;
+   not diagnosed. The store's configuration is already correct, so the
+   candidates are host starvation or a lock held across an unexpectedly long
+   operation — that distinction has not been established.
+3. **The demo showing all fifteen states** (§6). Blocked on ~2.5 GB free.
+4. **The two-browser scenario needs a host with ~2.5 GB genuinely free.** This
+   one has 2.1 GB while another application holds 2.6 GB, so
+   `test_workspace_ui`, `test_observer_loop` and the rendered VLM proof all
+   skip here rather than run.
+5. **Linux CI coverage for the POSIX-only test** (skip inventory row 12) — the
+   only release-blocking skip.
+6. **20 clean isolated runs of the previously failing test.** Three were run
+   before the corrected precondition landed (1 pass, 2 fail, both diagnosed);
+   the remaining runs have not been executed under the corrected precondition.
+7. `crewai` extra never exercised.
+8. The v2 ecosystem and remote-platform matrix, which is why no `2.0.0`
+   designation is claimed.
