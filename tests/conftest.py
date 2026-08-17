@@ -80,15 +80,33 @@ def require_verification_browser(count: int = 2) -> None:
     if free is None:
         return  # the unmeasured path has its own, stricter ceiling
     resident = pool._worker_cost_locked()
-    needed = count * pool.session_cost_mb + pool.min_available_mb + resident
+
+    # The governor's own requirement, at the moment the *last* verifier is
+    # acquired -- which is near the end of the run, not the start.
+    at_acquisition = pool.session_cost_mb + pool.min_available_mb + resident
+
+    # What the scenario has already eaten by then. Measured, not modelled:
+    # across repeated runs free memory fell from 2340 MB at start to 1000 MB
+    # by the second verification, so the scenario itself costs about 1340 MB
+    # in live browser, Playwright browser, OCR models and buffered frames.
+    #
+    # This term is why a start-time check of "two browsers' worth" was the
+    # wrong quantity: it passed at 2340 MB free and the run still died, at
+    # the second `advance()`, for want of memory the scenario had spent in
+    # the meantime. Observed outcomes at start-time free memory:
+    #   2722 MB -> pass      2620 MB -> fail      2340 MB -> fail
+    scenario_peak_mb = 1340.0 * (count - 1) if count > 1 else 0.0
+
+    needed = at_acquisition + scenario_peak_mb
     if free < needed:
         pytest.skip(
-            f"this scenario holds {count} governed browsers at once and needs "
-            f"about {needed:.0f} MB free "
-            f"({count * pool.session_cost_mb:.0f} MB for the browsers, "
-            f"{pool.min_available_mb:.0f} MB reserve, {resident:.0f} MB "
-            f"resident in loaded models); {free:.0f} MB is free. "
-            f"Close other applications or raise "
+            f"this scenario holds {count} governed browsers and needs about "
+            f"{needed:.0f} MB free at the start "
+            f"({scenario_peak_mb:.0f} MB the run itself consumes before the "
+            f"last verifier is acquired, {pool.session_cost_mb:.0f} MB for "
+            f"that browser, {pool.min_available_mb:.0f} MB reserve, "
+            f"{resident:.0f} MB resident in loaded models); "
+            f"{free:.0f} MB is free. Close other applications or raise "
             f"WATCHSKILL_MIN_BROWSER_MEMORY_MB. "
             f"This is a resource skip, not a pass.")
 

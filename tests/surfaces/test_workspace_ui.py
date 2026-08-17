@@ -21,6 +21,7 @@ from pathlib import Path
 
 import pytest
 
+from watch_skill import workspace
 from watch_skill.live import session as live_session
 from watch_skill.live.browser_pool import available_memory_mb
 from watch_skill.live.browser_pool import diagnostics as pool_diagnostics
@@ -327,9 +328,30 @@ def test_the_whole_scenario_is_visible_in_the_rendered_workspace(
                 if approve_button.is_visible():
                     approve_button.click(timeout=2000)
 
-                assert _wait(
-                    lambda: _approval_granted(run.approval_id), timeout=30.0), (
-                    "the UI click did not reach the approvals store")
+                if not _wait(lambda: _approval_granted(run.approval_id),
+                             timeout=30.0):
+                    # Say why. "The click did not reach the store" names a
+                    # symptom and leaves every candidate cause open — a
+                    # detached node, a re-render mid-click, an error the UI
+                    # swallowed into its banner, or a different approval id
+                    # than the one being watched.
+                    from watch_skill.actions import approval_state  # noqa: PLC0415
+
+                    banner = page.locator(".banner")
+                    raise AssertionError(
+                        "the UI click did not reach the approvals store\n"
+                        f"  watching approval_id : {run.approval_id}\n"
+                        f"  its state            : "
+                        f"{approval_state(run.approval_id) if run.approval_id else None}\n"
+                        f"  approvals in snapshot: "
+                        f"{json.dumps(workspace.snapshot(session.session_id).get('approvals'), default=str)}\n"
+                        f"  error banner         : "
+                        f"{banner.inner_text() if banner.count() else '(none)'}\n"
+                        f"  approve button       : "
+                        f"visible={approve_button.is_visible()} "
+                        f"text={approve_button.inner_text() if approve_button.count() else '(gone)'}\n"
+                        f"  console              : {console_errors[-5:]}\n"
+                        f"  network              : {net_failures[-10:]}")
 
                 # 8. The loop applies it exactly once and re-verifies.
                 run = advance(run.run_id, contract)
