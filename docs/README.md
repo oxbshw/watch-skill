@@ -64,6 +64,7 @@ Runnable counterparts live in the [example catalog](../examples/README.md).
 - [Architecture](architecture.md) describes boundaries, data flow, and extension points.
 - [Engineering decisions](DECISIONS.md) records the trade-offs behind those boundaries.
 - [Product completion ledger](SEASON_PRODUCT_COMPLETION.md) — what each slice built, what proved it, and what is still blocked.
+- [Release proof ledger](RELEASE_PROOF.md) — the collection diff, the root cause of the "UI flake", all 27 skip dispositions, security and accessibility gates, and the version recommendation.
 - [Real VLM receipt](VLM_RECEIPT.md) — the measured local vision model: revision, latency, memory, and the four failures only a live session showed.
 - [Workspace cleanup receipt](CLEANUP_RECEIPT.md) — what was removed to make room for the model environment, and what was deliberately kept.
 - [Benchmarks](../benchmarks/) contains methods, fixtures, and committed results.
