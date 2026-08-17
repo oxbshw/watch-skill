@@ -41,8 +41,91 @@ def isolated_settings(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     monkeypatch.setenv("WATCHSKILL_OLLAMA_NUM_CTX", "2048")
     monkeypatch.setenv("WATCHSKILL_OLLAMA_BASE_URL", "http://127.0.0.1:11434")
     reset_settings()
+    _reset_process_globals()
     yield data_dir
     reset_settings()
+    _reset_process_globals()
+
+
+def require_verification_browser(count: int = 2) -> None:
+    """Skip, with arithmetic, when this machine cannot hold the browsers.
+
+    Any scenario that drives the Observer Loop over a live browser source
+    holds two governed browsers at once: the live source for the whole run,
+    and the verifier during `advance()`. The governor charges each
+    `session_cost_mb` and insists `min_available_mb` survives, so near that
+    line the *second* acquisition is decided by whatever else the machine is
+    doing.
+
+    That produced what looked like a flaky UI test for a season. It was never
+    a UI problem: the same refusal failed `tests/observer/test_observer_loop`
+    in the same run, and the product said so plainly — "the verifier was
+    unavailable 2 times in a row: 962 MB is free; this session needs about
+    570 MB and 700 MB must remain for everything else". The governor was
+    right; the precondition was simply never checked.
+
+    Checked here, before anything starts. A skip that names the shortfall can
+    be acted on; an assertion that fires mid-scenario for want of a few
+    megabytes cannot.
+    """
+    import pytest  # noqa: PLC0415
+
+    from watch_skill.live.browser_pool import (  # noqa: PLC0415
+        available_memory_mb,
+        get_pool,
+    )
+
+    pool = get_pool()
+    free = available_memory_mb()
+    if free is None:
+        return  # the unmeasured path has its own, stricter ceiling
+    resident = pool._worker_cost_locked()
+    needed = count * pool.session_cost_mb + pool.min_available_mb + resident
+    if free < needed:
+        pytest.skip(
+            f"this scenario holds {count} governed browsers at once and needs "
+            f"about {needed:.0f} MB free "
+            f"({count * pool.session_cost_mb:.0f} MB for the browsers, "
+            f"{pool.min_available_mb:.0f} MB reserve, {resident:.0f} MB "
+            f"resident in loaded models); {free:.0f} MB is free. "
+            f"Close other applications or raise "
+            f"WATCHSKILL_MIN_BROWSER_MEMORY_MB. "
+            f"This is a resource skip, not a pass.")
+
+
+def _reset_process_globals() -> None:
+    """Drop model and browser state that outlives a single test.
+
+    Model residency is deliberately process-global — that is what makes
+    loading single-flight across every caller — so without this a model one
+    test loads is still resident for every test after it.
+
+    That is not a tidiness point. The browser governor charges admission for
+    resident models: with an empty registry a session needs 1150 MB free, and
+    with the 500 MB ASR model still loaded it needs 1650 MB. On a machine
+    sitting at ~1630 MB free, those two arithmetic results differ, and the
+    second one refuses the Observer's verification browser. That is the whole
+    mechanism behind an "intermittent" UI failure that only ever appeared when
+    a real-ASR test had run earlier in the same process — the governor was
+    right, the test process was dirty.
+
+    Leases are released for the same reason: a leaked lease is a slot the next
+    test cannot have.
+    """
+    try:
+        from watch_skill.models.lifecycle import (  # noqa: PLC0415
+            lifecycle_reset_for_tests,
+        )
+
+        lifecycle_reset_for_tests()
+    except Exception:  # noqa: BLE001 - cleanup must never fail a test
+        pass
+    try:
+        from watch_skill.live.browser_pool import get_pool  # noqa: PLC0415
+
+        get_pool().release_all()
+    except Exception:  # noqa: BLE001
+        pass
 
 
 @pytest.fixture(scope="session")

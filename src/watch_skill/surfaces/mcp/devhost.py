@@ -60,6 +60,27 @@ def _bundle() -> str:
     return html.replace(marker, tag, 1) if marker in html else html
 
 
+class _QuietServer(ThreadingHTTPServer):
+    """A server that does not shout when a browser walks away.
+
+    `socketserver` prints a full traceback for any exception raised while
+    handling a request, and a client that navigates, reloads or closes mid-
+    request produces one every time. On a proof run those tracebacks are
+    printed by the hundred and bury the assertion that actually failed —
+    which is precisely how an intermittent UI failure went a whole season
+    without being read.
+    """
+
+    def handle_error(self, request, client_address) -> None:  # noqa: ANN001
+        import sys as _sys  # noqa: PLC0415
+
+        exc = _sys.exc_info()[1]
+        if isinstance(exc, (ConnectionAbortedError, ConnectionResetError,
+                            BrokenPipeError)):
+            return
+        super().handle_error(request, client_address)
+
+
 class _Handler(BaseHTTPRequestHandler):
     server_version = "WatchSkillDevHost/1.0"
     protocol_version = "HTTP/1.1"
@@ -340,7 +361,7 @@ class DevHost:
         return f"http://127.0.0.1:{self.port}"
 
     def start(self) -> DevHost:
-        server = ThreadingHTTPServer(("127.0.0.1", self._port), _Handler)
+        server = _QuietServer(("127.0.0.1", self._port), _Handler)
         server.daemon_threads = True
         self._server = server
         self._thread = threading.Thread(target=server.serve_forever,

@@ -34,7 +34,15 @@ from watch_skill.surfaces.mcp.devhost import DevHost
 from watch_skill.surfaces.mcp.workspace_app import bundle_available
 
 REPO = Path(__file__).resolve().parents[2]
-ARTIFACTS = REPO / "docs" / "assets" / "workspace"
+
+# Same rule as the inherited UI proof: a build directory unless publishing was
+# asked for. Re-encoded PNGs written into a tracked path make the tree dirty
+# after every run, which destroys "clean tree" as a release gate.
+ARTIFACTS = (
+    REPO / "docs" / "assets" / "workspace"
+    if os.environ.get("WATCHSKILL_REFRESH_DOCS_ASSETS")
+    else REPO / "build" / "proof-artifacts" / "workspace"
+)
 
 pytestmark = [
     pytest.mark.real_model,

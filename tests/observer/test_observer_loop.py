@@ -28,6 +28,7 @@ import time
 from pathlib import Path
 
 import pytest
+from tests.conftest import require_verification_browser
 
 from watch_skill.actions import db as actions_db
 from watch_skill.actions.approvals import ApprovalError, approve
@@ -130,6 +131,12 @@ def _wait_for(predicate, timeout: float, interval: float = 0.15):
 def test_broken_app_observed_corrected_and_independently_verified(
     app, tmp_path: Path, isolated_settings: Path
 ) -> None:
+    # Two governed browsers are held at once here — the live source, and the
+    # verifier during `advance()`. Checked before anything starts, because a
+    # refusal halfway through surfaces as an unrelated-looking state
+    # assertion. See `require_verification_browser` for the measurement.
+    require_verification_browser(2)
+
     contract = _postcondition(app)
     assert contract.frozen and contract.digest
 
