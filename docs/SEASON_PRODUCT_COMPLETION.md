@@ -252,6 +252,61 @@ revision. `local_files_only` alone was not enough â€” a second connection c
 through `huggingface_hub.snapshot_download`, so `HF_HUB_OFFLINE` is now set
 for the duration of the load and restored after.
 
+## Final gates on frozen HEAD `a441862`
+
+| Gate | Result |
+| --- | --- |
+| Ruff | clean |
+| Full offline suite | **1363 passed, 27 skipped, 0 failed** |
+| Full suite, repeated | run 1 pass · run 2 **1 failure** · run 3 pass |
+| UI suite, clean process ×4 | pass, pass, pass, pass (79 passed, 1 skipped) |
+| Real live-VLM gate | 8 passed, 0 skipped |
+| Rendered real-VLM gate | pass |
+| Real ASR gate | 27 passed, 1 skipped |
+| Framework adapters (isolated env) | 7 passed, 1 skipped (crewai) |
+| Accessibility (axe, serious+critical) | 0 violations |
+| Keyboard reach / reduced motion / themes | pass |
+| Strict TypeScript + Next production build | pass |
+| npm audit | 0 vulnerabilities |
+| Wheel / sdist | 683 KiB / 6.0 MB |
+| Clean-environment install + installed smokes | pass |
+| Secret scan | clean (6 known redaction fixtures) |
+| Leaked chromium / ffmpeg / model workers | none |
+
+### The one intermittent failure, reported rather than smoothed
+
+`test_workspace_ui.py::test_the_whole_scenario_is_visible_in_the_rendered_workspace`
+failed once in three full-suite runs. It passed in all four clean-process
+runs, and a **deliberate contention test** — the same test run against
+concurrent load from `tests/live`, `tests/index` and `tests/perceive` — also
+passed, so the flake did not reproduce on demand.
+
+The exact assertion for that failure was not captured: the run's output was
+tailed and the failing line was cut. The same test failed the same way at the
+very start of the season, before any change in it, so it is inherited rather
+than introduced — but that is an explanation, not a diagnosis, and it is
+recorded here as **an open flake with an unknown assertion**.
+
+### Demo recording — a measured hardware ceiling
+
+`docs/assets/workspace/workspace-live-demo.mp4` (88 KiB, 28 s) is genuine
+footage from the rendered proof run: the live preview updating under the
+`LIVE FRAMES` label, and the vision panel in its `PROCESSING WITH VLM` state
+saying plainly that interpretation takes tens of seconds.
+
+It does not show a completed reading, and that is a measurement rather than an
+omission. With Playwright's video encoder added to Chromium, the dev host, the
+capture pipeline and the model on four threads, **two consecutive runs failed
+to produce a non-degraded reading within 480 seconds** — the first returned an
+empty (degraded) observation, which the workspace rendered correctly. Recording
+is therefore opt-in behind `WATCHSKILL_TEST_RECORD_DEMO`; the proof test itself
+runs without it and passes. The completed reading is evidenced by
+`workspace-vlm-historical.png` and by the gate.
+
+That run also improved the test: it used to accept the first observation to
+appear, which a degraded empty one satisfies. It now waits for a reading with
+words in it.
+
 ## Claims earned
 
 - A real vision model produces observations inside a running live session,

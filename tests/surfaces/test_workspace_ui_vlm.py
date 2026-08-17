@@ -98,7 +98,19 @@ def test_the_real_models_reading_is_visible_in_the_rendered_workspace(
     try:
         with DevHost() as host, sync_playwright() as play:
             browser = play.chromium.launch()
-            page = browser.new_page(viewport={"width": 1440, "height": 900})
+            # Recording is opt-in. A screenshot cannot show that the preview
+            # moves, so the demo has to come from the tested scenario itself —
+            # but encoding video costs real CPU, and on this four-thread
+            # machine the model is already the slow thing being measured.
+            # Adding the encoder to a default run pushed the first observation
+            # past its deadline and failed a test that otherwise passes.
+            recording = bool(os.environ.get("WATCHSKILL_TEST_RECORD_DEMO"))
+            options: dict = {"viewport": {"width": 1440, "height": 900}}
+            if recording:
+                options["record_video_dir"] = str(ARTIFACTS / "video")
+                options["record_video_size"] = {"width": 1440, "height": 900}
+            context = browser.new_context(**options)
+            page = context.new_page()
             console_errors: list[str] = []
             page.on("console", lambda m: console_errors.append(m.text)
                     if m.type == "error" else None)
@@ -145,12 +157,20 @@ def test_the_real_models_reading_is_visible_in_the_rendered_workspace(
             record_property("saw_processing_state", str(bool(processing)))
 
             # --- 3. a real reading arrives and is fully attributed ---------
+            # Wait for a reading with words in it, not merely for the panel to
+            # populate. A degraded observation -- the model returning no text,
+            # which happens when the machine is loaded enough -- renders
+            # correctly as an empty scene, and accepting it here would let the
+            # proof pass without a real reading ever having arrived.
             observation = page.locator('[data-testid="vlm-observation"]')
-            assert _wait(lambda: observation.count() > 0, 300), (
-                "no model reading reached the interface within 300s")
-
-            text = observation.inner_text().strip()
-            assert text, "the observation rendered empty"
+            budget = 480 if recording else 300
+            text = _wait(
+                lambda: (observation.inner_text().strip()
+                         if observation.count() > 0 else ""),
+                budget)
+            assert text, (
+                f"no non-degraded model reading reached the interface within "
+                f"{budget}s")
 
             model = page.locator('[data-testid="vlm-model"]').inner_text()
             assert "SmolVLM" in model, f"model identity missing: {model!r}"
@@ -200,6 +220,15 @@ def test_the_real_models_reading_is_visible_in_the_rendered_workspace(
 
             assert not [e for e in console_errors if "favicon" not in e], (
                 f"the workspace logged errors: {console_errors[:3]}")
+
+            # Close the context first: Playwright only finalises the video
+            # when the page that recorded it is gone.
+            video = page.video
+            context.close()
+            if video is not None:
+                saved = ARTIFACTS / "workspace-live-demo.webm"
+                video.save_as(str(saved))
+                record_property("demo_video", str(saved))
             browser.close()
     finally:
         live_session.stop_live(session_id)
