@@ -1,6 +1,50 @@
 # Changelog
 
-## Unreleased
+## v1.3.0rc1 — unreleased
+
+Backward compatible. No public contract changed: `WORKSPACE_SCHEMA_VERSION` and
+`LIVE_SCHEMA_VERSION` are both still `1`, the MCP Apps resource still declares
+`text/html;profile=mcp-app` at `ui://watch-skill/workspace` against SDK 1.7.5,
+and every CLI command and MCP tool that existed in v1.2.0 still exists. The CLI
+gained `capture-capabilities` and two other commands; the MCP surface gained
+`watch_workspace` and `workspace_snapshot`. Nothing was removed or renamed.
+
+### One behaviour change worth reading
+
+**Local speech recognition no longer downloads a missing model.** A cached
+model used to still reach the network to resolve its revision, which meant a
+live session could stall on a download nobody asked for. It now loads
+cache-only and, when the model is absent, fails with the exact command to fetch
+it deliberately. If you relied on the implicit download, fetch the model once
+before watching:
+
+```
+python -c "from faster_whisper import WhisperModel; WhisperModel('tiny')"
+```
+
+### Reliability fixes
+
+- **`database is locked` under concurrency.** `PRAGMA journal_mode = WAL` is the
+  one statement SQLite does not apply `busy_timeout` to: with a 30-second
+  timeout set it failed in 0.000s, while an ordinary `BEGIN IMMEDIATE` on the
+  same connection waited 33s. All eight database modules ran it on every
+  connect, so on a fresh database concurrent connections raced for an exclusive
+  lock no timeout covered. It is now attempted only when the mode actually
+  needs changing, and losing the race is treated as another connection doing
+  the work.
+- **Live session runners were never unregistered.** They were added to the
+  registry when they started and removed by nothing, so the process retained
+  every finished session's source, pipeline and frame buffers, and
+  `running_session()` could return a runner for a session that had ended.
+- **`Pipeline.stop(timeout=T)` cost up to 3T.** The timeout was applied to each
+  stage thread in turn rather than as one deadline.
+
+### Requirements
+
+Python 3.11+. The live browser and Observer verification paths need roughly
+2 GB of free memory: the resource governor refuses a browser it cannot afford
+and says exactly how much was short.
+
 
 ### A real model inside a live session, and late is not the same as wrong
 

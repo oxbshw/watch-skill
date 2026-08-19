@@ -6,14 +6,14 @@
   },
   "metadata": {
     "description": "Give any AI agent the ability to actually watch video.",
-    "version": "1.2.0"
+    "version": "1.3.0-rc.1"
   },
   "plugins": [
     {
       "name": "watch-skill",
       "source": ".",
       "description": "Watch, index, ask, and iterate on video (THE LOOP). Persistent index, self-healing answers, and a local lessons store — Windows/Linux/macOS.",
-      "version": "1.2.0",
+      "version": "1.3.0-rc.1",
       "author": {
         "name": "Watch Skill contributors",
         "url": "https://github.com/oxbshw/watch-skill"

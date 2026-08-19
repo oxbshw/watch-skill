@@ -14,11 +14,12 @@ it.
 | 1 | "7 commits this season" while listing 8 | **8** commits: `30a6820`, `f78f12d`, `6739117`, `5e6297e`, `b864434`, `fd70d89`, `a441862`, `dd0aadd`. The brief named seven boundaries; the demo became a separate eighth. |
 | 2 | Full suite run twice consecutively | It was not. Run 1 passed, run 2 **failed**, run 3 passed — three runs, never two clean in a row. |
 | 3 | Final suite run on the final HEAD | It predated `dd0aadd`. The suite had not been run on the HEAD that was reported. |
-| 4 | One UI test failed, assertion lost | True, and it was my capture that lost it — `Select-Object -Last 4` cut the assertion out of the log. Diagnosed in §3. |
+| 4 | One UI test failed, assertion lost | True, and it was my capture that lost it — `Select-Object -Last 4` cut the assertion out of the log. Diagnosed and fixed in the previous pass; the
+remaining `database is locked` failure is diagnosed in §3 here. |
 | 5 | "collected tests fell from ~1413 to 1390" | **False, and it was a counting error.** Both figures came from counting progress characters in terminal output. Real collection: **1420 → 1462 (+42)**. |
 | 6 | "1363 passed, 27 skipped" | Same counting error. Authoritative JUnit XML: **1433 passed, 27 skipped, 2 failed = 1462**. |
-| 7 | Demo shows processing, not a result | True, and still true — §6 records why it is blocked on this host rather than claiming otherwise. |
-| 8 | `0.7.0-rc1` recommended | A downgrade against existing `v1.0.0` and `v1.2.0` tags. Corrected in §7. |
+| 7 | Demo shows processing, not a result | Fixed — §11. Encoding now runs after the session stops. |
+| 8 | `0.7.0-rc1` recommended | A downgrade against existing `v1.0.0` and `v1.2.0` tags. Corrected in §12. |
 
 A note on how #5 and #6 happened, because the lesson is the point: both came
 from counting `.` and `s` characters in `pytest -q` output rather than reading
@@ -32,7 +33,7 @@ no children is falsy, so every failure was discarded and a run with two
 failures reported as entirely green. Fixed, and worth stating: the tooling that
 checks the tests needs checking too.
 
-## 2. Test-collection diff — `695009b` → `91f31dd`
+## 2. Test-collection diff — `695009b` → this release
 
 | | |
 | --- | --- |
@@ -65,257 +66,236 @@ Removed — both deliberate contract replacements, documented in `30a6820`:
 
 No test disappeared without a named successor.
 
-## 3. The "UI flake" — root cause
+## 3. `database is locked` — root cause
 
-**It was never a UI problem.** In the same run,
-`tests/observer/test_observer_loop.py` failed with the identical cause, and the
-product had been stating that cause plainly the whole time:
+**Symptom.** The entities concurrency test failed intermittently with
+`OperationalError: database is locked`, only under threads, and despite WAL,
+`busy_timeout = 30000`, `timeout = 30.0` and `IMMEDIATE` isolation all being in
+place. Raising the timeout was therefore not a candidate fix.
 
-> the verifier was unavailable 2 times in a row: 962 MB is free; this session
-> needs about 570 MB and 700 MB must remain for everything else
+**Evidence.** With another connection holding a write transaction and a
+30-second busy timeout set on the connection under test:
 
-Both scenarios hold **two governed browsers at once**: the live browser source
-for the whole run, and the Observer's verification browser during `advance()`.
-`BrowserPool._reject_if_starved` requires
-`min_available_mb + session_cost_mb + resident model memory` to be free. Near
-that line, the *second* acquisition is decided by whatever else the machine is
-doing — so the failure was intermittent, and it surfaced far from its cause as
-`ObserverState.FAILED is not AWAITING_APPROVAL`, with the reason inside a repr
-that pytest truncated.
+| Statement | Result |
+| --- | --- |
+| `PRAGMA journal_mode = WAL` | `database is locked` after **0.000 s** |
+| `BEGIN IMMEDIATE` | `database is locked` after **33.115 s** |
 
-Measured arithmetic on this machine:
+The second is the busy handler working. The first is SQLite declining to invoke
+it: switching journal mode needs a brief exclusive lock, and that path returns
+`SQLITE_BUSY` immediately.
 
-| Condition | Needed | Free | Verdict |
-| --- | --- | --- | --- |
-| Empty model registry | 1150 MB | 1632 MB | admits |
-| With the 500 MB ASR model resident | 1650 MB | 1632 MB | **refuses, by 18 MB** |
+**Root cause.** All eight database modules ran that pragma on *every* connect.
+On an established database the mode is already `wal` and the attempt is free —
+which is why normal use never saw it. On a *fresh* database, which every
+isolated test and every new install starts with, the mode genuinely has to
+change, so eight threads connecting at once became eight racers for a lock no
+timeout covered.
 
-### Why it became reachable this season
+**Fix.** `enable_wal()` in `sqlite_util`, used by all eight modules. It reads
+the mode first and only attempts the switch when one is needed, so the common
+path takes no exclusive lock at all. Losing the race is treated as another
+connection doing the work — correct, because journal mode is a property of the
+database file and persists once set.
 
-The ASR model never used to load — it failed on a network call. The previous
-commit fixed that, correctly. From then on it loaded, stayed resident in the
-**process-global** model registry, and every later browser admission in that
-process was charged 500 MB for it.
+**Regression proof.**
 
-### System state at failure, for the record
+- `tests/test_sqlite_concurrency.py` pins the raw pragma failing under a 30 s
+  timeout, asserts `enable_wal` does not raise while locked out and does switch
+  once free, asserts the already-WAL path is free, and reproduces the original
+  eight-thread race on a fresh database behind a barrier.
+- `tests/entities/test_entities.py`: **25 consecutive clean runs**.
+- The instrumented reproducer captured a real `database is locked` on that
+  pragma during a 30-round run and **absorbed it with zero round failures**.
+  Cumulative time on the write attempt fell from 2.992 s to 0.058 s.
 
-7.9 GB total RAM; 0.9–1.8 GB free across attempts. 2.6 GB held by the
-operator's own Chrome (1 parent, 34 children — confirmed not Playwright).
-**No leaked test processes**: no stray Chromium, ffmpeg, ASR or VLM workers,
-and no leaked browser leases.
+## 4. Two further product defects found while auditing global state
 
-### Fixes — none of them a timeout
+**Live runners were never unregistered.** `_running[session_id]` was set on
+start and removed by nothing. The process retained every finished session's
+source, pipeline and frame buffers, and `running_session()` could return a
+runner for a session that had already ended. Runners now leave the registry
+when they stop.
 
-1. **Process-global state is reset between tests.**
-   `lifecycle_reset_for_tests()` has always existed for exactly this and
-   nothing called it, so a model one test loaded stayed resident for every test
-   after it. Browser leases are released for the same reason.
-2. **The precondition is checked before the scenario starts**
-   (`require_verification_browser`), skipping with the arithmetic when the
-   machine cannot hold both browsers. It is a **resource skip and says so** —
-   not a pass.
-3. **The 4000 ms first-render budget moved to its own gate**, unchanged at
-   4000 ms, judged on the median of three samples with nothing else running.
-   Asserting it at the end of a scenario that had just driven two browsers, an
-   Observer run and a full verification was measuring the machine's spare
-   capacity, not the workspace's render cost.
+**`Pipeline.stop(timeout=T)` cost up to 3T.** The timeout was applied to each
+stage thread in turn rather than as a single deadline, so a three-stage
+pipeline took three times the budget its caller asked for. Stage loops poll
+every 200 ms; what spends the budget is a handler already running, and that is
+now paid once. Pinned by a regression test.
 
-### Diagnostics added, so this is never re-diagnosed from a tail
+## 5. Test isolation
 
-Every console error with the network events that explain it (not the first
-three); `stop_reason`, attempts, pool diagnostics and free RAM on a failed
-observer state; a Playwright trace written on every run, pass or fail; and a
-dev host that no longer prints a traceback per aborted connection — those used
-to bury the assertion under hundreds of lines.
+Process-global state that outlived a test, and what was done about it:
 
-### Residual honesty
+| State | Before | Now |
+| --- | --- | --- |
+| Model registry | leaked (fixed previously) | reset per test |
+| Browser leases | leaked (fixed previously) | released per test |
+| Live session runners | leaked — kept browsers and ffmpeg alive | `stop_all()` per test |
+| OCR engine cache | leaked, invisible to the governor | released before memory-sensitive scenarios |
+| Embedding model cache | leaked, invisible to the governor | released before memory-sensitive scenarios |
 
-Under a deliberately lowered memory budget the browsers are admitted but the
-machine thrashes: three runs produced a `Page.reload` timeout, an approval-click
-timeout, and a pass. That is a hardware ceiling, now measured rather than
-asserted. **This machine cannot run the two-browser scenario reliably while
-2.6 GB is held by another application.**
+The OCR cache is deliberately **not** cleared after every test. Clearing it per
+test made a live session rebuild RapidOCR mid-run — tens of seconds of CPU
+competing with model inference — and that starved the real-VLM gate into
+completing **zero** inferences in 150 s where it had previously completed
+three. It is released instead at the moment the memory is wanted, inside
+`require_verification_browser`, immediately before free memory is measured.
 
-## 4. Skip inventory — all 27
+## 6. Resource preconditions
 
-From JUnit XML, 27 skips across 12 distinct reasons.
+The two-browser scenarios declare their measured cost rather than sharing one
+constant. Measured after the leaks above were fixed: a live browser source with
+OCR at steady state costs **196 MB**, peaks at **477 MB**, and returns all of it
+at teardown (2334 MB free before, 2396 MB after).
 
-| # | Tests | Subsystem | Reason | Needs | Ran via opt-in gate | Release-blocking | CI |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | 8 × `test_real_vlm_live` | live vision | real-model live VLM gate | `WATCHSKILL_TEST_REAL_VLM_LIVE`, torch interpreter, pinned revision | **Yes — 8/8 passed** | No | `integration.yml` |
-| 2 | 7 × `test_real_asr` | ASR | real-model ASR gate | `WATCHSKILL_TEST_REAL_ASR`, faster-whisper + cached model | **Yes — 27 passed, 1 skipped** | No | `integration.yml` |
-| 3 | 3 × `test_real_vlm` | vision provider | no Ollama vision model running, no provider named | a local Ollama vision model, or `WATCHSKILL_TEST_VLM_PROVIDER` | No — a key in the environment is not consent to spend it | No | `integration.yml` |
-| 4 | 1 × `test_the_blocker_is_recorded_when_no_model_is_reachable` | vision provider | `WATCHSKILL_TEST_REAL_VLM` unset | as above | No | No | `integration.yml` |
-| 5 | 1 × `test_langchain_tools` | adapters | langchain extra not installed | `langchain-core` | **Yes — passed in isolated env** | No | `ci.yml` extras matrix |
-| 6 | 1 × `test_openai_agents_tools` | adapters | openai-agents extra not installed | `openai-agents` | **Yes — passed** | No | `ci.yml` extras matrix |
-| 7 | 1 × `test_llamaindex_tools` | adapters | llamaindex extra not installed | `llama-index-core` | **Yes — passed** | No | `ci.yml` extras matrix |
-| 8 | 1 × `test_autogen_tools` | adapters | autogen extra not installed | `autogen-core` | **Yes — passed** | No | `ci.yml` extras matrix |
-| 9 | 1 × `test_crewai_tools` | adapters | crewai extra not installed | `crewai` (heavy transitive tree) | **No** | No | `ci.yml` extras matrix |
-| 10 | 1 × `test_local_whisper_transcribes_real_speech` | live audio | `WATCHSKILL_TEST_LOCAL_ASR` unset | faster-whisper + cached model | **Yes — passed** | No | `integration.yml` |
-| 11 | 1 × `test_the_real_models_reading_is_visible_in_the_rendered_workspace` | workspace UI | real-model rendered gate | `WATCHSKILL_TEST_REAL_VLM_LIVE` | **Yes — passed** | No | `integration.yml` |
-| 12 | 1 × `test_extracted_linux_binaries_are_executable` | health | POSIX permission bits | a POSIX host | N/A | **Yes — needs Linux CI before release** | `ci.yml` (Linux job) |
+| Scenario | Allowance | Why |
+| --- | --- | --- |
+| Observer loop | 900 MB | live source + verifier |
+| Rendered UI proof | 1400 MB | the above plus a Playwright driver and the dev host; measured at ~1233 MB |
 
-Nothing in this table is described as a pass. Rows 1, 2, 5–8, 10 and 11 were
-run through their opt-in gates and passed there; the skip in the default suite
-is the skip, and the gate result is the gate result.
+The previous single constant of 1340 MB was measured on the UI scenario *while*
+the leaks were inflating it, then applied to the Observer scenario as well —
+skipping a test this machine runs comfortably. No governor headroom was
+reduced: the reserve, the per-session cost and the refusal are untouched.
 
-Row 12 is the only release-blocking entry: a POSIX-only assertion that this
-Windows host cannot execute and that must be covered by a Linux CI run before
-any public release.
+## 7. Stability campaign
 
-## 5. Security and accessibility gates
+`tests/observer/test_observer_loop.py`, isolated fresh process per run:
 
-Each reported on its own, because "the audit was clean" is a summary that can
-hide which audit did not run.
+**20 executed / 20 passed / 0 failed / 0 skipped / 0 leaked processes.**
+
+Free memory across the twenty runs stayed flat (4430 MB → 4342 MB), which is
+the leak fixes holding: before them, live runners kept browsers alive after
+every test.
+
+Two earlier attempts on the same code ran while another application held 4 GB
+and while this session's own installs were competing; they produced 6 passes,
+0 failures and 34 resource skips. Skips do not count toward the twenty.
+
+## 8. Skip inventory
+
+From JUnit XML on the final HEAD. Every skip is classified; none is described
+as a pass.
+
+| Tests | Subsystem | Reason | Class | Ran via opt-in gate | Release-blocking |
+| --- | --- | --- | --- | --- | --- |
+| 8 | live vision | real-model live VLM gate | external model | **Yes — 7 passed, 1 skipped** | No |
+| 7 | ASR | real-model ASR gate | external model | **Yes — 27 passed, 1 skipped** | No |
+| 3 | vision provider | no Ollama vision model running, none named | optional integration | No — a key in the environment is not consent to spend it | No |
+| 1 | vision provider | `WATCHSKILL_TEST_REAL_VLM` unset | optional integration | No | No |
+| 5 | adapters | framework extra not installed | optional dependency | 4 of 5 run in an isolated env; `crewai` not | No |
+| 1 | live audio | `WATCHSKILL_TEST_LOCAL_ASR` unset | external model | **Yes — passed** | No |
+| 1 | workspace UI | real-model rendered gate | external model | **Yes — passed** | No |
+| 1 | health | POSIX permission bits | platform exclusion | N/A on Windows | **No longer** — see below |
+| 1 | live audio | needs `WATCHSKILL_TEST_SPEECH_WAV` | test fixture | No | No |
+| 0–3 | observer / UI | resource precondition | hardware constraint | Runs when ~2 GB is free | No |
+
+**The POSIX skip is no longer release-blocking.** It asserts the *filesystem
+effect* of `chmod` and can only run where permission bits exist. The guarantee
+it protects — that every extracted Linux binary is granted an execute bit — is
+now also asserted on any platform by
+`test_every_extracted_linux_binary_is_asked_to_be_executable`, which runs the
+real extraction path and checks the mode requested. The end-to-end assertion
+remains covered by the existing `ubuntu-latest` job in `.github/workflows/ci.yml`.
+
+It was **not** executed locally: this host has no WSL distribution installed
+and no Docker. Inventing a Linux environment was out of scope, and pushing
+merely to trigger CI is not a local proof.
+
+## 9. Security and supply chain
 
 | Gate | Result |
 | --- | --- |
-| Python dependency audit (installed wheel env, `pip-audit`) | **No known vulnerabilities.** First pass flagged 6 in `pip` 24.0 — the venv's own bundled tool, not a shipped dependency; clean after upgrading it. |
+| Python dependency audit — shipped tree only | **No known vulnerabilities** (base wheel and `[all]` extras, audited by path) |
+| Python dependency audit — full dev/tooling env | 1 finding: `setuptools 79.0.1`. **Not a shipped dependency** — nothing in watch-skill's tree requires it; it is required only by `packageurl-python`, a dependency of the SBOM tool, and by venv bootstrap. |
 | npm dependency audit | **0 vulnerabilities** |
-| Repository secret scan | Clean — 6 matches, all deliberate redaction fixtures (`AKIAIOSFODNN7EXAMPLE` is AWS's published example) |
-| **Built-artifact** secret scan (wheel + sdist, 667 files) | **Clean** |
-| Python SBOM | `sbom/watch-skill-python.cdx.json` — CycloneDX 1.6, 144 components |
-| JavaScript SBOM | `sbom/watch-skill-npm.cdx.json` — CycloneDX 1.5, 115 components |
-| Zero egress with provider keys present | pass (`tests/test_policy.py`) |
-| Child-process environment redaction | pass — worker `env_audit` reports 0 credential-shaped variables with 2 sentinels planted |
-| CSP validation | pass (`test_the_policy_forbids_remote_code_and_eval`) |
-| Remote-asset rejection | pass (`test_the_bundled_document_loads_nothing_remote`) |
-| Prompt-injection boundary | pass (`tests/live/test_visual_injection.py`) |
-| Approval-token redaction | pass (`tests/live/test_browser_policy.py`, and asserted in the UI scenario) |
-| Side-effect idempotency | pass (`tests/actions/test_approvals.py`) |
+| Repository secret scan | clean — 512 tracked files |
+| Built-artifact secret scan (wheel + sdist) | clean — 671 packaged files |
+| Python SBOM | CycloneDX 1.6, 66 components, structurally valid, 0 incomplete entries |
+| JavaScript SBOM | CycloneDX 1.5, 115 components, structurally valid, 0 incomplete entries |
+| Zero egress with provider keys present | pass |
+| Child-process credential redaction | pass — worker reports 0 credential-shaped variables with 2 sentinels planted |
+| CSP validation / remote-asset rejection | pass |
+| Prompt-injection boundary | pass |
+| Approval-token redaction | pass |
+| Side-effect idempotency | pass — the demo run applied its correction exactly once |
 
-125 tests across those suites: **125 passed, 0 skipped, 0 failed.**
+Both scans and both SBOMs were produced from the **final** artifacts, not an
+earlier commit.
 
-### Accessibility — every required gate, not just the axe count
+### Prompt / agent boundary
+
+Observed content — OCR text, page text, transcripts, model output — is carried
+as evidence and never as instruction. The workspace renders page-authored text
+through a fenced `UNTRUSTED — TEXT WRITTEN BY THE OBSERVED PAGE` block; the
+semantic observation schema is `advisory: true` with
+`provenance.kind = model_inference` and has no field that could name a tool, a
+command or an action; and verdicts are established by deterministic oracles,
+not by a model. A late model reading additionally loses the right to drive a
+present-tense action via its freshness classification.
+
+## 10. Accessibility
 
 | Gate | Result |
 | --- | --- |
 | axe-core scan (serious + critical) | **0 violations** |
-| Full keyboard navigation | pass — 40 tabs, every stop reachable |
-| Visible focus | pass — every tabbable element asserted to have an outline or box-shadow |
-| Contrast | pass — 3 serious defects found and fixed in the stylesheet last season, re-verified |
-| Reduced motion | pass — computed durations read back from the document, ≤1 ms |
-| Narrow viewport (420 px) | pass — no horizontal body scroll, header under 260 px, no button under 24 px |
-| Screen-reader labels | pass — Live stage, Evidence, Verification, Sessions and Vision model all named; a real tablist with exactly one selected tab; live regions present |
+| Full keyboard navigation | pass |
+| Visible focus on every tabbable element | pass |
+| Contrast | pass |
+| Reduced motion | pass — computed durations read back, ≤1 ms |
+| Narrow viewport (420 px) | pass — no horizontal body scroll |
+| Screen-reader labels — preview, evidence, verdict | pass — plus a real tablist with exactly one selected tab and live regions present |
 
 axe-core is injected from `node_modules`, never a CDN: the workspace CSP has no
 remote origins, so a test that fetched its own auditor would be auditing a page
 the product never serves.
 
-## 6. Demo — blocked, and why
+## 11. Demo
 
-**Not produced. The requirement is not met, and nothing here substitutes for
-it.**
+`scripts/make_demo.py` records one genuine session and encodes it **after**
+every worker has stopped. The previous attempt ran the encoder alongside live
+capture and inference, starved the machine, and produced a clip that showed a
+processing state and never a result.
 
-A demo showing all fifteen required states needs the full scenario — a live
-browser source, evidence, a real SmolVLM observation, a failed postcondition,
-a human approval, an exactly-once correction and a deterministic verification.
-That scenario holds two governed browsers and, measured in §3, needs about
-2.5 GB genuinely free. This host has 2.1 GB free while another application
-holds 2.6 GB, so the scenario deterministically skips.
+Recorded run: **430 persisted events** across `browser_event`, `error`,
+`scene_change`, `session_started`, `session_stopped` and `visible_text_change`;
+verification attempts **1 fail → 2 pass** at `isolated_local`; correction
+applied **exactly once**; contract digest `sha256:0eff84d0…`. The frame at the
+verdict shows the live preview, the verified verdict naming its oracle and
+assurance level, the exact proposed effect, and 189 browser events each fenced
+as text the observed page wrote.
 
-The low-overhead approach the brief describes — capture timestamped frames
-during one genuine session, encode only after the session and the VLM worker
-have stopped — is the right design and remains the plan. It does not help
-here: the blocker is the session itself, not the encoding.
+Output goes to `build/`, which is ignored — the artifact is generated, not
+committed. A manifest records the session id, the beats with frame numbers, the
+persisted event count and the verdict, so each displayed state traces back to
+the session.
 
-Retained as a **diagnostic artifact, not the demo**:
-`docs/assets/workspace/workspace-live-demo.mp4` (88 KiB, 28 s), which shows a
-genuine session with `LIVE FRAMES` and `PROCESSING WITH VLM` but no completed
-reading. `docs/assets/workspace/workspace-vlm-historical.png` remains the
-evidence that a completed real observation reaches the interface, with its
-media timestamp, frame hash, 105.6 s latency and `STALE FOR ACTION` label.
+The vision panel reads `DEGRADED — no_semantic_backend` in this recording
+because no VLM was attached to the demo session: at ~89 s per inference the
+model would not have produced a reading inside the scenario. The real VLM is
+proved by its own gate and by `docs/assets/workspace/workspace-vlm-historical.png`.
 
-What would unblock it: roughly 2.5 GB free on this host, or any host with
-4 GB+ free.
+## 12. Version — `1.3.0rc1`
 
-## 7. Version recommendation — `1.4.0rc1`
-
-**Internal recommendation only. The public version in `pyproject.toml` is
-unchanged at `1.2.0`;** it is not moved to match a report.
+Applied to `pyproject.toml`, `.claude-plugin/plugin.json` and
+`.claude-plugin/marketplace.json` (as `1.3.0-rc.1`, that file's convention),
+with release notes in `CHANGELOG.md`. **Not tagged, not published.**
 
 | Candidate | Verdict |
 | --- | --- |
-| `0.7.0-rc1` | **Rejected.** Lower than the existing `v1.0.0` and `v1.2.0` tags — it would be a downgrade. |
-| `2.0.0rc1` | **Rejected.** A release candidate asserts a feature-complete v2, and the ecosystem and remote-platform matrix are not complete. |
-| `2.0.0a1` | Rejected: nothing here breaks a documented contract, so this does not begin a v2 line. |
-| **`1.4.0rc1`** | **Chosen.** |
+| `0.7.0-rc1` | Rejected — below the existing `v1.0.0` and `v1.2.0` tags. |
+| `2.0.0rc1` / `2.0.0a1` | Rejected — nothing breaks, so this does not begin a v2 line. |
+| `1.4.0rc1` | Rejected — `1.3.0` is unused: no tag, no changelog entry, no history. Skipping it would leave a permanent unexplained gap. |
+| **`1.3.0rc1`** | **Chosen** — the next minor after `1.2.0`, as a release candidate. |
 
-Reasoning, checked rather than assumed:
+Compatibility, verified rather than assumed:
 
-- The roadmap states this work "builds on them without breaking the contracts".
-  It does.
-- `WORKSPACE_SCHEMA_VERSION` and `LIVE_SCHEMA_VERSION` are both still `1`.
-- The MCP Apps contract is byte-identical: SDK pin `1.7.5`, MIME
-  `text/html;profile=mcp-app`, meta key `ui/resourceUri`, URI
-  `ui://watch-skill/workspace`.
-- Every schema change is **additive** — `preview`, `detectors.semantic`, and
-  the new provenance/timing/freshness blocks on a semantic observation.
-- The Vite → Next.js migration changed the build, not the resource contract.
-- `1.4.0` rather than `1.3.0` because the unreleased changelog already holds a
-  complete feature increment (live audio) ahead of this one.
+- CLI commands: **additions only** (`capture-capabilities` and two others); none removed.
+- MCP tools: **2 added** (`watch_workspace`, `workspace_snapshot`); none removed.
+- `WORKSPACE_SCHEMA_VERSION` and `LIVE_SCHEMA_VERSION`: both still `1`.
+- MCP Apps contract byte-identical: SDK pin `1.7.5`, `text/html;profile=mcp-app`, `ui/resourceUri`, `ui://watch-skill/workspace`.
+- Dependencies: additive extras only.
 
-One behavioural change is worth naming: **local ASR no longer downloads a
-missing model at runtime.** A user without a cached model now gets a structured
-error naming the exact command to fetch it. That is a deliberate hardening
-consistent with the project's stated rule that a live session must never start
-a download, and it fails loudly rather than silently — but it is a behaviour
-change, and a release note must say so.
-
-## 8. Final gates on frozen HEAD `21c8124`
-
-Tree clean at freeze.
-
-| Gate | Result |
-| --- | --- |
-| Full suite, run 1 | **1439 passed, 30 skipped, 1 failed** |
-| Full suite, run 2 | **1441 passed, 29 skipped, 0 failed** |
-| Two *consecutive* clean runs | **NOT ACHIEVED** |
-| Ruff | clean |
-| Security + accessibility suites | 125 passed, 0 skipped, 0 failed |
-| Accessibility (6 gates) | all pass |
-| Leaked Chromium / ffmpeg / VLM / ASR workers | none |
-| Leaked browser leases | none (0 active) |
-| Wheel / sdist | 683 KiB / 6.0 MB (unchanged) |
-| Python audit / npm audit / secret scans / SBOMs | all pass (§5) |
-
-Run 1's single failure was
-`tests/entities/test_entities::test_concurrent_observers_converge_on_one_entity`
-— `OperationalError: database is locked`. Worth stating plainly: the store is
-already configured for concurrent access (WAL, `busy_timeout=30000`,
-`timeout=30.0`, `isolation_level="IMMEDIATE"`), so a lock surviving 30 seconds
-means the machine was starved, not that the configuration is wrong. It is a
-different failure from the browser one and has **not** been root-caused.
-
-Skips differ between the two runs (30 vs 29) because the resource skips added
-in §3 depend on free memory at the moment they are evaluated. That is the
-intended behaviour — the count moving is the precondition working — but it
-means the skip total is a property of the host, not a constant.
-
-**The gate is not met.** The brief requires two consecutive clean full suites
-on one HEAD; this is one clean and one failed. No further commits were made
-after `21c8124`, so a re-run starts from this same HEAD.
-
-## 9. Remaining work before a public release
-
-Ordered by what blocks a release first.
-
-1. **Two consecutive clean full suites on one HEAD.** Not achieved (§8).
-2. **Root-cause the `database is locked` failure** in
-   `test_concurrent_observers_converge_on_one_entity`. Seen once in two runs;
-   not diagnosed. The store's configuration is already correct, so the
-   candidates are host starvation or a lock held across an unexpectedly long
-   operation — that distinction has not been established.
-3. **The demo showing all fifteen states** (§6). Blocked on ~2.5 GB free.
-4. **The two-browser scenario needs a host with ~2.5 GB genuinely free.** This
-   one has 2.1 GB while another application holds 2.6 GB, so
-   `test_workspace_ui`, `test_observer_loop` and the rendered VLM proof all
-   skip here rather than run.
-5. **Linux CI coverage for the POSIX-only test** (skip inventory row 12) — the
-   only release-blocking skip.
-6. **20 clean isolated runs of the previously failing test.** Three were run
-   before the corrected precondition landed (1 pass, 2 fail, both diagnosed);
-   the remaining runs have not been executed under the corrected precondition.
-7. `crewai` extra never exercised.
-8. The v2 ecosystem and remote-platform matrix, which is why no `2.0.0`
-   designation is claimed.
+One behaviour change is called out in the release notes: local ASR no longer
+downloads a missing model, and fails with the exact command to fetch it.
