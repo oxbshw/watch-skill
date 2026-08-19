@@ -81,3 +81,32 @@ def test_a_refusal_names_the_memory_it_was_refused_for() -> None:
                   "reserve_mb", "owner"):
         assert field in details, f"the refusal did not report {field}"
     assert details["owner"] == "verify:probe"
+
+
+def test_no_ocr_engine_is_inherited_from_an_earlier_test() -> None:
+    """RapidOCR weights are heavy and invisible to the governor.
+
+    The browser admission cost is computed from the model registry, and the
+    OCR engine cache was never in it — so an engine built by one test held
+    hundreds of megabytes that no later admission decision could account for.
+    """
+    from watch_skill.perceive import ocr
+
+    assert ocr._engines == {}, (
+        f"OCR engines leaked from an earlier test: {list(ocr._engines)}")
+
+
+def test_no_embedding_model_is_inherited_from_an_earlier_test() -> None:
+    from watch_skill.index import embeddings
+
+    assert embeddings._models == {}, (
+        f"embedding models leaked from an earlier test: "
+        f"{list(embeddings._models)}")
+
+
+def test_no_live_session_runner_is_inherited_from_an_earlier_test() -> None:
+    """A runner that outlives its test keeps a browser and an ffmpeg."""
+    from watch_skill.live import session
+
+    assert session._running == {}, (
+        f"live runners leaked from an earlier test: {list(session._running)}")

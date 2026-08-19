@@ -654,6 +654,12 @@ class RunningSession:
         db.update_session(self.session.session_id, state=final_state,
                           stopped_at=time.time(), stats=self.stats, error=error)
         self.session.state = final_state
+        # Leave the registry. Nothing used to, so `_running` grew for the life
+        # of the process and kept every stopped session's source, pipeline and
+        # frame buffers reachable — a leak in long-lived hosts, and the reason
+        # `running_session()` could hand back a runner for a session that had
+        # already finished.
+        _unregister(self.session.session_id)
         return self.session
 
 
@@ -664,6 +670,12 @@ _registry_lock = threading.Lock()
 def _register(session: RunningSession) -> None:
     with _registry_lock:
         _running[session.session.session_id] = session
+
+
+def _unregister(session_id: str) -> None:
+    """Forget a runner that has stopped. Safe to call more than once."""
+    with _registry_lock:
+        _running.pop(session_id, None)
 
 
 def running_session(session_id: str) -> RunningSession | None:

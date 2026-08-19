@@ -292,3 +292,39 @@ def test_concurrent_appends_get_distinct_sequence_numbers() -> None:
     seqs = [event.seq for event in stored]
     assert len(set(seqs)) == expected, "a sequence number was reused"
     assert seqs == list(range(1, expected + 1)), "the sequence has holes"
+
+
+def test_stopping_a_pipeline_honours_one_total_budget_not_one_per_stage() -> None:
+    """`stop(timeout=T)` must cost T, however many stages there are.
+
+    It used to join each thread with the full timeout in turn, so a
+    three-stage pipeline took three times the budget its caller asked for.
+    Live-session teardown was ~15s against a stated 5s, and every test that
+    stopped a session paid it.
+    """
+    import time
+
+    from watch_skill.live.pipeline import Pipeline
+
+    pipeline = Pipeline()
+    started = threading.Event()
+
+    def wedged(_item) -> None:
+        started.set()
+        time.sleep(30)  # in-flight work that will outlive the stop budget
+
+    for index in range(3):
+        stage = pipeline.stage(f"s{index}", capacity=4)
+        pipeline.consume(stage, wedged)
+        stage.put(object())
+
+    assert started.wait(timeout=10), "no stage handler ever started"
+
+    began = time.monotonic()
+    pipeline.stop(timeout=1.0)
+    elapsed = time.monotonic() - began
+
+    # One budget, with a little slack for scheduling — emphatically not three.
+    assert elapsed < 2.5, (
+        f"stop took {elapsed:.2f}s against a 1.0s budget across 3 stages; "
+        f"the timeout is being applied per thread again")

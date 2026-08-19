@@ -144,6 +144,28 @@ def _reset_process_globals() -> None:
         get_pool().release_all()
     except Exception:  # noqa: BLE001
         pass
+    try:
+        # Live runners own browsers and ffmpeg processes. A runner that
+        # outlives its test keeps both, and the next test inherits a machine
+        # with less of everything.
+        from watch_skill.live.session import stop_all  # noqa: PLC0415
+
+        stop_all()
+    except Exception:  # noqa: BLE001
+        pass
+    try:
+        # OCR engines and embedding models are cached process-globally on
+        # purpose -- RapidOCR takes tens of seconds to build and detector
+        # threads must share one. Neither cache is in the model registry, so
+        # the browser governor cannot see the memory they hold: they are the
+        # same leak as the ASR registry, in a place nothing was looking.
+        from watch_skill.index.embeddings import release_models  # noqa: PLC0415
+        from watch_skill.perceive.ocr import release_engines  # noqa: PLC0415
+
+        release_engines()
+        release_models()
+    except Exception:  # noqa: BLE001
+        pass
 
 
 @pytest.fixture(scope="session")

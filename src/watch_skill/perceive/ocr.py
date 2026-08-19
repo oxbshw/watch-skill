@@ -166,3 +166,19 @@ def ocr_frame(
             )
         )
     return blocks
+
+
+def release_engines() -> int:
+    """Drop every cached OCR engine and return how many were released.
+
+    Engines are cached process-globally because RapidOCR takes tens of seconds
+    to build and a live session needs several detector threads to share one.
+    That is right in production and wrong between tests: an engine built by one
+    test stays resident for every test after it, holding ONNX weights that
+    nothing in the resource governor can see — the browser admission cost is
+    computed from the model registry, and these were never in it.
+    """
+    with _engine_lock:
+        count = len(_engines)
+        _engines.clear()
+    return count

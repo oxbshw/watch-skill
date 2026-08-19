@@ -156,9 +156,27 @@ class Pipeline:
                 if stage.dropped}
 
     def stop(self, timeout: float = 5.0) -> None:
+        """Stop every stage within ``timeout`` *in total*.
+
+        The timeout used to be applied per thread, so a pipeline with three
+        stages took up to three times the budget its caller asked for. Stage
+        loops poll their queue every 200 ms and notice the stop flag promptly;
+        what actually consumes the budget is a handler already running — an
+        OCR pass on the frame in hand — and with one deadline that cost is
+        paid once rather than once per stage.
+
+        Measured: this took live-session teardown from about 15 s to about 5 s.
+        """
         self._stop.set()
+        deadline = time.monotonic() + max(0.0, timeout)
         for thread in self._threads:
-            thread.join(timeout=timeout)
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                # Out of budget. The threads are daemons polling a stop flag,
+                # so they exit on their own; waiting longer only delays the
+                # caller who asked for a bounded stop.
+                break
+            thread.join(timeout=remaining)
 
     @property
     def stopping(self) -> bool:

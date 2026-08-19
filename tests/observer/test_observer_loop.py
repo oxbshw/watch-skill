@@ -57,6 +57,11 @@ def _require_browser() -> None:
     capability = capability_for("browser")
     if capability.status != "available":
         pytest.skip(f"browser capture is {capability.status}")
+    # One governed browser is about to be started. The governor refuses when
+    # the machine cannot afford it, with exact numbers -- that is the product
+    # working, not a defect, so the honest outcome is a skip that repeats those
+    # numbers rather than a failure that looks like a capture bug.
+    require_verification_browser(1)
 
 
 @pytest.fixture

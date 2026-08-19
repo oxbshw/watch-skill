@@ -105,3 +105,14 @@ def cosine_similarity(a: list[float], b: list[float]) -> float:
     if norm_a == 0 or norm_b == 0:
         return 0.0
     return dot / (norm_a * norm_b)
+
+
+def release_models() -> int:
+    """Drop cached embedding models and return how many were released.
+
+    Same reasoning as the OCR engine cache: shared deliberately at runtime,
+    but inherited accidentally between tests.
+    """
+    count = len(_models)
+    _models.clear()
+    return count

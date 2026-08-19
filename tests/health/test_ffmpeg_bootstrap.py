@@ -133,3 +133,47 @@ def test_macos_fetches_ffmpeg_and_ffprobe_separately(bin_dir, monkeypatch) -> No
     assert not list(bin_dir.glob("*.zip")), "the zips were left behind"
     if sys.platform != "win32":
         assert ffmpeg.stat().st_mode & 0o111, "ffmpeg is not executable"
+
+
+def test_every_extracted_linux_binary_is_asked_to_be_executable(
+    bin_dir, monkeypatch
+) -> None:
+    """The same guarantee as the POSIX test, checkable on any platform.
+
+    `test_extracted_linux_binaries_are_executable` asserts the *effect* of
+    `chmod` and can only run where the filesystem has permission bits, which
+    leaves the guarantee unverified on Windows — and it is release-blocking,
+    because an extracted binary without the executable bit simply cannot run.
+
+    This asserts the *request* instead: the real bootstrap runs against the
+    same stub tarball, and every file it extracts must have been handed an
+    exec-bearing mode. Nothing is mocked except the download the other tests
+    already stub; the extraction path under test is the production one.
+    """
+    chmods: list[tuple[str, int]] = []
+    real_chmod = Path.chmod
+
+    def recording_chmod(self, mode, *args, **kwargs):
+        chmods.append((self.name, mode))
+        return real_chmod(self, mode, *args, **kwargs)
+
+    monkeypatch.setattr(
+        binaries, "_download_file",
+        lambda url, dest, timeout=600.0: (_linux_tarball(dest), dest)[1])
+    monkeypatch.setattr(binaries.platform, "machine", lambda: "x86_64")
+    monkeypatch.setattr(Path, "chmod", recording_chmod)
+
+    ffmpeg, ffprobe = binaries._bootstrap_ffmpeg_linux(bin_dir)
+
+    granted = {name: mode for name, mode in chmods}
+    for binary in (ffmpeg.name, ffprobe.name):
+        assert binary in granted, (
+            f"{binary} was extracted without any chmod; on POSIX it would "
+            f"land un-runnable")
+        assert granted[binary] & 0o111, (
+            f"{binary} was chmod'ed to {granted[binary]:o}, which grants no "
+            f"execute bit to anyone")
+    # Owner execute is not enough on a shared install: the bit has to be there
+    # for group and other too, which 0o755 gives and 0o700 does not.
+    assert granted[ffmpeg.name] & 0o011, (
+        f"only the owner may execute ffmpeg ({granted[ffmpeg.name]:o})")
