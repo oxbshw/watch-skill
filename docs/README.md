@@ -59,6 +59,7 @@ Runnable counterparts live in the [example catalog](../examples/README.md).
 - [MCP tools](tools/README.md) documents all 23 public tools and their REST/CLI twins.
 - [Configuration](configuration.md) is the source of truth for `WATCHSKILL_*` settings.
 - [Testing tiers](testing.md) — what the offline suite proves, and what only a real model can
+- [Browser Runtime](browser-runtime.md) — operator and observer modes, target resolution, action receipts, recovery, and the false-success benchmark
 - [Live watching](live.md) — watch something as it happens: sources, bounded pipelines, cursors, finalisation
 - [Capture capabilities](capture-capabilities.md) — what this machine can actually record, and how each answer was established
 - [Architecture](architecture.md) describes boundaries, data flow, and extension points.

@@ -309,6 +309,62 @@ watch-skill verify run checkout-contract.json --dir .
 runs makes the run `inconclusive` — never a pass. See
 [Verification](docs/verification.md).
 
+### Drive the browser yourself
+
+Watch Skill has one browser subsystem with two modes. *Observer* mode watches
+someone else work and verifies the result. *Operator* mode does the work and
+holds itself to the same standard.
+
+```python
+from watch_skill.operate import (
+    Action, ActionKind, BrowserRuntime, Expectation, SideEffect, Target,
+)
+
+runtime = BrowserRuntime(source)          # an already-running browser session
+result = runtime.run_task("save the display name", [
+    Action(kind=ActionKind.CLICK, intent="save",
+           target=Target(role="button", name="Save"),
+           side_effect=SideEffect.REVERSIBLE,
+           expect=Expectation(text_present="Saved", network_ok=True)),
+])
+
+result.verified          # False — the page said Saved, PATCH /api/save returned 500
+result.receipts[-1].reason
+```
+
+The rule the runtime is built around: **dispatching an action is not the same
+as proving its effect.** Playwright returning from `click()` proves a click was
+delivered and nothing more, so every action carries an expectation written down
+beforehand, and the verdict is the comparison. An action with no expectation is
+`UNVERIFIED`, never `SUCCEEDED`.
+
+That is what catches the failure mode nothing else does — a page that renders
+success over a request that failed. `network_ok` correlates the requests made
+during the step, so "Saved" over a 500 is a failure with the request named in
+the receipt.
+
+Other properties worth knowing:
+
+- **Targets resolve deterministically first** — accessible role and name, then
+  label, test id, placeholder, selector, text. Vision is last because it is the
+  most expensive signal and the least stable across a redeploy.
+- **Ambiguity is refused, not guessed.** Two buttons named "Delete account" is
+  not a case where the first one is probably right.
+- **Retries respect side effects.** Clicking "Next" again is fine; clicking
+  "Buy" again is not. Recovery never repeats an action that may have taken.
+- **Every step produces a receipt** — how the target was found and with what
+  confidence, what changed, which requests ran, the verdict, and any recovery.
+
+Run the benchmark against the bundled local fixture site:
+
+```bash
+python -m watch_skill.operate.benchmark --out build/benchmark
+```
+
+It scores **false-success rate** — tasks where the runtime claimed the goal was
+met and the server disagrees — because task success rate on its own counts a
+confident wrong answer as a win.
+
 ### Export an offline report
 
 ```bash
