@@ -83,25 +83,32 @@ def test_a_refusal_names_the_memory_it_was_refused_for() -> None:
     assert details["owner"] == "verify:probe"
 
 
-def test_no_ocr_engine_is_inherited_from_an_earlier_test() -> None:
+def test_the_ocr_engine_cache_can_be_released_on_demand() -> None:
     """RapidOCR weights are heavy and invisible to the governor.
 
-    The browser admission cost is computed from the model registry, and the
-    OCR engine cache was never in it — so an engine built by one test held
-    hundreds of megabytes that no later admission decision could account for.
+    Browser admission cost is computed from the model registry, and the OCR
+    engine cache was never in it, so an engine built by one test could hold
+    hundreds of megabytes that no later admission decision accounted for.
+
+    The cache is *not* cleared after every test: RapidOCR takes tens of seconds
+    to build, and clearing it per test made a live session rebuild it mid-run,
+    which starved the real-VLM gate into producing no completed inferences at
+    all. It is released instead at the point the memory is wanted -- see
+    `require_verification_browser`. What this pins is that the release works.
     """
     from watch_skill.perceive import ocr
 
-    assert ocr._engines == {}, (
-        f"OCR engines leaked from an earlier test: {list(ocr._engines)}")
+    ocr._engines["probe"] = object()
+    assert ocr.release_engines() >= 1
+    assert ocr._engines == {}, "release_engines left something behind"
 
 
-def test_no_embedding_model_is_inherited_from_an_earlier_test() -> None:
+def test_the_embedding_model_cache_can_be_released_on_demand() -> None:
     from watch_skill.index import embeddings
 
-    assert embeddings._models == {}, (
-        f"embedding models leaked from an earlier test: "
-        f"{list(embeddings._models)}")
+    embeddings._models["probe"] = object()
+    assert embeddings.release_models() >= 1
+    assert embeddings._models == {}
 
 
 def test_no_live_session_runner_is_inherited_from_an_earlier_test() -> None:

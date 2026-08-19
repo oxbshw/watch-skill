@@ -76,6 +76,24 @@ def require_verification_browser(count: int = 2,
         get_pool,
     )
 
+    # Drop caches that are safe to drop *before* measuring, so the decision is
+    # made against the memory this scenario can really have.
+    #
+    # These are not released after every test on purpose. RapidOCR takes tens
+    # of seconds to build, and clearing it per test made a live session rebuild
+    # it mid-run -- which starved the real-VLM gate badly enough that eight
+    # selected keyframes produced zero completed inferences in 150 seconds.
+    # The engines are shared deliberately; what they must not do is silently
+    # consume the headroom a browser is about to be admitted against.
+    try:
+        from watch_skill.index.embeddings import release_models  # noqa: PLC0415
+        from watch_skill.perceive.ocr import release_engines  # noqa: PLC0415
+
+        release_engines()
+        release_models()
+    except Exception:  # noqa: BLE001 - best effort, never fatal
+        pass
+
     pool = get_pool()
     free = available_memory_mb()
     if free is None:
@@ -156,19 +174,6 @@ def _reset_process_globals() -> None:
         from watch_skill.live.session import stop_all  # noqa: PLC0415
 
         stop_all()
-    except Exception:  # noqa: BLE001
-        pass
-    try:
-        # OCR engines and embedding models are cached process-globally on
-        # purpose -- RapidOCR takes tens of seconds to build and detector
-        # threads must share one. Neither cache is in the model registry, so
-        # the browser governor cannot see the memory they hold: they are the
-        # same leak as the ASR registry, in a place nothing was looking.
-        from watch_skill.index.embeddings import release_models  # noqa: PLC0415
-        from watch_skill.perceive.ocr import release_engines  # noqa: PLC0415
-
-        release_engines()
-        release_models()
     except Exception:  # noqa: BLE001
         pass
 
