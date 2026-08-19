@@ -461,6 +461,20 @@ class TaskResult(BaseModel):
         return sum(1 for r in self.receipts if r.recovered_from is not None)
 
     @property
+    def final_receipts(self) -> list[ActionReceipt]:
+        """The last attempt for each action, in order.
+
+        Receipts record every attempt, so a step that failed once and then
+        succeeded appears twice. Any judgement about whether the *task* worked
+        has to look at where each step ended up, not at everything that
+        happened on the way there.
+        """
+        latest: dict[str, ActionReceipt] = {}
+        for receipt in self.receipts:
+            latest[receipt.action_id] = receipt
+        return list(latest.values())
+
+    @property
     def first_attempt_success(self) -> bool:
         """Every step worked without a retry. The metric that separates a
         runtime that is reliable from one that merely recovers well."""

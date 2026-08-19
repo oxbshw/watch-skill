@@ -195,10 +195,17 @@ class BrowserRuntime:
         # Verified means every step stated an expectation and met it. A run of
         # UNVERIFIED steps completed without proving anything, and saying so is
         # the whole reason this field is separate from `status`.
+        #
+        # Judged on where each step *ended up*, not on every attempt along the
+        # way. Requiring all receipts to have succeeded made a task that
+        # recovered successfully impossible to verify -- the failed first
+        # attempt that recovery then fixed was still in the list, so a working
+        # recovery engine guaranteed an unverified result.
+        final = result.final_receipts
         result.verified = (
             result.status is TaskStatus.COMPLETED
-            and bool(result.receipts)
-            and all(r.verdict is Verdict.SUCCEEDED for r in result.receipts)
+            and bool(final)
+            and all(r.verdict is Verdict.SUCCEEDED for r in final)
         )
 
         try:
