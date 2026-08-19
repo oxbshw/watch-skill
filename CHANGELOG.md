@@ -1,5 +1,62 @@
 # Changelog
 
+## v1.3.0rc2 — unreleased
+
+Adds operator mode: Watch Skill can drive a browser itself, and holds its own
+actions to the same standard it holds anyone else's. Additive — no CLI command,
+MCP tool or schema changed, and `watch_skill.operate` is a new package rather
+than a modification of an existing one.
+
+### Browser Runtime
+
+One browser subsystem, two modes. *Observer* watches someone else work and
+verifies the result; *operator* does the work and proves its own. They share
+the page, the navigation policy, the resource lease, the per-session profile
+and the evidence log — there is deliberately no second browser stack.
+
+The rule everything is built around: **dispatching an action is not the same as
+proving its effect.** Playwright returning from `click()` proves a click was
+delivered and nothing more. So every action carries an expectation written down
+beforehand, execution measures the effect, and the verdict is the comparison.
+An action with no expectation is `UNVERIFIED`, never `SUCCEEDED`.
+
+- **Action receipts.** Every step records how the target was found and with
+  what confidence, what changed, which requests ran, the verdict, and any
+  recovery. A receipt for a failure is more useful than one for a success.
+- **Network-aware verification.** `network_ok` correlates the requests made
+  during a step, which is what catches a page rendering "Saved" over a `PATCH`
+  that returned 500.
+- **Deterministic-first target resolution** — accessible role and name, then
+  label, test id, placeholder, selector, text. Vision is last because it is the
+  most expensive signal and the least stable across a redeploy. Ambiguity is
+  refused rather than resolved to the first match, and a destructive action
+  resolved below 0.75 confidence is refused outright.
+- **Recovery by failure class**, bounded at three attempts: a stale node
+  settles and re-resolves, an intercepting modal is dismissed, a missing
+  control is waited for. Whether a retry is permitted at all is decided by the
+  action's side-effect class first — clicking "Next" again is fine, clicking
+  "Buy" again is not.
+- **Popup handling is now a policy.** Observer mode still records and closes
+  them; operator mode adopts them, because a `target="_blank"` link is often
+  the task itself and an adopted popup joins the page graph, so it is watched.
+
+### Benchmark
+
+`python -m watch_skill.operate.benchmark` runs nine tasks against a bundled
+local fixture site built to fail the way real sites fail. Each task carries a
+ground-truth predicate read from the site's server state rather than from
+anything the browser reported.
+
+On the reference machine: correct-verdict rate 1.0, **false-success rate 0.0**,
+first-attempt success 0.667, recovery success 0.5, median latency 11.2 s.
+
+### Requirements
+
+Python 3.11+. The browser paths need roughly 1.2 GB of free memory for a single
+session; the resource governor refuses a browser it cannot afford and says how
+much was short.
+
+
 ## v1.3.0rc1 — unreleased
 
 Backward compatible. No public contract changed: `WORKSPACE_SCHEMA_VERSION` and

@@ -1,6 +1,6 @@
 ---
 name: video-memory
-version: "1.3.0rc1"
+version: "1.3.0rc2"
 description: The user asks about videos watched in the past or across sessions — "have we watched anything about X", "which video showed that error", "what did that meeting decide", "search my videos", or a question that spans several videos. Use this to search and answer from the persistent cross-video index instead of saying you don't remember.
 license: MIT
 user-invocable: true

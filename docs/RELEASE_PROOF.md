@@ -308,3 +308,127 @@ Compatibility, verified rather than assumed:
 
 One behaviour change is called out in the release notes: local ASR no longer
 downloads a missing model, and fails with the exact command to fetch it.
+
+---
+
+# Browser Runtime season — `1.3.0rc2`
+
+Operator mode: Watch Skill drives a browser itself and proves its own actions.
+Everything below is measured on the reference machine.
+
+## Architecture
+
+One browser subsystem, two modes, sharing the page, the navigation policy, the
+resource lease, the per-session profile, the navigation epochs and the evidence
+log. `watch_skill.operate` is built on the existing `BrowserSource` rather than
+beside it; the enabling piece is `BrowserSource.call`, which is the command
+queue `navigate` and `evaluate` already used, with a reply slot. Operator
+actions therefore run on the one thread that owns the page, interleaved with
+the capture loop, with no second stack and no lock.
+
+| Layer | Module |
+| --- | --- |
+| Types — actions, targets, receipts, verdicts | `operate/types.py` |
+| Observation | `operate/observe.py` |
+| Target resolution | `operate/resolve.py` |
+| Execution and verification | `operate/execute.py` |
+| Recovery policies | `operate/recover.py` |
+| Runtime and task API | `operate/runtime.py` |
+| Benchmark + fixture site | `operate/benchmark.py`, `operate/fixture_site.py` |
+
+## Browser capability, measured
+
+All against a real Chromium and the bundled local fixture site
+(`tests/operate/test_browser_runtime.py`, 17 tests, all passing):
+
+| Capability | Result |
+| --- | --- |
+| Navigation with verified effect | pass |
+| Form fill, select, checkbox, submit | pass — 5-step task, `verified=True` |
+| Accessible-name resolution | pass, strategy `label`, confidence 0.93 |
+| Ambiguity refused | pass — 2 matches, `TARGET_AMBIGUOUS`, not guessed |
+| Destructive action below confidence floor | pass — `POLICY_REFUSED` |
+| Action with no expectation | pass — `UNVERIFIED`, not success |
+| Click that dispatches but changes nothing | pass — `VERIFICATION_FAILED` |
+| **Page says "Saved", `PATCH` returns 500** | **pass — rejected, request named in the receipt** |
+| Late-rendering control | pass — settled and retried |
+| Intercepting modal | pass — dismissed, retried, verified on attempt 2 |
+| Side-effecting action never retried | pass — attempt stays 1 |
+| New tab in the page graph | pass |
+| Target inside an iframe | pass |
+| Task stops at first failed step | pass |
+| Prompt injection stays evidence | pass |
+
+## Benchmark
+
+`python -m watch_skill.operate.benchmark` — nine tasks, nine categories, ground
+truth read from the fixture site's server state rather than from the browser.
+
+| Metric | Value |
+| --- | --- |
+| correct_verdict_rate | **1.0** |
+| **false_success_rate** | **0.0** |
+| verified_task_success_rate | 0.667 |
+| first_attempt_success_rate | 0.667 |
+| recovery_success_rate | 0.5 |
+| mean steps / attempts per task | 2.33 / 3.0 |
+| median latency | 11.2 s |
+| p95 latency | 19.9 s |
+| by category | form, iframe, network, recovery, safety, security, tabs, timing, validation — all 1/1 |
+
+The remaining third of `verified_task_success_rate` is tasks that are *supposed*
+to be refused — an ambiguous "Delete account" and a save whose request fails.
+Refusing them is the correct answer and is scored as such.
+
+The benchmark earned its place immediately by finding a design bug the unit
+tests missed: `TaskResult.verified` required every receipt to have succeeded,
+but receipts record every attempt, so a step fixed by recovery left its failed
+attempt in the list and a working recovery engine guaranteed an unverified
+task. Verification is now judged on the final attempt per action.
+
+## Stability
+
+`tests/operate/test_browser_runtime.py`, isolated fresh process per run:
+
+**20 executed / 20 passed / 0 failed / 0 skipped / 0 leaked processes.**
+
+Free memory across the twenty runs stayed flat (2778 MB → 2700 MB), with the
+last run's dip explained by an unrelated concurrent build. No Chromium,
+ffmpeg or Playwright driver survived any run.
+
+## Demo
+
+`scripts/make_browser_demo.py` records the two things worth demonstrating:
+
+1. A subscribe modal intercepts a click. Classified `target_obscured`,
+   overlay dismissed, retried, **verified on attempt 2**, with the recovery
+   trail on the receipt.
+2. A settings page paints "Saved" while its `PATCH` returns 500. The runtime
+   rejects it: *"PATCH /api/save returned 500 while the UI reported success"*,
+   and the server's own `save_attempts` counter corroborates it.
+
+Output in `build/browser-demo/` — generated, not committed.
+
+## Security posture for operator mode
+
+- Actions are a **closed enum**; no field a page could populate names a tool,
+  a command or a shell.
+- Uploads take an explicit file list from the caller. A page cannot request one.
+- Script execution is not part of the public action surface.
+- Network records strip query strings — a URL is evidence, a URL carrying a
+  session token is a leak.
+- Observed text is preserved verbatim as evidence and fenced as page-authored
+  wherever it reaches a model context.
+- The context-level route handler applies the navigation policy to every page
+  in the context, adopted popups included.
+
+## Version — `1.3.0rc2`
+
+Incremented from `rc1` because this season materially changed the prepared RC
+contents. Still `1.3.0`: purely additive — `watch_skill.operate` is a new
+package, no CLI command or MCP tool was removed or renamed, and
+`WORKSPACE_SCHEMA_VERSION` and `LIVE_SCHEMA_VERSION` are both still `1`.
+
+Fourteen version surfaces are aligned: `pyproject.toml`, `uv.lock`,
+`.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json` (metadata and
+entry), ten `skills/*/SKILL.md`, and `watch_skill.__version__`.

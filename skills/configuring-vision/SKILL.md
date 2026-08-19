@@ -1,6 +1,6 @@
 ---
 name: configuring-vision
-version: "1.3.0rc1"
+version: "1.3.0rc2"
 description: The user wants to connect an LLM or vision provider, already has an API key, asks "can I use OpenAI/Anthropic/Gemini/OpenRouter", wants local Ollama, or needs different cheap and strong models. Use this to configure provider-neutral visual understanding without tying Watch Skill to one agent or model vendor.
 license: MIT
 user-invocable: true
