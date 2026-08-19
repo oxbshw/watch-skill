@@ -76,7 +76,10 @@ def _require_two_browsers() -> None:
     """The shared precondition. See `tests/conftest.require_verification_browser`."""
     from tests.conftest import require_verification_browser  # noqa: PLC0415
 
-    require_verification_browser(2)
+    # Higher than the Observer loop's allowance: this scenario also runs a
+    # Playwright driver browser and the dev host. Measured consuming about
+    # 1233 MB before its second verification, so 1400 covers it.
+    require_verification_browser(2, scenario_mb=1400.0)
 
 
 def _wait(predicate, timeout: float, interval: float = 0.25):

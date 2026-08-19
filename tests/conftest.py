@@ -47,7 +47,8 @@ def isolated_settings(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     _reset_process_globals()
 
 
-def require_verification_browser(count: int = 2) -> None:
+def require_verification_browser(count: int = 2,
+                                 scenario_mb: float = 900.0) -> None:
     """Skip, with arithmetic, when this machine cannot hold the browsers.
 
     Any scenario that drives the Observer Loop over a live browser source
@@ -85,17 +86,21 @@ def require_verification_browser(count: int = 2) -> None:
     # acquired -- which is near the end of the run, not the start.
     at_acquisition = pool.session_cost_mb + pool.min_available_mb + resident
 
-    # What the scenario has already eaten by then. Measured, not modelled:
-    # across repeated runs free memory fell from 2340 MB at start to 1000 MB
-    # by the second verification, so the scenario itself costs about 1340 MB
-    # in live browser, Playwright browser, OCR models and buffered frames.
+    # What the scenario has already eaten by then, supplied by the caller
+    # because the two scenarios that need this do not cost the same thing.
     #
-    # This term is why a start-time check of "two browsers' worth" was the
-    # wrong quantity: it passed at 2340 MB free and the run still died, at
-    # the second `advance()`, for want of memory the scenario had spent in
-    # the meantime. Observed outcomes at start-time free memory:
-    #   2722 MB -> pass      2620 MB -> fail      2340 MB -> fail
-    scenario_peak_mb = 1340.0 * (count - 1) if count > 1 else 0.0
+    # Measured after the OCR, embedding and runner leaks were fixed: a live
+    # browser source with OCR at steady state costs 196 MB and peaks at 477 MB,
+    # and all of it comes back at teardown. The Observer loop scenario runs
+    # that plus a verifier browser and passes with 900 MB allowed. The rendered
+    # UI proof additionally runs a Playwright driver browser and the dev host,
+    # and was measured consuming ~1233 MB before its second verification.
+    #
+    # A single shared constant of 1340 MB used to cover both. It was measured
+    # on the UI scenario while those leaks were still inflating it, and applying
+    # it to the Observer scenario skipped a test this machine can run
+    # comfortably. One number could not be right for both.
+    scenario_peak_mb = scenario_mb if count > 1 else 0.0
 
     needed = at_acquisition + scenario_peak_mb
     if free < needed:
