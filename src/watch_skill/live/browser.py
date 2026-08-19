@@ -228,6 +228,21 @@ class BrowserOptions:
 
     capture_request_metadata: bool = True
 
+    adopt_popups: bool = False
+    """Whether a popup is kept and watched, or recorded and closed.
+
+    Off by default, and the default is the security position: an observed page
+    that can open windows nobody is looking at can do work the session would
+    report nothing about, so in observer mode a popup is evidence and then it
+    is gone.
+
+    Operator mode turns this on, because a `target="_blank"` link is often the
+    task itself, and the objection was never to popups — it was to *unwatched*
+    surfaces. An adopted popup is enumerated in the page graph and appears in
+    every observation, so it is watched. The context-level route handler
+    already applies the navigation policy to every page in the context,
+    popups included, so the boundary is unchanged."""
+
     @classmethod
     def from_spec(cls, spec: LiveSourceSpec, policy: NavigationPolicy) -> BrowserOptions:
         detail = spec.detail or {}
@@ -402,6 +417,36 @@ class BrowserSource:
     def navigate(self, url: str) -> None:
         """Queue a navigation. Checked by policy on the browser thread."""
         self._commands.put(("navigate", url))
+
+    def call(self, fn: Any, timeout: float = 30.0) -> Any:
+        """Run ``fn(page)`` on the browser thread and return what it returns.
+
+        Playwright's sync API binds every object to the thread that created
+        it, which is why this class already funnels `navigate` and `evaluate`
+        through a queue. Those are fire-and-forget; an action needs its result
+        and its exception back, so this is the same queue with a reply slot.
+
+        This is the primitive the whole operator runtime is built on: it means
+        actions execute on the one thread that owns the page, in order,
+        interleaved with the capture loop, with no second browser stack and no
+        lock of our own.
+        """
+        if not self.running:
+            raise CaptureError(
+                "the browser is not running",
+                code="live.browser.not_running",
+                fix="start the session before driving it")
+        box: dict[str, Any] = {}
+        done = threading.Event()
+        self._commands.put(("call", (fn, box, done)))
+        if not done.wait(timeout):
+            raise CaptureError(
+                f"a browser call did not return within {timeout:.0f}s",
+                code="live.browser.call_timeout",
+                fix="the page may be blocked by a dialog or a navigation")
+        if "error" in box:
+            raise box["error"]
+        return box.get("value")
 
     def evaluate(self, expression: str) -> None:
         """Queue a page evaluation, for governed corrections only.
@@ -615,8 +660,19 @@ class BrowserSource:
                 # would otherwise turn into a burst of back-to-back captures.
                 next_tick = time.monotonic()
                 wait = 0.005
+            # Sliced, so a command queued mid-wait is serviced in tens of
+            # milliseconds rather than after the rest of the frame interval.
+            # `wait_for_timeout` is still what pumps Playwright's event loop,
+            # so console messages and request failures keep arriving between
+            # slices exactly as before.
             try:
-                page.wait_for_timeout(wait * 1000)
+                remaining = wait
+                while remaining > 0 and not self._stop.is_set():
+                    if not self._commands.empty():
+                        break
+                    slice_s = min(0.05, remaining)
+                    page.wait_for_timeout(slice_s * 1000)
+                    remaining -= slice_s
             except Exception:  # noqa: BLE001 - a closing page ends the loop
                 return
 
@@ -661,7 +717,15 @@ class BrowserSource:
                 name, payload = self._commands.get_nowait()
             except queue.Empty:
                 return
-            if name == "navigate":
+            if name == "call":
+                fn, box, done = payload
+                try:
+                    box["value"] = fn(page)
+                except BaseException as exc:  # noqa: BLE001 - returned to caller
+                    box["error"] = exc
+                finally:
+                    done.set()
+            elif name == "navigate":
                 self._open(page, str(payload))
             elif name == "evaluate":
                 try:
@@ -841,9 +905,14 @@ class BrowserSource:
         self._emit(BrowserEventKind.POPUP, "popup opened",
                    {"url": redact_url(url, redaction)},
                    redaction=redaction, page_authored=False)
-        # A popup is a second surface nobody is watching. It is recorded and
-        # closed, because a page that can open unwatched windows can do work
-        # the session would report nothing about.
+        if self.options.adopt_popups:
+            # Kept, and therefore watched: it joins the page graph and shows up
+            # in every observation from here on. That is what makes keeping it
+            # acceptable — the original objection was to a surface nobody was
+            # looking at, not to popups as such.
+            return
+        # Otherwise recorded and closed: a page that can open unwatched windows
+        # can do work the session would report nothing about.
         try:
             popup.close()
         except Exception:  # noqa: BLE001

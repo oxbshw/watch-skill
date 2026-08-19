@@ -131,7 +131,18 @@ def test_every_declared_browser_channel_produces_evidence(
     assert remote["cross_process"] is True
     assert sorted(remote["observed"]) == sorted(receipt.observed_channels), (
         "a fresh process derived a different receipt from the same log")
-    assert remote["totals"]["frames_captured"] == receipt.frames_captured
+    # `>=`, not `==`. Both counts are read from the same append-only log, but
+    # at two different instants and from two different processes: the
+    # in-process receipt is taken the moment `stop_live` returns, and a frame
+    # already captured can still be persisted while the subprocess starts.
+    # Requiring exact equality asserts that nothing landed in between, which
+    # is not a property the pipeline offers or should. What matters — and what
+    # this now checks — is that the log only grows and that the fresh process
+    # sees at least everything the first reader saw.
+    assert remote["totals"]["frames_captured"] >= receipt.frames_captured, (
+        f"a fresh process saw fewer frames "
+        f"({remote['totals']['frames_captured']}) than the in-process receipt "
+        f"({receipt.frames_captured}); the log lost data")
 
 
 def _has_all_event_channels(session_id: str) -> bool:
