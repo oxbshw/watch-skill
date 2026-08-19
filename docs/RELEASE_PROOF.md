@@ -278,9 +278,18 @@ proved by its own gate and by `docs/assets/workspace/workspace-vlm-historical.pn
 
 ## 12. Version — `1.3.0rc1`
 
-Applied to `pyproject.toml`, `.claude-plugin/plugin.json` and
-`.claude-plugin/marketplace.json` (as `1.3.0-rc.1`, that file's convention),
-with release notes in `CHANGELOG.md`. **Not tagged, not published.**
+Applied to every canonical surface, all of which must agree exactly:
+`pyproject.toml`, `uv.lock`, `.claude-plugin/plugin.json`,
+`.claude-plugin/marketplace.json` (both the metadata and the entry), the
+ten `skills/*/SKILL.md` manifests, and `watch_skill.__version__` via
+installed metadata — with release notes in `CHANGELOG.md`.
+**Not tagged, not published.**
+
+Fourteen surfaces, and the suite found the four that a manual sweep
+missed: the skill manifests, `uv.lock`, the stale editable-install
+metadata behind `__version__`, and a `1.3.0-rc.1` spelling in the plugin
+manifests that `test_versions_agree_across_manifests` requires to match
+`pyproject` character for character.
 
 | Candidate | Verdict |
 | --- | --- |
