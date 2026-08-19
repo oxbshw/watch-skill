@@ -26,7 +26,7 @@ from watch_skill.live.types import (
     LiveState,
     Provenance,
 )
-from watch_skill.sqlite_util import apply_migrations
+from watch_skill.sqlite_util import apply_migrations, enable_wal
 
 MIGRATIONS: list[str] = [
     # v1 — sessions and their append-only events.
@@ -100,7 +100,7 @@ def connect(db_path: Path | None = None) -> sqlite3.Connection:
     path.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(str(path), timeout=30.0, isolation_level="IMMEDIATE")
     conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA journal_mode = WAL")
+    enable_wal(conn)
     conn.execute("PRAGMA busy_timeout = 30000")
     conn.execute("PRAGMA synchronous = NORMAL")
     conn.execute("PRAGMA foreign_keys = ON")

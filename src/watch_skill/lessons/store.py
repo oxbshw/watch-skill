@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Any
 
 from watch_skill.config import get_settings
+from watch_skill.sqlite_util import enable_wal
 
 Migration = str | Callable[[sqlite3.Connection], None]
 
@@ -55,7 +56,7 @@ def connect(db_path: Path | None = None) -> sqlite3.Connection:
     path.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(str(path))
     conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA journal_mode = WAL")
+    enable_wal(conn)
     migrate(conn)
     return conn
 

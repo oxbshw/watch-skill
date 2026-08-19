@@ -18,8 +18,76 @@ driver's automatic handling for the duration.
 from __future__ import annotations
 
 import sqlite3
+import time
 from collections.abc import Iterator
 from contextlib import contextmanager
+
+WAL_SWITCH_TIMEOUT_S = 10.0
+"""How long to keep trying to move a database into WAL mode.
+
+Generous, because losing this race is harmless and retrying is cheap; bounded,
+because a database that can never switch must not hang a command forever."""
+
+
+def enable_wal(conn: sqlite3.Connection,
+               timeout: float = WAL_SWITCH_TIMEOUT_S) -> str:
+    """Put a database into WAL mode without dying on a concurrent switch.
+
+    ``PRAGMA journal_mode = WAL`` is the one statement here that **does not
+    honour ``busy_timeout``**. Measured, not assumed: with a 30-second timeout
+    set and another connection holding a write transaction, the pragma failed
+    in 0.000s with ``database is locked``, while an ordinary
+    ``BEGIN IMMEDIATE`` on the same connection correctly blocked for 33s
+    before giving up.
+
+    That matters because the switch needs a brief exclusive lock, and every
+    connection used to attempt it on every connect. On an established database
+    the mode is already ``wal`` and the attempt is free — but on a *fresh* one,
+    which is what every isolated test and every new install starts with, the
+    mode genuinely has to change, and eight threads connecting at once meant
+    eight racers for a lock no timeout protected. One of them died instantly
+    with ``database is locked``, intermittently, and only under concurrency.
+
+    Two things make this safe. The mode is a property of the **database file**,
+    not of the connection, so whichever caller wins sets it for everyone.
+    And it is persistent, so the race only exists on the first connection to a
+    new file. This therefore reads first, only attempts the switch when it is
+    actually needed, and treats losing the race as "someone else is doing it"
+    rather than as an error.
+
+    Returns the journal mode now in force.
+    """
+    deadline = time.monotonic() + max(0.0, timeout)
+    delay = 0.01
+    while True:
+        mode = _journal_mode(conn)
+        if mode == "wal":
+            return mode
+        try:
+            switched = conn.execute("PRAGMA journal_mode = WAL").fetchone()
+            if switched and str(switched[0]).lower() == "wal":
+                return "wal"
+        except sqlite3.OperationalError:
+            # Locked by a concurrent switch or writer. Not an error: the next
+            # loop re-reads, and another connection may already have done it.
+            pass
+        if _journal_mode(conn) == "wal":
+            return "wal"
+        if time.monotonic() >= deadline:
+            # Still not WAL. The database is usable in its current mode, with
+            # less write concurrency, and saying so beats failing the command.
+            return _journal_mode(conn)
+        time.sleep(delay)
+        delay = min(delay * 2, 0.25)
+
+
+def _journal_mode(conn: sqlite3.Connection) -> str:
+    """The mode in force, or "" when even the read is locked out."""
+    try:
+        row = conn.execute("PRAGMA journal_mode").fetchone()
+    except sqlite3.OperationalError:
+        return ""
+    return str(row[0]).lower() if row else ""
 
 
 @contextmanager
@@ -125,4 +193,5 @@ def current_version(conn: sqlite3.Connection) -> int:
     return int(row[0]) if row and row[0] is not None else 0
 
 
-__all__ = ["apply_migrations", "current_version", "split_statements"]
+__all__ = ["apply_migrations", "current_version", "enable_wal",
+           "immediate", "split_statements"]

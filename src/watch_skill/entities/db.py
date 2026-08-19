@@ -24,7 +24,7 @@ from watch_skill.entities.types import (
     EvidenceLink,
     normalize_alias,
 )
-from watch_skill.sqlite_util import apply_migrations
+from watch_skill.sqlite_util import apply_migrations, enable_wal
 
 MIGRATIONS: list[str] = [
     # v1 — entities, their aliases, their bi-temporal attributes, conflicts.
@@ -108,7 +108,7 @@ def connect(db_path: Path | None = None) -> sqlite3.Connection:
     path.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(str(path), timeout=30.0, isolation_level="IMMEDIATE")
     conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA journal_mode = WAL")
+    enable_wal(conn)
     conn.execute("PRAGMA busy_timeout = 30000")
     conn.execute("PRAGMA synchronous = FULL")
     conn.execute("PRAGMA foreign_keys = ON")

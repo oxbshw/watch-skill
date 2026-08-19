@@ -10,6 +10,7 @@ from collections.abc import Callable
 from pathlib import Path
 
 from watch_skill.config import get_settings
+from watch_skill.sqlite_util import enable_wal
 
 Migration = str | Callable[[sqlite3.Connection], None]
 
@@ -418,7 +419,7 @@ def connect(db_path: Path | None = None) -> sqlite3.Connection:
     path.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(str(path), timeout=30.0)
     conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA journal_mode = WAL")
+    enable_wal(conn)
     conn.execute("PRAGMA busy_timeout = 30000")
     migrate(conn)
     conn.execute("PRAGMA foreign_keys = ON")

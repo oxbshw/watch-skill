@@ -24,7 +24,7 @@ from watch_skill.actions.types import (
     ApprovalStatus,
 )
 from watch_skill.config import get_settings
-from watch_skill.sqlite_util import apply_migrations, immediate
+from watch_skill.sqlite_util import apply_migrations, enable_wal, immediate
 
 MIGRATIONS: list[str] = [
     # v1 — actions, approvals, and the transition log that explains both.
@@ -103,7 +103,7 @@ def connect(db_path: Path | None = None) -> sqlite3.Connection:
     path.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(str(path), timeout=30.0, isolation_level="IMMEDIATE")
     conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA journal_mode = WAL")
+    enable_wal(conn)
     conn.execute("PRAGMA busy_timeout = 30000")
     conn.execute("PRAGMA synchronous = FULL")
     conn.execute("PRAGMA foreign_keys = ON")
