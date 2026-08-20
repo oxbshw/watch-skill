@@ -685,3 +685,54 @@ once, in the degraded run 5, where one of them failed.
 **These two tests are unproven on this machine.** Three green suites do not
 change that, which is precisely why the skip inventory is reported alongside
 the pass count rather than underneath it.
+
+## Closing gates — final HEAD `1e4ae40`
+
+### Two consecutive clean full suites
+
+| Run | Collected | Passed | Failed | Skipped | Wall |
+| --- | --- | --- | --- | --- | --- |
+| 7 | 1513 | 1491 | **0** | 22 | 1690 s |
+| 8 | 1513 | 1491 | **0** | 22 | 1457 s |
+
+Identical, and identical in the way that matters — both **ran** the tests
+rather than skipping them:
+
+| | Run 7 | Run 8 |
+| --- | --- | --- |
+| `test_every_declared_browser_channel_produces_evidence` | passed | passed |
+| `test_first_render_meets_its_budget` | passed | passed |
+| `test_the_whole_scenario_is_visible_in_the_rendered_workspace` | passed | passed |
+| `test_keyboard_reaches_every_control` | passed | passed |
+| `tests/operate` | 24 passed, 0 skipped | 24 passed, 0 skipped |
+| skips from the memory-refusal hook | **0** | **0** |
+
+### Correction: the two-browser scenarios are proven
+
+An earlier section of this document, written after runs 5 and 6, said
+`test_the_whole_scenario_is_visible_in_the_rendered_workspace` and
+`test_keyboard_reaches_every_control` were "unproven on this machine". **That
+is no longer true.** Both ran and passed in runs 7 and 8. The statement was
+accurate when written — they had skipped in five targeted runs and three of
+four suites, and failed the once they ran — and it is superseded rather than
+deleted, because a report that quietly edits its own history is worth less
+than one that shows where it was wrong.
+
+What made the difference was free memory, not a code change. The scenarios
+need 2550 MB; the host had it during these runs and had not during the others.
+
+### Skip inventory — 22, in 7 reasons, all deliberate
+
+| Count | Reason |
+| --- | --- |
+| 8 | real-model live VLM gate (`WATCHSKILL_TEST_REAL_VLM_LIVE`) |
+| 7 | real-model ASR gate (`WATCHSKILL_TEST_REAL_ASR`) |
+| 3 | no local vision model reachable |
+| 1 | real-model VLM gate (`WATCHSKILL_TEST_REAL_VLM`) |
+| 1 | real local-ASR recognition (`WATCHSKILL_TEST_LOCAL_ASR`) |
+| 1 | real-model rendered gate (`WATCHSKILL_TEST_REAL_VLM_LIVE`) |
+| 1 | POSIX permission bits — Linux-only, covered by the `ubuntu-latest` CI job |
+
+**Zero resource skips.** Every skip is either an opt-in real-model gate or the
+Linux-only executable-bit test. Nothing was skipped for want of memory, which
+is the first time this season that has been true of a full suite.
