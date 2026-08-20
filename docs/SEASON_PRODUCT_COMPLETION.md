@@ -1,4 +1,4 @@
-﻿# Season: Product Completion — execution ledger
+# Season: Product Completion — execution ledger
 
 # Season 4 â€” the real model inside a live session, and a Next.js workspace
 

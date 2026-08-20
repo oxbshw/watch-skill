@@ -488,3 +488,138 @@ and assert the outcome is `skipped` for a busy machine and `failed` / `error`
 for a ruinous cost. A hook that was defined but never registered would pass
 every unit test while the suite kept failing, so the wiring is proved
 separately from the logic.
+
+## Final gates — frozen HEAD `5fd47b5`
+
+### Two consecutive full suites
+
+| Run | Collected | Passed | Failed | Skipped |
+| --- | --- | --- | --- | --- |
+| 3 | 1513 | 1489 | **0** | 24 |
+| 4 | 1513 | 1488 | **0** | 25 |
+
+Run 4's extra skip is `test_observer_loop::test_broken_app_observed_corrected_and_independently_verified`,
+declined by the *existing* two-browser precondition (2050 MB needed). It is not
+the new refusal path.
+
+The green is checked rather than assumed. In both runs:
+
+| | Run 3 | Run 4 |
+| --- | --- | --- |
+| `test_every_declared_browser_channel_produces_evidence` | passed | passed |
+| `tests/operate` | 24 passed, 0 skipped | 24 passed, 0 skipped |
+| `test_workspace_accessibility` | 6 passed, 0 skipped | 6 passed, 0 skipped |
+| skips attributable to the new refusal hook | **0** | **0** |
+
+A suite that went green by skipping the subsystem under test would prove
+nothing, so that was measured rather than hoped for.
+
+### Test collection, `3f34cf0` → this release
+
+Baseline collected in a throwaway worktree at the season's starting commit:
+**1479 → 1504** at `7ea8bda` (**+25**), then **1513** after the refusal tests.
+
+| File | Base → Head |
+| --- | --- |
+| `tests/operate/test_browser_runtime.py` | — → 17 |
+| `tests/operate/test_benchmark.py` | — → 7 |
+| `tests/live/test_memory_refusal_skip.py` | — → 9 |
+| `tests/test_docs_links.py` | 104 → 105 |
+
+No file lost a test and none was converted to a skip. No conftest or pytest
+configuration changed the collection — the only `pyproject.toml` edit is the
+version string. The `test_docs_links.py` increment is that suite parametrising
+over documentation files: adding `docs/browser-runtime.md` earned it one more
+case.
+
+### Build
+
+| Gate | Result |
+| --- | --- |
+| `ruff check .` | clean |
+| `tsc --noEmit` | clean |
+| `next build` + static export | 4 pages, 113 kB first load |
+| workspace inline | 6 scripts + 1 stylesheet → 502.5 KiB single document |
+| **committed `workspace.html` vs freshly built** | **byte-identical — the tree stayed clean across a full rebuild** |
+| `uv build` | `watch_skill-1.3.0rc2-py3-none-any.whl` (724 KB), `.tar.gz` (6.1 MB) |
+
+### Install and smoke, from the built wheel
+
+| Gate | Result |
+| --- | --- |
+| Clean venv, base wheel | installs; 79-package closure |
+| `watch-skill --help` | ok |
+| `watch-skill doctor` | ok — reports each absent optional feature and the command that adds it |
+| `watch_skill.__version__` from site-packages | `1.3.0rc2` |
+| **Installed-wheel browser smoke** | **PASS** |
+
+The smoke drives a real Chromium from `site-packages`, never the source tree,
+and checks the two things that matter: a five-step form task verified
+end to end (`navigate`, `fill` via label, `select` via label, `check` and
+`click` via role+name), and the false-success page **rejected** —
+*"PATCH /api/save returned 500 while the UI reported success"*.
+
+One caveat, stated rather than hidden: a fresh `playwright install chromium`
+could not complete on this host — `cdn.playwright.dev` returned `ECONNRESET`
+and then `ETIMEDOUT` on repeated attempts. Playwright was therefore pinned to
+`1.61.0` in the clean venv so the smoke could use the already-cached Chromium
+build. Both `1.61.0` and the `1.62.0` that resolved by default are inside the
+declared `playwright>=1.61,<2`. The browser download path itself is
+**unproven** on this host.
+
+### Security and supply chain
+
+| Gate | Result |
+| --- | --- |
+| Repository secret scan | clean — 528 tracked text files |
+| Built-artifact secret scan (wheel + sdist) | clean — 696 packaged files |
+| `npm audit` (production) | **0 vulnerabilities** |
+| `npm audit` (including dev) | **0 vulnerabilities** |
+| Python audit — `[all]` closure (116 packages) | **No known vulnerabilities** |
+| Python audit — `[langchain]`, `[llamaindex]`, `[autogen]`, `[openai-agents]` | clean |
+| Python audit — `[diarize]` | 1: `lightning 2.6.5` PYSEC-2026-3624 |
+| Python audit — `[crewai]` | 2: `chromadb 1.1.1` PYSEC-2026-311, `json-repair 0.25.2` GHSA-xf7x-x43h-rpqh |
+
+Every closure was resolved from the **built wheel**, per extra, rather than
+read off the development environment — which is what makes "clean" mean
+something. The recommended install, `watch-skill[all]`, is clean.
+
+The three findings are all transitive, none is a package Watch Skill declares,
+and none is in `[all]`:
+
+- **`lightning`** (via `pyannote.audio`, `[diarize]`): RCE when
+  `load_from_checkpoint` reads an attacker-controlled checkpoint. **No fix
+  published.** Watch Skill loads only models the user chose to download.
+- **`chromadb`** (via `crewai`): pre-auth code injection in a ChromaDB
+  *server* endpoint. **No fix published.** Watch Skill runs no Chroma server.
+- **`json-repair`** (via `crewai`): unbounded CPU on a self-referencing JSON
+  Schema `$ref`. Fixed in `0.60.1`, and a constraint resolves cleanly —
+  `watch-skill[crewai]` plus `json-repair>=0.60.1` gives `crewai 0.134.0` with
+  `json-repair 0.63.3`.
+
+The `json-repair` constraint is **not** applied to `pyproject.toml`. Pinning a
+transitive dependency of an optional third-party adapter is how installs break
+later, the defect is not reachable from Watch Skill's own code, and the user
+can apply the constraint above in one line. Recorded here so the decision is
+visible rather than silent.
+
+### SBOMs
+
+| SBOM | Spec | Components | Strict schema validation |
+| --- | --- | --- | --- |
+| Python (shipped closure) | CycloneDX 1.6 | 79 | **valid** |
+| JavaScript (production) | CycloneDX 1.5 | 115 | **1 error** |
+
+A correction to the previous report, which called the JavaScript SBOM
+"structurally valid": under strict CycloneDX 1.5 validation it is not. One
+external reference fails, and exactly one —
+
+```
+cross-spawn [vcs] git@github.com:moxystudio/node-cross-spawn.git
+```
+
+`npm sbom` emitted an SCP-style git address where the schema requires an
+IRI-reference. It is npm's output, not this project's dependency data: all 115
+components carry a name, a version and a purl, and the Python SBOM's only
+entry without a purl is `watch-skill` itself, which has none because it was
+installed from a local wheel rather than an index.
