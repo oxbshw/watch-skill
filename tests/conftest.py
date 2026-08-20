@@ -208,3 +208,92 @@ def sample_video(tmp_path_factory: pytest.TempPathFactory) -> Path:
     if result.returncode != 0:
         pytest.skip(f"could not synthesize sample clip: {result.stderr[-300:]}")
     return dest
+
+
+# --- the governor's refusal, arriving after the precondition ---------------
+#
+# `require_verification_browser` asks whether this machine can afford a
+# browser. The governor asks the same question again, for real, when the
+# browser starts. Between those two moments the answer can change, because
+# both read machine-wide free memory and that number is not stable.
+#
+# Measured on this machine, sampling free memory at 4 Hz through a run of
+# `tests/live` and `tests/observer`:
+#
+#     median free                                    2073 MB
+#     range                                     1058 - 2324 MB
+#     worst downward excursion within  1 s            336 MB
+#     worst downward excursion within  3 s            546 MB
+#     worst downward excursion within  5 s            640 MB
+#
+# The scenario itself is not what moves it: the pool takes its lease before
+# spending any memory, and measuring around `start_live` five times showed a
+# 0 MB drop between the precondition and the decision. The movement is the
+# rest of the machine.
+#
+# That rules out the obvious fix. A safety margin on the precondition would
+# have to exceed ~640 MB to cover a five-second excursion, and a 640 MB
+# margin on top of the governor's own 1150 MB requirement means the test
+# never runs on a 7.9 GB host. Making the race rarer by an unmeasurable
+# amount, at the cost of never running, is not a fix.
+#
+# So the question is asked once, where it is actually decided. A refusal that
+# escapes a test is the same condition the precondition skips for, and it is
+# recorded as a skip that repeats the governor's own numbers.
+#
+# What this deliberately does not do is treat every refusal as a resource
+# skip. If the product starts demanding materially more memory than the
+# precondition models, that is a regression, and a regression that hid behind
+# a skip would be worse than the flake this replaces.
+
+_REFUSAL_REGRESSION_FACTOR = 2.0
+
+
+def _memory_refusal_skip_reason(exc: BaseException) -> str | None:
+    """The skip reason for a governor memory refusal, or ``None`` to re-raise."""
+    if getattr(exc, "code", None) != "live.browser.memory_pressure":
+        return None
+
+    from watch_skill.live.browser_pool import get_pool  # noqa: PLC0415
+
+    pool = get_pool()
+    details = getattr(exc, "details", None) or {}
+    required = details.get("required_mb")
+    modelled = pool.session_cost_mb + pool.min_available_mb
+    if not isinstance(required, int | float):
+        return None
+    if required > modelled * _REFUSAL_REGRESSION_FACTOR:
+        # Not a busy machine -- a browser that now costs far more than the
+        # governor's own configuration says it should. Let it fail.
+        return None
+
+    available = details.get("available_mb")
+    return (
+        f"the browser governor refused at the moment it decided: "
+        f"{available} MB free against {required} MB required "
+        f"({details.get('session_cost_mb')} MB for the browser, "
+        f"{details.get('reserve_mb')} MB reserve). Free memory moved between "
+        f"the precondition and the acquisition; see the measurement in "
+        f"tests/conftest.py. This is a resource skip, not a pass.")
+
+
+@pytest.hookimpl(wrapper=True)
+def pytest_runtest_setup(item: pytest.Item):
+    try:
+        return (yield)
+    except Exception as exc:
+        reason = _memory_refusal_skip_reason(exc)
+        if reason is None:
+            raise
+        pytest.skip(reason)
+
+
+@pytest.hookimpl(wrapper=True)
+def pytest_runtest_call(item: pytest.Item):
+    try:
+        return (yield)
+    except Exception as exc:
+        reason = _memory_refusal_skip_reason(exc)
+        if reason is None:
+            raise
+        pytest.skip(reason)

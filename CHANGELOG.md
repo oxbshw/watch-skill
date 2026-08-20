@@ -7,6 +7,17 @@ actions to the same standard it holds anyone else's. Additive — no CLI command
 MCP tool or schema changed, and `watch_skill.operate` is a new package rather
 than a modification of an existing one.
 
+### Fixed
+
+- A browser test could fail instead of skip when the machine was momentarily
+  busy. The precondition and the resource governor both read machine-wide free
+  memory, seconds apart, and that number moves by up to 336 MB in a second
+  under suite load — so a precondition that passed could still be refused at
+  acquisition. The question is now asked once, where it is decided, and a
+  refusal is recorded as a resource skip with the governor's own numbers.
+  A refusal demanding more than twice the configured requirement still fails,
+  so a regression cannot hide behind the skip.
+
 ### Browser Runtime
 
 One browser subsystem, two modes. *Observer* watches someone else work and

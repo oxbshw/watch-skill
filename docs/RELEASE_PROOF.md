@@ -432,3 +432,59 @@ package, no CLI command or MCP tool was removed or renamed, and
 Fourteen version surfaces are aligned: `pyproject.toml`, `uv.lock`,
 `.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json` (metadata and
 entry), ten `skills/*/SKILL.md`, and `watch_skill.__version__`.
+
+## The last failure: a precondition asked at the wrong moment
+
+Two consecutive full suites on frozen HEAD `7ea8bda` gave **run 1: 1 failed**,
+**run 2: 0 failed**, with nothing changed in between. The failure:
+
+```
+tests/live/test_browser_receipt.py::test_every_declared_browser_channel_produces_evidence
+CaptureError: [live.browser.memory_pressure] 1086 MB is free; this session
+needs about 450 MB and 700 MB must remain for everything else
+```
+
+The governor was right again. The test's precondition,
+`require_verification_browser(1)`, computes exactly the governor's requirement
+— 450 MB for the browser plus a 700 MB reserve — and it had passed moments
+earlier. Then free memory fell 64 MB below the line before the browser started.
+
+**Not the scenario's own cost.** The pool takes its lease *before* spending
+memory, and measuring free memory at the precondition and again immediately
+before `start_live`, five times, gave a **0 MB** drop each time. The
+`FixtureApp` costs nothing measurable.
+
+**It is the machine.** Sampling free memory at 4 Hz through a run of
+`tests/live` and `tests/observer` (1673 samples over 420 s):
+
+| | |
+| --- | --- |
+| median free | 2073 MB |
+| range | 1058 – 2324 MB |
+| worst downward excursion within 1 s | **336 MB** |
+| worst downward excursion within 3 s | 546 MB |
+| worst downward excursion within 5 s | 640 MB |
+
+That rules out the obvious fix. A safety margin on the precondition would need
+to exceed ~640 MB to cover a five-second excursion, and 640 MB on top of the
+governor's own 1150 MB requirement means the test never runs on a 7.9 GB host.
+Making a race rarer by an unmeasurable amount, at the cost of never running the
+test, is not a fix.
+
+**Fix.** Ask the question once, where it is actually decided. A memory refusal
+that escapes a test is the same condition the precondition already skips for,
+so `pytest_runtest_setup` and `pytest_runtest_call` wrappers in
+`tests/conftest.py` record it as a skip carrying the governor's own numbers.
+
+The guard matters as much as the fix: a refusal is only converted when its
+`required_mb` is within 2× the governor's configured requirement. If a browser
+ever starts demanding materially more than the pool is configured for, that is
+a regression, and it still fails. A regression hiding behind a resource skip
+would be worse than the flake it replaces.
+
+`tests/live/test_memory_refusal_skip.py` — 9 tests — pins both halves,
+including four that run a real pytest subprocess on a generated refusing test
+and assert the outcome is `skipped` for a busy machine and `failed` / `error`
+for a ruinous cost. A hook that was defined but never registered would pass
+every unit test while the suite kept failing, so the wiring is proved
+separately from the logic.
