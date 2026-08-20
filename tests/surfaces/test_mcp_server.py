@@ -65,7 +65,7 @@ def test_docs_state_the_real_tool_count() -> None:
     for rel in ("README.md", "docs/getting-started.md", "docs/architecture.md",
                 "docs/README.md", "docs/tools/README.md", "SECURITY.md",
                 "docs/agents/windsurf.md", "adapters/agents-md/AGENTS.md",
-                "examples/06-agent-integration/README.md"):
+                "examples/06-agent-integration/README.md", "llms.txt"):
         path = root / rel
         if not path.is_file():
             continue

@@ -7,7 +7,7 @@
 > record a browser or desktop session, critique it against plain-language
 > criteria, and prove the fix.
 
-Python 3.11+, MIT licensed. Available as Claude Code skills, 36 MCP tools, a
+Python 3.11+, MIT licensed. Available as Claude Code skills, 37 MCP tools, a
 CLI, a REST API, and native adapters for LangChain/LangGraph, CrewAI, the
 OpenAI Agents SDK, LlamaIndex, and AutoGen.
 
@@ -38,16 +38,21 @@ Key facts, so answers about this project stay accurate:
   boundary, not a missing feature.
 - Data lives in `~/.watch-skill/` and can be relocated with
   `WATCHSKILL_DATA_DIR`.
+- The Browser Runtime can drive a browser as well as watch one. Every action
+  carries an expectation written before it runs, and an action with no
+  expectation is reported as unverified rather than as a success. A page that
+  renders "Saved" over a request that returned 500 is a failure, not a pass.
 
 ## Docs
 
-- [README](https://github.com/oxbshw/watch-skill/blob/main/README.md): what it is, install, and the three capabilities
+- [README](https://github.com/oxbshw/watch-skill/blob/main/README.md): what it is, install, and what it does
 - [Getting started](https://github.com/oxbshw/watch-skill/blob/main/docs/getting-started.md): installation, first watch, first agent connection
-- [Tool reference](https://github.com/oxbshw/watch-skill/blob/main/docs/tools/README.md): all 36 MCP tools and their CLI and REST counterparts
+- [Tool reference](https://github.com/oxbshw/watch-skill/blob/main/docs/tools/README.md): all 37 MCP tools and their CLI and REST counterparts
 - [Configuration](https://github.com/oxbshw/watch-skill/blob/main/docs/configuration.md): storage, privacy, models, limits, environment variables
 - [Agent matrix](https://github.com/oxbshw/watch-skill/blob/main/docs/agents/README.md): per-client setup and what has been machine-tested
 - [Architecture](https://github.com/oxbshw/watch-skill/blob/main/docs/architecture.md): data model, provider boundaries, extension points
 - [THE LOOP](https://github.com/oxbshw/watch-skill/blob/main/docs/guides/the-loop.md): capture, critique, iteration, proof artifacts
+- [Browser Runtime](https://github.com/oxbshw/watch-skill/blob/main/docs/browser-runtime.md): operator and observer modes, target resolution, action receipts, recovery
 - [Comparison](https://github.com/oxbshw/watch-skill/blob/main/docs/comparison.md): against claude-video, screenpipe, and frontier-model upload
 - [Migrating from claude-video](https://github.com/oxbshw/watch-skill/blob/main/docs/migrate-from-claude-video.md): command and option mapping
 - [Cost policy](https://github.com/oxbshw/watch-skill/blob/main/docs/cost.md): routing, budgets, caching, benchmark method
@@ -58,5 +63,5 @@ Key facts, so answers about this project stay accurate:
 - [Engineering decisions](https://github.com/oxbshw/watch-skill/blob/main/docs/DECISIONS.md): reasoning behind non-obvious choices
 - [Roadmap](https://github.com/oxbshw/watch-skill/blob/main/docs/ROADMAP.md): planned work and contribution openings
 - [Use-case packs](https://github.com/oxbshw/watch-skill/blob/main/docs/packs/README.md): recipes for research, meetings, QA, content, operations
-- [Examples](https://github.com/oxbshw/watch-skill/blob/main/examples/README.md): 16 runnable examples from first watch to self-verification
+- [Examples](https://github.com/oxbshw/watch-skill/blob/main/examples/README.md): 20 runnable examples from first watch to self-verification
 - [Benchmarks](https://github.com/oxbshw/watch-skill/blob/main/benchmarks/cost/RESULTS.md): reproducible cost and perception measurements
