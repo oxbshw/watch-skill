@@ -50,7 +50,7 @@ uvx --from "watch-skill[standard]" watch-skill setup
 Available as Claude Code skills, 37 MCP tools, a CLI, a REST API, and native adapters for
 LangChain/LangGraph, CrewAI, the OpenAI Agents SDK, LlamaIndex, and AutoGen.
 
-Three things it will not do, because each one is a way of being confidently wrong:
+Four things it will not do, because each one is a way of being confidently wrong:
 
 - **Answer from a video that changed.** Identity follows the bytes, not the path. Overwrite
   `demo.mp4` and the next question returns `stale`, not yesterday's frames.
