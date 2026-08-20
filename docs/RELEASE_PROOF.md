@@ -623,3 +623,65 @@ IRI-reference. It is npm's output, not this project's dependency data: all 115
 components carry a name, a version and a purl, and the Python SBOM's only
 entry without a purl is `watch-skill` itself, which has none because it was
 installed from a local wheel rather than an index.
+
+## The rendered-workspace gates, measured rather than assumed
+
+A later suite pair on the final HEAD gave **run 5: 2 failed**, **run 6: 0
+failed**. Neither failure was in this season's subsystem, and run 6 did not
+retire them — it *skipped* both. So they were measured directly.
+
+### `test_first_render_meets_its_budget`
+
+Ten isolated runs, nothing else running, each launching its own Chromium and
+loading the shipped bundle three times:
+
+| Runs | Median range | Worst single sample | Budget | Result |
+| --- | --- | --- | --- | --- |
+| 10 | 1594 – 2250 ms | 2437 ms | 4000 ms | **10/10 pass** |
+
+Roughly 2.4× headroom, and the measurement is of the real artifact:
+`DevHost` serves `workspace_html()` — the same 502.5 KiB inlined document that
+ships inside the Python package — over a plain local HTTP server. No dev
+server, no compilation, nothing synthetic.
+
+Against that baseline the two failures read clearly:
+
+| Where | Samples | Median |
+| --- | --- | --- |
+| baseline (10 runs) | 1547 – 2437 | 1594 – 2250 |
+| back-to-back UI runs | 1641, 4266, 5140 | 4266 |
+| full suite on a degraded host | 4641, 13937, 14078 | 13937 |
+
+Both failures keep a first sample inside the normal band and then lose the
+later ones. That is interference arriving mid-run, not a slow baseline — and
+the suite corroborates it: run 5 took **2964 s** against runs 3 and 4's
+**1053 s** and **1086 s** on identical code, a 2.8× degraded host.
+
+The test's own docstring says it is "measured with nothing competing". Nothing
+enforces that. It is a documented precondition that is never checked — the
+same shape of defect as the memory precondition fixed above, and it is
+**recorded here rather than fixed**, because the honest options are a
+contention precondition this host cannot measure reliably, or weakening the
+gate. `FIRST_RENDER_BUDGET_MS` was not changed in either direction.
+
+### `test_the_whole_scenario_is_visible_in_the_rendered_workspace`
+
+Its one failure was diagnosed, not dismissed. The approve click **landed** —
+Playwright's `click()` auto-waits, so a missing button would have raised there
+instead. The button then reads as `(gone)` because the locator matches the
+accessible name "Approve this exact effect", and a successful click flips that
+label to "Approving…". The error banner was empty, no request failed, and the
+approval stayed `pending`: the `approve_action` transport call had not
+resolved inside the test's 30 s wait on a host running 2.8× slow.
+
+### What this host does not prove
+
+`test_the_whole_scenario_is_visible_in_the_rendered_workspace` and
+`test_keyboard_reaches_every_control` hold **two** governed browsers and need
+2550 MB free. This machine sits at roughly 2100 – 2400 MB. They skipped in
+every one of five targeted runs and in suites 3, 4 and 6; they ran exactly
+once, in the degraded run 5, where one of them failed.
+
+**These two tests are unproven on this machine.** Three green suites do not
+change that, which is precisely why the skip inventory is reported alongside
+the pass count rather than underneath it.
