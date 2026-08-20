@@ -5,8 +5,8 @@ before the scenario starts. The governor checks again, for real, when the
 browser starts. Both read machine-wide free memory, and that number moves --
 measured at up to 336 MB in one second and 546 MB in three during a run of
 `tests/live` and `tests/observer`. So the precondition can pass and the
-acquisition still be refused, which is how a full suite failed on run 1 and
-passed on run 2 with nothing changed.
+acquisition still be refused, which makes a browser test fail on a busy
+machine and pass on an idle one with nothing changed.
 
 These tests pin the two halves of the answer: the refusal that means "this
 machine is busy" is skipped with the governor's own numbers, and the refusal

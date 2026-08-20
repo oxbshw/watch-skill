@@ -2,21 +2,12 @@
 
 ## v1.3.0rc2 — unreleased
 
+Nothing in 1.3.0 has shipped yet; this entry covers the whole 1.3.0 line.
+
 Adds operator mode: Watch Skill can drive a browser itself, and holds its own
 actions to the same standard it holds anyone else's. Additive — no CLI command,
 MCP tool or schema changed, and `watch_skill.operate` is a new package rather
 than a modification of an existing one.
-
-### Fixed
-
-- A browser test could fail instead of skip when the machine was momentarily
-  busy. The precondition and the resource governor both read machine-wide free
-  memory, seconds apart, and that number moves by up to 336 MB in a second
-  under suite load — so a precondition that passed could still be refused at
-  acquisition. The question is now asked once, where it is decided, and a
-  refusal is recorded as a resource skip with the governor's own numbers.
-  A refusal demanding more than twice the configured requirement still fails,
-  so a regression cannot hide behind the skip.
 
 ### Browser Runtime
 
@@ -58,24 +49,10 @@ local fixture site built to fail the way real sites fail. Each task carries a
 ground-truth predicate read from the site's server state rather than from
 anything the browser reported.
 
-On the reference machine: correct-verdict rate 1.0, **false-success rate 0.0**,
-first-attempt success 0.667, recovery success 0.5, median latency 11.2 s.
-
-### Requirements
-
-Python 3.11+. The browser paths need roughly 1.2 GB of free memory for a single
-session; the resource governor refuses a browser it cannot afford and says how
-much was short.
-
-
-## v1.3.0rc1 — unreleased
-
-Backward compatible. No public contract changed: `WORKSPACE_SCHEMA_VERSION` and
-`LIVE_SCHEMA_VERSION` are both still `1`, the MCP Apps resource still declares
-`text/html;profile=mcp-app` at `ui://watch-skill/workspace` against SDK 1.7.5,
-and every CLI command and MCP tool that existed in v1.2.0 still exists. The CLI
-gained `capture-capabilities` and two other commands; the MCP surface gained
-`watch_workspace` and `workspace_snapshot`. Nothing was removed or renamed.
+Across those nine tasks every ground-truth verdict was classified correctly and
+no false-success verdict was produced. First-attempt success 0.667, recovery
+success 0.5, median latency 11.2 s on an 8 GiB CPU-only host. Nine tasks on one
+synthetic site is a regression gate, not a claim about real websites.
 
 ### One behaviour change worth reading
 
@@ -107,18 +84,13 @@ python -c "from faster_whisper import WhisperModel; WhisperModel('tiny')"
 - **`Pipeline.stop(timeout=T)` cost up to 3T.** The timeout was applied to each
   stage thread in turn rather than as one deadline.
 
-### Requirements
-
-Python 3.11+. The live browser and Observer verification paths need roughly
-2 GB of free memory: the resource governor refuses a browser it cannot afford
-and says exactly how much was short.
-
 
 ### A real model inside a live session, and late is not the same as wrong
 
 The external vision worker proved a model could read a picture. It can now say
-something about a *running* session. On this hardware an interpretation takes
-roughly 50 seconds, and taking that number seriously is most of the change.
+something about a *running* session. On an 8 GiB CPU-only host an
+interpretation takes tens of seconds — 47.1 s p50 idle, up to 81.8 s under
+load — and taking that number seriously is most of the change.
 
 - **A late result is never discarded.** It is persisted, queryable, and citable
   against the frame it describes. What lateness costs it is the present tense:
@@ -563,6 +535,22 @@ model, an empty description, and a judge that could not be called.
   RFC is open and the pull requests were closed unmerged — so the page
   documents the `/run` route through the CLI instead of pasting an
   `mcpServers` block that Aider would ignore.
+
+### Requirements
+
+Python 3.11+. A single browser session needs roughly 1.2 GB of free memory, and
+the live browser plus Observer verification paths need roughly 2 GB because
+they hold two browsers at once. The resource governor refuses a browser it
+cannot afford and reports how much was short.
+
+
+Backward compatible. No public contract changed: `WORKSPACE_SCHEMA_VERSION` and
+`LIVE_SCHEMA_VERSION` are both still `1`, the MCP Apps resource still declares
+`text/html;profile=mcp-app` at `ui://watch-skill/workspace` against SDK 1.7.5,
+and every CLI command and MCP tool that existed in v1.2.0 still exists. The CLI
+gained `capture-capabilities` and two other commands; the MCP surface gained
+`watch_workspace` and `workspace_snapshot`. Nothing was removed or renamed.
+
 
 ## v1.2.0 — 2026-08-08
 

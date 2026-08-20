@@ -366,10 +366,9 @@ class RunningSession:
         if observation.degraded:
             summary = f"semantic reading unavailable: {observation.degraded_reason}"
         elif observation.freshness != "current_state":
-            # The lateness goes in the sentence a human reads, not only in a
-            # field they have to go looking for. A minute-old reading
-            # presented as plain narration is the whole failure mode this
-            # season exists to avoid.
+            # The lateness goes in the sentence a human reads, not only in
+            # a field they have to go looking for. A minute-old reading
+            # presented as plain narration is the failure this guards against.
             summary = (f"[{observation.freshness}, "
                        f"{observation.late_by_seconds:.0f}s late] {summary}")
         self._append(LiveEvent(

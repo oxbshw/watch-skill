@@ -290,10 +290,10 @@ def test_the_whole_scenario_is_visible_in_the_rendered_workspace(
                     session_id=session.session_id)
                 run = advance(run.run_id, contract)
                 assert run.state is ObserverState.AWAITING_APPROVAL, (
-                    # The enum alone says nothing. A run that failed here has
-                    # a reason, and printing only "FAILED is not
-                    # AWAITING_APPROVAL" is what kept an intermittent failure
-                    # undiagnosed for a season.
+                    # The enum alone says nothing. A run that failed here
+                    # has a reason, and reporting only "FAILED is not
+                    # AWAITING_APPROVAL" leaves an intermittent failure with
+                    # no evidence to diagnose it from.
                     f"observer run {run.run_id} is {run.state.value}, not "
                     f"awaiting approval.\n"
                     f"  stop_reason: {run.stop_reason!r}\n"
@@ -405,9 +405,9 @@ def test_the_whole_scenario_is_visible_in_the_rendered_workspace(
                 page.wait_for_timeout(250)
                 page.screenshot(path=str(ARTIFACTS / "workspace-narrow.png"))
 
-                # Every console error, with the network failures that explain
-                # them. Truncating this to three entries is how an
-                # intermittent failure here stayed undiagnosed for a season.
+                # Every console error, with the network failures that
+                # explain them. Truncating the list hides the one entry that
+                # explains an intermittent failure.
                 logged = [e for e in console_errors if "favicon" not in e]
                 assert not logged, (
                     f"the workspace logged {len(logged)} error(s):\n"

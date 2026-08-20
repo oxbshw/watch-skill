@@ -111,3 +111,28 @@ def test_every_doc_is_reachable_from_an_index() -> None:
         and not SKIP_PARTS & set(path.parts)
     ]
     assert not orphans, f"documentation nothing links to: {orphans}"
+
+
+def test_the_readme_lists_every_example() -> None:
+    """The README's example table drifted three behind the directory.
+
+    It also claimed "all 16 examples" while twenty existed. Neither the link
+    checker nor the catalog noticed, because every link that was present
+    resolved -- the failure was the ones that were absent.
+    """
+    import re
+
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    on_disk = {p.name for p in (ROOT / "examples").iterdir()
+               if p.is_dir() and p.name[:2].isdigit()}
+    linked = set(re.findall(r"examples/(\d\d-[a-z0-9-]+)", readme))
+
+    assert not on_disk - linked, (
+        f"examples missing from the README table: {sorted(on_disk - linked)}")
+    assert not linked - on_disk, (
+        f"README links an example that does not exist: {sorted(linked - on_disk)}")
+
+    claimed = re.search(r"all (\d+) examples", readme)
+    assert claimed, "the README no longer states how many examples there are"
+    assert int(claimed.group(1)) == len(on_disk), (
+        f"README says {claimed.group(1)} examples; {len(on_disk)} exist")

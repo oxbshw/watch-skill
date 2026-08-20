@@ -389,11 +389,12 @@ self-verification.
 | Learn the core | [01 Watch and ask](examples/01-watch-and-ask), [02 Focused moment](examples/02-focused-moment), [03 Cross-video search](examples/03-cross-video-search) |
 | Build with agents | [06 MCP and REST](examples/06-agent-integration), [09 Framework adapters](examples/09-framework-adapters), [15 Private offline workflow](examples/15-private-offline-workflow) |
 | Understand and organize | [05 Multilingual Arabic](examples/05-multilingual-arabic), [10 Structured extraction](examples/10-structured-extraction), [11 Batch mode](examples/11-batch-mode), [12 Library memory](examples/12-library-memory) |
-| Verify and improve | [04 UI loop](examples/04-ui-loop), [07 Lessons and stats](examples/07-lessons-and-stats), [08 Loop types](examples/08-loop-types), [13 Self-improvement](examples/13-self-improvement), [14 Browser verification](examples/14-browser-verification), [17 Freshness and offline](examples/17-freshness-and-offline) |
+| Verify and improve | [04 UI loop](examples/04-ui-loop), [07 Lessons and stats](examples/07-lessons-and-stats), [08 Loop types](examples/08-loop-types), [13 Self-improvement](examples/13-self-improvement), [14 Browser verification](examples/14-browser-verification), [17 Freshness and offline](examples/17-freshness-and-offline), [20 Observer loop](examples/20-observer-loop) |
+| Watch live | [18 Live watch](examples/18-live-watch), [19 Live browser](examples/19-live-browser) |
 | Share results | [16 Export a self-contained viewer](examples/16-shareable-viewer) |
 
 See the [example catalog](examples/README.md) for prerequisites, expected output, and a
-recommended path through all 16 examples.
+recommended path through all 20 examples.
 
 ## Architecture
 

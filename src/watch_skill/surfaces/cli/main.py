@@ -729,7 +729,7 @@ def stats(
         print(f"  (prices as of {price_table()['as_of']} — src/watch_skill/vision/prices.json)")
 
 
-bench_app = typer.Typer(help="Benchmarks with receipts (measured on THIS machine).")
+bench_app = typer.Typer(help="Benchmarks with receipts (measured on this machine).")
 app.add_typer(bench_app, name="bench")
 
 
