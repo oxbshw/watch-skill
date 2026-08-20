@@ -187,13 +187,15 @@ Vision is a fallback, not the default mechanism.
 | 0 | negligible | structured browser state — role, name, value, enabled |
 | 1 | low | OCR on a captured frame |
 | 2 | medium | a targeted screenshot region |
-| 3 | ~89 s on this hardware | local VLM inference |
+| 3 | tens of seconds | local VLM inference |
 
-Measured local VLM latency is roughly 89 seconds per inference on the reference
-machine, which is why tier 3 must never sit in the path of an ordinary click.
-Nothing in the operator loop calls it; it enriches evidence asynchronously
-through the existing live-session semantic path, where a late result is
-classified by freshness rather than blocking an action.
+On the reference host a local VLM inference has a p50 of 47.1 s idle and
+48.9–81.8 s while a test suite competes for the same CPU
+([measurements](vlm-performance.md)). Either number is three orders of magnitude
+above a target lookup, which is why tier 3 never sits in the path of an
+ordinary click. Nothing in the operator loop calls it. It enriches evidence
+asynchronously through the live-session semantic path, where a late reading is
+classified by freshness rather than allowed to block an action.
 
 ## Benchmark
 

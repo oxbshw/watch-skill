@@ -15,67 +15,67 @@ benchmark tables and the examples' recorded runs). Everything below
 builds on them without breaking the contracts: engine agent-agnostic,
 MCP tool names stable, forward migrations only.
 
-## Known gaps in the current tree
+## Status of the current tree
 
-Stated plainly rather than left implicit. Each of these is a design that is
-not built yet, not a feature that half-works.
+Stated plainly rather than left implicit. Anything listed as planned is a
+design that is not built, not a feature that half-works.
+
+### Available
+
+These shipped and carry evidence. They are listed because earlier revisions of
+this roadmap described them as gaps.
+
+- **Live browser sessions** emit synchronized pixel and structured
+  (DOM, console, network) evidence — [live browser](guides/live-browser.md).
+- **Browser Runtime operator mode** drives a browser and verifies its own
+  actions, sharing one browser subsystem with observer mode —
+  [browser runtime](browser-runtime.md).
+- **Live triggers and the Observer Loop** evaluate declared conditions against
+  a running session — [observer loop](guides/observer-loop.md).
+- **The MCP App** ships as a `ui://` resource with app-only tools —
+  [the MCP App](guides/mcp-app.md).
+- **Semantic live vision has a real-model result.** A local VLM produces
+  observations inside a running session, persisted with provenance and readable
+  from a fresh process — [VLM performance](vlm-performance.md) has the
+  latency, memory, and failure modes.
+
+### Known gaps
 
 - **Live speech recognition needs the optional model.** Audio capture,
   chunking, timestamping and event publication run on every test. Recognition
   uses faster-whisper, an optional extra; without it a session reports
   `asr: degraded, model_unavailable` and continues visually. Real recognition
-  now has an opt-in gate (`WATCHSKILL_TEST_REAL_ASR=1`) measured against a
-  locally synthesized fixture: **WER 0.0 over 20 reference words, 0.27x
-  realtime, faster-whisper tiny int8 on CPU.** That is clean synthetic speech,
-  an easier problem than a real recording — see [testing.md](testing.md).
-- **Semantic live vision has no real-model result.** The selector, schema
-  validation, circuit breaker, staleness guard and advisory labelling are
-  tested with a deterministic backend. `watch-skill models bootstrap-vlm` will
-  fetch SmolVLM2-500M-Video-Instruct on a machine that can hold it; this one
-  cannot — 3.5 GiB free disk against 8 required, 1.6 GiB available RAM against
-  3, and neither torch nor transformers installed. No VLM has been run here,
-  so "the agent understands what it sees" is **not** a claim this build has
-  earned.
-- **The live browser source is not built.** Recorded browser capture works
-  (`capture`, `loop_start`); a live browser session emitting synchronized
-  pixel and structured (DOM/console/network) evidence does not exist yet.
-- **Live triggers and the Observer Loop are not built.** No deterministic or
-  semantic trigger evaluation exists, so nothing watches a live session for a
-  declared condition.
-- **Live capture is file-replay and stream only.** Browser, screen, window and
-  camera work for *recorded* capture (`capture`, `loop_start`) and are not
-  wired as live sources. `capture-capabilities` reports this per kind rather
-  than leaving it to be discovered at the failure.
-- **The MCP UI is a self-contained HTML viewer, not an MCP App.** The official
-  MCP Apps extension (`ui://` resources, app-only tools, interactive live
-  player) is not implemented.
+  has an opt-in gate (`WATCHSKILL_TEST_REAL_ASR=1`) measured against a locally
+  synthesized fixture: **WER 0.0 over 20 reference words, 0.27x realtime,
+  faster-whisper tiny int8 on CPU.** That is clean synthetic speech, an easier
+  problem than a real recording — see [testing.md](testing.md).
+- **Local VLM inference is slow on CPU-only hardware.** Tens of seconds per
+  inference on the 8 GiB reference class. It is asynchronous evidence, never an
+  interactive path, and a session without the model continues without it.
+- **Some verification check types are still absent.** DOM locator, browser
+  console, and live evidence assertions exist. Accessibility assertions,
+  failed-request assertions, and test-report ingestion are designed and not
+  built — see [verification.md](verification.md). They are missing rather than
+  stubbed, because a check that always passes is worse than no check.
+- **`remote_attested` is defined and not implemented**, on purpose. See
+  [DECISIONS.md](DECISIONS.md).
+- **Capture is not machine-tested off Windows.**
+  `watch-skill capture-capabilities` reports every kind with how its answer was
+  established, so nothing claims support it has not earned — macOS screen is
+  `degraded` (ScreenCaptureKit unimplemented, permission unprobeable) and
+  Wayland is `unavailable` (the PipeWire/portal path does not exist). Detection
+  is tested in CI on every platform; hardware capture is not, because the
+  runners have no camera, microphone, or desktop session. See
+  [capture-capabilities.md](capture-capabilities.md).
 - **The ten skills are not consolidated.** `benchmarks/skill_tokens.py`
   measures the current cost — 1,259 discovery tokens every session across ten
   skills, 5,232 body tokens total — and the four-skill progressive-disclosure
-  design is not built. The number is a baseline, not a result.
+  design is not built. The overlap between `watch` / `watching-videos` /
+  `asking-with-evidence` / `video-memory` is real and unaddressed. The number
+  is a baseline, not a result.
 - **There is no plugin entry-point SDK, TypeScript SDK, or adoption
   analytics.** Backends are internal protocols; external plugins cannot
   register.
-- **Capture is still not machine-tested off Windows.**
-  `watch-skill capture-capabilities` now reports every kind with how its
-  answer was established, so nothing claims support it has not earned — macOS
-  screen is `degraded` (ScreenCaptureKit unimplemented, permission unprobeable)
-  and Wayland is `unavailable` (the PipeWire/portal path does not exist here).
-  Detection is tested in CI on every platform; actual hardware capture is not,
-  because the runners have no camera, microphone, or desktop session. See
-  [capture-capabilities.md](capture-capabilities.md).
-- **Verification check types stop where they can be deterministic.** DOM
-  locator, accessibility, browser-console and failed-request assertions, and
-  test-report ingestion are designed but absent — see
-  [verification.md](verification.md). They are missing rather than stubbed,
-  because a check that always passes is worse than no check.
-- **`remote_attested` is defined and not implemented**, on purpose. See
-  [DECISIONS.md](DECISIONS.md).
-- **Skill token footprint is measured, not yet reduced.** Ten skills,
-  23,581 bytes, ~1,140 metadata tokens at discovery and ~4,717 body tokens if
-  every skill loads. No progressive disclosure is in use. The overlap between
-  `watch` / `watching-videos` / `asking-with-evidence` / `video-memory` is
-  real and unaddressed.
 
 ## v1.1 candidates
 

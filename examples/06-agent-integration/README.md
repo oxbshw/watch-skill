@@ -6,7 +6,7 @@ this — `watch-skill setup` configures every supported agent automatically
 agent **builders**.
 
 `agent_integration.py` drives the MCP server exactly the way an agent
-framework does: connect, discover the 13 tools, call them. It uses the
+framework does: connect, discover the 37 tools, call them. It uses the
 in-process FastMCP client (same protocol as a spawned stdio server), so it
 runs offline against whatever is already indexed.
 
@@ -21,7 +21,7 @@ uv run --no-sync python examples/06-agent-integration/agent_integration.py
 Real run on this machine (trimmed):
 
 ```
-connected: 13 tools exposed
+connected: 37 tools exposed
   - watch_video: FIRST LOOK at any video — use when given a video you have NOT analyzed
   - ask_video: ANY follow-up question about a video you (or anyone) already watched —
   - get_moment: Zoom into ONE SPECIFIC MOMENT of an indexed video — use when the user

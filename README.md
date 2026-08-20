@@ -45,6 +45,7 @@ uvx --from "watch-skill[standard]" watch-skill setup
 | **Watch live** | A session that reports what changed **while the source is still playing** — bounded queues, counted drops, cursor-addressed events, and a rolling buffer that pins the evidence around each one. [Guide](docs/live.md) |
 | **Remember** | A persistent, searchable index with timestamp citations, hybrid retrieval, cross-video synthesis, and reusable lessons. |
 | **Verify** | A capture → critique → fix → re-capture loop for browser flows, interfaces, generated video, gameplay, and monitored streams — with deterministic contracts deciding pass or fail. |
+| **Operate** | Drive a browser and prove the effect of each action — deterministic target resolution, per-step receipts, and verdicts that reject a page reporting success over a failed request. [Guide](docs/browser-runtime.md) |
 
 Available as Claude Code skills, 37 MCP tools, a CLI, a REST API, and native adapters for
 LangChain/LangGraph, CrewAI, the OpenAI Agents SDK, LlamaIndex, and AutoGen.
@@ -263,53 +264,12 @@ npx skills add oxbshw/watch-skill --list
 | **Native Python tools** | [LangChain/LangGraph, CrewAI, OpenAI Agents SDK, LlamaIndex, and AutoGen](docs/agents/frameworks.md) |
 | **HTTP** | Vercel AI SDK, n8n, and any client that can call REST/OpenAPI |
 
-Skills and MCP complement each other: skills carry the judgement about when video
-is worth watching, MCP carries the 37 tools. Installing both is the full setup, and
-`watch-skill setup` does it.
-
 The [full compatibility matrix](docs/agents/README.md) separates machine-tested,
 machine-configured, and documentation-verified integrations. If your agent is missing,
 the [adapter template](templates/agent-adapter/README.md) provides a short contribution
 path.
 
-## Common workflows
-
-### Build a searchable video library
-
-```bash
-watch-skill batch ./recordings --limit 50
-watch-skill library overview
-watch-skill library ask "What did the team decide about authentication?"
-```
-
-`library ask` synthesizes evidence across videos and retains per-video timestamp
-provenance. The [library example](examples/12-library-memory/) demonstrates a question
-whose answer is distributed across four clips.
-
-### Verify an agent's browser work
-
-```bash
-watch-skill loop start \
-  --source "browser:http://127.0.0.1:3000" \
-  --criteria "Checkout completes and the total is always a valid currency amount"
-```
-
-The loop captures the full interaction, critiques failures, and records the before/after
-comparison once the agent applies a fix — the run shown at the top of this page.
-[Example 14](examples/14-browser-verification/) walks through that transient `$NaN` bug.
-
-The critique is one model's reading of the recording. To make success a decision rather
-than an opinion, attach deterministic checks:
-
-```bash
-watch-skill verify run checkout-contract.json --dir .
-```
-
-`pass` requires every **required** check to pass. A check that fails, times out, or never
-runs makes the run `inconclusive` — never a pass. See
-[Verification](docs/verification.md).
-
-### Drive the browser yourself
+## Browser Runtime
 
 Watch Skill has one browser subsystem with two modes. *Observer* mode watches
 someone else work and verifies the result. *Operator* mode does the work and
@@ -363,7 +323,52 @@ python -m watch_skill.operate.benchmark --out build/benchmark
 
 It scores **false-success rate** — tasks where the runtime claimed the goal was
 met and the server disagrees — because task success rate on its own counts a
-confident wrong answer as a win.
+confident wrong answer as a win. Ground truth comes from the fixture server's
+own state, not from anything the browser reported.
+
+On that nine-task fixture benchmark every ground-truth verdict was classified
+correctly and no false-success verdict was produced. Nine tasks on one
+synthetic site is a regression gate rather than a capability claim: it does not
+cover real websites, authentication, or shadow DOM, and no other tool was
+measured under the same method. [Full method and results](docs/release-proof.md)
+and the [design](docs/browser-runtime.md).
+
+## Common workflows
+
+### Build a searchable video library
+
+```bash
+watch-skill batch ./recordings --limit 50
+watch-skill library overview
+watch-skill library ask "What did the team decide about authentication?"
+```
+
+`library ask` synthesizes evidence across videos and retains per-video timestamp
+provenance. The [library example](examples/12-library-memory/) demonstrates a question
+whose answer is distributed across four clips.
+
+### Verify an agent's browser work
+
+```bash
+watch-skill loop start \
+  --source "browser:http://127.0.0.1:3000" \
+  --criteria "Checkout completes and the total is always a valid currency amount"
+```
+
+The loop captures the full interaction, critiques failures, and records the before/after
+comparison once the agent applies a fix — the run shown at the top of this page.
+[Example 14](examples/14-browser-verification/) walks through that transient `$NaN` bug.
+
+The critique is one model's reading of the recording. To make success a decision rather
+than an opinion, attach deterministic checks:
+
+```bash
+watch-skill verify run checkout-contract.json --dir .
+```
+
+`pass` requires every **required** check to pass. A check that fails, times out, or never
+runs makes the run `inconclusive` — never a pass. See
+[Verification](docs/verification.md).
 
 ### Export an offline report
 

@@ -1,0 +1,224 @@
+# Release proof
+
+Evidence for the current release candidate: what was measured, on what, and
+what the measurements do not cover. Every figure here comes from a run on the
+reference host described below. Nothing is estimated.
+
+Historical debugging lives in commit history. This page records the final
+artifact.
+
+## Test host
+
+Measurements are hardware-bound, so the class of machine is part of the result.
+
+| | |
+|---|---|
+| CPU | dual-core x86-64 laptop processor, ~2.6 GHz, 4 threads |
+| RAM | 8 GiB |
+| GPU | integrated graphics, no CUDA — CPU-only inference |
+| OS | Windows 10 |
+| Python | 3.11 |
+
+A modest machine is deliberate. The browser governor, the memory preconditions,
+and the model latency figures are only interesting where memory and CPU are
+actually scarce; on a generous host every admission check passes and proves
+nothing. Expect faster numbers on modern hardware, and read the latency figures
+as an upper bound rather than a target.
+
+## Method
+
+Test counts come from the JUnit XML pytest writes, read by
+`scripts/test_report.py`. Progress characters in terminal output are not a data
+format — they wrap and carry percentage columns, and counting them produced
+wrong totals in two earlier reports.
+
+```bash
+uv run pytest --junitxml=results.xml
+uv run python scripts/test_report.py results.xml --skips
+```
+
+## Test results
+
+Two consecutive full suites on the same frozen commit, no changes between them:
+
+| Run | Collected | Passed | Failed | Skipped | Wall |
+|---|---|---|---|---|---|
+| 1 | 1513 | 1491 | 0 | 22 | 1690 s |
+| 2 | 1513 | 1491 | 0 | 22 | 1457 s |
+
+Both runs exercised the resource-sensitive scenarios rather than skipping them:
+the live browser capability receipt, the workspace first-render budget, both
+two-browser workspace scenarios, and all 24 browser runtime tests passed in
+each run.
+
+### Skips
+
+All 22 are deliberate. Twenty are opt-in gates for real models, which are off
+by default because a suite that silently downloads several hundred megabytes is
+not a suite that can be trusted to be offline. See [testing tiers](testing.md).
+
+| Count | Reason |
+|---|---|
+| 8 | live VLM gate (`WATCHSKILL_TEST_REAL_VLM_LIVE`) |
+| 7 | ASR gate (`WATCHSKILL_TEST_REAL_ASR`) |
+| 3 | no local vision model reachable |
+| 1 | VLM gate (`WATCHSKILL_TEST_REAL_VLM`) |
+| 1 | local ASR recognition (`WATCHSKILL_TEST_LOCAL_ASR`) |
+| 1 | rendered VLM gate (`WATCHSKILL_TEST_REAL_VLM_LIVE`) |
+| 1 | POSIX permission bits — Linux-only, covered by the `ubuntu-latest` CI job |
+
+No test was skipped for want of memory in either run.
+
+## Browser runtime
+
+Seventeen capability tests drive a real Chromium against the bundled fixture
+site. The behaviours worth naming:
+
+| Behaviour | Result |
+|---|---|
+| Accessible-name resolution | strategy `label`, confidence 0.93 |
+| Two matching elements, no explicit index | refused as ambiguous, not guessed |
+| Destructive action resolved below the 0.75 floor | refused |
+| Action carrying no expectation | `UNVERIFIED`, never `SUCCEEDED` |
+| Click that dispatches but changes nothing | `VERIFICATION_FAILED` |
+| Page renders "Saved" while `PATCH` returns 500 | rejected, request named in the receipt |
+| Intercepting modal | dismissed, retried, verified on attempt 2 |
+| Side-effecting action after failure | not retried; attempt stays 1 |
+| Injected instructions in page text | preserved as evidence, cannot act |
+
+### Stability
+
+`tests/operate/test_browser_runtime.py`, twenty isolated runs, fresh process
+each time: 20 executed, 20 passed, 0 failed, 0 leaked processes. Free memory
+across the campaign stayed flat. No Chromium, ffmpeg, or Playwright driver
+survived any run.
+
+## Benchmark
+
+```bash
+python -m watch_skill.operate.benchmark --out build/benchmark
+```
+
+Nine tasks across nine categories against a bundled local fixture site. Ground
+truth is read from the site's server state rather than from anything the
+browser reported, so a page that renders a false success cannot score one.
+
+| Metric | Value |
+|---|---|
+| correct_verdict_rate | 1.0 |
+| false_success_rate | 0.0 |
+| verified_task_success_rate | 0.667 |
+| first_attempt_success_rate | 0.667 |
+| recovery_success_rate | 0.5 |
+| mean steps / attempts per task | 2.33 / 3.0 |
+| median / p95 latency | 11.2 s / 19.9 s |
+
+Read as: on this nine-task fixture benchmark, every ground-truth verdict was
+classified correctly and no false-success verdict was produced. The remaining
+third of `verified_task_success_rate` is tasks designed to be refused — an
+ambiguous "Delete account" and a save whose request fails — where refusal is
+the correct answer and is scored as such.
+
+### What the benchmark does not establish
+
+Nine tasks on one synthetic site is a regression gate, not a capability claim.
+It does not measure performance on real websites, does not cover
+authentication, single-page-app routing, shadow DOM, or CAPTCHAs, and produces
+no comparison against any other tool. No competitor was measured under this
+methodology, so no comparison is offered.
+
+## Local model latency
+
+Measured on the reference host; full method in [VLM performance](vlm-performance.md).
+
+| | |
+|---|---|
+| Inference p50, idle machine | 47.1 s |
+| Inference range under concurrent test load | 48.9 – 81.8 s |
+| Worker spawn + model load, cold | 8.4 s |
+
+Both numbers are reported rather than averaged. The second is what a session on
+a working laptop actually experiences, and it is the reason local VLM inference
+never sits in the path of an interactive action.
+
+## Packaging
+
+| Check | Result |
+|---|---|
+| `ruff check .` | clean |
+| `tsc --noEmit`, `next build`, inline | clean |
+| Committed `workspace.html` vs a fresh build | byte-identical |
+| Wheel / sdist | 724 KB / 6.1 MB |
+| Clean-venv install from the wheel, CLI, `doctor` | pass |
+| Browser task driven from the installed wheel | pass |
+
+The installed-wheel check matters more than the import check: it runs a
+multi-step browser task from `site-packages` and requires both a verified
+success and a correctly rejected false success.
+
+## Security
+
+| Check | Result |
+|---|---|
+| Secret scan, repository | clean |
+| Secret scan, built wheel and sdist | clean |
+| `npm audit`, production and dev | 0 vulnerabilities |
+| Python audit, default and `[all]` closures | no known vulnerabilities |
+| Zero egress with provider keys present | pass |
+| Child-process credential redaction | pass |
+| CSP validation and remote-asset rejection | pass |
+| Prompt-injection boundary | pass |
+
+Dependency audits are resolved per declared extra from the built wheel rather
+than read off a development environment, because a development environment
+contains tooling the product does not ship.
+
+Three advisories affect optional integration extras and none is a package Watch
+Skill declares directly:
+
+| Extra | Package | Status |
+|---|---|---|
+| `diarize` | `lightning` | no fix published upstream |
+| `crewai` | `chromadb` | no fix published upstream |
+| `crewai` | `json-repair` | fix available upstream |
+
+`json-repair` is not pinned. Pinning a third-party framework's transitive
+dependency is how installs break later; the constraint is documented for anyone
+who needs it.
+
+### SBOM
+
+| SBOM | Format | Components | Validation |
+|---|---|---|---|
+| Python | CycloneDX 1.6 | 79 | valid |
+| JavaScript | CycloneDX 1.5 | 115 | one field fails strict validation |
+
+npm emits `git@github.com:...` as `cross-spawn`'s VCS reference, and CycloneDX
+1.5 requires an IRI there. The component data is correct; the serialization of
+one field is not.
+
+## Known limitations
+
+- **Two-browser scenarios need headroom.** Scenarios holding a live source and
+  a verifier at once require roughly 2550 MB free. On an 8 GiB host they skip
+  when the machine is busy, with the shortfall named.
+- **Local VLM inference is slow on CPU-only hardware.** Tens of seconds per
+  inference. It is asynchronous evidence, not an interactive path.
+- **The workspace first-render budget assumes an idle host.** The gate measures
+  4000 ms against a 1594–2250 ms median, but the measurement is sensitive to
+  whatever else the machine is doing.
+- **The Linux executable-bit test does not run on Windows.** It is covered by
+  the `ubuntu-latest` CI job.
+- **The benchmark fixture is synthetic.** See the scope note above.
+
+## Reproducing
+
+```bash
+uv sync --extra all
+uv run pytest --junitxml=results.xml
+uv run python scripts/test_report.py results.xml --skips
+
+uv run python -m watch_skill.operate.benchmark --out build/benchmark
+uv run pytest tests/operate/test_browser_runtime.py
+uv run python scripts/secret_scan.py
+```

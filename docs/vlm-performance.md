@@ -1,13 +1,14 @@
-# Real local VLM — model receipt
+# Local VLM performance
 
-The first real vision-model run in this project. Three previous seasons
-recorded it as environmentally blocked; a dedicated workspace on a drive with
-room, plus a CPU-only build, unblocked it.
+Measured behaviour of the local vision model: which revision, how long an
+inference takes, how much memory it needs, and the failure modes that only
+appeared once it ran inside a live session.
 
-Paths are recorded as **logical cache roles**, never machine paths. The
-workspace root is operator-chosen and passed through environment variables to
-child processes only — nothing global was modified, and nothing in this
-repository hard-codes a drive.
+All figures come from an 8 GiB CPU-only Windows host with no CUDA. Treat them
+as an upper bound; modern hardware is faster. Cache locations are recorded as
+logical roles rather than machine paths — the workspace root is chosen by the
+operator and passed to child processes through environment variables, and
+nothing in this repository hard-codes a drive.
 
 ## Model
 
@@ -77,7 +78,7 @@ latency lever available, and it is also the one that silently costs
 comprehension — the smaller input did not fail, it produced a confident wrong
 answer. **512 px is the floor for reading on-screen text with this model.**
 
-## Three things measured while wiring the model into a live session
+## Measurement notes
 
 ### An unpinned revision is a network call
 
@@ -129,7 +130,7 @@ Nothing about the model changed; the CPU it was sharing did. Both numbers are
 reported rather than averaged, because the second is what a real session on a
 working laptop actually experiences.
 
-## Four things that only showed up in a live session
+## Failure modes found in a live session
 
 The standalone worker measurements above are all correct and all optimistic.
 Putting the same model inside a running session surfaced four failures that a
@@ -187,10 +188,10 @@ webpage with a red and blue button."* Drawn instead with a scalable font at
 
 > A red screen with the words "ORDER FAILED" and "Total: NaN" in white.
 
-## Honest assessment
+## Assessment
 
-This is a **real model producing real observations**, not a stand-in. It is
-not production-quality on this hardware:
+The model produces real observations rather than a stand-in, and it is not
+production-quality on this class of hardware:
 
 - ~47 s per keyframe means it cannot follow raw capture at 2–3 fps. It can
   follow *selected keyframes* at roughly one per minute, which is what the
@@ -198,8 +199,9 @@ not production-quality on this hardware:
 - Output quality at 256 M is loose. It reads large text, gets colours and
   rough layout, and invents plausible words for small text ("Submitder",
   "Submitter" for "Submit order").
-- No ground-truth precision/recall/F1 was computed — that needs the labelled
-  fixture run, which has not been executed yet.
+- No ground-truth precision/recall/F1 is reported. Four labelled states on one
+  machine would produce a number with no statistical power; per-state
+  correctness is reported instead.
 
 ## Architecture
 

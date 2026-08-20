@@ -56,19 +56,41 @@ Runnable counterparts live in the [example catalog](../examples/README.md).
 
 ## Reference and design
 
-- [MCP tools](tools/README.md) documents all 23 public tools and their REST/CLI twins.
-- [Configuration](configuration.md) is the source of truth for `WATCHSKILL_*` settings.
-- [Testing tiers](testing.md) — what the offline suite proves, and what only a real model can
-- [Browser Runtime](browser-runtime.md) — operator and observer modes, target resolution, action receipts, recovery, and the false-success benchmark
-- [Live watching](live.md) — watch something as it happens: sources, bounded pipelines, cursors, finalisation
-- [Capture capabilities](capture-capabilities.md) — what this machine can actually record, and how each answer was established
-- [Architecture](architecture.md) describes boundaries, data flow, and extension points.
-- [Engineering decisions](DECISIONS.md) records the trade-offs behind those boundaries.
-- [Product completion ledger](SEASON_PRODUCT_COMPLETION.md) — what each slice built, what proved it, and what is still blocked.
-- [Release proof ledger](RELEASE_PROOF.md) — the collection diff, the root cause of the "UI flake", all 27 skip dispositions, security and accessibility gates, and the version recommendation.
-- [Real VLM receipt](VLM_RECEIPT.md) — the measured local vision model: revision, latency, memory, and the four failures only a live session showed.
-- [Workspace cleanup receipt](CLEANUP_RECEIPT.md) — what was removed to make room for the model environment, and what was deliberately kept.
-- [Benchmarks](../benchmarks/) contains methods, fixtures, and committed results.
+### Architecture
+
+- [Architecture](architecture.md) — boundaries, data flow, and extension points.
+- [Engineering decisions](DECISIONS.md) — the trade-offs behind those boundaries,
+  with the measurements that settled them.
+
+### Browser and verification
+
+- [Browser Runtime](browser-runtime.md) — operator and observer modes, target
+  resolution, action receipts, recovery, and the false-success benchmark.
+- [Verification](verification.md) — contracts, deterministic checks, assurance
+  levels, attestations.
+- [Live watching](live.md) — sources, bounded pipelines, cursors, finalisation.
+- [Capture capabilities](capture-capabilities.md) — what a given machine can
+  actually record, and how each answer was established.
+
+### Interfaces
+
+- [MCP tools](tools/README.md) — all 37 tools and their REST/CLI twins.
+- [Configuration](configuration.md) — the source of truth for `WATCHSKILL_*`
+  settings.
+
+### Evidence
+
+- [Release proof](release-proof.md) — test results, browser benchmark, packaging
+  and security checks, and the limits of each.
+- [VLM performance](vlm-performance.md) — the measured local vision model:
+  revision, latency, memory, and the failure modes a live session exposed.
+- [Benchmarks](../benchmarks/) — methods, fixtures, and committed results.
+
+### Development
+
+- [Testing tiers](testing.md) — what the offline suite proves, and what only a
+  real model can.
+- [Roadmap](ROADMAP.md) — what ships today, what is missing, and what is planned.
 
 ## Documentation standards
 

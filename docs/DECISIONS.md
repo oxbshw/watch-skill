@@ -48,8 +48,8 @@ swaps. Newest entries at the bottom of each section.
   Rust/C++ toolchain needed, CPU-friendly with int8.
 - **Embeddings: fastembed (ONNX) instead of sentence-transformers.** The
   plan called for sentence-transformers, but it drags in torch (~2 GB
-  installed); this machine has <7 GB free disk total across drives, so the
-  install would fail outright. fastembed serves the same MiniLM-class models
+  installed), which does not fit the disk budget the reference class
+  assumes. fastembed serves the same MiniLM-class models
   (`sentence-transformers/all-MiniLM-L6-v2`) through onnxruntime, which the
   OCR stack already installs. Same vectors, ~50 MB instead of ~2 GB.
 
@@ -416,3 +416,58 @@ proves nothing about who produced it. Ed25519 signing exists behind the
 `attest` extra because `cryptography` is not a declared dependency, and
 shipping a hash under the word "signed" would be the most misleading thing in
 the system.
+
+### `journal_mode` is the one pragma `busy_timeout` does not cover (2026-08-19)
+
+Every database module ran `PRAGMA journal_mode = WAL` on connect. On an
+established database the mode is already `wal` and the statement is free, so
+normal use never saw a problem. On a fresh database the mode genuinely changes,
+and that path takes a brief exclusive lock which returns `SQLITE_BUSY` without
+consulting the busy handler.
+
+Measured with another connection holding a write transaction and a 30 s busy
+timeout set on the connection under test:
+
+| Statement | Result |
+|---|---|
+| `PRAGMA journal_mode = WAL` | `database is locked` after 0.000 s |
+| `BEGIN IMMEDIATE` | `database is locked` after 33.115 s |
+
+The second is the busy handler working. The first is SQLite declining to invoke
+it. Raising the timeout was therefore never a candidate fix.
+
+`sqlite_util.enable_wal()` reads the mode first and attempts the switch only
+when one is needed, so the common path takes no exclusive lock. Losing the race
+is treated as another connection having done the work, which is correct because
+journal mode is a property of the file and persists once set.
+
+### Browser admission is decided once, at acquisition (2026-08-20)
+
+The browser pool refuses a session when free memory cannot cover the session
+cost plus the reserve that must remain for the rest of the host. Tests that
+drive a governed browser check the same arithmetic up front so an unaffordable
+scenario skips with numbers instead of failing mid-run.
+
+Those two checks read machine-wide free memory at different instants, and that
+quantity is not stable. Sampled at 4 Hz through a run of the live and observer
+suites (1673 samples over 420 s) on the reference host:
+
+| | |
+|---|---|
+| median free | 2073 MB |
+| range | 1058 – 2324 MB |
+| worst downward excursion within 1 s | 336 MB |
+| worst downward excursion within 5 s | 640 MB |
+
+A safety margin on the precondition cannot close that gap: covering a
+five-second excursion would require 640 MB on top of the pool's own 1150 MB
+requirement, which on an 8 GiB host means the scenario never runs. The
+scenario's own cost is not the variable — the pool takes its lease before
+spending memory, and free memory measured either side of session start does not
+move.
+
+So admission is decided once, where it is actually decided. A refusal that
+reaches a test is recorded as a resource skip carrying the pool's own figures,
+and only when the refusal is within 2× the configured requirement. A browser
+that demanded materially more than the pool is configured for would be a
+regression, and still fails.

@@ -72,7 +72,7 @@ than no model.
 > with room, plus a CPU-only torch build in an interpreter outside the base
 > environment, made this run. `HuggingFaceTB/SmolVLM2-256M-Video-Instruct` at
 > revision `067788b1…` is cached offline; measurements are in
-> [VLM_RECEIPT.md](VLM_RECEIPT.md). The 500M variant was never downloaded.
+> [VLM performance](vlm-performance.md). The 500M variant was never downloaded.
 
 ### The live real-VLM gate
 

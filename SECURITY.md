@@ -85,8 +85,8 @@ tool in the same agent, and no more sandboxed.
 If that is not acceptable in your setup:
 
 - Do not expose the MCP server to an agent you would not give a terminal.
-- The other 25 tools do not execute user-supplied commands through a shell; a
-  wrapper that drops these two leaves the rest of the surface intact.
+- No other tool executes user-supplied commands through a shell; a wrapper
+  that drops these two leaves the rest of the surface intact.
   `verify_contract`'s `command_exit` check does run a process, but only from an
   argv list with `shell=False`, in a bounded working directory, under a
   timeout, with a sanitized environment.

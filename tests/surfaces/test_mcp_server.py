@@ -41,8 +41,14 @@ def test_docs_state_the_real_tool_count() -> None:
     """Docs quoted "13 MCP tools" for three releases after the count changed.
 
     Nothing failed when a tool was added, so the number silently rotted in
-    the README, getting-started, and architecture pages at once. Pin the
-    documented figure to the registry instead of to someone's memory.
+    several pages at once. Pin the documented figure to the registry instead
+    of to someone's memory.
+
+    The pattern allows adjectives between the count and "tools". Matching only
+    "N tools" and "N MCP tools" let "23 public tools" and "the other 25 tools"
+    stay stale while this test passed. Files are enumerated rather than
+    globbed, because a changelog entry describing an older release is correct
+    at its own number.
     """
     import re
     from pathlib import Path
@@ -53,11 +59,13 @@ def test_docs_state_the_real_tool_count() -> None:
 
     count = len(asyncio.run(_list()))
     root = Path(__file__).resolve().parents[2]
-    pattern = re.compile(r"(\d+)\s+(?:MCP\s+)?tools\b")
+    pattern = re.compile(r"(\d+)(?:\s+[A-Za-z]+){0,2}\s+tools\b")
 
     stale: list[str] = []
     for rel in ("README.md", "docs/getting-started.md", "docs/architecture.md",
-                "docs/README.md", "docs/tools/README.md"):
+                "docs/README.md", "docs/tools/README.md", "SECURITY.md",
+                "docs/agents/windsurf.md", "adapters/agents-md/AGENTS.md",
+                "examples/06-agent-integration/README.md"):
         path = root / rel
         if not path.is_file():
             continue
