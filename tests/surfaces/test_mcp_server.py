@@ -132,3 +132,24 @@ def test_frame_cap_respected(sample_video: Path, monkeypatch: pytest.MonkeyPatch
     result = _call("watch_video", source=str(sample_video), budget=10)
     images = [c for c in result.content if c.type == "image"]
     assert len(images) <= 3
+
+
+def test_the_tool_reference_documents_every_tool() -> None:
+    """The reference opened with "All 37 tools" and documented 35.
+
+    The count guard above only compares numbers, so a page can state the right
+    total and still omit the tools it promises. This checks the headings
+    against the registry instead.
+    """
+    import re
+    from pathlib import Path
+
+    async def _list():
+        async with Client(mcp) as client:
+            return {t.name for t in await client.list_tools()}
+
+    registered = asyncio.run(_list())
+    doc = (Path(__file__).resolve().parents[2] / "docs" / "tools" / "README.md")
+    headings = set(re.findall(r"^#{2,4}\s+`?([a-z_]+)`?", doc.read_text(encoding="utf-8"), re.M))
+    assert not registered - headings, (
+        f"tools with no section in docs/tools/README.md: {sorted(registered - headings)}")

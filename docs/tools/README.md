@@ -57,6 +57,18 @@ Returns status/phase/progress JSON; when done it includes the `video_id`
 and the exact `ask_video` call to make next. Poll every few seconds, not
 in a tight loop.
 
+### `cancel_job`
+
+Stop a durable background job started with `watch_video(background=true)`.
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `job_id` | str | required | From the `watch_video` background response |
+
+A queued job stops immediately. A running one is asked to stop and
+acknowledges at its next stage checkpoint, so cancellation is real rather than
+a flag nobody reads: partial work is discarded rather than half-committed.
+
 ### `ask_video`
 
 Any follow-up question about a video already watched — by anyone, in any
@@ -550,6 +562,25 @@ every tool for non-MCP agents:
 | `library_synthesize` | `POST /v1/library/synthesize` |
 | `library_overview` | `GET /v1/library/overview` |
 | `doctor` | `POST /v1/doctor` |
+
+## The workspace
+
+### `watch_workspace`
+
+Open the live workspace: the visual view of a session, showing frames,
+evidence separated into observed / heard / browser / inferred, the unified
+timeline, trigger firings, and the Observer Loop's frozen postcondition with
+its verification receipt.
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `session` | str \| null | `null` | A session id; omit for the most recent active one |
+| `mode` | str | `auto` | `auto` opens the resolved session; `new` opens the start-a-watch view |
+
+This tool only opens the view. Every real operation — starting a session,
+approving a correction, running verification — goes through the canonical
+tools, so what the UI can do is not decided here. Requires a client that
+supports MCP Apps; see [the MCP App](../guides/mcp-app.md).
 
 (`get_status`, `report_mistake`, and `stats` are MCP/CLI-side:
 backgrounding is an MCP transport concern, and lessons/stats have CLI
