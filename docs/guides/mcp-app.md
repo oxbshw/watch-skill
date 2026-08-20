@@ -18,6 +18,12 @@ and standalone in a local dev host for development and testing.
 | Verification | Frozen postcondition, oracle, assurance, iteration, budgets, proposed correction, approval, receipt |
 | Timeline | One lane per evidence kind, with seek |
 
+A model reading is labelled by how current it is. A reading that arrived after
+the frame it describes had passed is shown as historical evidence rather than
+as a description of the present:
+
+![A model reading labelled as historical evidence](../assets/workspace/workspace-vlm-historical.png)
+
 ## Opening it
 
 One tool:
@@ -57,6 +63,12 @@ Desktop, ChatGPT, or any other production MCP host — see Known limitations.
 
 ## Live data
 
+The approval panel renders the exact effect awaiting a decision, never a
+summary of it, and never the approval token:
+
+![Approval awaiting a decision](../assets/workspace/workspace-approval.png)
+
+
 Canonical state comes from `watch_skill.workspace`:
 
 - `snapshot()` — everything needed for a first render, bounded, fetched on
@@ -73,6 +85,9 @@ disconnected.
 ## Media transport
 
 Negotiated, and labelled honestly:
+
+![Live frame preview](../assets/workspace/workspace-live-preview.png)
+
 
 1. an MCP resource/blob where the host supports it;
 2. a session-scoped current-frame endpoint in the standalone host;
