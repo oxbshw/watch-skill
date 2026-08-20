@@ -193,6 +193,25 @@ describes each frame, deterministic rules parsed from the criteria decide
 recording; digit-generalized, whitespace-tolerant, negation-aware), and a
 plain PASS/FAIL text judgment covers only what no rule can express.
 
+## The browser subsystem
+
+One browser stack, two modes. *Observer* watches a session somebody else drives
+and verifies the outcome; *operator* drives the session and verifies its own
+actions. They share the page, the navigation policy, the resource lease, the
+per-session profile, the navigation epochs and the evidence log.
+
+The split matters because the alternative is two stacks with two lease
+accountings and two sets of evidence that can disagree about what happened.
+Admission for either mode goes through the same resource governor, which
+refuses a browser the machine cannot afford and reports the shortfall rather
+than letting the OS resolve it.
+
+`live/` owns the session and the evidence; `operate/` adds action dispatch and
+verification on top of it; `observer/` and `verify/` decide whether a run met a
+postcondition. A model may choose which action to take and may read the
+resulting evidence, but the verdict comes from deterministic oracles. See
+[Browser Runtime](browser-runtime.md).
+
 ## Module map
 
 | Module | Job | Key entry points |
@@ -206,13 +225,21 @@ plain PASS/FAIL text judgment covers only what no rule can express.
 | `lessons/` | mistake reports → classified lessons → prompt injection, adaptive profiles; eval replay + classification (still-effective/prunable/regressed) + prune | `report_mistake()`, `relevant_guidance()`, `eval_report()`, `prune_lessons()` |
 | `vision/` | one `prompt+images→text` primitive across Anthropic/OpenAI/Gemini/OpenRouter/Ollama; cheap/strong tiers; pre-call cost guard (dated prices.json); local-server health: liveness cache, detached restart, structured `vision.server_down` | `get_vision(tier)`, `ensure_ollama()` |
 | `loop/` | pluggable loop framework: producers (ui/video-gen/game) → critic (JSON or describe-then-judge) → phash diff → runner → proof artifact; bounded monitor loop w/ events.jsonl + signed webhooks | `loop_start()`, `loop_iterate()`, `loop_monitor()`, `deliver_event()` |
+| `live/` | live sessions: browser/screen/window/camera/stream sources, bounded pipelines, cursor-addressed events, rolling evidence buffer, session finalisation | `start_live()`, `observe_live()`, `ask_live()`, `capability_for()` |
+| `operate/` | Browser Runtime operator mode: observation, deterministic target resolution, dispatch, effect verification, recovery, action receipts | `BrowserRuntime.act()`, `run_task()`, `observe()`, `resolve()` |
+| `observer/` | the Observer Loop: declare a postcondition, act, verify independently, request approval for a correction | `start_run()`, `advance()`, `approve_pending()` |
+| `actions/` | governed side effects: an effect is described and hashed before it runs, and a human approval is bound to that exact digest | `request_approval()`, `approve()`, `approval_state()` |
+| `verify/` | verification contracts: frozen postconditions, deterministic check types, assurance levels, evidence bundles and attestation | `decide()`, `attest()`, `draft_contract()` |
+| `triggers/` | durable conditions evaluated against a live session, with firings recorded | `create_trigger()`, `evaluate()`, `explain()` |
+| `entities/` | persistent temporal entities: attributes over time, aliases, conflicts | `get_entity()`, `attributes_at()`, `conflicts_for()` |
+| `models/` | local model registry and lifecycle; residency is process-global so loading is single-flight, and the browser governor charges admission against it | `get_registry()`, `register_builtin_models()` |
 | `bench/` | benchmarks with receipts: perception char-hit/latency/RSS over committed fixtures | `bench_perception()` |
 | `health/` | doctor --fix (deps, browser recording, memory headroom, index integrity, model files, local vision), managed binaries, agent config writer, provider-neutral vision setup | `run_doctor()`, `detect_agents()`, `configure_cloud()`, `configure_ollama()` |
 | `integrations/` | thin framework adapters (LangChain/CrewAI/Agents SDK/LlamaIndex/AutoGen) over three shared core calls | `get_watch_tools()` per module |
 | `extract/` | deterministic structured extraction over the index: chapters, bug reports, hook analysis | `extract_chapters()`, `extract_bug_report()`, `analyze_hook()` |
 | `batch.py` | playlist/folder/list → one indexed, cross-searchable memory; per-source resilience | `watch_batch()` |
 | `viewer.py` | one self-contained offline HTML page per analysis (frames inlined, evidence cited) | `generate_viewer()` |
-| `jobs.py` | thread-backed background jobs for long operations (MCP `background=true`) | `start_job()`, `get_job()` |
+| `jobs/` | durable background jobs that survive the process that started them (MCP `background=true`) | `start_job()`, `get_job()` |
 | `watch.py` | the front door: acquire → perceive → transcribe with progress callbacks | `watch()` |
 | `config.py` | one typed settings object; `WATCHSKILL_*` env / `.env` / defaults | `get_settings()` |
 

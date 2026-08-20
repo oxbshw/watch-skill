@@ -136,3 +136,19 @@ def test_the_readme_lists_every_example() -> None:
     assert claimed, "the README no longer states how many examples there are"
     assert int(claimed.group(1)) == len(on_disk), (
         f"README says {claimed.group(1)} examples; {len(on_disk)} exist")
+
+
+def test_the_architecture_module_map_covers_every_package() -> None:
+    """The map described a tree eight packages out of date.
+
+    live, operate, observer, actions, verify, triggers, entities and models
+    all shipped without an entry, so the architecture page described a
+    different program than the one in src/.
+    """
+    doc = (ROOT / "docs" / "architecture.md").read_text(encoding="utf-8")
+    packages = {
+        p.name for p in (ROOT / "src" / "watch_skill").iterdir()
+        if p.is_dir() and not p.name.startswith("__")
+    }
+    missing = sorted(p for p in packages if f"`{p}/`" not in doc)
+    assert not missing, f"packages absent from the architecture module map: {missing}"
