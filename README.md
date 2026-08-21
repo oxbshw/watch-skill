@@ -350,9 +350,8 @@ whose answer is distributed across four clips.
 ### Verify an agent's browser work
 
 ```bash
-watch-skill loop start \
-  --source "browser:http://127.0.0.1:3000" \
-  --criteria "Checkout completes and the total is always a valid currency amount"
+watch-skill loop start "browser:http://127.0.0.1:3000" \
+  "Checkout completes and the total is always a valid currency amount"
 ```
 
 The loop captures the full interaction, critiques failures, and records the before/after

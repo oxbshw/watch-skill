@@ -38,10 +38,13 @@ Three rules for reading the result:
 Moment questions get a dense window, not a whole-video ask:
 
 ```bash
-watch-skill moment <video_id> 2:30 [--window 10]
+watch-skill ask <video_id> "what is on screen around 2:30?"
 ```
 
-Returns frames + transcript + OCR around that timestamp.
+The answer engine pulls frames, transcript and OCR around the moment it
+resolves. Agents on MCP have a dedicated `get_moment` tool that takes an
+explicit timestamp and window; the CLI answers the same question through
+`ask`.
 
 ## Don't know which video? Search them all
 

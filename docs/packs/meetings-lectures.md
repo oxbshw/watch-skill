@@ -30,7 +30,7 @@ better than a confident paraphrase of something nobody said.
 For "what happened around minute 40 of yesterday's call":
 
 ```powershell
-watch-skill moment <video_id> 40:00 --window 30
+watch-skill ask <video_id> "what happened around 40:00?"
 ```
 
 ## Notes

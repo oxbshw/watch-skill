@@ -36,7 +36,7 @@ with video + timestamp; follow up on a hit with:
 
 ```bash
 watch-skill ask <video_id> "<the user's actual question>"
-watch-skill moment <video_id> <timestamp>
+watch-skill ask <video_id> "what is on screen at <timestamp>?"
 ```
 
 ## Questions that span videos

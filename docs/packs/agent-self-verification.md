@@ -18,7 +18,7 @@ watch-skill loop iterate <loop_id>
 judge the render against the spec, re-render, repeat:
 
 ```powershell
-watch-skill loop video-gen --spec "a blue square slides left to right, title 'Demo' visible throughout" --cmd "python render.py" --output out.mp4
+watch-skill loop video-gen "a blue square slides left to right, title 'Demo' visible throughout" "python render.py" --output out.mp4
 ```
 
 **Game / simulation** — record gameplay, catch the failures screenshots

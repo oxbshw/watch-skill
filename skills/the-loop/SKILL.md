@@ -35,7 +35,7 @@ watch-skill loop iterate <loop_id>
 ## Generated video (Manim, Remotion, ffmpeg, AI-gen)
 
 ```bash
-watch-skill loop video-gen --spec "<what the video must show>" --cmd "<render command>" --output <file>
+watch-skill loop video-gen "<what the video must show>" "<render command>" --output <file>
 ```
 
 Re-runs the generator each iteration and judges the fresh render against
@@ -44,7 +44,7 @@ the spec.
 ## Game / simulation
 
 ```bash
-watch-skill loop game "<canvas-url | window:<title> | screen:>" "<pass criteria>" [--run-cmd "<launch cmd>"]
+watch-skill loop game "<canvas-url | window:<title> | screen:>" "<pass criteria>" [--run "<launch cmd>"]
 ```
 
 Catches the failures screenshots miss: a NaN score counter, black
