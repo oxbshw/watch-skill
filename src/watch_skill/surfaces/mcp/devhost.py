@@ -361,6 +361,15 @@ class DevHost:
         return f"http://127.0.0.1:{self.port}"
 
     def start(self) -> DevHost:
+        # Every snapshot response carries the capture-capability matrix, and
+        # building it enumerates ffmpeg devices and launches a browser driver.
+        # Warming before the socket accepts anything means `start()` returning
+        # is the same claim as being able to answer -- a host that is listening
+        # but needs seven seconds for its first reply is not started, it is
+        # starting. Probes are cached per process, so only the first host in a
+        # process pays this.
+        self._warm_probes()
+
         server = _QuietServer(("127.0.0.1", self._port), _Handler)
         server.daemon_threads = True
         self._server = server
@@ -368,14 +377,6 @@ class DevHost:
                                         kwargs={"poll_interval": 0.05},
                                         name="ws-devhost", daemon=True)
         self._thread.start()
-
-        # Capture-capability probing enumerates ffmpeg devices and launches a
-        # browser driver. Every snapshot response carries the result, so
-        # without this the first caller waits several seconds for an answer
-        # that does not change. The probes are single-flight, so a request
-        # arriving mid-warm-up waits for this one rather than starting another.
-        threading.Thread(target=self._warm_probes,
-                         name="ws-devhost-warm", daemon=True).start()
         return self
 
     @staticmethod
