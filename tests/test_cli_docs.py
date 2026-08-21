@@ -3,12 +3,17 @@
 The README told readers to run `watch-skill loop start --source ... --criteria
 ...`. Neither option exists -- `loop start` takes two positional arguments --
 so the flagship browser-verification example in the project's front door could
-never have worked. Two skill files pointed at `watch-skill moment`, a command
+never have worked. Three skill files pointed at `watch-skill moment`, a command
 that has never existed, and skills are executed by agents rather than read by
 people who might notice.
 
 The link checker could not catch any of this, because every link resolved. The
 commands were real; their options were not.
+
+Options are read from the command objects rather than from `--help` output.
+Rendered help wraps to the terminal width, so a first version of this test
+matched fine on a wide local terminal and failed on all four CI runners at
+eighty columns -- checking a presentation layer for something that is data.
 """
 from __future__ import annotations
 
@@ -16,7 +21,7 @@ import re
 from pathlib import Path
 
 import pytest
-from typer.testing import CliRunner
+import typer.main
 
 from watch_skill.surfaces.cli.main import app
 
@@ -27,15 +32,24 @@ SKIP_DIRS = {"node_modules", ".venv", "build", "dist", ".git"}
 INVOCATION = re.compile(r"watch-skill\s+([a-z][a-z0-9-]*)(?:\s+([a-z][a-z0-9-]*))?(.*)")
 FLAG = re.compile(r"(?<![\w-])(--[a-z][a-z0-9-]+)")
 
-_runner = CliRunner()
-_help_cache: dict[tuple[str, ...], str] = {}
+_root = typer.main.get_command(app)
 
 
-def _help(parts: tuple[str, ...]) -> str:
-    if parts not in _help_cache:
-        result = _runner.invoke(app, [*parts, "--help"])
-        _help_cache[parts] = result.output if result.exit_code == 0 else ""
-    return _help_cache[parts]
+def _lookup(parts: tuple[str, ...]):
+    """The command object for `watch-skill <parts>`, or None."""
+    node = _root
+    for part in parts:
+        commands = getattr(node, "commands", None)
+        if not commands or part not in commands:
+            return None
+        node = commands[part]
+    return node
+
+
+def _options(command) -> set[str]:
+    """Every long option the command accepts, including inherited ones."""
+    return {opt for param in command.params for opt in param.opts
+            if opt.startswith("--")} | {"--help"}
 
 
 def _documents() -> list[Path]:
@@ -75,19 +89,23 @@ def test_documented_cli_options_exist(doc: Path) -> None:
         if not match:
             continue
         first, second, rest = match.group(1), match.group(2), match.group(3) or ""
-        flags = set(FLAG.findall(rest))
 
-        # Prefer the two-word form when it is a real subcommand.
         parts: tuple[str, ...] = (first,)
-        if second and _help((first, second)):
+        if second and _lookup((first, second)) is not None:
             parts = (first, second)
-        text = _help(parts)
-        if not text:
+        command = _lookup(parts)
+        if command is None:
             problems.append(f"`{line[:70]}` -> no such command: {' '.join(parts)}")
             continue
-        # Options of the parent are not repeated in a subcommand's help.
-        parent = _help((first,)) if len(parts) == 2 else ""
-        missing = sorted(f for f in flags if f not in text and f not in parent)
+
+        allowed = _options(command)
+        if len(parts) == 2:
+            parent = _lookup((first,))
+            if parent is not None:
+                allowed |= _options(parent)
+        allowed |= _options(_root)
+
+        missing = sorted(f for f in FLAG.findall(rest) if f not in allowed)
         if missing:
             problems.append(f"`{line[:70]}` -> unknown {missing}")
 
