@@ -147,6 +147,11 @@ replacement = '](https://github.com/oxbshw/watch-skill/blob/main/\1)'
 testpaths = ["tests"]
 addopts = "-q"
 timeout = 300
+# Several suites import shared preconditions from `tests.conftest`, which needs
+# the repository root importable. `python -m pytest` puts the working directory
+# on sys.path and a bare `pytest` does not, so without this the suite passes
+# locally and fails collection in CI.
+pythonpath = ["."]
 markers = [
     "network: hits the real network (excluded from CI's merge gate)",
     # Runs a real model rather than a deterministic stand-in. Off by default:
