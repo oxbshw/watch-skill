@@ -377,7 +377,39 @@ class DevHost:
                                         kwargs={"poll_interval": 0.05},
                                         name="ws-devhost", daemon=True)
         self._thread.start()
+        self._await_first_answer()
         return self
+
+    def _await_first_answer(self, timeout: float = 30.0) -> None:
+        """Block until the host actually answers a request.
+
+        Binding happens in the server constructor, so the kernel accepts
+        connections into the backlog from that moment -- before
+        `serve_forever` has been scheduled to pull any of them out. A client
+        that connects in that window sees an open socket and no bytes, which
+        is indistinguishable from a hung handler and produced an intermittent
+        read timeout on loaded CI runners.
+
+        Answering once here makes `start()` returning mean the host is
+        serving, not merely listening.
+        """
+        import urllib.error  # noqa: PLC0415
+        import urllib.request  # noqa: PLC0415
+
+        deadline = time.monotonic() + timeout
+        last: Exception | None = None
+        while time.monotonic() < deadline:
+            try:
+                with urllib.request.urlopen(
+                        f"{self.base_url}/favicon.ico", timeout=2.0):
+                    return
+            except urllib.error.HTTPError:
+                return  # answered, and the status does not matter here
+            except OSError as exc:  # not serving yet
+                last = exc
+                time.sleep(0.05)
+        raise RuntimeError(
+            f"the dev host bound {self.base_url} but never answered: {last}")
 
     @staticmethod
     def _warm_probes() -> None:
