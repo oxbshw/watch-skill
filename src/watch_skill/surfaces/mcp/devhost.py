@@ -368,7 +368,24 @@ class DevHost:
                                         kwargs={"poll_interval": 0.05},
                                         name="ws-devhost", daemon=True)
         self._thread.start()
+
+        # Capture-capability probing enumerates ffmpeg devices and launches a
+        # browser driver. Every snapshot response carries the result, so
+        # without this the first caller waits several seconds for an answer
+        # that does not change. The probes are single-flight, so a request
+        # arriving mid-warm-up waits for this one rather than starting another.
+        threading.Thread(target=self._warm_probes,
+                         name="ws-devhost-warm", daemon=True).start()
         return self
+
+    @staticmethod
+    def _warm_probes() -> None:
+        try:
+            from watch_skill.live.capabilities import warm_capability_probes
+
+            warm_capability_probes()
+        except Exception:  # noqa: BLE001 - warming is an optimisation, never a failure
+            pass
 
     def stop(self) -> None:
         if self._server is not None:

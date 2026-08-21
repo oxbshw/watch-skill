@@ -493,3 +493,27 @@ def test_a_bundle_digest_covers_the_check_results() -> None:
                     status=CheckStatus.FAIL)
     ]})
     assert base.digest() != with_result.digest()
+
+
+def test_the_read_only_sqlite_uri_keeps_the_path_absolute() -> None:
+    """Slicing a fixed `file:///` prefix was wrong on POSIX.
+
+    It left the drive letter intact on Windows but removed the leading slash
+    on POSIX, so `/tmp/app.db` became the relative `tmp/app.db` and opened
+    nothing. Every `sqlite_query` check errored on Linux and macOS while this
+    suite passed on Windows.
+
+    Asserted on the URI rather than by opening a database, so the platform
+    that broke is not the only platform that can catch it.
+    """
+    import tempfile
+
+    from watch_skill.verify.checks import read_only_sqlite_uri
+
+    uri = read_only_sqlite_uri(Path(tempfile.gettempdir()).resolve() / "app.db")
+    assert uri.startswith("file:///"), uri
+    assert uri.endswith("?mode=ro"), uri
+
+    # The path inside the URI must still be absolute for the platform.
+    inner = uri[len("file://"):-len("?mode=ro")]
+    assert inner.startswith("/"), f"URI path is not absolute: {inner!r}"

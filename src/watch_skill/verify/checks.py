@@ -223,6 +223,21 @@ _WRITE_KEYWORDS = (
 )
 
 
+def read_only_sqlite_uri(path: Path) -> str:
+    """A `mode=ro` SQLite URI for ``path``.
+
+    Read-only at the driver level rather than by convention: a query that slips
+    past the keyword screen still cannot write through this handle.
+
+    The whole URI is kept rather than sliced. Trimming a fixed `file:///`
+    prefix leaves the drive letter intact on Windows but eats the leading
+    slash on POSIX, turning `/tmp/app.db` into the relative `tmp/app.db` --
+    which opened nothing, so every `sqlite_query` check errored on Linux and
+    macOS while passing on Windows.
+    """
+    return f"{path.as_uri()}?mode=ro"
+
+
 def _sqlite_query(check: Check, ctx: CheckContext) -> tuple[CheckStatus, Any, Any, str]:
     sql = str(check.params["sql"]).strip().rstrip(";")
     lowered = sql.lower()
@@ -234,9 +249,7 @@ def _sqlite_query(check: Check, ctx: CheckContext) -> tuple[CheckStatus, Any, An
         raise ValueError(f"query contains a write keyword: {sql[:80]!r}")
 
     path = _resolve_within(str(check.params["database"]), ctx)
-    # Read-only at the driver level, not by convention: even a query that
-    # slipped past the keyword screen cannot write through this handle.
-    uri = f"file:{path.as_uri()[8:]}?mode=ro"
+    uri = read_only_sqlite_uri(path)
     conn = sqlite3.connect(uri, uri=True, timeout=10.0)
     try:
         conn.row_factory = sqlite3.Row

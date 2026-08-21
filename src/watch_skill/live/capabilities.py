@@ -23,6 +23,7 @@ import platform
 import shutil
 import subprocess
 import sys
+import threading
 
 from watch_skill.live.types import CaptureCapability
 
@@ -38,18 +39,61 @@ def _have(binary: str) -> bool:
     return find_binary(binary) is not None
 
 
-def _ffmpeg_has_device(name: str) -> bool:
-    """Whether this ffmpeg build actually carries a given input device.
+# Probe results, cached for the life of the process.
+#
+# `capability_matrix()` asks about eight capture kinds and is served on every
+# `/api/snapshot` request. Uncached, that spawned an `ffmpeg -devices` process
+# per kind and a Playwright driver every time -- about 7 s per request on the
+# reference host and over the client timeout on a cold CI runner, for an answer
+# that cannot change without installing software.
+#
+# Only the environment probes are cached. The predicates around them
+# (`_have`, `_source_network_allowed`) stay live, so policy and binary changes
+# are still reflected immediately.
+_DEVICES_CACHE: str | None = None
+_PLAYWRIGHT_CACHE: tuple[bool, str] | None = None
+# Held while probing so concurrent callers wait for the one in flight rather
+# than each starting their own driver.
+_PROBE_LOCK = threading.Lock()
 
-    Checked against the build rather than assumed from the platform: distro
-    ffmpeg packages routinely ship without x11grab, and a confident attempt
-    that dies with 'Unknown input format' helps nobody.
+
+def reset_capability_probes() -> None:
+    """Drop cached probe results. For tests and for `doctor --fix`."""
+    global _DEVICES_CACHE, _PLAYWRIGHT_CACHE
+    with _PROBE_LOCK:
+        _DEVICES_CACHE = None
+        _PLAYWRIGHT_CACHE = None
+
+
+def warm_capability_probes() -> None:
+    """Run the environment probes now, off the request path.
+
+    A server that serves capabilities should not make the first caller pay for
+    device enumeration and a browser-driver launch.
     """
+    _ffmpeg_devices()
+    _playwright_ready()
+
+
+def _ffmpeg_devices() -> str:
+    """`ffmpeg -devices` output, read once per process."""
+    global _DEVICES_CACHE
+    if _DEVICES_CACHE is not None:
+        return _DEVICES_CACHE
+
     from watch_skill.health.binaries import find_binary
 
-    ffmpeg = find_binary("ffmpeg")
+    with _PROBE_LOCK:
+        if _DEVICES_CACHE is not None:
+            return _DEVICES_CACHE
+        _DEVICES_CACHE = _read_ffmpeg_devices(find_binary("ffmpeg"))
+    return _DEVICES_CACHE
+
+
+def _read_ffmpeg_devices(ffmpeg: object) -> str:
+
     if ffmpeg is None:
-        return False
+        return ""
     try:
         result = subprocess.run(
             [str(ffmpeg), "-hide_banner", "-devices"],
@@ -57,11 +101,32 @@ def _ffmpeg_has_device(name: str) -> bool:
             encoding="utf-8", errors="replace",
         )
     except (OSError, subprocess.SubprocessError):
-        return False
-    return name in (result.stdout or "") + (result.stderr or "")
+        return ""
+    return (result.stdout or "") + (result.stderr or "")
+
+
+def _ffmpeg_has_device(name: str) -> bool:
+    """Whether this ffmpeg build actually carries a given input device.
+
+    Checked against the build rather than assumed from the platform: distro
+    ffmpeg packages routinely ship without x11grab, and a confident attempt
+    that dies with 'Unknown input format' helps nobody.
+    """
+    return name in _ffmpeg_devices()
 
 
 def _playwright_ready() -> tuple[bool, str]:
+    global _PLAYWRIGHT_CACHE
+    if _PLAYWRIGHT_CACHE is not None:
+        return _PLAYWRIGHT_CACHE
+    with _PROBE_LOCK:
+        if _PLAYWRIGHT_CACHE is None:
+            _PLAYWRIGHT_CACHE = _probe_playwright()
+    return _PLAYWRIGHT_CACHE
+
+
+def _probe_playwright() -> tuple[bool, str]:
+    fix = "playwright install chromium"
     try:
         from playwright.sync_api import sync_playwright  # noqa: PLC0415
     except ImportError:
@@ -70,8 +135,8 @@ def _playwright_ready() -> tuple[bool, str]:
         with sync_playwright() as p:
             path = p.chromium.executable_path
     except Exception:  # noqa: BLE001 - any driver problem means not ready
-        return False, "playwright install chromium"
-    return (bool(path) and os.path.exists(path)), "playwright install chromium"
+        return False, fix
+    return (bool(path) and os.path.exists(path)), fix
 
 
 def _linux_session_type() -> str:

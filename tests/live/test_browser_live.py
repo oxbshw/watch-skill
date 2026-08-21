@@ -89,12 +89,19 @@ def test_pixels_and_structure_both_arrive_before_the_browser_closes(
     events = []
     generator = source.frames()
     deadline = time.monotonic() + 45.0
+    # Wait for every channel this test asserts on, not a subset of them. The
+    # accessibility flip is on a 900 ms timer, so a loop that stopped as soon
+    # as the console and network events arrived passed on a fast machine and
+    # failed on a busy one -- while the deadline below still fails a channel
+    # that genuinely never reports.
+    wanted = {"console", "request_failed", "dom_mutation",
+              "accessibility_change", "navigation", "page_error"}
     try:
         while time.monotonic() < deadline:
             frames.append(next(generator))
             events.extend(source.drain_events())
             kinds = _kinds(events)
-            if len(frames) >= 6 and {"console", "request_failed"} <= kinds:
+            if len(frames) >= 6 and wanted <= kinds:
                 break
         still_running = source.running
         frames_while_running = len(frames)
