@@ -40,6 +40,24 @@ def _settle(runtime: SemanticRuntime, timeout: float = 10.0) -> None:
     raise AssertionError("the semantic runtime never went idle")
 
 
+def _wait_until_taken(runtime: SemanticRuntime, timeout: float = 10.0) -> None:
+    """Wait until the worker has pulled the queued frame out of the queue.
+
+    `consider` starts the worker on the first accepted frame, and the worker
+    empties the queue as soon as it is scheduled. Any test that reasons about
+    what is *waiting* has to synchronise with that instead of racing it --
+    otherwise the same call produces `queue_full` on a busy machine and
+    `superseded_by_better_frame` on an idle one.
+    """
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        with runtime._lock:
+            if not runtime._queue and runtime._inflight:
+                return
+        time.sleep(0.01)
+    raise AssertionError("the worker never picked up the first frame")
+
+
 # --- selection: the module's whole reason for existing -------------------------
 
 
@@ -234,16 +252,30 @@ def test_the_keyframe_queue_is_small_and_bounded() -> None:
 
 
 def test_a_more_informative_frame_takes_the_slot_and_the_loser_is_recorded() -> None:
-    """When frames compete, the better one wins — visibly, not silently."""
+    """When frames compete, the better one wins — visibly, not silently.
+
+    The competition being tested is between two frames waiting for the *same*
+    slot, so the first frame has to be out of the way first. The worker takes
+    it, and the long backend delay keeps it busy while the two contenders are
+    offered -- without that barrier this test was deciding whether the queue
+    was full by thread scheduling, which is why it passed locally and failed
+    under load.
+    """
     backend = DeterministicSemanticBackend(
-        [{"start": 0, "end": 1000, "scene": "x"}], delay=1.0
+        [{"start": 0, "end": 1000, "scene": "x"}], delay=30.0
     )
     runtime = SemanticRuntime(backend=backend, on_observation=lambda *_: None,
                               queue_limit=1)
-    runtime.consider(_candidate(10.0, scene_changed=True, visible_text="a"))
-    runtime.consider(_candidate(20.0, trigger_interest=True, visible_text="b"))
+    assert runtime.consider(_candidate(10.0, scene_changed=True,
+                                       visible_text="a"))
+    _wait_until_taken(runtime)
+
+    # The slot is empty and the worker is busy, so these two compete for it.
+    assert runtime.consider(_candidate(20.0, trigger_interest=True,
+                                       visible_text="b"))
     # A waiting question outranks a bare trigger nudge, so it evicts it.
-    runtime.consider(_candidate(30.0, question_pending=True, visible_text="c"))
+    assert runtime.consider(_candidate(30.0, question_pending=True,
+                                       visible_text="c"))
     drops = runtime.stats()["drops"]
     assert any(d["dropped_because"] == "superseded_by_better_frame"
                for d in drops), f"no supersede recorded: {drops}"

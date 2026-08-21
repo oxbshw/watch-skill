@@ -381,10 +381,23 @@ class DevHost:
 
     @staticmethod
     def _warm_probes() -> None:
-        try:
-            from watch_skill.live.capabilities import warm_capability_probes
+        """Build one snapshot before the socket opens.
 
-            warm_capability_probes()
+        Not just the capture probes. The snapshot path also resolves lazy
+        imports, opens the session and approval stores, and reads policy, and
+        every one of those is cold exactly once per process. Warming the whole
+        response is what makes the guarantee independent of which part happens
+        to be slowest on a given machine -- warming only the probes left a
+        cold Windows runner still exceeding a ten-second client timeout on its
+        first request.
+
+        Best effort throughout: a warm-up that fails must never stop a host
+        from starting, because the request path recomputes anything missing.
+        """
+        try:
+            from watch_skill import workspace
+
+            _with_preview(workspace.snapshot())
         except Exception:  # noqa: BLE001 - warming is an optimisation, never a failure
             pass
 

@@ -113,3 +113,30 @@ def test_an_unknown_path_is_still_a_404(host) -> None:
     """Absence-is-not-an-error applies to frames, not to typos."""
     status, _, _ = _get(f"{host.base_url}/api/nope")
     assert status == 404
+
+
+def test_the_host_is_warm_before_it_accepts_a_request() -> None:
+    """`start()` returning must mean the first caller is not paying for cold state.
+
+    The snapshot response carries the capture-capability matrix, and building
+    that enumerates ffmpeg devices and launches a browser driver. Warming it in
+    a background thread was not enough: a client connecting immediately still
+    waited for the probe, which on a cold Windows CI runner exceeded a
+    ten-second client timeout while every later request was instant.
+
+    Asserted structurally rather than with a stopwatch, so the guarantee is
+    pinned without a timing threshold that would itself be flaky.
+    """
+    from watch_skill.live import capabilities as caps
+
+    caps.reset_capability_probes()
+    assert caps._DEVICES_CACHE is None and caps._PLAYWRIGHT_CACHE is None
+
+    server = DevHost().start()
+    try:
+        assert caps._DEVICES_CACHE is not None, (
+            "start() returned before the device probe was resolved")
+        assert caps._PLAYWRIGHT_CACHE is not None, (
+            "start() returned before the browser probe was resolved")
+    finally:
+        server.stop()
