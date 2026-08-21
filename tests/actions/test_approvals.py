@@ -189,13 +189,29 @@ def test_the_oracle_reads_approvals_from_the_store_not_from_evidence(
 
 
 def test_approval_state_reports_expiry_against_the_clock_now() -> None:
-    approval = request_approval(kind="http_post", inputs=EFFECT, summary="fix",
-                                ttl_seconds=1.0)
-    approve(approval.approval_id, actor="operator@example")
-    assert approval_state(approval.approval_id)["expired"] is False
-    time.sleep(1.2)
-    state = approval_state(approval.approval_id)
-    assert state["expired"] is True
+    """Expiry is resolved against the clock now, not frozen at creation.
+
+    Two approvals rather than one. A single short-lived approval had to be
+    created, approved and read inside its entire lifetime, and the TTL has a
+    one-second floor -- a budget no loaded machine can promise. It failed on a
+    CI runner taking more than twice its usual time for the suite. Each
+    direction now has room where it needs it: a long-lived approval for "not
+    expired", and a poll rather than a fixed sleep for "expired".
+    """
+    live = request_approval(kind="http_post", inputs=EFFECT, summary="fix",
+                            ttl_seconds=300.0)
+    approve(live.approval_id, actor="operator@example")
+    assert approval_state(live.approval_id)["expired"] is False
+
+    brief = request_approval(kind="http_post", inputs=EFFECT, summary="fix",
+                             ttl_seconds=2.0)
+    approve(brief.approval_id, actor="operator@example")
+    deadline = time.monotonic() + 30.0
+    state = approval_state(brief.approval_id)
+    while time.monotonic() < deadline and not state["expired"]:
+        time.sleep(0.05)
+        state = approval_state(brief.approval_id)
+    assert state["expired"] is True, "a two-second approval never expired"
     assert state["status"] == "expired"
 
 
