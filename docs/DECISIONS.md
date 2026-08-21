@@ -471,3 +471,45 @@ reaches a test is recorded as a resource skip carrying the pool's own figures,
 and only when the refusal is within 2× the configured requirement. A browser
 that demanded materially more than the pool is configured for would be a
 regression, and still fails.
+
+### Capture capabilities are probed once, not per request (2026-08-21)
+
+`capability_matrix()` answers for eight capture kinds, and two of those answers
+are expensive: enumerating ffmpeg input devices spawns a process, and deciding
+whether browser capture is available launches a Playwright driver to resolve
+the chromium executable. Every workspace snapshot carried the matrix, so the
+UI paid for both on every poll.
+
+Measured on the reference host, uncached:
+
+| | |
+|---|---|
+| first `capability_matrix()` | 20.9 s |
+| subsequent calls | 2.2 s |
+
+Neither answer can change without installing software, so the environment
+probes are cached for the life of the process and run single-flight: a second
+caller waits for the probe already running rather than starting another.
+
+Only the probes are cached. The predicates around them, `_have` and
+`_source_network_allowed`, stay live, because a policy change or a newly
+installed binary must be visible immediately. `reset_capability_probes()`
+exists for the case where that is not enough.
+
+### A server that is listening is not yet a server that is serving (2026-08-21)
+
+`DevHost.start()` used to return once the serving thread had been created. The
+listening socket is created earlier, in the server constructor, so the kernel
+accepts connections into the backlog from that moment. A client connecting in
+the window before `serve_forever` was scheduled saw an open socket and no
+bytes, which is indistinguishable from a hung handler and caused an
+intermittent read timeout that alternated between CI runners rather than
+following a platform or a Python version.
+
+`start()` now builds one complete snapshot through the request handler's own
+path, then issues a request against itself and returns only when the host
+answers. Warming the whole response rather than only the probes is what makes
+the guarantee independent of which component happens to be coldest; an earlier
+attempt that warmed only the probes left the first request slow for other
+reasons. If the host never answers, `start()` raises with the bound address
+instead of leaving a caller to time out.

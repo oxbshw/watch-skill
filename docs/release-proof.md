@@ -1,15 +1,42 @@
 # Release proof
 
 Evidence for the current release candidate: what was measured, on what, and
-what the measurements do not cover. Every figure here comes from a run on the
-reference host described below. Nothing is estimated.
+what the measurements do not cover. Pass or fail comes from continuous
+integration; timing and memory figures come from the local host described
+below. Nothing is estimated.
 
 Historical debugging lives in commit history. This page records the final
 artifact.
 
-## Test host
+## Where the evidence comes from
 
-Measurements are hardware-bound, so the class of machine is part of the result.
+Two sources, and they answer different questions. Continuous integration
+decides whether the suite passes; the local host is where the timing and
+memory figures are measured, because those are hardware-bound.
+
+### Continuous integration
+
+Every push runs the offline suite on a four-way matrix:
+
+| | Python 3.11 | Python 3.12 |
+|---|---|---|
+| `ubuntu-latest` | pass | pass |
+| `windows-latest` | pass | pass |
+
+Plus lint, an install check on Linux, macOS and Windows, and a multi-arch
+Docker build with an SBOM and a signed provenance attestation.
+
+This matters more than a local run, and it was added to this page only after
+it caught three defects a Windows-only workflow could not see: a verification
+check type that opened a relative path on POSIX, a request handler that probed
+hardware on every call, and a server that accepted connections before it could
+answer them. A suite that passes on one platform through one invocation is a
+narrower claim than it looks.
+
+### Local host
+
+Timing and memory figures below are measured here, so the class of machine is
+part of the result.
 
 | | |
 |---|---|
@@ -39,23 +66,33 @@ uv run python scripts/test_report.py results.xml --skips
 
 ## Test results
 
-Two consecutive full suites on the same frozen commit, no changes between them:
+The suite is run the way CI runs it — `pytest`, not `python -m pytest`. The
+distinction is not cosmetic: `python -m pytest` puts the working directory on
+`sys.path` and a bare `pytest` does not, and for a while that difference was
+the only reason five modules imported at all.
 
-| Run | Collected | Passed | Failed | Skipped | Wall |
-|---|---|---|---|---|---|
-| 1 | 1513 | 1491 | 0 | 22 | 1690 s |
-| 2 | 1513 | 1491 | 0 | 22 | 1457 s |
+| | Collected | Passed | Failed | Skipped |
+|---|---|---|---|---|
+| Local, most recent | 1516 | 1491 | 0 | 25 |
 
-Both runs exercised the resource-sensitive scenarios rather than skipping them:
-the live browser capability receipt, the workspace first-render budget, both
-two-browser workspace scenarios, and all 24 browser runtime tests passed in
-each run.
+CI runs the same suite on all four matrix jobs and every one passes; the counts
+there differ from the local run because the Linux jobs execute tests a Windows
+host skips, and vice versa.
+
+Skip counts move with free memory: scenarios that hold a governed browser skip
+when the machine cannot afford one, and say by how much.
+
+A pass count alone would not say much, because the resource-sensitive
+scenarios can skip rather than fail. What matters is that they ran: the live
+browser capability receipt, the workspace first-render budget, the two-browser
+workspace scenarios, and all 24 browser runtime tests.
 
 ### Skips
 
-All 22 are deliberate. Twenty are opt-in gates for real models, which are off
-by default because a suite that silently downloads several hundred megabytes is
-not a suite that can be trusted to be offline. See [testing tiers](testing.md).
+Twenty-two skips are fixed and deliberate; the rest vary with free memory.
+Twenty of the fixed ones are opt-in gates for real models, off by default
+because a suite that silently downloads several hundred megabytes is not a
+suite that can be trusted to be offline. See [testing tiers](testing.md).
 
 | Count | Reason |
 |---|---|
@@ -65,9 +102,11 @@ not a suite that can be trusted to be offline. See [testing tiers](testing.md).
 | 1 | VLM gate (`WATCHSKILL_TEST_REAL_VLM`) |
 | 1 | local ASR recognition (`WATCHSKILL_TEST_LOCAL_ASR`) |
 | 1 | rendered VLM gate (`WATCHSKILL_TEST_REAL_VLM_LIVE`) |
-| 1 | POSIX permission bits — Linux-only, covered by the `ubuntu-latest` CI job |
+| 1 | POSIX permission bits — skipped on Windows, and executed by the `ubuntu-latest` jobs |
 
-No test was skipped for want of memory in either run.
+Anything beyond those is a resource skip: a scenario holding a governed
+browser that the machine could not afford, reported with the shortfall in
+megabytes rather than passing quietly. Three appeared in the run above.
 
 ## Browser runtime
 

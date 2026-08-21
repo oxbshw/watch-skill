@@ -9,6 +9,26 @@ actions to the same standard it holds anyone else's. Additive — no CLI command
 MCP tool or schema changed, and `watch_skill.operate` is a new package rather
 than a modification of an existing one.
 
+### Fixed
+
+- **`sqlite_query` verification could not open its database on Linux or
+  macOS.** The read-only connection URI was built by trimming a fixed prefix
+  from the file URL, which left a Windows path intact but removed the leading
+  slash on POSIX, so an absolute path became a relative one and every check of
+  that type reported an error. The check type is documented as available on
+  every platform and now is.
+- **The workspace served capture capabilities by probing hardware on every
+  request.** Each snapshot enumerated ffmpeg input devices once per capture
+  kind and launched a browser driver to resolve the chromium path — about
+  twenty seconds on a cold 8 GiB host, for an answer that cannot change
+  without installing software. The probes are cached per process and resolved
+  before the host serves, so opening the workspace no longer waits on them.
+- **A dev host could accept a connection before it could answer one.** The
+  listening socket exists from the moment the server is constructed, so a
+  client connecting before the serving loop was scheduled saw an open socket
+  and no reply. `start()` now returns only once the host has answered a
+  request, and reports the bound address if it never does.
+
 ### Browser Runtime
 
 One browser subsystem, two modes. *Observer* watches someone else work and
