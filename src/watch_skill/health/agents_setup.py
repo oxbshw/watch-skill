@@ -5,6 +5,7 @@ on this machine and offers to register the MCP server in each one — with a
 timestamped backup of any file it touches, and surgical merges that never
 drop existing keys.
 """
+
 from __future__ import annotations
 
 import json
@@ -20,11 +21,11 @@ from pathlib import Path
 class AgentTarget:
     """One configurable agent installation found on this machine."""
 
-    key: str            # claude-code | claude-desktop | cursor | codex | windsurf | cline | gemini
+    key: str  # claude-code | claude-desktop | cursor | codex | windsurf | cline | gemini
     label: str
     config_path: Path
-    kind: str           # json-mcpservers | toml-codex
-    detected: bool      # was the agent itself found (not just its config)?
+    kind: str  # json-mcpservers | toml-codex
+    detected: bool  # was the agent itself found (not just its config)?
     configured: bool = False  # already has an watch-skill entry
 
 
@@ -55,30 +56,47 @@ def detect_agents() -> list[AgentTarget]:
     mac_support = home / "Library" / "Application Support"
     candidates = [
         AgentTarget(
-            "claude-code", "Claude Code", home / ".claude.json", "json-mcpservers",
+            "claude-code",
+            "Claude Code",
+            home / ".claude.json",
+            "json-mcpservers",
             detected=bool(shutil.which("claude")) or (home / ".claude.json").is_file(),
         ),
         AgentTarget(
-            "claude-desktop", "Claude Desktop",
-            (appdata if sys.platform == "win32" else mac_support) / "Claude" / "claude_desktop_config.json",
+            "claude-desktop",
+            "Claude Desktop",
+            (appdata if sys.platform == "win32" else mac_support)
+            / "Claude"
+            / "claude_desktop_config.json",
             "json-mcpservers",
             detected=((appdata if sys.platform == "win32" else mac_support) / "Claude").is_dir(),
         ),
         AgentTarget(
-            "cursor", "Cursor", home / ".cursor" / "mcp.json", "json-mcpservers",
+            "cursor",
+            "Cursor",
+            home / ".cursor" / "mcp.json",
+            "json-mcpservers",
             detected=(home / ".cursor").is_dir() or bool(shutil.which("cursor")),
         ),
         AgentTarget(
-            "codex", "Codex CLI", home / ".codex" / "config.toml", "toml-codex",
+            "codex",
+            "Codex CLI",
+            home / ".codex" / "config.toml",
+            "toml-codex",
             detected=(home / ".codex").is_dir() or bool(shutil.which("codex")),
         ),
         AgentTarget(
-            "windsurf", "Windsurf", home / ".codeium" / "windsurf" / "mcp_config.json",
+            "windsurf",
+            "Windsurf",
+            home / ".codeium" / "windsurf" / "mcp_config.json",
             "json-mcpservers",
             detected=(home / ".codeium" / "windsurf").is_dir(),
         ),
         AgentTarget(
-            "gemini", "Gemini CLI", home / ".gemini" / "settings.json", "json-mcpservers",
+            "gemini",
+            "Gemini CLI",
+            home / ".gemini" / "settings.json",
+            "json-mcpservers",
             detected=(home / ".gemini").is_dir() or bool(shutil.which("gemini")),
         ),
     ]
@@ -121,16 +139,12 @@ def _write_toml_codex(path: Path, command: str, args: list[str]) -> None:
     if "[mcp_servers.watch-skill]" in text:
         return
     args_toml = ", ".join(json.dumps(a) for a in args)
-    block = (
-        f'\n[mcp_servers.watch-skill]\ncommand = "{command}"\nargs = [{args_toml}]\n'
-    )
+    block = f'\n[mcp_servers.watch-skill]\ncommand = "{command}"\nargs = [{args_toml}]\n'
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(text + block, encoding="utf-8")
 
 
-def configure_agent(
-    target: AgentTarget, project_dir: Path | None = None
-) -> tuple[bool, str]:
+def configure_agent(target: AgentTarget, project_dir: Path | None = None) -> tuple[bool, str]:
     """Write the watch-skill MCP entry into one agent's config.
 
     Returns (changed, human message). Existing files are backed up first;
@@ -145,7 +159,46 @@ def configure_agent(
             _write_json_mcpservers(target.config_path, command, args)
         else:
             _write_toml_codex(target.config_path, command, args)
-    except (OSError, json.JSONDecodeError) as exc:
+    except json.JSONDecodeError as exc:
+        # Raised while reading the existing config, before any write: the
+        # file genuinely is untouched.
         return False, f"{target.label}: FAILED to write ({exc}) — config untouched"
+    except OSError as exc:
+        # A write that raised may still have truncated or replaced the file,
+        # so roll back to the pre-call bytes instead of claiming untouched.
+        restored = _restore_from_backup(target.config_path, backup)
+        if backup is None:
+            if restored:
+                return (
+                    False,
+                    f"{target.label}: FAILED to write ({exc}) — partial new config removed",
+                )
+            return (
+                False,
+                f"{target.label}: FAILED to write ({exc}) — could not remove partial config at {target.config_path}; delete it manually",
+            )
+        if restored:
+            return (
+                False,
+                f"{target.label}: FAILED to write ({exc}) — restored pre-call config from {backup.name}",
+            )
+        return (
+            False,
+            f"{target.label}: FAILED to write ({exc}) — RESTORE FAILED; recover manually from {backup.name}",
+        )
     note = f" (backup: {backup.name})" if backup else ""
     return True, f"{target.label}: configured -> {target.config_path}{note}"
+
+
+def _restore_from_backup(path: Path, backup: Path | None) -> bool:
+    """Best-effort rollback after a failed write. A config that did not exist
+    before the call must not be left behind as a partial file. Returns whether
+    the pre-call state was recovered."""
+    try:
+        if backup is None:
+            path.unlink(missing_ok=True)
+        else:
+            shutil.copy2(backup, path)
+    except OSError:
+        return False
+    return True
