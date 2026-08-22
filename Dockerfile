@@ -8,7 +8,7 @@
 # The volume matters: the persistent index is the product. Without it every
 # run re-downloads and re-transcribes.
 
-FROM python:3.13-slim-bookworm
+FROM python:3.14-slim-bookworm
 
 # ffmpeg is the one dependency the doctor cannot bootstrap inside a slim
 # image without a package manager; install it here so first run is clean.
