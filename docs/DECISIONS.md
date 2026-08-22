@@ -502,85 +502,65 @@ exists for the case where that is not enough.
 listening socket is created earlier, in the server constructor, so the kernel
 accepts connections into the backlog from that moment. A client connecting in
 the window before `serve_forever` was scheduled saw an open socket and no
-bytes, which is indistinguishable from a hung handler and caused an
-intermittent read timeout that alternated between CI runners rather than
-following a platform or a Python version.
+bytes, which is indistinguishable from a hung handler. The symptom is a read
+timeout on the first request and nothing wrong afterwards, and it follows load
+rather than platform, so it reads as flakiness rather than as a bug.
 
 `start()` now builds one complete snapshot through the request handler's own
 path, then issues a request against itself and returns only when the host
-answers. Warming the whole response rather than only the probes is what makes
-the guarantee independent of which component happens to be coldest; an earlier
-attempt that warmed only the probes left the first request slow for other
-reasons. If the host never answers, `start()` raises with the bound address
-instead of leaving a caller to time out.
+answers. Warming the whole response matters rather than only the capture
+probes, because the snapshot path is cold in more places than those: lazy
+imports, the session and approval stores, and policy all resolve once per
+process. Warming the response makes the guarantee independent of which of them
+happens to be slowest. If the host never answers, `start()` raises with the
+bound address instead of leaving a caller to time out.
 
-### No npm package, and what `npx skills add` actually is (2026-08-22)
+### The engine ships on PyPI; there is no npm package
 
 `npx skills add oxbshw/watch-skill -g` appears in the install instructions and
-reads as though Watch Skill were an npm package. It is not. Checked against the
-registry on 2026-08-22:
+reads as though Watch Skill were an npm package. It is not. That command runs
+Vercel's `skills` CLI, which reads the `SKILL.md` files out of this repository
+and installs them into whichever agents are present. The engine is Python and
+arrives from PyPI. The Next.js app under `app/` is `private: true` — a build
+surface for the embedded MCP App, not a publishable artifact.
 
-| Package | Status |
-|---|---|
-| `watch-skill` | not published (404) |
-| `@oxbshw/watch-skill` | not published (404) |
-| `watch-skill-mcp` | not published (404) |
-| `skills` | published by Vercel, 1.5.23 |
+An npm wrapper was considered and rejected. Shelling out to `uvx` from Node
+would add a second install path, a second version to keep in step and a second
+supply-chain surface, and it would not remove the Python requirement, because
+the engine is Python: Node users would still need `uv` or `pip` on the machine.
 
-The command runs Vercel's `skills` CLI, which reads the ten `SKILL.md` files
-out of this repository and installs them into whichever agents are present. The
-engine is Python and arrives from PyPI. The Next.js app under `app/` is
-`watch-skill-workspace`, `private: true` — an internal build surface for the
-embedded MCP App, not a publishable artifact.
+The bar for revisiting is a package that does something the Python
+distribution cannot — a typed Node client with tests, no install-time side
+effects, correct exit-code and signal passthrough on all three platforms, a
+version synchronized with the Python release, and trusted publishing with
+provenance. A wrapper that only re-exports `uvx` does not meet it.
 
-Publishing an npm package was considered and rejected. A wrapper that shells
-out to `uvx` would add a second install path, a second version to keep in step,
-and a second place for a supply-chain problem, in exchange for a badge. It
-would not remove the Python requirement, because the engine is Python: Node
-users would still need `uv` or `pip` on the machine.
+### The MCP Registry entry cannot precede the package it points at
 
-The bar for revisiting this is a package that does something the Python
-distribution cannot: a real typed Node/TypeScript client, tests, no install-time
-side effects, correct exit-code and signal passthrough on all three platforms,
-a version synchronized with the Python release, and trusted publishing with
-provenance. Until something meets that bar, the README says PyPI, and says what
-the `npx` line is doing.
+`server.json` declares `io.github.oxbshw/watch-skill` against the PyPI package,
+and `tests/test_mcp_registry.py` validates it on every push against a committed
+copy of the official schema. The schema is committed rather than fetched: a
+test that downloads its own schema fails when someone else's CDN has a bad
+morning, and a schema change should be something a person reviews.
 
-### MCP Registry entry is committed but not yet published (2026-08-22)
+PyPI proves ownership through a marker in the package description, so the
+README carries `<!-- mcp-name: io.github.oxbshw/watch-skill -->` and the build
+is checked to confirm it survives the `hatch-fancy-pypi-readme` rewrite into
+wheel metadata.
 
-`server.json` declares `io.github.oxbshw/watch-skill` against the real PyPI
-package, validated on every push by `tests/test_mcp_registry.py` against a
-committed copy of the official schema
-(`schemas/mcp-server.schema.json`, `2025-12-11`). PyPI ownership is proved by a
-marker in the package description; the README carries
-`<!-- mcp-name: io.github.oxbshw/watch-skill -->`, and a build confirms it
-survives the `hatch-fancy-pypi-readme` rewrite into the wheel metadata.
+A registry entry resolves to a package at a version, so publishing one before
+that version exists on PyPI advertises an install that cannot work. The release
+workflow publishes the entry from a job that `needs: pypi`, which makes the
+ordering structural rather than something a release checklist has to remember.
 
-Nothing has been published. The registry entry resolves to a package at a
-version, and only `1.2.0` is on PyPI — advertising `1.3.0rc2` would describe an
-install that cannot work. The release workflow therefore publishes the entry in
-a job that `needs: pypi`, so the metadata can never precede the package. The
-first registry publication happens on the next authorized release, not before.
+Pre-releases are published too. The install command is pinned to the version
+the entry declares — `--from watch-skill[standard]==<version>` — because an
+unpinned `uvx` resolves the newest *stable* release, and an entry that
+advertises a candidate while starting a different build is worse than no entry
+at all. The registry sorts versions itself and does not mark a pre-release as
+latest once the matching stable release exists.
 
-The tests cover the failure that would otherwise reach users: the version in
-`server.json` matching `pyproject.toml`, the command in `packageArguments`
-being a real CLI command, and the extra in `runtimeArguments` being one
-`pyproject.toml` actually declares.
-
-### External directories carry stale metadata we cannot fix from here (2026-08-22)
-
-Several third-party catalogs list the project with outdated identity or tool
-counts. A repository change cannot correct any of them; each needs an account
-action on the platform.
-
-| Listing | What is stale |
-|---|---|
-| Glama | Old `agentvision` slug, 13 tools, "cannot be installed", entry unclaimed |
-| AIProductHub | 23 tools |
-
-The current figure is 37, enforced by `tests/surfaces/test_mcp_server.py`
-against the live registry rather than kept in prose. What this repository can
-do is publish accurate machine-readable metadata — `server.json`, the plugin
-manifests, `llms.txt` — so a directory that re-reads the source gets the right
-answer. Claiming and correcting the listings is manual and is recorded in the
-release notes for whoever holds those accounts.
+The tests pin what would otherwise reach users as a broken install: the version
+matching `pyproject.toml`, the command in `packageArguments` being a real CLI
+command, and the extra in `runtimeArguments` being one `pyproject.toml`
+declares.

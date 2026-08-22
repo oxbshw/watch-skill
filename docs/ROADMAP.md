@@ -1,19 +1,68 @@
 # Roadmap
 
-The thesis behind v1.0: every AI agent — coding agents, browser agents,
-framework agents — needs to watch video. Its own UI. A bug recording. A
-tutorial. The browser session it just drove. Agents can act on screens
-at scale now, and an agent that acts on screens needs an independent eye
-that watches the recording and verifies the outcome. watch-skill aims to
-be that layer for all of them: installed everywhere, remembering
-everything it watches, at a measured near-zero cost, with the best
-perception the machine at hand allows, healing and improving itself, and
-packaged for real work.
+## What this is converging on
 
-v1.0 shipped all seven of those claims with receipts (see the README's
-benchmark tables and the examples' recorded runs). Everything below
-builds on them without breaking the contracts: engine agent-agnostic,
-MCP tool names stable, forward migrations only.
+Agents can act on screens now. They click, type, navigate and report back —
+and the reporting is the weak part. An agent that says "done" is describing its
+own intent, and the industry's answer so far has been a better-behaved agent
+rather than an independent record of what happened.
+
+Watch Skill is that record. Three layers, each useful alone and much more
+useful together:
+
+**Perception** turns any visual source into timestamped evidence — video, a
+live stream, a meeting, a screen, a browser session, generated video, a game.
+Scene-aware frames, on-screen text, transcripts, and the structured state of a
+page, all carrying the moment they came from.
+
+**Memory** keeps that evidence and makes it answerable later. Watch once, ask
+for a year. The index is local, schema-versioned, and addressed by content
+rather than by filename, so an answer cites a moment that can be checked
+instead of a summary that has to be trusted.
+
+**Verification** turns evidence into a verdict. Deterministic checks decide;
+a model may describe, advise, and read the record, but it never rules. An
+action with no expectation is unverified, an absent check is inconclusive, and
+a page that renders success over a failed request is a failure.
+
+The direction is to make the third layer hard to fool and the second layer
+worth keeping for years. Perception is the input to both, so it improves in
+service of them rather than for its own sake.
+
+## What would make this matter more
+
+Ordered by how much each would change what the product can honestly claim,
+not by how easy it is.
+
+**Verification that survives an adversary.** Today a contract can be fooled by
+a failure that never reaches any oracle. The work is more check types
+(accessibility, failed-request assertions, ingesting a test report), and
+correlating them so a run is judged on the whole recording rather than its
+final frame. Every one of these narrows the gap between "the checks passed"
+and "it actually worked".
+
+**Evidence somebody else can verify.** `remote_attested` is defined and
+deliberately unimplemented: a hash is not a signature, and an attestation
+nobody can check independently is decoration. Making a run's evidence bundle
+verifiable by a third party is what turns a local verdict into something an
+auditor, a customer, or a CI system can accept.
+
+**Memory that spans sources and time.** The entity layer already tracks
+attributes across a session. The direction is answers that hold across many
+recordings and many days — what changed between two releases, when a
+regression first appeared, which of forty sessions shows the failure —
+without re-processing anything.
+
+**Perception that keeps up with the present.** Local VLM inference costs tens
+of seconds on ordinary hardware, so understanding lags the screen. Better
+selection, smaller models, and the freshness semantics that already label a
+late reading as historical are what keep a slow model honest instead of
+misleading.
+
+**A footprint small enough to leave installed.** Ten skills cost about 1,259
+discovery tokens every session before an agent does anything. Progressive
+disclosure and consolidation are how the product stays installed rather than
+being removed for being expensive to have around.
 
 ## Status of the current tree
 
@@ -77,74 +126,71 @@ this roadmap described them as gaps.
   analytics.** Backends are internal protocols; external plugins cannot
   register.
 
-## v1.1 candidates
+## Named work, by theme
 
-- **Team-shared video memory**: the remote MCP recipe (streamable HTTP +
-  bearer auth) graduated into a documented deployment — one library,
-  many agents, `library_synthesize` across a team's footage. The notes
-  layer (schema v7) was designed with this in mind: provenance survives
+Nothing here carries a date. Items move when they are built and proved, and
+several below record something that was tried and rejected, because that is as
+useful to a contributor as a plan.
+
+### Verification depth
+
+- Accessibility, failed-request, and test-report check types
+  ([verification.md](verification.md)). Missing rather than stubbed: a check
+  that always passes is worse than no check.
+- Independent attestation for `remote_attested` — see
+  [DECISIONS](DECISIONS.md) for why a digest alone does not qualify.
+- A retrieval-quality benchmark: scored (video, question, expected-evidence)
+  triples, the missing sibling of the cost and perception benches.
+
+### Memory and scale
+
+- **Index size is the live scaling limit.** About 2 KB per vector means a
+  100k-item library is a 200 MB file, while the scan behind it is 115 ms.
+  `watch-skill stats --disk` shows where the space went so `forget` is
+  informed. Open: eviction by age or access, and an opt-in smaller embedding
+  model — both shrink the file without charging every query.
+- ~~**Narrower vector storage**~~ — tried, measured, rejected. float16 halves
+  the index (197 MB → 80 MB at 100k) with no ranking change, but widening it
+  on every read takes a 100k scan from 115 ms to ~310 ms. Storage stays
+  float32 and the reader accepts either width.
+- **sqlite-vec** remains the intended answer because it keeps everything in
+  the one SQLite file, but it is still 0.1.9 with no stated development
+  status and the latency it would fix is not yet felt.
+- **Scene graph**: object and person persistence across scenes, built on the
+  existing phash alignment.
+- **Team-shared memory**: the remote MCP recipe graduated into a documented
+  deployment. The notes layer was designed for it — provenance survives
   sharing.
-- **More machine-tested agent rows**: every doc-verified ☑ row in the
-  matrix is one community smoke test away from ✅ — the good-first-issue
-  batch exists for exactly this.
-- **Comparison / A-B mode** (`extract/hook.py`): two cuts of a video →
-  which hook wins, building directly on `analyze_hook`.
-- **Visual diff between two videos** (`loop/diff.py`): the phash
-  alignment engine already pairs frames across recordings; expose it as
-  a first-class tool for visual regression monitoring.
-- **Tesseract fallback machine-proven**: the Lao/Khmer/Myanmar/Tibetan
-  route ships tested against fixtures; a live read on a machine with
-  tesseract installed upgrades the bench table.
-- **Framework adapters promoted**: LlamaIndex and AutoGen get live
-  agent-run examples like the LangChain/CrewAI/Agents-SDK trio has.
 
-## Medium term
+### Perception
 
-- **Scene graph**: object/person persistence across scenes ("track the
-  red car"), built on the existing phash alignment.
-- ~~**Bootstrap tesseract like every other binary**~~ — done, as far as it
-  can be. Language files now download themselves on first use for the
-  scripts RapidOCR reads at 0% (Lao, Khmer, Myanmar, Tibetan), which is the
-  half that is usually missing — `apt install tesseract-ocr` ships English
-  and leaves those in separate packages. The binary is installed via winget
-  on Windows; elsewhere it needs a package manager, so `doctor` warns with
-  the exact command instead of failing. The engine was never the gap:
-  RapidOCR reads clean text at confidence 1.00, and Surya stays opt-in
-  because it needs more RAM than the 8 GB reference machine.
-- ~~**Narrower vector storage**~~ — tried, measured, rejected. float16
-  halves the index (197 MB → 80 MB at 100k) with no change to ranking, but
-  widening it back on every read takes the scan from 115 ms to ~310 ms per
-  100k, and no decode strategy avoids that. Storage stays float32; the
-  reader accepts either width, so an index written during the experiment
-  still works. Table in [DECISIONS](DECISIONS.md).
-- **Index size is the remaining scaling limit** (`index/`): ~2 KB per vector
-  means a 100k-item library is a 200 MB file, while the scan behind it is
-  only 115 ms. `watch-skill stats --disk` now shows where that space went
-  and ranks videos by what they cost, so `forget` is an informed decision
-  rather than a guess. Still open: automatic eviction by age or access, and
-  an opt-in smaller embedding model — both reduce the file without charging
-  every query, which is what ruled out narrower vectors.
-- **sqlite-vec for vector search**: still 0.1.9 with no stated development
-  status, and the numbers above say the latency it would fix is not yet
-  felt. It keeps everything in the one SQLite file, which is why it remains
-  the intended answer — see [DECISIONS](DECISIONS.md) for the full table and
-  the condition to revisit.
-- **Streaming watch progress over MCP** (`surfaces/mcp/`): partial
-  transcript/scene events as they land, so agents can answer before the
-  watch finishes.
-- ~~**Word-level timestamps**~~ — shipped. `--word-timestamps` aligns each
-  word through the local-whisper rung; `get_moment` names the word being
-  spoken at the instant asked about. Captions and cloud STT carry no
+- **Streaming watch progress over MCP**: partial transcript and scene events
+  as they land, so an agent can answer before the watch finishes.
+- **Diarization polish**: a lighter local backend, speaker naming from
+  context, diarized evidence.
+- **Visual diff between two recordings**: the phash alignment already pairs
+  frames across videos; exposing it makes visual regression monitoring a
+  first-class use rather than a recipe.
+- ~~**Word-level timestamps**~~ — shipped. Captions and cloud STT carry no
   alignment, so the field is absent rather than guessed.
-- **Diarization polish** (`transcribe/diarize.py`): lighter local
-  backend, speaker naming from context, diarized evidence.
-- **yt-dlp PO-token / impersonation extras** (`acquire/`): opt-in
-  "hardened acquisition", off by default to preserve the no-cookies
-  invariant.
-- **Retrieval-quality benchmark**: scored (video, question,
-  expected-evidence) triples measuring retrieval and frame-budget
-  efficiency across providers — the missing sibling of the cost and
-  perception benches.
+- ~~**Tesseract bootstrap**~~ — done as far as it can be. Language files
+  download on first use for the scripts RapidOCR reads at 0%; the binary
+  needs a package manager off Windows, so `doctor` prints the exact command.
+- **yt-dlp hardened acquisition**: PO-token and impersonation extras, opt-in
+  and off by default so the no-cookies invariant holds.
+
+### Reach
+
+- **More machine-tested agent rows.** Every documentation-verified row in the
+  matrix is one community smoke test away from machine-tested, and the
+  distinction is deliberate — see [the agent matrix](agents/README.md).
+- **Framework adapters promoted**: LlamaIndex and AutoGen get live agent-run
+  examples like the LangChain, CrewAI and Agents-SDK trio has.
+- **Skill consolidation**: the four-skill progressive-disclosure design,
+  measured against the current 1,259-token discovery cost by
+  `benchmarks/skill_tokens.py`.
+- **A plugin entry point.** Backends are internal protocols today, so an
+  external perception or verification backend cannot register itself.
 
 ## Non-goals (so PRs don't die in review)
 
