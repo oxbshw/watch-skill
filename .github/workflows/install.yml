@@ -25,6 +25,12 @@ on:
     - cron: "0 6 * * 1"
   workflow_dispatch:
 
+# Least privilege, stated rather than inherited. The repository default is
+# read today, so this changes nothing now -- it is what keeps a future
+# change to that default from silently handing this workflow write access.
+permissions:
+  contents: read
+
 jobs:
   posix:
     name: install.sh (${{ matrix.os }})

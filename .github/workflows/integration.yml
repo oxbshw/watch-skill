@@ -9,6 +9,12 @@ on:
         description: "Comma list for golden_path --skip (e.g. tiktok,loop)"
         default: "loop"
 
+# Least privilege, stated rather than inherited. The repository default is
+# read today, so this changes nothing now -- it is what keeps a future
+# change to that default from silently handing this workflow write access.
+permissions:
+  contents: read
+
 jobs:
   golden-path:
     runs-on: ubuntu-latest
