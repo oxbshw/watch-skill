@@ -513,3 +513,74 @@ the guarantee independent of which component happens to be coldest; an earlier
 attempt that warmed only the probes left the first request slow for other
 reasons. If the host never answers, `start()` raises with the bound address
 instead of leaving a caller to time out.
+
+### No npm package, and what `npx skills add` actually is (2026-08-22)
+
+`npx skills add oxbshw/watch-skill -g` appears in the install instructions and
+reads as though Watch Skill were an npm package. It is not. Checked against the
+registry on 2026-08-22:
+
+| Package | Status |
+|---|---|
+| `watch-skill` | not published (404) |
+| `@oxbshw/watch-skill` | not published (404) |
+| `watch-skill-mcp` | not published (404) |
+| `skills` | published by Vercel, 1.5.23 |
+
+The command runs Vercel's `skills` CLI, which reads the ten `SKILL.md` files
+out of this repository and installs them into whichever agents are present. The
+engine is Python and arrives from PyPI. The Next.js app under `app/` is
+`watch-skill-workspace`, `private: true` — an internal build surface for the
+embedded MCP App, not a publishable artifact.
+
+Publishing an npm package was considered and rejected. A wrapper that shells
+out to `uvx` would add a second install path, a second version to keep in step,
+and a second place for a supply-chain problem, in exchange for a badge. It
+would not remove the Python requirement, because the engine is Python: Node
+users would still need `uv` or `pip` on the machine.
+
+The bar for revisiting this is a package that does something the Python
+distribution cannot: a real typed Node/TypeScript client, tests, no install-time
+side effects, correct exit-code and signal passthrough on all three platforms,
+a version synchronized with the Python release, and trusted publishing with
+provenance. Until something meets that bar, the README says PyPI, and says what
+the `npx` line is doing.
+
+### MCP Registry entry is committed but not yet published (2026-08-22)
+
+`server.json` declares `io.github.oxbshw/watch-skill` against the real PyPI
+package, validated on every push by `tests/test_mcp_registry.py` against a
+committed copy of the official schema
+(`schemas/mcp-server.schema.json`, `2025-12-11`). PyPI ownership is proved by a
+marker in the package description; the README carries
+`<!-- mcp-name: io.github.oxbshw/watch-skill -->`, and a build confirms it
+survives the `hatch-fancy-pypi-readme` rewrite into the wheel metadata.
+
+Nothing has been published. The registry entry resolves to a package at a
+version, and only `1.2.0` is on PyPI — advertising `1.3.0rc2` would describe an
+install that cannot work. The release workflow therefore publishes the entry in
+a job that `needs: pypi`, so the metadata can never precede the package. The
+first registry publication happens on the next authorized release, not before.
+
+The tests cover the failure that would otherwise reach users: the version in
+`server.json` matching `pyproject.toml`, the command in `packageArguments`
+being a real CLI command, and the extra in `runtimeArguments` being one
+`pyproject.toml` actually declares.
+
+### External directories carry stale metadata we cannot fix from here (2026-08-22)
+
+Several third-party catalogs list the project with outdated identity or tool
+counts. A repository change cannot correct any of them; each needs an account
+action on the platform.
+
+| Listing | What is stale |
+|---|---|
+| Glama | Old `agentvision` slug, 13 tools, "cannot be installed", entry unclaimed |
+| AIProductHub | 23 tools |
+
+The current figure is 37, enforced by `tests/surfaces/test_mcp_server.py`
+against the live registry rather than kept in prose. What this repository can
+do is publish accurate machine-readable metadata — `server.json`, the plugin
+manifests, `llms.txt` — so a directory that re-reads the source gets the right
+answer. Claiming and correcting the listings is manual and is recorded in the
+release notes for whoever holds those accounts.

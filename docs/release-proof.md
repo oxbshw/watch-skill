@@ -195,6 +195,34 @@ The installed-wheel check matters more than the import check: it runs a
 multi-step browser task from `site-packages` and requires both a verified
 success and a correctly rejected false success.
 
+## Distribution
+
+Every channel below was checked against the live service on 2026-08-22 rather
+than copied from an earlier report.
+
+| Channel | State |
+|---|---|
+| PyPI `watch-skill` | `1.2.0` is the only published version. The source is `1.3.0rc2` and is not installable from PyPI. |
+| Agent Skills (skills.sh) | Badge endpoint returns HTTP 200, `Skills: 1.1K`. Ten `SKILL.md` files in the repository. |
+| GHCR `ghcr.io/oxbshw/watch-skill` | OCI index with `linux/amd64` and `linux/arm64`, plus two attestation manifests. |
+| GitHub release `v1.2.0` | Wheel, sdist and `watch-skill.skill`. |
+| npm | Nothing published. `watch-skill`, `@oxbshw/watch-skill` and `watch-skill-mcp` all return 404; `npx skills` runs Vercel's CLI. See [DECISIONS](DECISIONS.md). |
+| MCP Registry | `server.json` committed and schema-validated; not yet published. |
+
+The README states PyPI as the install channel and no longer reads as though
+`npx skills add` were installing an npm package.
+
+### Installed-wheel checks
+
+| Check | Result |
+|---|---|
+| `watch-skill --version` | `1.3.0rc2` |
+| `watch-skill doctor --no-fix --json` | valid JSON, 16 checks |
+| MCP `initialize` over real stdio | ok |
+| `tools/list` over real stdio | 37 tools |
+| PyPI description carries the `mcp-name` marker | yes, survives the README rewrite |
+| sdist / wheel hygiene | no `node_modules`, `.next`, caches or build junk |
+
 ## Security
 
 | Check | Result |

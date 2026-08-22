@@ -1,3 +1,4 @@
+<!-- mcp-name: io.github.oxbshw/watch-skill -->
 <div align="center">
 
 <img src="docs/assets/watch-skill-hero.webp" alt="Watch Skill: watch a video, remember the evidence with timestamps, and verify an agent's work through THE LOOP" width="88%">
@@ -10,6 +11,7 @@
 [![Install](https://github.com/oxbshw/watch-skill/actions/workflows/install.yml/badge.svg)](https://github.com/oxbshw/watch-skill/actions/workflows/install.yml)
 [![PyPI](https://img.shields.io/pypi/v/watch-skill)](https://pypi.org/project/watch-skill/)
 [![Downloads](https://img.shields.io/pypi/dm/watch-skill)](https://pypi.org/project/watch-skill/)
+[![Agent Skills](https://www.skills.sh/b/oxbshw/watch-skill)](https://www.skills.sh/oxbshw/watch-skill)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-3776AB)](pyproject.toml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
@@ -73,6 +75,12 @@ uvx --from "watch-skill[standard]" watch-skill setup
 # 2. the skills — into Claude Code, Codex, Cursor, Copilot, Gemini CLI, and 20+ more
 npx skills add oxbshw/watch-skill -g
 ```
+
+Watch Skill ships on PyPI, not npm. The second command runs
+[Vercel's `skills` CLI](https://www.skills.sh), which reads the ten `SKILL.md`
+files out of this repository and installs them into whichever agents you have —
+there is no `watch-skill` npm package to install, and the engine is Python
+either way.
 
 Neither needs a clone, and the engine command works the same on macOS, Linux, and
 Windows — [CI runs it on all three](https://github.com/oxbshw/watch-skill/actions/workflows/install.yml)

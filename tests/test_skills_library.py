@@ -98,3 +98,37 @@ def test_original_watch_skill_untouched_contract() -> None:
     fm = _frontmatter(SKILLS_DIR / "watch" / "SKILL.md")
     assert fm.get("user-invocable") == "true"
     assert "argument-hint" in fm
+
+
+def test_documented_skill_counts_match_the_directory() -> None:
+    """Prose that counts the skills has to count the ones that exist.
+
+    The MCP tool count rotted in six places before a test pinned it. The skill
+    count is written in words rather than digits, which is exactly the form a
+    find-and-replace misses, so it is checked here against the directory
+    instead of trusted to a reviewer.
+    """
+    import re
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parents[1]
+    actual = len([p for p in (root / "skills").iterdir()
+                  if p.is_dir() and (p / "SKILL.md").is_file()])
+    words = {"one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6,
+             "seven": 7, "eight": 8, "nine": 9, "ten": 10, "eleven": 11,
+             "twelve": 12}
+    pattern = re.compile(r"\b(\w+)\s+(?:portable\s+|agent\s+)?skills\b", re.I)
+
+    stale: list[str] = []
+    for rel in ("README.md", "docs/ROADMAP.md", "docs/architecture.md",
+                "docs/README.md", "llms.txt"):
+        path = root / rel
+        if not path.is_file():
+            continue
+        for found in pattern.findall(path.read_text(encoding="utf-8")):
+            token = found.lower()
+            claimed = words.get(token, int(token) if token.isdigit() else None)
+            if claimed is not None and claimed != actual:
+                stale.append(f"{rel} says {found}")
+
+    assert not stale, f"{actual} skills exist; {'; '.join(stale)}"
