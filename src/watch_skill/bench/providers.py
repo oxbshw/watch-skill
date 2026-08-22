@@ -32,6 +32,17 @@ from typing import Any
 
 from watch_skill.index.textnorm import normalize_for_search
 
+
+def _host() -> str:
+    """The class of machine a measurement ran on, not the machine.
+
+    `platform.platform()` returns the exact build ("Windows-10-10.0.19045-SP0"),
+    which is more than a benchmark needs to be reproducible and more than
+    belongs in a committed result. The family and release are what let a reader
+    judge whether their own numbers should look similar.
+    """
+    return f"{platform.system()} {platform.release()}"
+
 # Reading text off a frame is the task where providers visibly differ, and
 # it is checkable against ground truth — unlike "describe this scene".
 READ_PROMPT = (
@@ -131,7 +142,7 @@ def bench_providers(
         ready = [p for p in ready if p in wanted]
 
     report = ProviderReport(
-        machine=f"{platform.platform()}",
+        machine=_host(),
         date=date.today().isoformat(),
         skipped=skipped,
     )

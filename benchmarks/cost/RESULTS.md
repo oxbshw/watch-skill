@@ -1,6 +1,6 @@
 # Cost benchmark
 
-- Machine: Windows-10-10.0.19045-SP0, 8 GB RAM, CPU-only
+- Machine: Windows 10, 8 GB RAM, CPU-only
 - Date: 2026-07-11
 - Load: 4 videos (12 s of footage), 6 questions (2 repeats)
 - Prices: src/watch_skill/vision/prices.json (as of 2026-07-11)

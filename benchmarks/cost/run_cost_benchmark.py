@@ -39,6 +39,17 @@ os.environ["WATCHSKILL_COST_POLICY"] = "offline_only"
 
 from PIL import Image, ImageDraw, ImageFont  # noqa: E402
 
+
+def _host() -> str:
+    """The class of machine a measurement ran on, not the machine.
+
+    `platform.platform()` returns the exact build ("Windows-10-10.0.19045-SP0"),
+    which is more than a benchmark needs to be reproducible and more than
+    belongs in a committed result. The family and release are what let a reader
+    judge whether their own numbers should look similar.
+    """
+    return f"{platform.system()} {platform.release()}"
+
 CLIPS = [
     ("deploy_pipeline", (20, 60, 90), ["DEPLOY PIPELINE", "STAGE 3 OF 5"]),
     ("error_triage", (150, 25, 25), ["ERROR 502", "RETRY FAILED"]),
@@ -169,7 +180,7 @@ def main() -> int:
     lines = [
         "# Cost benchmark",
         "",
-        f"- Machine: {platform.platform()}, 8 GB RAM, CPU-only",
+        f"- Machine: {_host()}, 8 GB RAM, CPU-only",
         f"- Date: {date.today().isoformat()}",
         f"- Load: {len(CLIPS)} videos ({len(CLIPS) * 3} s of footage), "
         f"{len(QUESTIONS)} questions ({len(QUESTIONS) - 4} repeats)",

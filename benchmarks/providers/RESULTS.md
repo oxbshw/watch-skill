@@ -1,6 +1,6 @@
 # Vision provider benchmark
 
-- Machine: Windows-10-10.0.19045-SP0
+- Machine: Windows 10
 - Date: 2026-08-08
 - Task: transcribe all text in a frame; metric is char-hit rate (multiset recall of ground-truth characters)
 - Cost: the provider's own reported input tokens x the dated price in `src/watch_skill/vision/prices.json`

@@ -22,6 +22,17 @@ from typing import Any
 from watch_skill.index.textnorm import normalize_for_search
 
 
+def _host() -> str:
+    """The class of machine a measurement ran on, not the machine.
+
+    `platform.platform()` returns the exact build ("Windows-10-10.0.19045-SP0"),
+    which is more than a benchmark needs to be reproducible and more than
+    belongs in a committed result. The family and release are what let a reader
+    judge whether their own numbers should look similar.
+    """
+    return f"{platform.system()} {platform.release()}"
+
+
 def _peak_rss_mb() -> float:
     """Process peak working set in MB (cumulative since process start)."""
     if sys.platform == "win32":
@@ -155,7 +166,7 @@ def bench_perception(
     lines = [
         "# Perception benchmark",
         "",
-        f"- Machine: {platform.platform()}, 8 GB RAM, CPU-only",
+        f"- Machine: {_host()}, 8 GB RAM, CPU-only",
         f"- Date: {date.today().isoformat()}",
         "- Metric: char-hit rate (normalized multiset recall of ground-truth chars)",
         "- Peak RSS is process-wide and cumulative — read it as 'high-water mark by then'",

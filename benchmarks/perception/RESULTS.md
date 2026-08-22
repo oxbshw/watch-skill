@@ -1,6 +1,6 @@
 # Perception benchmark
 
-- Machine: Windows-10-10.0.19045-SP0, 8 GB RAM, CPU-only
+- Machine: Windows 10, 8 GB RAM, CPU-only
 - Date: 2026-07-11
 - Metric: char-hit rate (normalized multiset recall of ground-truth chars)
 - Peak RSS is process-wide and cumulative — read it as 'high-water mark by then'
