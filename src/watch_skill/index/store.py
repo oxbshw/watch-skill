@@ -27,7 +27,7 @@ def video_id_for(source: str) -> str:
     return hashlib.sha256(source.strip().encode("utf-8")).hexdigest()[:16]
 
 
-def _persist_frames(result: WatchResult, video_id: str) -> Path:
+def _persist_frames(result: WatchResult, video_id: str) -> tuple[Path, Path | None]:
     """Copy kept frames out of the throwaway work dir into managed storage.
 
     Staged through a private directory and swapped in at the end. Wiping the
@@ -42,12 +42,19 @@ def _persist_frames(result: WatchResult, video_id: str) -> Path:
 
     Either way the copy failed with a bare FileNotFoundError and the index
     kept a row pointing at frames that were no longer there.
+
+    Returns the destination and, when one existed, the directory holding the
+    frames it displaced. The caller owns that directory: it must call
+    :func:`_commit_frames` once the database has committed, or
+    :func:`_rollback_frames` if it has not. Deleting the displaced frames here
+    is what let a rolled-back transaction leave committed `frame_path` rows
+    pointing at files this function had already removed.
     """
     frames_root = get_settings().data_dir / "frames"
     dest = frames_root / video_id
     if result.perception is None:
         dest.mkdir(parents=True, exist_ok=True)
-        return dest
+        return dest, None
 
     frames_root.mkdir(parents=True, exist_ok=True)
     staging = Path(tempfile.mkdtemp(prefix=f".{video_id}.", dir=frames_root))
@@ -69,15 +76,40 @@ def _persist_frames(result: WatchResult, video_id: str) -> Path:
         except OSError:
             if previous.exists():  # put the old frames back rather than lose both
                 os.replace(previous, dest)
-            raise
-        finally:
             shutil.rmtree(previous, ignore_errors=True)
+            raise
 
         for frame, target in copied:
             frame.path = dest / target.name
     finally:
         shutil.rmtree(staging, ignore_errors=True)
-    return dest
+    return dest, (previous if previous.exists() else None)
+
+
+def _commit_frames(previous: Path | None) -> None:
+    """Drop the displaced frames. Safe only once the database has committed."""
+    if previous is not None:
+        shutil.rmtree(previous, ignore_errors=True)
+
+
+def _rollback_frames(dest: Path, previous: Path | None) -> None:
+    """Undo a frame swap whose database transaction did not commit.
+
+    The published directory goes back to exactly what was there before the
+    call, so rows committed by an earlier successful index keep resolving. A
+    video indexed for the first time has nothing to restore, and its frames
+    are removed rather than left behind as an orphan directory no row names.
+    """
+    try:
+        if previous is not None:
+            shutil.rmtree(dest, ignore_errors=True)
+            os.replace(previous, dest)
+        else:
+            shutil.rmtree(dest, ignore_errors=True)
+    except OSError:
+        # A rollback that cannot complete must not mask the original failure;
+        # the displaced frames are still on disk under their `.old-` name.
+        pass
 
 
 def _insert_video(conn: sqlite3.Connection, result: WatchResult, video_id: str, frames_dir: Path) -> None:
@@ -297,11 +329,20 @@ def index_watch_result(result: WatchResult, describe_scenes: bool = True) -> str
     try:
         with conn:
             video_id = _video_id_for_result(conn, result)
-        frames_dir = _persist_frames(result, video_id)
-        with conn:
-            _insert_video(conn, result, video_id, frames_dir)
-            items = _insert_derived(conn, result, video_id)
-            _index_texts(conn, video_id, items)
+        frames_dir, displaced = _persist_frames(result, video_id)
+        try:
+            with conn:
+                _insert_video(conn, result, video_id, frames_dir)
+                items = _insert_derived(conn, result, video_id)
+                _index_texts(conn, video_id, items)
+        except BaseException:
+            # The rows rolled back, so the frames must too. Without this the
+            # database keeps the previous scene rows while their frame files
+            # have already been replaced, and a committed frame_path resolves
+            # to nothing.
+            _rollback_frames(frames_dir, displaced)
+            raise
+        _commit_frames(displaced)
         if describe_scenes:
             with conn:
                 _maybe_describe_scenes(conn, video_id)
