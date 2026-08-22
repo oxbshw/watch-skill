@@ -1,8 +1,17 @@
 # Changelog
 
-## v1.3.0rc2 — unreleased
+## v1.3.0rc2 — 2026-08-22 (pre-release)
 
-Nothing in 1.3.0 has shipped yet; this entry covers the whole 1.3.0 line.
+A release candidate, published so the 1.3.0 line gets real use before it
+becomes what `pip install watch-skill` gives you. `uvx` and `pip` still resolve
+to 1.2.0 unless you ask for a pre-release:
+
+```bash
+uvx --from "watch-skill[standard]==1.3.0rc2" watch-skill setup
+pip install --pre "watch-skill[standard]"
+```
+
+This entry covers the whole 1.3.0 line.
 
 Adds operator mode: Watch Skill can drive a browser itself, and holds its own
 actions to the same standard it holds anyone else's. Additive — no CLI command,

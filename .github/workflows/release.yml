@@ -10,8 +10,21 @@ permissions:
 jobs:
   release:
     runs-on: ubuntu-latest
+    outputs:
+      prerelease: ${{ steps.tag.outputs.prerelease }}
     steps:
       - uses: actions/checkout@v4
+      # PEP 440 pre-release markers. Without this an rc tag produced a release
+      # GitHub labels "Latest", so anyone landing on the repository was shown a
+      # release candidate as the current version.
+      - name: Classify the tag
+        id: tag
+        run: |
+          case "${GITHUB_REF_NAME}" in
+            *rc*|*alpha*|*beta*|*a[0-9]*|*b[0-9]*|*dev*|*-*)
+              echo "prerelease=true" >> "$GITHUB_OUTPUT" ;;
+            *) echo "prerelease=false" >> "$GITHUB_OUTPUT" ;;
+          esac
       - uses: astral-sh/setup-uv@v5
         with:
           python-version: "3.11"
@@ -45,6 +58,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           body_path: release-notes.md
+          prerelease: ${{ steps.tag.outputs.prerelease == 'true' }}
           files: |
             dist/*.whl
             dist/*.tar.gz

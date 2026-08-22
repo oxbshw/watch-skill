@@ -77,14 +77,22 @@ def test_the_command_it_advertises_actually_starts_the_server() -> None:
 
     extras = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
     declared = extras["project"]["optional-dependencies"]
+    version = _project_version()
     for argument in package.get("runtimeArguments", []):
         if argument.get("name") == "--from":
             value = argument["value"]
             assert value.startswith("watch-skill["), value
-            extra = value.split("[", 1)[1].rstrip("]")
+            extra = value.split("[", 1)[1].split("]", 1)[0]
             assert extra in declared, (
                 f"server.json installs the `{extra}` extra, which pyproject "
                 f"does not declare")
+            # The entry declares a version; the command has to install that
+            # one. Unpinned, uvx resolves the newest stable release, so a
+            # pre-release entry advertises one version and starts another --
+            # and the mismatch only shows up to whoever installed it.
+            assert value.endswith(f"=={version}"), (
+                f"server.json declares {version} but its install command is "
+                f"{value!r}")
 
 
 def test_the_readme_carries_the_pypi_ownership_marker() -> None:
