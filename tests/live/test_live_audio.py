@@ -262,11 +262,18 @@ def test_live_audio_end_to_end(
                 if e["type"] == LiveEventType.SPEECH.value]
         if not hits:
             return None
-        runner = live_session.running_session(session.session_id)
-        seen["source_running"] = bool(
-            runner and runner._source and runner._source.running
-        )
-        seen["first_at"] = min(e["media_ts"] for e in hits)
+        # Record the state at the FIRST speech sighting and never again. The
+        # assertion below is that speech arrived before the stream ended, and
+        # overwriting this on every poll measured something else: whether the
+        # source was still running when the *second* cue landed. That cue ends
+        # at 14 s, so on a slow runner the replay finished first and the test
+        # failed while the property it names held perfectly.
+        if "source_running" not in seen:
+            runner = live_session.running_session(session.session_id)
+            seen["source_running"] = bool(
+                runner and runner._source and runner._source.running
+            )
+            seen["first_at"] = min(e["media_ts"] for e in hits)
         # Wait for the SECOND cue specifically. Stopping at the first speech
         # event would end the session at ~4s and the later utterance would
         # never be spoken — which is exactly how an earlier version of this
