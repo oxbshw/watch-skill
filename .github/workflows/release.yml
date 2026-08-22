@@ -82,3 +82,28 @@ jobs:
         with:
           attestations: true
           print-hash: true
+
+  # Registry metadata last, and only after PyPI accepted the upload. The entry
+  # resolves to a real package at a real version, so publishing it before the
+  # package exists advertises an install that cannot work. `needs: pypi` is the
+  # ordering that guarantees it.
+  #
+  # This has never run: the registry entry for io.github.oxbshw/watch-skill is
+  # created by the first release that reaches it. `server.json` is validated on
+  # every push by tests/test_mcp_registry.py, so what runs here has already
+  # been checked against the schema and against pyproject's version.
+  mcp-registry:
+    needs: pypi
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write   # OIDC identity the registry verifies against this repo
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install mcp-publisher
+        run: |
+          curl -L "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_$(uname -s | tr '[:upper:]' '[:lower:]')_$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/').tar.gz" | tar xz mcp-publisher
+      - name: Authenticate
+        run: ./mcp-publisher login github-oidc
+      - name: Publish server.json
+        run: ./mcp-publisher publish
