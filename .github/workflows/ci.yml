@@ -26,7 +26,10 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest]
-        python: ["3.11", "3.12"]
+        # Every version pyproject claims in its classifiers. 3.13 was
+        # advertised and never executed, which is the same unverified
+        # claim as a documented-but-untested integration.
+        python: ["3.11", "3.12", "3.13"]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
