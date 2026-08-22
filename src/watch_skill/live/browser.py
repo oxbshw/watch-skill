@@ -1058,10 +1058,25 @@ def _pids_with_marker(marker: str) -> list[int]:
     return _pids_proc(marker)
 
 
+def _quote_powershell(value: str) -> str:
+    """A PowerShell single-quoted literal for ``value``.
+
+    Doubling is how a single quote is escaped inside a single-quoted
+    PowerShell string. The marker is currently built from a generated session
+    id and cannot contain one, so this closes a class rather than a live hole:
+    `BrowserSource` takes `session_id` from its caller, the marker is derived
+    from it, and interpolating it raw put the value inside a quoted string
+    where one apostrophe would end the literal and the rest would be parsed as
+    code.
+    """
+    return "'" + value.replace("'", "''") + "'"
+
+
 def _pids_windows(marker: str) -> list[int]:  # pragma: no cover - escalation path
+    pattern = _quote_powershell(f"*{marker}*")
     script = (
         "Get-CimInstance Win32_Process | "
-        f"Where-Object {{ $_.CommandLine -like '*{marker}*' }} | "
+        f"Where-Object {{ $_.CommandLine -like {pattern} }} | "
         "Select-Object -ExpandProperty ProcessId"
     )
     try:

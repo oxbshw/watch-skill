@@ -13,6 +13,7 @@ import anyio
 from fastmcp import Context, FastMCP
 from fastmcp.utilities.types import Image
 
+from watch_skill import __version__
 from watch_skill.config import get_settings
 from watch_skill.errors import WatchSkillError
 from watch_skill.health.binaries import prepend_bin_dir_to_path
@@ -20,6 +21,12 @@ from watch_skill.perceive.budget import format_time, parse_time
 
 mcp = FastMCP(
     name="watch-skill",
+    # Without this the handshake reports FastMCP's version, so a client asking
+    # what it is connected to is told about the framework rather than the
+    # server. The MCP Registry entry declares this same version, and the two
+    # disagreeing is what makes a support conversation start from the wrong
+    # place.
+    version=__version__,
     instructions=(
         "Give this agent a video input. watch_video analyzes + indexes any "
         "source (URL, direct media, HLS/DASH, local file); ask_video answers "

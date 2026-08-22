@@ -205,3 +205,23 @@ def test_public_event_payload_marks_page_authored_content():
     assert payload["page_authored"] is True
     assert payload["provenance"] == "observation"
     assert payload["navigation_epoch"] == 0
+
+
+def test_a_marker_cannot_break_out_of_the_powershell_literal() -> None:
+    """The Windows pid lookup interpolates a marker into a quoted string.
+
+    The marker is derived from a session id, and `BrowserSource` takes that id
+    from its caller. Interpolated raw, one apostrophe would close the literal
+    and everything after it would parse as PowerShell. Doubling is the escape
+    that language defines, so the payload stays a string.
+    """
+    from watch_skill.live.browser import _quote_powershell
+
+    hostile = r"x' ; Remove-Item C:\ -Recurse ; '"
+    quoted = _quote_powershell(hostile)
+
+    assert quoted.startswith("'") and quoted.endswith("'")
+    # Every apostrophe from the input survives as a doubled pair, so no
+    # single quote inside the literal can terminate it.
+    inner = quoted[1:-1]
+    assert "'" not in inner.replace("''", "")

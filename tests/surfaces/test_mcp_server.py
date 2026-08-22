@@ -153,3 +153,17 @@ def test_the_tool_reference_documents_every_tool() -> None:
     headings = set(re.findall(r"^#{2,4}\s+`?([a-z_]+)`?", doc.read_text(encoding="utf-8"), re.M))
     assert not registered - headings, (
         f"tools with no section in docs/tools/README.md: {sorted(registered - headings)}")
+
+
+def test_the_handshake_reports_watch_skills_version_not_the_frameworks() -> None:
+    """A client asking what it is connected to must be told about this server.
+
+    FastMCP defaults `version` to its own, so the initialize handshake reported
+    the framework's version — an MCP client, and anyone reading a bug report
+    from one, saw 3.4.7 for a 1.3.0rc2 server. The registry entry declares the
+    package version too, and the two disagreeing sends support conversations
+    to the wrong place.
+    """
+    from watch_skill import __version__
+
+    assert mcp.version == __version__
