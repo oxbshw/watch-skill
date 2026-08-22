@@ -314,13 +314,23 @@ def test_a_fresh_process_can_read_the_clip_relationship(
 
 
 def test_the_quota_never_evicts_pinned_evidence(live_session_with_event) -> None:
-    """Pinned media is what a clip is made of; evicting it loses the clip."""
+    """Pinned media is what a clip is made of; evicting it loses the clip.
+
+    Identities, not a count. The session is still capturing, so a frame that
+    lands inside the pinned window between the two reads is pinned too, and
+    counting made that arrival look like a failure -- the assertion read
+    `11 == 10` on a CI runner while the property it names was never violated.
+    Nothing pinned may disappear; more evidence arriving is not a loss.
+    """
     session, events = live_session_with_event
     event = events[0]
     buf.pin_window(session.session_id, event.media_ts, before=3.0, after=3.0)
-    pinned_before = len(buf.pinned_frames(session.session_id))
+    pinned_before = {f.artifact_id for f in buf.pinned_frames(session.session_id)}
     clips.enforce_quota(session.session_id, quota_bytes=0)
-    assert len(buf.pinned_frames(session.session_id)) == pinned_before
+    pinned_after = {f.artifact_id for f in buf.pinned_frames(session.session_id)}
+    assert pinned_before <= pinned_after, (
+        f"the quota evicted pinned evidence: "
+        f"{sorted(pinned_before - pinned_after)}")
 
 
 def test_cleanup_partials_is_safe_when_there_are_none(
