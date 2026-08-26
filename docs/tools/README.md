@@ -1,6 +1,6 @@
 # MCP tool reference
 
-All 37 tools exposed by the `watch-skill` MCP server
+All 39 tools exposed by the `watch-skill` MCP server
 (`src/watch_skill/surfaces/mcp/server.py`), with parameters, defaults, and
 what comes back. Every tool has a REST twin — the mapping table is at the
 bottom.
@@ -581,6 +581,32 @@ This tool only opens the view. Every real operation — starting a session,
 approving a correction, running verification — goes through the canonical
 tools, so what the UI can do is not decided here. Requires a client that
 supports MCP Apps; see [the MCP App](../guides/mcp-app.md).
+
+### `workspace_snapshot`
+
+Canonical workspace state as JSON. Called by the rendered MCP App, not by an
+agent.
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `session` | str \| null | `null` | A session id; omit for the most recent active one |
+
+### `workspace_delta`
+
+Events after a cursor, as JSON. The App's polling call, so a rendered
+workspace follows the log instead of re-snapshotting.
+
+| Parameter | Type | Default | Meaning |
+|---|---|---|---|
+| `session` | str | — | The session to follow |
+| `after_seq` | int | `0` | Return events after this sequence number |
+
+Both carry `_meta.ui.visibility = ["app"]` — the MCP Apps marker for "callable
+by the app from this server, not offered to the model". They are listed in
+`tools/list` because a host resolves a tool call against the list it cached, so
+an unlisted tool cannot be called at all; a spec-aware host keeps them out of
+the model's context on the strength of that marker. Their REST twins are the
+dev host's `/api/snapshot` and `/api/delta`.
 
 (`get_status`, `report_mistake`, and `stats` are MCP/CLI-side:
 backgrounding is an MCP transport concern, and lessons/stats have CLI

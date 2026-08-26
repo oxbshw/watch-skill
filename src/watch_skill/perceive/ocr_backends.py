@@ -93,6 +93,7 @@ def tesseract_langs(binary: str | None = None) -> set[str]:
     binary = binary or _tesseract_binary()
     out = subprocess.run(
         [binary, "--list-langs"], capture_output=True, text=True, timeout=30,
+        stdin=subprocess.DEVNULL,
     )
     return {line.strip() for line in out.stdout.splitlines() if line.strip() and ":" not in line}
 
@@ -290,6 +291,7 @@ def ocr_frame_tesseract(
     out = subprocess.run(
         args,
         capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=120,
+        stdin=subprocess.DEVNULL,
     )
     if out.returncode != 0:
         raise PerceptionError(

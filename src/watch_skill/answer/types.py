@@ -13,6 +13,10 @@ class Evidence:
     kind: str  # segment | ocr | scene
     text: str
     score: float
+    # >1 when this stands for several near-identical OCR reads of one
+    # persistent on-screen text. Kept so a caller can say "held from 1:00 to
+    # 1:03" without re-deriving it; the rendered evidence line is unchanged.
+    duplicate_count: int = 1
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -33,6 +37,10 @@ class Answer:
     frames: list[str] = field(default_factory=list)  # paths worth attaching
     cached: bool = False
     budget_stopped: bool = False
+    # A rung was skipped or cut short to stay inside the wall-clock deadline.
+    # Reported, never hidden: it says the ask was shorter than it could have
+    # been, not that its evidence is weaker than it claims.
+    deadline_stopped: bool = False
     tokens_spent_estimate: int = 0
     tokens_saved_estimate: int = 0
     # cost meter v2: where the spend went, per source. Keys: text_first /

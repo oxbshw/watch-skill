@@ -397,6 +397,17 @@ MIGRATIONS: list[Migration] = [
     """,
     # v9 — content revisioning (see the callable for why videos is rebuilt)
     _migration_v9_content_identity,
+    # v10 — stamp cached answers with the schema that produced them.
+    #
+    # The answer cache keyed only on (video, normalized question) plus a
+    # semantic near-match, so an entry outlived the algorithm that made it:
+    # rows written before the deadline work still carry no `deadline_stopped`
+    # at all, and would be served verbatim for a near-duplicate question long
+    # after retrieval and scoring moved on. Existing rows get NULL, which no
+    # current schema string equals, so they are ignored rather than deleted.
+    """
+    ALTER TABLE answers ADD COLUMN engine_schema TEXT;
+    """,
 ]
 
 

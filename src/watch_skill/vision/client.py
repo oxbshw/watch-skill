@@ -205,12 +205,20 @@ class VisionClient:
             )
         return key.get_secret_value().strip()
 
-    def generate(self, prompt: str, images: list[Path] | None = None) -> str:
+    def generate(
+        self, prompt: str, images: list[Path] | None = None, timeout: float | None = None
+    ) -> str:
         """One vision call, policy- and cost-guarded.
 
         The policy check happens before the request is even built, so a denied
         call cannot leak through a half-constructed body, and before the key is
         read, so a configured key never implies permission to use it.
+
+        ``timeout`` overrides the provider default for this call only. An
+        interactive caller working against a wall-clock deadline needs it:
+        the local default is deliberately in minutes (a CPU model load is
+        slow), which is correct for batch work and far too slow to let an
+        MCP follow-up block on.
         """
         if self.provider not in _BUILDERS:
             raise VisionError(
@@ -219,6 +227,7 @@ class VisionClient:
                 fix=f"one of: {', '.join(sorted(_BUILDERS))}",
             )
         images = images or []
+        call_timeout = timeout if timeout is not None else _timeout_for(self.provider)
         self._guard_policy(images)
         estimated = guard_cost(self.provider, self.model, images)
         charge(self.phase, estimated_usd=estimated)
@@ -230,7 +239,7 @@ class VisionClient:
         endpoint, headers, body = build(self.model, self._api_key(), prompt, images)
         try:
             response = httpx.post(
-                endpoint, headers=headers, json=body, timeout=_timeout_for(self.provider)
+                endpoint, headers=headers, json=body, timeout=call_timeout
             )
             response.raise_for_status()
             payload = response.json()
@@ -246,7 +255,7 @@ class VisionClient:
                 try:
                     response = httpx.post(
                         endpoint, headers=headers, json=body,
-                        timeout=_timeout_for(self.provider),
+                        timeout=call_timeout,
                     )
                     response.raise_for_status()
                     payload = response.json()
@@ -294,7 +303,7 @@ class VisionClient:
                 try:
                     response = httpx.post(
                         endpoint, headers=headers, json=body,
-                        timeout=_timeout_for(self.provider),
+                        timeout=call_timeout,
                     )
                     response.raise_for_status()
                     payload = response.json()

@@ -21,6 +21,7 @@ def probe(video_path: Path) -> VideoMetadata:
             "-show_format", "-show_streams", str(video_path.resolve()),
         ],
         capture_output=True, text=True, encoding="utf-8", errors="replace",
+        stdin=subprocess.DEVNULL,
     )
     if result.returncode != 0:
         raise PerceptionError(
@@ -83,7 +84,8 @@ def extract_frame_at(
         str(dest),
     ]
     result = subprocess.run(
-        cmd, capture_output=True, text=True, encoding="utf-8", errors="replace"
+        cmd, capture_output=True, text=True, encoding="utf-8", errors="replace",
+        stdin=subprocess.DEVNULL,
     )
     if result.returncode != 0 or not dest.is_file() or dest.stat().st_size == 0:
         dest.unlink(missing_ok=True)

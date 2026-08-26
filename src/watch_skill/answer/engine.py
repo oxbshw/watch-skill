@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 import re
 import sys
+import time
 from pathlib import Path
 
 from watch_skill.answer import cache
@@ -22,6 +23,7 @@ from watch_skill.answer.ladder import (
     _profile_for,
     dense_resample,
     estimate_verify_cost,
+    out_of_time,
     zoom_crops_reocr,
 )
 from watch_skill.answer.localize import (
@@ -53,7 +55,13 @@ actually visible/audible. {directive} Return ONLY a JSON object:
 
 
 def _evidence_from_hits(hits: list[Hit]) -> list[Evidence]:
-    return [Evidence(h.timestamp, h.kind, h.text, round(h.score, 4)) for h in hits]
+    return [
+        Evidence(
+            h.timestamp, h.kind, h.text, round(h.score, 4),
+            duplicate_count=getattr(h, "duplicate_count", 1),
+        )
+        for h in hits
+    ]
 
 
 def _grounded_confidence(hits: list[Hit], question: str, floor: float) -> float:
@@ -139,12 +147,17 @@ def _try_model_verify(
     lessons: str,
     tier: str,
     lang: str | LanguageGuess = "en",
+    timeout: float | None = None,
 ) -> tuple[bool, float, str] | None:
     """One structured verify/answer call; None when no model is reachable.
 
     The model is told to answer in the QUESTION's language, so a Spanish
     question about a Japanese video comes back in Spanish (cross-lingual by
-    contract, not by luck)."""
+    contract, not by luck).
+
+    ``timeout`` caps this one call. Without it a local provider inherits
+    ``vision_local_timeout_seconds`` (minutes, to allow a CPU model load),
+    which is right for batch indexing and would hang an interactive ask."""
     from watch_skill.vision import get_vision  # noqa: PLC0415
 
     prompt = _VERIFY_PROMPT.format(
@@ -155,7 +168,9 @@ def _try_model_verify(
     )
     try:
         vision = get_vision(tier)
-        raw = vision.client.generate(prompt, [Path(p) for p in frames][:4])
+        raw = vision.client.generate(
+            prompt, [Path(p) for p in frames][:4], timeout=timeout
+        )
     except VisionError as exc:
         print(f"[watch-skill] verify pass unavailable ({exc.code})", file=sys.stderr)
         return None
@@ -208,10 +223,23 @@ def answer_question(
     verify: bool | None = None,
     k: int = 8,
     allow_stale: bool = False,
+    deadline_seconds: float | None = None,
 ) -> Answer:
-    """The self-healing ask: never unverified silently, never invented."""
+    """The self-healing ask: never unverified silently, never invented.
+
+    ``deadline_seconds`` bounds the whole ask in wall-clock time (default
+    ``answer_deadline_seconds``); pass ``0`` or a negative value to opt out
+    entirely for batch/offline callers who would rather wait than skip a
+    rung. The deadline only ever removes *work*, never lowers the bar: a
+    deadline-shortened ask reports ``deadline_stopped`` and still has to
+    clear the same confidence floor, so it abstains where it would have
+    abstained anyway rather than answering on thinner evidence."""
     from watch_skill.index.store import require_current
 
+    # Stamped before any work, including the first embedding call — that
+    # loads the sentence-transformer model (~6s cold) and a deadline that
+    # started counting after it would not bound what the caller waits for.
+    started = time.monotonic()
     settings = get_settings()
     video = get_video(video_id_or_source)
     if video is None:
@@ -252,6 +280,15 @@ def answer_question(
     usd_spent = 0.0
     escalations: list[str] = []
     budget_stopped = False
+    deadline_stopped = False
+
+    # The second ceiling. The token budget cannot bound the model-free rungs
+    # (they are charged 0 tokens by construction), and measured on a
+    # caption-rich video they burned ~100s for a 0.000 confidence gain — long
+    # past any interactive MCP client's patience. Wall-clock bounds them.
+    window = settings.answer_deadline_seconds if deadline_seconds is None else deadline_seconds
+    deadline = started + window if window and window > 0 else None
+    reserve = settings.answer_step_reserve_seconds
 
     hits = hybrid_search(question, video_id=video["id"], k=k)
     confidence = _grounded_confidence(hits, question, floor)
@@ -267,14 +304,21 @@ def answer_question(
     for step_name, step in steps:
         if confidence >= target:
             break
+        if out_of_time(deadline, reserve):
+            deadline_stopped = True
+            escalations.append(f"{step_name}(deadline)")
+            continue
         try:
-            new_items, cost = step(video, hits)
+            new_items, cost, truncated = step(video, hits, deadline)
         except Exception as exc:  # noqa: BLE001 — escalation is best-effort:
             # a step dying (OCR model OOM on a loaded machine, missing frame)
             # must degrade to "no new evidence", never kill the answer
             print(f"[watch-skill] escalation {step_name} failed ({exc})", file=sys.stderr)
             escalations.append(f"{step_name}(failed)")
             continue
+        # A rung that cut itself short says so, so the answer can report a
+        # shortened ladder instead of quietly looking like a complete one.
+        deadline_stopped = deadline_stopped or truncated
         escalations.append(step_name)
         spent += cost
         breakdown["local_escalation"] += cost
@@ -295,7 +339,16 @@ def answer_question(
             if spent + call_cost > budget:
                 budget_stopped = True
                 break
-            result = _try_model_verify(question, evidence, frames, lessons, tier, guess)
+            if out_of_time(deadline, reserve):
+                deadline_stopped = True
+                break
+            # Hand the call whatever wall-clock is actually left rather than
+            # the provider default, so a local model that decides to load
+            # cannot outlive the ask it belongs to.
+            call_timeout = None if deadline is None else max(1.0, deadline - time.monotonic())
+            result = _try_model_verify(
+                question, evidence, frames, lessons, tier, guess, timeout=call_timeout
+            )
             if result is None:
                 break  # no provider reachable — degrade gracefully, model-free
             spent += call_cost
@@ -346,6 +399,7 @@ def answer_question(
         evidence=evidence,
         frames=frames if attach else [],
         budget_stopped=budget_stopped,
+        deadline_stopped=deadline_stopped,
         tokens_spent_estimate=spent,
         tokens_saved_estimate=max(0, naive - spent),
         cost_breakdown={k: v for k, v in breakdown.items() if v},

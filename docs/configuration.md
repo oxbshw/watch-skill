@@ -157,10 +157,17 @@ pass `--cheap-model` / `--strong-model` rather than waiting for a release.
 
 | Variable | Type | Default | Effect |
 |---|---|---|---|
+| `WATCHSKILL_RETRIEVAL_OCR_DEDUP_ENABLED` | bool | `true` | Collapse runs of near-identical OCR from one persistent on-screen text into a single representative before evidence is selected. Off, a static caption read on a dozen adjacent frames competes for a dozen top-K slots and crowds out transcript. |
+| `WATCHSKILL_RETRIEVAL_OCR_DEDUP_WINDOW_SECONDS` | float | `10.0` | Gap tolerance when chaining OCR readings into one occurrence. Consecutive readings closer than this continue the same run, so a caption held for a minute is one cluster while the same text recurring later stays separate. |
+| `WATCHSKILL_RETRIEVAL_OCR_DEDUP_SIMILARITY` | float | `0.88` | How alike two normalized OCR reads must be to count as the same text. Below 1.0 so recognition noise (`decislon` for `decision`) clusters; high enough that different nearby captions stay distinct. |
 | `WATCHSKILL_ANSWER_CONFIDENCE_FLOOR` | float | `0.35` | Below this after the full escalation ladder, the answer states plainly that the video does not clearly show it (the honest floor). |
 | `WATCHSKILL_ANSWER_CONFIDENCE_TARGET` | float | `0.6` | Escalation stops as soon as confidence clears this bar. |
 | `WATCHSKILL_ANSWER_VERIFY_ENABLED` | bool | `true` | When a vision provider is configured, show the model the exact frames it is about to cite and require confirmation before answering. Degrades gracefully (model-free answers) when no provider is reachable. |
 | `WATCHSKILL_ANSWER_TOKEN_BUDGET` | int | `8000` | Per-question token ceiling; the escalation ladder stops (and the answer says `budget_stopped`) rather than exceed it. |
+| `WATCHSKILL_ANSWER_DEADLINE_SECONDS` | float | `25.0` | Per-question wall-clock ceiling. The model-free escalation rungs cost 0 tokens, so the token budget cannot bound them — this does. A rung is skipped or shortened (and the answer says `deadline_stopped`) rather than overrun an interactive MCP client's timeout. Set `0` to opt out for batch/offline runs where latency does not matter. |
+| `WATCHSKILL_ANSWER_STEP_RESERVE_SECONDS` | float | `6.0` | Headroom one escalation rung must have left before it may start, so a rung cannot begin a unit of work it has no time to finish. |
+| `WATCHSKILL_ANSWER_RESAMPLE_SECONDS_PER_FRAME` | float | `2.5` | Starting estimate for one dense-resample frame (ffmpeg extract + OCR + indexing); refined per process from what windows actually cost on this machine. |
+| `WATCHSKILL_ANSWER_ESCALATION_WARMUP_SECONDS` | float | `40.0` | One-off cost of the first escalation in a process — the OCR engine is a per-process singleton, so window one pays a model load later windows do not. Counted against the deadline, which is why a fresh server's first ask answers from the index alone. |
 | `WATCHSKILL_ANSWER_RESAMPLE_WIDTH` | float | `8.0` | Window in seconds around a candidate timestamp for the dense re-sampling escalation step. |
 | `WATCHSKILL_ANSWER_RESAMPLE_RESOLUTION` | int | `1024` | Frame width in px for escalation re-sampling — higher than the indexing default so zoom crops have pixels to work with. |
 | `WATCHSKILL_ANSWER_CACHE_ENABLED` | bool | `true` | Semantic answer cache, per video. Repeat questions return the cached answer at zero model cost. |

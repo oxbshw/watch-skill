@@ -49,7 +49,7 @@ Press the refresh button in the MCP panel after saving.
 
 ## Smoke test (3 steps)
 
-1. The Cascade MCP panel should list `watch-skill` with its 37 tools.
+1. The Cascade MCP panel should list `watch-skill` with its 39 tools.
 2. Cascade prompt: *"Use watch-skill to watch
    https://www.youtube.com/watch?v=aqz-KE-bpKQ and tell me what happens at 0:10."*
 3. Follow up: *"search my indexed videos for 'bunny'"* → `search_videos`.

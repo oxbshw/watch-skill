@@ -251,6 +251,8 @@ def ask(
         flags.append(f"escalations: {', '.join(answer.escalations_used)}")
     if answer.budget_stopped:
         flags.append("stopped at token budget")
+    if answer.deadline_stopped:
+        flags.append("stopped at time budget")
     print(f"\n({' | '.join(flags)})")
     if answer.frames:
         print("Frames:")
@@ -729,6 +731,44 @@ def stats(
         print(f"  (prices as of {price_table()['as_of']} — src/watch_skill/vision/prices.json)")
 
 
+@app.command()
+def notes(
+    video: str = typer.Argument(..., help="video_id or the source you watched."),
+    write: Path | None = typer.Option(
+        None, "--write", help="Write the markdown here instead of printing it."
+    ),
+    as_json: bool = typer.Option(False, "--json", help="Emit the structured document."),
+) -> None:
+    """Write up an indexed video as readable notes, every line timestamped.
+
+    Chapters, what was said, what was on screen, and the frames to prove it —
+    assembled from the index rather than generated, so every statement in the
+    document can be checked against the second it came from.
+    """
+    from watch_skill.errors import WatchSkillError
+    from watch_skill.extract.notes import build_notes, render_notes
+
+    try:
+        document = build_notes(video)
+    except WatchSkillError as exc:
+        _console.print(f"[red]error:[/red] {exc}")
+        print(json.dumps(exc.to_dict(), indent=2))
+        raise typer.Exit(code=1) from None
+
+    if as_json:
+        print(json.dumps(document.to_dict(), indent=2, ensure_ascii=False))
+        return
+    markdown = render_notes(
+        document, frames_relative_to=write.parent if write is not None else None
+    )
+    if write is not None:
+        write.parent.mkdir(parents=True, exist_ok=True)
+        write.write_text(markdown, encoding="utf-8")
+        print(f"written: {write}")
+    else:
+        print(markdown)
+
+
 bench_app = typer.Typer(help="Benchmarks with receipts (measured on this machine).")
 app.add_typer(bench_app, name="bench")
 
@@ -793,6 +833,174 @@ def bench_providers_cmd(
     if write is not None:
         write.write_text(markdown, encoding="utf-8")
         print(f"written: {write}")
+
+
+def _write_chart(result, directory: Path) -> None:
+    """Draw the comparison chart from the same result the report was rendered
+    from, so the picture can never drift from the table beside it."""
+    from watch_skill.bench.video_backends.chart import render_chart
+    from watch_skill.bench.video_backends.comparison import build_axes
+
+    axes = build_axes(result.to_dict())
+    if not axes:
+        return
+    destination = directory / "comparison.svg"
+    destination.write_text(
+        render_chart(axes, title="Watch Skill vs Adversal MCP 0.1.4 — measured axes"),
+        encoding="utf-8",
+    )
+    print(f"chart:   {destination}")
+
+
+@bench_app.command("video-backend")
+def bench_video_backend_cmd(
+    backend: str = typer.Argument("adversal", help="Which external backend to evaluate."),
+    fixtures: Path = typer.Option(
+        Path("benchmarks/video_backends/fixtures"), "--fixtures",
+        help="Ground-truth directory (manifest.json + generated media).",
+    ),
+    adversal_cli: str | None = typer.Option(
+        None, "--adversal-cli", help="Path to the adversal-cli executable."
+    ),
+    adversal_python: str | None = typer.Option(
+        None, "--adversal-python",
+        help="Interpreter adversal-cli is installed into, used to read its version.",
+    ),
+    runs: int = typer.Option(3, "--runs", help="Repeat the frame path this many times."),
+    baseline: bool = typer.Option(
+        True, "--baseline/--no-baseline", help="Also score Watch Skill on the same probes."
+    ),
+    poll_attempts: int = typer.Option(
+        0, "--poll", help="Poll a submitted job this many times before giving up."
+    ),
+    real_media: list[Path] = typer.Option(
+        None, "--real-media",
+        help="Also measure against a real local video (repeatable). No ground "
+             "truth is authored for it; the file supplies its own.",
+    ),
+    real_media_url: list[str] = typer.Option(
+        None, "--real-media-url",
+        help="Also exercise the URL acquisition path (repeatable). Needs a "
+             "--real-media reference copy to localize returned frames against.",
+    ),
+    real_probes: int = typer.Option(
+        30, "--real-probes", help="Timestamps to request per real video."
+    ),
+    analysis: list[str] = typer.Option(
+        None, "--analysis",
+        help="SOURCE=PATH — score the provider's written analysis for a video "
+             "Watch Skill has also indexed (repeatable).",
+    ),
+    call_timeout: float = typer.Option(
+        900.0, "--call-timeout",
+        help="Give up on one backend call after this many seconds. A tool that "
+             "never returns is a result; waiting forever is not.",
+    ),
+    work_dir: Path | None = typer.Option(
+        None, "--work-dir", help="Where to put downloaded frames (default: a temp dir)."
+    ),
+    raw: Path | None = typer.Option(
+        None, "--raw", help="Write the sanitized machine-readable result here."
+    ),
+    write: Path | None = typer.Option(None, "--write", help="Write the markdown report here."),
+    from_raw: Path | None = typer.Option(
+        None, "--from-raw",
+        help="Re-render the report from a previous run's raw JSON. Touches no "
+             "backend — the point is that every number is reproducible from it.",
+    ),
+) -> None:
+    """Measure an external video backend against Watch Skill's evidence model.
+
+    Frames, timestamps, ordering, transcripts and failure semantics against a
+    generated fixture whose ground truth is exact. Nothing is estimated: a
+    path that needs credentials this machine does not have is reported as not
+    measured, never as a zero.
+    """
+    import tempfile
+
+    from watch_skill.bench.video_backends import report as vb_report
+    from watch_skill.bench.video_backends import verdict as vb_verdict
+    from watch_skill.bench.video_backends.runner import (
+        evidence_matrix,
+        run_benchmark,
+        write_raw,
+    )
+
+    if backend != "adversal":
+        print(f"unknown backend {backend!r} — only 'adversal' is implemented")
+        raise typer.Exit(code=2)
+
+    if from_raw is not None:
+        from watch_skill.bench.video_backends.runner import result_from_raw
+
+        result = result_from_raw(json.loads(from_raw.read_text(encoding="utf-8")))
+        data = result.to_dict()
+        rows = evidence_matrix({
+            "frames_measured": bool(data.get("frame_identity")),
+            "pipeline_completed": bool(data.get("pipeline", {}).get("completed")),
+        })
+        gates = vb_verdict.evaluate(data, rows)
+        decision, reasons = vb_verdict.decide(gates)
+        markdown = vb_report.render(
+            result, verdict=decision, verdict_reasons=reasons, gates=gates
+        )
+        if write is not None:
+            write.parent.mkdir(parents=True, exist_ok=True)
+            write.write_text(markdown, encoding="utf-8")
+            print(f"written: {write}")
+            _write_chart(result, write.parent)
+        else:
+            print(markdown)
+        print(f"verdict: {decision} (re-rendered from {from_raw})")
+        return
+    if not (fixtures / "manifest.json").is_file():
+        print(
+            f"no ground truth at {fixtures} — run "
+            "benchmarks/video_backends/make_fixtures.py first"
+        )
+        raise typer.Exit(code=1)
+
+    from watch_skill.bench.video_backends.adapters.adversal_mcp import AdversalMcpAdapter
+
+    adapter = AdversalMcpAdapter(
+        executable=adversal_cli, python=adversal_python, timeout=call_timeout
+    )
+
+    with tempfile.TemporaryDirectory(prefix="ws-video-backend-") as tmp:
+        target = work_dir if work_dir is not None else Path(tmp)
+        result = run_benchmark(
+            fixtures, adapter, work_dir=target, repeats=runs,
+            include_baseline=baseline, poll_attempts=poll_attempts,
+            real_media=[Path(p) for p in (real_media or [])],
+            real_media_urls=list(real_media_url or []),
+            real_media_probes=real_probes,
+            analysis_documents=dict(
+                pair.split("=", 1) for pair in (analysis or []) if "=" in pair
+            ) or None,
+        )
+        data = result.to_dict()
+        rows = evidence_matrix({
+            "frames_measured": bool(data.get("frame_identity")),
+            "pipeline_completed": bool(data.get("pipeline", {}).get("completed")),
+        })
+        gates = vb_verdict.evaluate(data, rows)
+        decision, reasons = vb_verdict.decide(gates)
+        markdown = vb_report.render(
+            result, verdict=decision, verdict_reasons=reasons, gates=gates
+        )
+
+        if raw is not None:
+            write_raw(result, raw)
+            print(f"raw: {raw}")
+        if write is not None:
+            write.parent.mkdir(parents=True, exist_ok=True)
+            write.write_text(markdown, encoding="utf-8")
+            print(f"written: {write}")
+            _write_chart(result, write.parent)
+        if write is None and raw is None:
+            print(markdown)
+        else:
+            print(f"\nverdict: {decision}")
 
 
 library_app = typer.Typer(help="Cross-video memory: notes, synthesis, overview.")

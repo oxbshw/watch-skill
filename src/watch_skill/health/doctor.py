@@ -67,9 +67,18 @@ class DoctorReport:
 
 
 def _run(cmd: list[str], timeout: float = 120.0) -> subprocess.CompletedProcess[str]:
-    """Run a command without a shell (space-safe paths), capturing text output."""
+    """Run a command without a shell (space-safe paths), capturing text output.
+
+    ``stdin`` is detached deliberately. Under the stdio MCP server the process
+    stdin *is* the JSON-RPC channel, and a child that inherits it can block on
+    (or steal bytes from) the protocol stream: `doctor` finished in 5.7s on the
+    main thread and in 2.5s in a worker thread, but hung past 90s inside
+    ``subprocess.communicate`` when the same call ran in a server whose stdio
+    were pipes. A health check has no stdin to read.
+    """
     return subprocess.run(
-        cmd, capture_output=True, text=True, timeout=timeout, encoding="utf-8", errors="replace"
+        cmd, capture_output=True, text=True, timeout=timeout,
+        stdin=subprocess.DEVNULL, encoding="utf-8", errors="replace",
     )
 
 

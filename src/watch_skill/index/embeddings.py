@@ -54,6 +54,24 @@ def _get_model(name: str):
     return _models.get(name)
 
 
+def warm_up(model_name: str | None = None) -> bool:
+    """Load the embedding stack on the CALLING thread. Returns availability.
+
+    Import this chain — fastembed, then numpy's and onnxruntime's native
+    extensions — on a long-lived server's main thread, before any request can
+    reach it. Every call site is otherwise lazy, so in the stdio MCP server the
+    first import lands inside a FastMCP worker thread, where loading the numpy
+    C extension deadlocks: the thread parks in ``create_module`` and never
+    returns. Two consecutive faulthandler dumps 35s apart showed the identical
+    frame, and the tools that need vectors (``search_videos``, ``ask_video``)
+    hung forever while ``list_videos``, which never embeds, stayed instant.
+
+    Warming costs a few seconds of startup once and is best-effort: a box
+    without fastembed degrades to keyword-only search exactly as before.
+    """
+    return _get_model(model_name or MODEL_NAME) is not None
+
+
 def embed_texts(texts: list[str], model_name: str | None = None) -> list[list[float]] | None:
     """Embed a batch of texts; ``None`` when embeddings are unavailable.
 

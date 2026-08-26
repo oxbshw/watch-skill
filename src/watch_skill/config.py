@@ -217,6 +217,28 @@ class Settings(BaseSettings):
         description="Max frames sent to the loop critic in one call. Lower (4) for local models.",
     )
 
+    retrieval_ocr_dedup_enabled: bool = Field(
+        default=True,
+        description="Collapse runs of near-identical OCR from one persistent "
+        "on-screen text into a single representative hit before evidence is "
+        "selected. Without it a static caption read on a dozen adjacent "
+        "frames competes for a dozen top-K slots and crowds out transcript.",
+    )
+    retrieval_ocr_dedup_window_seconds: float = Field(
+        default=10.0,
+        description="Gap tolerance when chaining OCR readings into one "
+        "occurrence. Consecutive readings closer than this continue the same "
+        "run, so a caption held for a minute is one cluster while the same "
+        "text recurring later stays a separate occurrence.",
+    )
+    retrieval_ocr_dedup_similarity: float = Field(
+        default=0.88,
+        description="How alike two normalized OCR reads must be to count as "
+        "the same text. Below 1.0 so recognition noise ('decislon' for "
+        "'decision') clusters, high enough that different nearby captions "
+        "stay distinct.",
+    )
+
     # --- self-healing answers (v0.6) ----------------------------------------
     answer_confidence_floor: float = Field(
         default=0.35,
@@ -236,6 +258,35 @@ class Settings(BaseSettings):
         default=8000,
         description="Per-question token ceiling; the escalation ladder stops "
         "(and says so) rather than exceed it.",
+    )
+    answer_deadline_seconds: float = Field(
+        default=25.0,
+        description="Wall-clock ceiling for one ask. The model-free escalation "
+        "rungs cost 0 tokens, so the token budget cannot bound them — this "
+        "does. A rung is skipped (and the answer says `deadline_stopped`) "
+        "rather than overrun an interactive MCP client's timeout. Raise it "
+        "for batch/offline use where latency does not matter.",
+    )
+    answer_step_reserve_seconds: float = Field(
+        default=6.0,
+        description="Headroom a single escalation rung must have left before "
+        "it may start, so a rung cannot begin a unit of work it has no time "
+        "to finish. Sized from a measured zoom-crop re-OCR frame.",
+    )
+    answer_resample_seconds_per_frame: float = Field(
+        default=2.5,
+        description="Starting estimate for one dense-resample frame (ffmpeg "
+        "extract + OCR + indexing) on a CPU box. Used to size a resample "
+        "window to the time actually left, so one window cannot overrun the "
+        "deadline it was checked against; refined per process from what "
+        "windows actually cost on this machine.",
+    )
+    answer_escalation_warmup_seconds: float = Field(
+        default=40.0,
+        description="One-off cost of the FIRST escalation in a process: the "
+        "OCR engine is a per-process singleton, so window one pays a model "
+        "load later windows do not. Counted against the deadline, which is "
+        "why a fresh server's first ask answers from the index alone.",
     )
     answer_resample_width: float = Field(
         default=8.0,

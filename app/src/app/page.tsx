@@ -15,8 +15,9 @@
  * mean shipping a workspace that shows yesterday's session for one frame.
  */
 import { useEffect, useState } from "react";
+import { App } from "@modelcontextprotocol/ext-apps";
 import Workspace from "@/components/Workspace";
-import { StandaloneTransport, standaloneBase } from "@/transport";
+import { McpTransport, StandaloneTransport, standaloneBase } from "@/transport";
 import type { WorkspaceTransport } from "@/transport";
 
 export default function Page() {
@@ -34,15 +35,20 @@ export default function Page() {
       };
     }
 
-    // Loaded lazily so the standalone build never pulls the MCP SDK into its
-    // first chunk, and so a host that cannot provide it fails with a sentence
-    // rather than a blank frame.
+    // Imported statically, not lazily. A dynamic import here reads as free —
+    // the standalone build never needs the MCP SDK, so why ship it in the
+    // first chunk — but the two builds are the same file. `next build` turns
+    // the split into a separate chunk, and the single-file document that the
+    // MCP resource carries has nowhere to fetch a chunk from: the host hands
+    // the app to a sandbox as a string, not as a directory it can serve. The
+    // request went to the sandbox origin, 404'd, and the only path that needs
+    // the SDK — the MCP host path — was the one path that could not load it.
+    //
+    // So the SDK is part of the document. Standalone carries code it never
+    // runs, which costs bytes on a build that is already inlined whole; a
+    // chunk that cannot be fetched costs the entire feature.
     void (async () => {
       try {
-        const [{ App }, { McpTransport }] = await Promise.all([
-          import("@modelcontextprotocol/ext-apps"),
-          import("@/transport"),
-        ]);
         const app = new App({
           name: "watch-skill-workspace",
           version: "0.2.0",

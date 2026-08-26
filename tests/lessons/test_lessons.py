@@ -215,10 +215,10 @@ def test_profile_reorders_ladder(indexed: str, monkeypatch) -> None:
 
     calls: list[str] = []
     monkeypatch.setattr(
-        mod, "dense_resample", lambda v, h: calls.append("dense_resample") or (0, 0)
+        mod, "dense_resample", lambda v, h, d=None: calls.append("dense_resample") or (0, 0, False)
     )
     monkeypatch.setattr(
-        mod, "zoom_crops_reocr", lambda v, h: calls.append("zoom_crops_reocr") or (0, 0)
+        mod, "zoom_crops_reocr", lambda v, h, d=None: calls.append("zoom_crops_reocr") or (0, 0, False)
     )
     monkeypatch.setattr(mod, "_profile_for", lambda v: {"ocr_first": True})
     from watch_skill.answer import answer_question

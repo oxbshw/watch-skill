@@ -161,9 +161,9 @@ def test_ladder_runs_in_order_and_stops_at_target(indexed: str, monkeypatch) -> 
         Hit(indexed, "ocr", 2, 1.5, "supporting ocr", 0.2),
     ]
 
-    def fake_resample(video, hits):
+    def fake_resample(video, hits, deadline=None):
         calls.append("dense_resample")
-        return 3, 0  # found new items
+        return 3, 0, False  # found new items
 
     # after resample, retrieval suddenly finds a clear winner
     real_search = mod.hybrid_search
@@ -172,7 +172,7 @@ def test_ladder_runs_in_order_and_stops_at_target(indexed: str, monkeypatch) -> 
         return strong_hits if calls else real_search(question, video_id=video_id, k=k)
 
     monkeypatch.setattr(mod, "dense_resample", fake_resample)
-    monkeypatch.setattr(mod, "zoom_crops_reocr", lambda v, h: calls.append("zoom") or (0, 0))
+    monkeypatch.setattr(mod, "zoom_crops_reocr", lambda v, h, d=None: calls.append("zoom") or (0, 0, False))
     monkeypatch.setattr(mod, "hybrid_search", fake_search)
 
     answer = answer_question(indexed, "which glowing artifact number appears?", use_cache=False)
@@ -186,10 +186,10 @@ def test_ladder_full_walk_on_stubborn_low_confidence(indexed: str, monkeypatch) 
 
     calls: list[str] = []
     monkeypatch.setattr(
-        mod, "dense_resample", lambda v, h: calls.append("dense_resample") or (0, 0)
+        mod, "dense_resample", lambda v, h, d=None: calls.append("dense_resample") or (0, 0, False)
     )
     monkeypatch.setattr(
-        mod, "zoom_crops_reocr", lambda v, h: calls.append("zoom_crops_reocr") or (0, 0)
+        mod, "zoom_crops_reocr", lambda v, h, d=None: calls.append("zoom_crops_reocr") or (0, 0, False)
     )
     answer = answer_question(indexed, "zebra spaceship quantum", use_cache=False)
     assert calls == ["dense_resample", "zoom_crops_reocr"]
@@ -203,7 +203,7 @@ def test_verify_pass_confirms_and_marks_verified(indexed: str, monkeypatch) -> N
 
     monkeypatch.setattr(
         mod, "_try_model_verify",
-        lambda q, e, f, lessons, tier, lang="en": (True, 0.9, "The warning screen appears at 0:01."),
+        lambda q, e, f, lessons, tier, lang="en", timeout=None: (True, 0.9, "The warning screen appears at 0:01."),
     )
     answer = answer_question(indexed, "when does the red warning screen appear?", use_cache=False)
     assert answer.verified is True
@@ -218,7 +218,7 @@ def test_verify_pass_rejection_forces_floor(indexed: str, monkeypatch) -> None:
     from watch_skill.answer import engine as mod
 
     monkeypatch.setattr(
-        mod, "_try_model_verify", lambda q, e, f, lessons, tier, lang="en": (False, 0.1, "not visible")
+        mod, "_try_model_verify", lambda q, e, f, lessons, tier, lang="en", timeout=None: (False, 0.1, "not visible")
     )
     answer = answer_question(indexed, "when does the red warning screen appear?", use_cache=False)
     assert answer.verified is False
@@ -232,7 +232,7 @@ def test_escalation_step_crash_never_kills_the_answer(indexed: str, monkeypatch)
     ONNXRuntime 'bad allocation' inside zoom_crops_reocr killed ask entirely."""
     from watch_skill.answer import engine as mod
 
-    def boom(video, hits):
+    def boom(video, hits, deadline=None):
         raise MemoryError("bad allocation")
 
     monkeypatch.setattr(mod, "dense_resample", boom)
@@ -261,7 +261,7 @@ def test_budget_guard_stops_model_calls(indexed: str, monkeypatch) -> None:
     reset_settings()
     called = []
     monkeypatch.setattr(
-        mod, "_try_model_verify", lambda *a: called.append(1) or (True, 0.9, "yes")
+        mod, "_try_model_verify", lambda *a, **kw: called.append(1) or (True, 0.9, "yes")
     )
     try:
         answer = answer_question(

@@ -42,7 +42,11 @@ def normalize(text: str) -> list[str]:
     for token in _SPACES.split(text.strip()):
         if not token:
             continue
-        if token.isdigit():
+        # `str.isdigit()` accepts more than 0-9 — "①", "٣" and "²" all pass it
+        # — while the table above only holds ASCII. Without the ascii guard a
+        # transcript containing any of them raises KeyError mid-scoring, which
+        # is how it was found: on OCR text lifted off a real slide.
+        if token.isascii() and token.isdigit():
             out.extend(_DIGIT_WORDS[d] for d in token)
         else:
             out.append(token)

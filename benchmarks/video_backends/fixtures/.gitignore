@@ -1,0 +1,9 @@
+# Generated media, never committed: `../make_fixtures.py` rebuilds it
+# deterministically in about ten seconds, which is cheaper than carrying a few
+# hundred kilobytes of MP4 in every clone.
+#
+# manifest.json IS committed — it is the ground truth, and it records the
+# sha256/md5 of the media each measurement was proven against, so a stale
+# fixture cannot be silently scored as a fresh one.
+*.mp4
+*.wav

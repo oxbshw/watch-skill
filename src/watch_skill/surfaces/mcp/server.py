@@ -6,11 +6,13 @@ images per response — retrieval is designed to make more unnecessary.
 from __future__ import annotations
 
 import json
+import sys
 from pathlib import Path
 from typing import Any
 
 import anyio
 from fastmcp import Context, FastMCP
+from fastmcp.tools import ToolResult
 from fastmcp.utilities.types import Image
 
 from watch_skill import __version__
@@ -18,6 +20,22 @@ from watch_skill.config import get_settings
 from watch_skill.errors import WatchSkillError
 from watch_skill.health.binaries import prepend_bin_dir_to_path
 from watch_skill.perceive.budget import format_time, parse_time
+
+# Imported at module scope, not lazily inside the tool, because the MCP Apps
+# declarations below are decorator arguments: they are evaluated when this
+# module is imported, and that is what puts the UI metadata on the tool and
+# resource definitions the host reads at `tools/list` / `resources/list` time.
+from watch_skill.surfaces.mcp.workspace_app import (
+    APP_ONLY_TOOL_META,
+    RESOURCE_MIME_TYPE,
+    WORKSPACE_URI,
+    resource_app_config,
+    resource_meta,
+    tool_app_config,
+    tool_meta,
+    workspace_html,
+    workspace_tool_result,
+)
 
 mcp = FastMCP(
     name="watch-skill",
@@ -235,6 +253,11 @@ def ask_video(
         meta.append(f"escalations_used: {', '.join(answer.escalations_used)}")
     if answer.budget_stopped:
         meta.append("stopped at the per-question token budget")
+    if answer.deadline_stopped:
+        meta.append(
+            "stopped at the per-question time budget — rerun with a larger "
+            "WATCHSKILL_ANSWER_DEADLINE_SECONDS if you want the full ladder"
+        )
     lines = [
         answer.text,
         "",
@@ -949,8 +972,29 @@ def doctor() -> str:
     return json.dumps(run_doctor(fix=True).to_dict(), indent=2)
 
 
-@mcp.tool(output_schema=None)
-def watch_workspace(session: str | None = None, mode: str = "auto") -> list[Any]:
+@mcp.resource(
+    WORKSPACE_URI,
+    name="Watch Skill workspace",
+    description="The Watch Skill live workspace: an MCP App document.",
+    mime_type=RESOURCE_MIME_TYPE,
+    # `app=` overwrites `meta["ui"]` with exactly what `resource_meta` already
+    # put there; passing both keeps the legacy extension-id block alongside it.
+    meta=resource_meta(),
+    app=resource_app_config(),
+)
+def workspace_document() -> str:
+    """The built app itself, so a host can resolve `ui://watch-skill/workspace`.
+
+    Registered as a real resource rather than only embedded in the tool result:
+    the MCP Apps flow is for a host to read `_meta.ui.resourceUri` off the tool
+    and then fetch that URI. Without this registration `resources/read` on the
+    URI the tool advertises answers "Resource not found".
+    """
+    return workspace_html()
+
+
+@mcp.tool(output_schema=None, meta=tool_meta(), app=tool_app_config())
+def watch_workspace(session: str | None = None, mode: str = "auto") -> ToolResult:
     """Open the Watch Skill live workspace — the visual view of a session.
 
     Shows live pixels, evidence separated into observed/heard/browser/inferred,
@@ -965,21 +1009,76 @@ def watch_workspace(session: str | None = None, mode: str = "auto") -> list[Any]
     approving a correction, running verification — goes through the existing
     canonical tools, so nothing about what the UI can do is decided here.
     """
-    from watch_skill.surfaces.mcp.workspace_app import open_workspace
-
-    return open_workspace(session, mode=mode)
+    return workspace_tool_result(session, mode=mode)
 
 
+@mcp.tool(output_schema=None, meta=APP_ONLY_TOOL_META)
 def workspace_snapshot(session: str | None = None) -> str:
-    """Canonical workspace state as JSON. Used by the app and by tests."""
+    """Canonical workspace state as JSON. Used by the app and by tests.
+
+    Registered as a tool because the hosted app has no other way to reach it.
+    `McpTransport.snapshot` calls `workspace_snapshot` through the host, and
+    until this decorator existed that call answered "Unknown tool" — so a
+    workspace opened inside an MCP host could connect its transport and then
+    never load a single value. The dev host reaches the same function over
+    `/api/snapshot`, which is why the gap only ever showed up in a real host.
+    """
     from watch_skill.surfaces.mcp.workspace_app import workspace_snapshot_json
 
     return workspace_snapshot_json(session)
 
 
+@mcp.tool(output_schema=None, meta=APP_ONLY_TOOL_META)
+def workspace_delta(session: str, after_seq: int = 0) -> str:
+    """Events after a cursor, as JSON. The app's polling call.
+
+    The counterpart to `workspace_snapshot`: the workspace snapshots once and
+    then follows the log from a cursor. Mirrors the dev host's `/api/delta`
+    so both transports read the same canonical function.
+    """
+    from watch_skill import workspace as workspace_state
+
+    return json.dumps(workspace_state.delta(session, after_seq),
+                      ensure_ascii=False, default=str)
+
+
+def _warm_native_imports() -> None:
+    """Import the native-extension stack on the main thread, before serving.
+
+    FastMCP runs sync tools in worker threads. The embedding stack
+    (fastembed -> numpy -> onnxruntime) is imported lazily at its call sites,
+    so in the stdio server that first import happens inside a worker thread —
+    where it deadlocks on the numpy C-extension load and never returns. The
+    symptom is asymmetric and misleading: `search_videos` and `ask_video` hang
+    forever while `list_videos`, which never embeds, answers instantly.
+
+    Best-effort by design: `warm_up` degrades to keyword-only search on a box
+    where fastembed is missing or unloadable, and serving must start either way.
+    """
+    try:
+        from watch_skill.index import embeddings
+        from watch_skill.index.db import connect, get_meta
+
+        embeddings.warm_up()
+        # Retrieval embeds with the model recorded in the index, not the
+        # current default, so an index built by an older release pulls a
+        # second model in — lazily, on a worker thread, which is the exact
+        # deadlock this function exists to prevent. Warm that one too.
+        conn = connect()
+        try:
+            recorded = get_meta(conn, "embedding_model")
+        finally:
+            conn.close()
+        if recorded and recorded != embeddings.MODEL_NAME:
+            embeddings.warm_up(recorded)
+    except Exception as exc:  # noqa: BLE001 - never block serving on a warmup
+        print(f"[watch-skill] embedding warmup skipped ({exc})", file=sys.stderr)
+
+
 def main(http: bool = False, host: str = "127.0.0.1", port: int = 8747) -> None:
     """Entry point used by `watch-skill serve`."""
     prepend_bin_dir_to_path()
+    _warm_native_imports()
     if http:
         mcp.run(transport="http", host=host, port=port)
     else:

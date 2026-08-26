@@ -65,7 +65,7 @@ def detect_scenes_ffmpeg(
     try:
         result = subprocess.run(
             command, capture_output=True, text=True, encoding="utf-8",
-            errors="replace", timeout=_FFMPEG_TIMEOUT,
+            errors="replace", timeout=_FFMPEG_TIMEOUT, stdin=subprocess.DEVNULL,
         )
     except subprocess.TimeoutExpired as exc:
         raise PerceptionError(

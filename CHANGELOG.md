@@ -1,5 +1,38 @@
 # Changelog
 
+## Unreleased
+
+### `watch-skill notes` — a write-up whose every line is checkable
+
+A readable document for an indexed video: chapters, what was said, what was on
+screen, and the frames to prove it. Assembled from the index rather than
+generated, so every quote traces to a transcript segment, every frame to a kept
+frame, and each carries the timestamp it came from. Deterministic — no model in
+the path, so the same index always yields the same bytes.
+
+```bash
+watch-skill notes <video_id> --write notes.md
+```
+
+### Video-backend benchmark
+
+`watch-skill bench video-backend adversal` measures whether an external
+provider's output can be ingested into Watch Skill's evidence model without
+inventing anything. Generated fixtures carry ground truth exact to the
+millisecond; real footage derives its truth from the file itself by decoding
+the window around each probe.
+
+The scorer, ground truth and report are transport-independent, so a future
+direct-API adapter reuses all of it. Results and method:
+[`benchmarks/video_backends/`](benchmarks/video_backends/).
+
+### Fixed
+
+- `normalize_words` (and `benchmarks/asr_accuracy.py`) raised `KeyError` on
+  Unicode digit-likes such as `①`, which `str.isdigit()` accepts but the
+  ASCII spelling table does not hold. Found on OCR text lifted from a real
+  slide.
+
 ## v1.3.0rc2 — 2026-08-22 (pre-release)
 
 A release candidate, published so the 1.3.0 line gets real use before it

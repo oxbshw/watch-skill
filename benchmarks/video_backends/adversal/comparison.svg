@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1044" height="614" viewBox="0 0 1044 614" role="img" aria-label="Watch Skill vs Adversal MCP 0.1.4 — measured axes. 7 axes measured on the same files, with the same scorer, on the same machine · 2 exact ties">
+<rect width="1044" height="614" fill="#ffffff"/>
+<text font-family="system-ui,-apple-system,Segoe UI,Roboto,Helvetica,sans-serif" font-size="20" font-weight="600" x="30" y="36" fill="#18181b">Watch Skill vs Adversal MCP 0.1.4 — measured axes</text>
+<text font-family="system-ui,-apple-system,Segoe UI,Roboto,Helvetica,sans-serif" font-size="13" x="30" y="58" fill="#52525b">7 axes measured on the same files, with the same scorer, on the same machine · 2 exact ties</text>
+<rect x="30" y="74" width="12" height="12" rx="3" fill="#2a78d6"/>
+<text font-family="system-ui,-apple-system,Segoe UI,Roboto,Helvetica,sans-serif" font-size="13" font-weight="500" x="49" y="84" fill="#18181b">Watch Skill</text>
+<rect x="156" y="74" width="12" height="12" rx="3" fill="#eb6834"/>
+<text font-family="system-ui,-apple-system,Segoe UI,Roboto,Helvetica,sans-serif" font-size="13" font-weight="500" x="175" y="84" fill="#18181b">Adversal MCP 0.1.4</text>
+<line x1="30" y1="97" x2="1014" y2="97" stroke="#d4d4d8" stroke-width="1"/>
+<line x1="83.0" y1="130.0" x2="223.0" y2="130.0" stroke="#d4d4d8" stroke-width="1" stroke-dasharray="3 3"/>
+<rect x="93.0" y="145.7" width="50" height="136.3" rx="3" fill="#2a78d6"/>
+<text font-family="system-ui,-apple-system,Segoe UI,Roboto,Helvetica,sans-serif" font-size="13" font-weight="600" x="118.0" y="137.7" fill="#2a78d6" text-anchor="middle">89.7</text>
+<rect x="163.0" y="239.6" width="50" height="42.4" rx="3" fill="#eb6834"/>
+<text font-family="system-ui,-apple-system,Segoe UI,Roboto,Helvetica,sans-serif" font-size="13" font-weight="600" x="188.0" y="231.6" fill="#eb6834" text-anchor="middle">27.9</text>
+<line x1="46" y1="282.5" x2="260" y2="282.5" stroke="#d4d4d8" stroke-width="1"/>
+<text font-family="system-ui,-apple-system,Segoe UI,Roboto,Helvetica,sans-serif" font-size="12.5" font-weight="500" x="153.0" y="304" fill="#18181b" text-anchor="middle">Written analysis,</text>
+<text font-family="system-ui,-apple-system,Segoe UI,Roboto,Helvetica,sans-serif" font-size="12.5" font-weight="500" x="153.0" y="320" fill="#18181b" text-anchor="middle">groundedness</text>
+<text font-family="system-ui,-apple-system,Segoe UI,Roboto,Helvetica,sans-serif" font-size="11" x="153.0" y="338" fill="#8b8b93" text-anchor="middle">%</text>
+<rect x="339.0" y="130.0" width="50" height="152.0" rx="3" fill="#2a78d6"/>
+<text font-family="system-ui,-apple-system,Segoe UI,Roboto,Helvetica,sans-serif" font-size="13" font-weight="600" x="364.0" y="122.0" fill="#2a78d6" text-anchor="middle">13.23</text>
+<rect x="409.0" y="279.0" width="50" height="3.0" rx="3" fill="#eb6834"/>
+<text font-family="system-ui,-apple-system,Segoe UI,Roboto,Helvetica,sans-serif" font-size="13" font-weight="600" x="434.0" y="271.0" fill="#eb6834" text-anchor="middle">0.12</text>
+<line x1="292" y1="282.5" x2="506" y2="282.5" stroke="#d4d4d8" stroke-width="1"/>
+<text font-family="system-ui,-apple-system,Segoe UI,Roboto,Helvetica,sans-serif" font-size="12.5" font-weight="500" x="399.0" y="304" fill="#18181b" text-anchor="middle">Written analysis,</text>
+<text font-family="system-ui,-apple-system,Segoe UI,Roboto,Helvetica,sans-serif" font-size="12.5" font-weight="500" x="399.0" y="320" fill="#18181b" text-anchor="middle">citations</text>
+<text font-family="system-ui,-apple-system,Segoe UI,Roboto,Helvetica,sans-serif" font-size="11" x="399.0" y="338" fill="#8b8b93" text-anchor="middle">per 100 words</text>
+<line x1="575.0" y1="130.0" x2="715.0" y2="130.0" stroke="#d4d4d8" stroke-width="1" stroke-dasharray="3 3"/>
+<rect x="585.0" y="134.7" width="50" height="147.3" rx="3" fill="#2a78d6"/>
+<text font-family="system-ui,-apple-system,Segoe UI,Roboto,Helvetica,sans-serif" font-size="13" font-weight="600" x="610.0" y="126.7" fill="#2a78d6" text-anchor="middle">96.9</text>
+<rect x="655.0" y="234.6" width="50" height="47.4" rx="3" fill="#eb6834"/>
+<text font-family="system-ui,-apple-system,Segoe UI,Roboto,Helvetica,sans-serif" font-size="13" font-weight="600" x="680.0" y="226.6" fill="#eb6834" text-anchor="middle">31.2</text>
+<line x1="538" y1="282.5" x2="752" y2="282.5" stroke="#d4d4d8" stroke-width="1"/>
+<text font-family="system-ui,-apple-system,Segoe UI,Roboto,Helvetica,sans-serif" font-size="12.5" font-weight="500" x="645.0" y="304" fill="#18181b" text-anchor="middle">Frame delivery, real</text>
+<text font-family="system-ui,-apple-system,Segoe UI,Roboto,Helvetica,sans-serif" font-size="12.5" font-weight="500" x="645.0" y="320" fill="#18181b" text-anchor="middle">footage</text>
+<text font-family="system-ui,-apple-system,Segoe UI,Roboto,Helvetica,sans-serif" font-size="11" x="645.0" y="338" fill="#8b8b93" text-anchor="middle">%</text>
+<line x1="821.0" y1="130.0" x2="961.0" y2="130.0" stroke="#d4d4d8" stroke-width="1" stroke-dasharray="3 3"/>
+<rect x="831.0" y="130.0" width="50" height="152.0" rx="3" fill="#2a78d6"/>
+<text font-family="system-ui,-apple-system,Segoe UI,Roboto,Helvetica,sans-serif" font-size="13" font-weight="600" x="856.0" y="122.0" fill="#2a78d6" text-anchor="middle">100</text>
+<rect x="901.0" y="130.0" width="50" height="152.0" rx="3" fill="#eb6834"/>
+<text font-family="system-ui,-apple-system,Segoe UI,Roboto,Helvetica,sans-serif" font-size="13" font-weight="600" x="926.0" y="122.0" fill="#eb6834" text-anchor="middle">100</text>
+<line x1="784" y1="282.5" x2="998" y2="282.5" stroke="#d4d4d8" stroke-width="1"/>
+<text font-family="system-ui,-apple-system,Segoe UI,Roboto,Helvetica,sans-serif" font-size="12.5" font-weight="500" x="891.0" y="304" fill="#18181b" text-anchor="middle">Transcript text</text>
+<text font-family="system-ui,-apple-system,Segoe UI,Roboto,Helvetica,sans-serif" font-size="12.5" font-weight="500" x="891.0" y="320" fill="#18181b" text-anchor="middle">accuracy</text>
+<text font-family="system-ui,-apple-system,Segoe UI,Roboto,Helvetica,sans-serif" font-size="11" x="891.0" y="338" fill="#8b8b93" text-anchor="middle">%</text>
+<rect x="874.0" y="345" width="34" height="16" rx="8" fill="#f4f4f5"/>
+<text font-family="system-ui,-apple-system,Segoe UI,Roboto,Helvetica,sans-serif" font-size="11" x="891.0" y="357" fill="#52525b" text-anchor="middle">tie</text>
+<rect x="93.0" y="370.0" width="50" height="152.0" rx="3" fill="#2a78d6"/>
+<text font-family="system-ui,-apple-system,Segoe UI,Roboto,Helvetica,sans-serif" font-size="13" font-weight="600" x="118.0" y="362.0" fill="#2a78d6" text-anchor="middle">0.747</text>
+<rect x="163.0" y="415.2" width="50" height="106.8" rx="3" fill="#eb6834"/>
+<text font-family="system-ui,-apple-system,Segoe UI,Roboto,Helvetica,sans-serif" font-size="13" font-weight="600" x="188.0" y="407.2" fill="#eb6834" text-anchor="middle">0.525</text>
+<line x1="46" y1="522.5" x2="260" y2="522.5" stroke="#d4d4d8" stroke-width="1"/>
+<text font-family="system-ui,-apple-system,Segoe UI,Roboto,Helvetica,sans-serif" font-size="12.5" font-weight="500" x="153.0" y="544" fill="#18181b" text-anchor="middle">Transcript interval</text>
+<text font-family="system-ui,-apple-system,Segoe UI,Roboto,Helvetica,sans-serif" font-size="12.5" font-weight="500" x="153.0" y="560" fill="#18181b" text-anchor="middle">alignment</text>
+<text font-family="system-ui,-apple-system,Segoe UI,Roboto,Helvetica,sans-serif" font-size="11" x="153.0" y="578" fill="#8b8b93" text-anchor="middle">IoU</text>
+<line x1="329.0" y1="370.0" x2="469.0" y2="370.0" stroke="#d4d4d8" stroke-width="1" stroke-dasharray="3 3"/>
+<rect x="339.0" y="370.0" width="50" height="152.0" rx="3" fill="#2a78d6"/>
+<text font-family="system-ui,-apple-system,Segoe UI,Roboto,Helvetica,sans-serif" font-size="13" font-weight="600" x="364.0" y="362.0" fill="#2a78d6" text-anchor="middle">100</text>
+<rect x="409.0" y="484.0" width="50" height="38.0" rx="3" fill="#eb6834"/>
+<text font-family="system-ui,-apple-system,Segoe UI,Roboto,Helvetica,sans-serif" font-size="13" font-weight="600" x="434.0" y="476.0" fill="#eb6834" text-anchor="middle">25</text>
+<line x1="292" y1="522.5" x2="506" y2="522.5" stroke="#d4d4d8" stroke-width="1"/>
+<text font-family="system-ui,-apple-system,Segoe UI,Roboto,Helvetica,sans-serif" font-size="12.5" font-weight="500" x="399.0" y="544" fill="#18181b" text-anchor="middle">Cue starts within 0.5s</text>
+<text font-family="system-ui,-apple-system,Segoe UI,Roboto,Helvetica,sans-serif" font-size="11" x="399.0" y="562" fill="#8b8b93" text-anchor="middle">%</text>
+<line x1="575.0" y1="370.0" x2="715.0" y2="370.0" stroke="#d4d4d8" stroke-width="1" stroke-dasharray="3 3"/>
+<rect x="585.0" y="370.0" width="50" height="152.0" rx="3" fill="#2a78d6"/>
+<text font-family="system-ui,-apple-system,Segoe UI,Roboto,Helvetica,sans-serif" font-size="13" font-weight="600" x="610.0" y="362.0" fill="#2a78d6" text-anchor="middle">100</text>
+<rect x="655.0" y="370.0" width="50" height="152.0" rx="3" fill="#eb6834"/>
+<text font-family="system-ui,-apple-system,Segoe UI,Roboto,Helvetica,sans-serif" font-size="13" font-weight="600" x="680.0" y="362.0" fill="#eb6834" text-anchor="middle">100</text>
+<line x1="538" y1="522.5" x2="752" y2="522.5" stroke="#d4d4d8" stroke-width="1"/>
+<text font-family="system-ui,-apple-system,Segoe UI,Roboto,Helvetica,sans-serif" font-size="12.5" font-weight="500" x="645.0" y="544" fill="#18181b" text-anchor="middle">Frame identity,</text>
+<text font-family="system-ui,-apple-system,Segoe UI,Roboto,Helvetica,sans-serif" font-size="12.5" font-weight="500" x="645.0" y="560" fill="#18181b" text-anchor="middle">requested time</text>
+<text font-family="system-ui,-apple-system,Segoe UI,Roboto,Helvetica,sans-serif" font-size="11" x="645.0" y="578" fill="#8b8b93" text-anchor="middle">%</text>
+<rect x="628.0" y="585" width="34" height="16" rx="8" fill="#f4f4f5"/>
+<text font-family="system-ui,-apple-system,Segoe UI,Roboto,Helvetica,sans-serif" font-size="11" x="645.0" y="597" fill="#52525b" text-anchor="middle">tie</text>
+</svg>

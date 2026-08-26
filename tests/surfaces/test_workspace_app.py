@@ -29,10 +29,10 @@ from watch_skill.surfaces.mcp.workspace_app import (
     RESOURCE_MIME_TYPE,
     RESOURCE_URI_META_KEY,
     WORKSPACE_URI,
-    open_workspace,
     resource_meta,
     tool_meta,
     workspace_resource,
+    workspace_summary,
 )
 
 SDK_DIST = (Path(__file__).resolve().parents[2] / "app" / "node_modules"
@@ -62,26 +62,36 @@ def test_the_constants_match_the_installed_sdk() -> None:
         f"pinned {MCP_APPS_SDK_VERSION}, installed {package['version']}")
 
 
-def test_the_tool_result_carries_text_and_a_ui_resource() -> None:
-    blocks = open_workspace(None)
-    assert [b["type"] for b in blocks] == ["text", "resource"]
-    resource = blocks[1]["resource"]
+def test_the_ui_resource_carries_the_document_and_its_sandbox_policy() -> None:
+    """The resource — the one place the document is allowed to travel."""
+    resource = workspace_resource()["resource"]
     assert resource["uri"] == WORKSPACE_URI
     assert resource["mimeType"] == RESOURCE_MIME_TYPE
     assert resource["text"], "the resource carried no document"
     assert "io.modelcontextprotocol/ui" in resource["_meta"]
+    assert "ui" in resource["_meta"], "no spec-shaped `_meta.ui` for the host"
 
 
 def test_a_host_that_cannot_render_still_gets_a_usable_answer() -> None:
-    """The text block is not an afterthought.
+    """The text is not an afterthought — it is the whole tool result.
 
     An agent reading a transcript in a host with no MCP Apps support must get
     the canonical state in words, not a note saying a UI appeared somewhere
     it cannot see.
     """
-    text = open_workspace(None)[0]["text"]
+    text = workspace_summary(None)
     assert "Watch Skill workspace" in text
     assert "assurance" in text
+
+
+def test_the_summary_is_small_enough_to_be_a_tool_result() -> None:
+    """The point of the whole fix, asserted at its source.
+
+    `workspace_summary` is the entire payload `watch_workspace` returns. If it
+    ever grows toward the size of the document it replaced, the tool-output
+    cap that broke Claude Desktop comes back.
+    """
+    assert len(workspace_summary(None).encode("utf-8")) < 4_000
 
 
 def test_the_meta_key_points_at_the_workspace_resource() -> None:

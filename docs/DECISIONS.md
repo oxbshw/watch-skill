@@ -564,3 +564,132 @@ The tests pin what would otherwise reach users as a broken install: the version
 matching `pyproject.toml`, the command in `packageArguments` being a real CLI
 command, and the extra in `runtimeArguments` being one `pyproject.toml`
 declares.
+
+### A token budget cannot bound a step that costs no tokens (2026-08-24)
+
+`ask_video` was documented as having "a hard ceiling on top":
+`answer_token_budget`, capping the whole escalation ladder per question. It
+does not, and could not. Both model-free rungs return their cost as literally
+`0` — that is what "compute before tokens" means — so no token ceiling has
+anything to subtract. The ladder was unbounded by construction, and the
+document said otherwise.
+
+It surfaced as an acceptance failure against a 7-minute caption-rich video with
+no vision backend reachable: two `ask_video` calls over MCP timed out, and the
+CLI retry took **113s** to return an honest abstention nobody was still waiting
+for. From the host, that is indistinguishable from a dead server.
+
+Measured on the reference host, one ask, no VLM:
+
+| phase | before | after |
+|---|---|---|
+| retrieval (hybrid search) | 0.9 s | 0.9 s |
+| `dense_resample` | 53.6 s | ≤ 19 s, or skipped |
+| `zoom_crops_reocr` | 48.3 s | skipped when unaffordable |
+| verify probe (`vision.server_down`) | 2.4 s | 2.4 s |
+| **total** | **113.0 s** | **20–27 s** |
+
+What the escalation bought, on the same two questions:
+
+| | retrieval only | after 104 s of escalation |
+|---|---|---|
+| "main idea of this video" | 0.330 | 0.330 |
+| "what is a second brain made of" | 0.486 | 0.486 |
+
+Zero. On a video whose evidence is captions, re-sampling frames and re-OCRing
+crops recovers nothing, because there was no OCR gap to recover — and one run
+*lowered* confidence by adding same-kind rivals that shrank the top hit's
+margin.
+
+So: a second ceiling, in the unit that was actually being spent.
+`answer_deadline_seconds` (default 25) bounds the ask in wall-clock, and the
+rungs check it between units of work rather than only on entry — a window that
+legitimately cleared the check on entry then ran 24 s past it, so the frame
+count is sized to the time left, not just gated by it.
+
+The cost model is measured, not assumed. The OCR engine is a per-process
+singleton (`perceive/ocr.py::_engines`), so the first window in a fresh server
+pays a ~40 s model load that later windows do not — 45.9 s for 5 frames cold
+against ~2.2 s/frame warm. Predicting one number for both is how the overrun
+happened; the estimate now carries a warmup term and refines per-frame cost
+from observed windows. A fresh server's first ask therefore answers from the
+index alone, which is the right trade: that ask is the one a human is waiting
+on.
+
+Two things deliberately did **not** change. The confidence floor is untouched,
+so a shortened ladder abstains exactly where the full one did — the deadline
+removes work, never lowers the bar. And `vision.server_down` is still printed
+and still leaves `verified=False`; it was never the cause of the timeout (2.4 s
+of 113 s) and suppressing it would have hidden a true statement about what did
+not happen.
+
+The related latent hang: `vision_local_timeout_seconds` defaults to 900 s,
+correct for a batch indexing run against a cold CPU model and a fifteen-minute
+stall for an interactive follow-up. A verify call now inherits whatever
+wall-clock the ask has left instead of the provider default.
+
+### Eleven readings of one caption are one observation (2026-08-25)
+
+Found in a Claude Desktop acceptance test, not in a unit test — which is the
+point: every part in isolation was behaving correctly.
+
+Asked what a "second brain" keeps that ordinary AI memory loses, `hybrid_search`
+returned a top-8 of one transcript segment and **seven identical OCR reads** of
+the static on-screen phrase `the second brain`, at 01:00, 01:01, 01:02 and
+01:03. Every one scored an identical `0.7985`. Widened to top-24, eleven of
+them held ranks 2-12. The transcript line that answered the question —
+
+> "the details and so on. However, second brain keeps every decision and the"
+
+was at **rank 15**, which no top-8 can reach. The user could only get the answer
+by rephrasing the question until different text happened to retrieve, and
+"phrase it differently until it works" is not a retrieval contract.
+
+Nothing was scoring wrongly. A caption that sits on screen gets OCR'd on every
+frame it survives, each read becomes its own indexed block with its own
+`ref_id`, and each is therefore a separate row competing for a separate slot.
+Relevance ranking has no notion that they are the same observation, so
+persistence converts directly into votes.
+
+The fix is a collapse pass between ranking and the top-K cut, over the whole
+candidate pool — running it *after* the cut would dedup a top-K that redundancy
+had already filled, which is the same bug wearing a smaller hat.
+
+Four constraints shaped it:
+
+- **Text alone is not enough.** The same caption recurring five minutes later is
+  a genuine second occurrence. Clustering therefore chains through time: a run
+  continues only while consecutive readings stay within a gap tolerance
+  (default 10s). Gap, not total span — a caption held for two minutes is still
+  one occurrence, and a fixed span cap would slice it arbitrarily.
+- **Text is compared after `normalize_for_search`**, the same normalization the
+  query path uses, so Arabic folding and CJK/Thai segmentation apply here too. A
+  byte-level dedup would have silently never fired on any script normalization
+  exists for.
+- **Similarity, not equality** (`SequenceMatcher` ≥ 0.88, behind a length gate).
+  OCR noise turns `decision` into `decislon`; those are the same caption. The
+  length gate is what stops a short read being absorbed by a longer line that
+  merely contains it.
+- **OCR is not penalized as a modality.** A silent screencast may have nothing
+  else, and distinct OCR lines all survive. The representative keeps its own
+  score rather than being boosted for the readings it covers — boosting would
+  let repetition count again through the back door.
+
+Transcript segments are never clustered: two adjacent segments are two
+different statements, which is the same reasoning `_competitor_score` already
+encodes when it treats same-kind neighbours as rivals rather than corroboration.
+
+Measured on the reported video and question:
+
+| | before | after |
+|---|---|---|
+| top-8 composition | 1 segment, 7 OCR | 5 segments, 3 OCR |
+| near-duplicate OCR in top-8 | 7 (11 in top-24) | 0 |
+| rank of the answering transcript line | 15 | 5 |
+| answer confidence | 0.47 | 0.51 |
+| retrieval latency (median) | 49.4 ms | 55.3 ms |
+
+The strongest OCR hit still ranks second overall, above four transcript
+segments. Confidence rose because evidence agreement across modalities went up,
+not because any threshold moved — the lexical-anchor cap and the honest floor
+are untouched.

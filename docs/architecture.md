@@ -70,7 +70,7 @@ a watch.
 
 | Surface | Entry point | Transport | Notes |
 |---|---|---|---|
-| MCP | `watch-skill serve` | stdio (default) or streamable HTTP (`--http`, port 8747, endpoint `/mcp`) | 37 tools ([reference](tools/README.md)); responses are text + real image blocks capped at `response_frame_cap`. Structured errors serialize as `{error, message, fix, details}`. |
+| MCP | `watch-skill serve` | stdio (default) or streamable HTTP (`--http`, port 8747, endpoint `/mcp`) | 39 tools ([reference](tools/README.md)); responses are text + real image blocks capped at `response_frame_cap`. Structured errors serialize as `{error, message, fix, details}`. |
 | CLI | `watch-skill <command>` | terminal | Progress to stderr, results to stdout — pipes cleanly. `--json` flags where output is machine-consumed. |
 | REST | `watch-skill api` | HTTP (port 8748) | Every MCP tool has a REST twin; OpenAPI at `/openapi.json`. Engine error codes map to HTTP statuses by prefix (`acquire.*`/`vision.*`/`transcribe.*` → 502, `perceive.*`/`loop.*` → 422, `index.*` and `*.not_found` → 404, `config.*` → 400) with the structured body preserved in `detail`. Refuses non-loopback binds without `WATCHSKILL_API_BEARER_TOKEN`. |
 
@@ -84,7 +84,15 @@ on without parsing prose.
 answer that is *never silently unverified and never invented*:
 
 1. **Retrieve.** Hybrid search returns the top evidence (transcript
-   segments, OCR blocks, scene descriptions) for this video.
+   segments, OCR blocks, scene descriptions) for this video. Before the
+   top-K cut, runs of near-identical OCR from one persistent on-screen text
+   collapse to a single representative: a caption read on a dozen adjacent
+   frames is one thing the video showed, not a dozen independent witnesses,
+   and repetition must not let it outvote the narration. Clustering chains
+   through *time* on normalized text, so the same caption recurring later
+   stays a separate occurrence; transcript segments are never clustered and
+   never absorbed, and the representative keeps its own score and then
+   competes normally for the final slots.
 2. **Score confidence** from real retrieval signals, calibrated against
    measured distributions (see [DECISIONS.md](DECISIONS.md), v0.6): top-hit
    strength, the *margin* over the runner-up (the strongest signal —
@@ -100,6 +108,15 @@ answer that is *never silently unverified and never invented*:
    into the index permanently — the spend amortizes across every future
    ask. Adaptive profiles learned from past mistakes can reorder the steps
    (e.g. screencasts with missed-OCR history try OCR recovery first).
+   Because these rungs are model-free they cost 0 tokens, so the token
+   budget cannot bound them — a wall-clock deadline
+   (`answer_deadline_seconds`, default 25s) does. A rung is sized to the
+   time actually left (and on a cold OCR engine, skipped outright: the
+   engine is a per-process singleton, so the first window in a fresh
+   server pays a model load later windows do not). A shortened ladder is
+   reported as `deadline_stopped`, never hidden — and it removes only
+   *work*: the confidence floor is unchanged, so a shortened ask abstains
+   exactly where the full one would have.
 4. **Verify.** When a vision provider is configured, the model is shown the
    *exact frames about to be cited* and must return a structured
    supported/certainty verdict — cheap tier first, strong tier only while
@@ -132,9 +149,16 @@ by *ordering* and a *hard ceiling*:
 3. **Tokens only on genuine uncertainty.** The verify pass runs cheap-tier
    first, strong-tier only if still unsure — and it must confirm against
    the exact frames, not free-associate.
-4. **A hard ceiling on top.** `answer_token_budget` (default 8000) caps the
-   whole ladder per question. When the cap vetoes a step, the answer is
-   flagged `budget_stopped` instead of silently degrading.
+4. **Two hard ceilings on top.** `answer_token_budget` (default 8000) caps
+   what the ladder may *spend*; `answer_deadline_seconds` (default 25) caps
+   how long it may *take*. Both are needed and neither substitutes for the
+   other: the model-free rungs are charged 0 tokens, so a token budget
+   alone left them unbounded — measured at ~100s of CPU for a 0.000
+   confidence gain on a caption-rich video, long past the point an
+   interactive MCP client had given up. When a cap vetoes a step the answer
+   is flagged `budget_stopped` / `deadline_stopped` instead of silently
+   degrading. Batch callers who would rather wait pass `deadline_seconds=0`
+   and keep the unbounded behaviour.
 5. **Repeats are free.** A semantic answer cache returns previous answers
    for questions within `answer_cache_similarity` (0.92 cosine) at zero
    model cost, marked `cached: true`. A lifetime savings meter

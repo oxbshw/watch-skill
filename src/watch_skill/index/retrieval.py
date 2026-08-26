@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import sqlite3
 from dataclasses import dataclass, field
+from difflib import SequenceMatcher
 from pathlib import Path
 from typing import Any
 
@@ -25,6 +26,14 @@ class Hit:
     timestamp: float | None
     text: str
     score: float
+    # How many near-identical OCR observations this hit stands for, and the
+    # span they covered. A caption that sits on screen across a dozen frames
+    # is ONE thing the video showed, not a dozen independent witnesses — the
+    # cluster is collapsed to a representative, and these say what it covered
+    # so the evidence is summarizable without being re-derived.
+    duplicate_count: int = 1
+    duplicate_first: float | None = None
+    duplicate_last: float | None = None
 
 
 @dataclass
@@ -158,6 +167,152 @@ def _batch_cosine(query_vec: list[float], rows: list) -> list[float]:
         ]
 
 
+def _ocr_confidences(conn: sqlite3.Connection, ref_ids: list[int]) -> dict[int, float]:
+    """OCR confidence for the candidate blocks, in one query.
+
+    Used only to break ties between cluster members. A missing row (an older
+    index, a block inserted without one) simply scores 0.0 and loses the
+    tie-break to a block that has a real number.
+    """
+    if not ref_ids:
+        return {}
+    marks = ",".join("?" * len(ref_ids))
+    rows = conn.execute(
+        f"SELECT id, confidence FROM ocr_blocks WHERE id IN ({marks})", ref_ids
+    ).fetchall()
+    return {int(r["id"]): float(r["confidence"] or 0.0) for r in rows}
+
+
+def _near_identical(a: str, b: str, threshold: float) -> bool:
+    """Same on-screen text, allowing for recognition noise.
+
+    Compared after the project's own search normalization, so Arabic folding,
+    CJK/Thai segmentation and digit folding apply here exactly as they do to
+    the query — a dedup that used raw bytes would silently not work on any
+    script that normalization exists for.
+    """
+    if a == b:
+        return True
+    if not a or not b:
+        return False
+    # Length gate first: it is cheap, and it stops a short string from
+    # accidentally scoring high against a long one that merely contains it.
+    shorter, longer = sorted((len(a), len(b)))
+    if longer and shorter / longer < threshold:
+        return False
+    return SequenceMatcher(None, a, b).ratio() >= threshold
+
+
+def _pick_representative(cluster: list[Hit], confidences: dict[int, float]) -> Hit:
+    """The one hit that speaks for a cluster.
+
+    Retrieval score first (it is what the ranking is denominated in), then OCR
+    confidence, then the longer text — a truncated read of a caption is worse
+    evidence than a complete one — and finally the earliest timestamp purely
+    so the choice is deterministic rather than dependent on row order.
+    """
+    return max(
+        cluster,
+        key=lambda h: (
+            round(h.score, 6),
+            confidences.get(h.ref_id, 0.0),
+            len(h.text.strip()),
+            -(h.timestamp if h.timestamp is not None else 0.0),
+        ),
+    )
+
+
+def collapse_ocr_duplicates(
+    hits: list[Hit],
+    conn: sqlite3.Connection | None = None,
+    *,
+    window: float | None = None,
+    similarity: float | None = None,
+) -> list[Hit]:
+    """Collapse runs of near-identical OCR from one persistent on-screen text.
+
+    The defect this fixes, measured: a static caption OCR'd on eleven adjacent
+    frames produced eleven hits with *identical* scores, which took ranks 2-12
+    and pushed the transcript line that actually answered the question down to
+    rank 15 — where no top-8 could reach it. Eleven readings of one caption is
+    one observation, and it should occupy one slot.
+
+    Deliberately narrow:
+
+    - OCR only. Transcript segments are a different modality and two adjacent
+      segments are two different statements, so they are never clustered and
+      never absorbed into an OCR cluster.
+    - Text alone is not enough. The same caption recurring later in the video
+      is a genuinely separate occurrence and stays separate; clustering
+      chains through *time*, so a run only continues while consecutive
+      readings stay inside ``window`` of each other.
+    - Nothing is dropped from the ranking's denominator: a representative
+      keeps its own score and then competes normally against transcript hits
+      for the final slots.
+    """
+    from watch_skill.config import get_settings
+
+    settings = get_settings()
+    if not settings.retrieval_ocr_dedup_enabled:
+        return hits
+    window = settings.retrieval_ocr_dedup_window_seconds if window is None else window
+    similarity = (
+        settings.retrieval_ocr_dedup_similarity if similarity is None else similarity
+    )
+
+    ocr = [h for h in hits if h.kind == "ocr" and h.timestamp is not None]
+    if len(ocr) < 2:
+        return hits
+
+    from watch_skill.index.textnorm import normalize_for_search
+
+    confidences: dict[int, float] = {}
+    if conn is not None:
+        confidences = _ocr_confidences(conn, [h.ref_id for h in ocr])
+
+    # Chain by time within a video: sorting by timestamp is what makes a
+    # persistent caption one run and a later reappearance a new one.
+    clusters: list[list[Hit]] = []
+    by_video: dict[str, list[Hit]] = {}
+    for hit in ocr:
+        by_video.setdefault(hit.video_id, []).append(hit)
+    for group in by_video.values():
+        group.sort(key=lambda h: h.timestamp or 0.0)
+        norms = {id(h): normalize_for_search(h.text) for h in group}
+        for hit in group:
+            for cluster in reversed(clusters):
+                if cluster[0].video_id != hit.video_id:
+                    continue
+                last = cluster[-1]
+                gap = abs((hit.timestamp or 0.0) - (last.timestamp or 0.0))
+                if gap <= window and _near_identical(
+                    norms[id(hit)], norms[id(last)], similarity
+                ):
+                    cluster.append(hit)
+                    break
+            else:
+                clusters.append([hit])
+
+    winners: dict[int, Hit] = {}
+    absorbed: set[int] = set()
+    for cluster in clusters:
+        if len(cluster) == 1:
+            continue
+        rep = _pick_representative(cluster, confidences)
+        stamps = [h.timestamp for h in cluster if h.timestamp is not None]
+        rep.duplicate_count = len(cluster)
+        rep.duplicate_first = min(stamps) if stamps else None
+        rep.duplicate_last = max(stamps) if stamps else None
+        winners[id(rep)] = rep
+        for member in cluster:
+            if member is not rep:
+                absorbed.add(id(member))
+
+    # Original order is preserved for everything that survives, so the caller's
+    # own ranking still decides; this only removes redundant competitors.
+    return [h for h in hits if id(h) not in absorbed]
+
+
 def hybrid_search(query: str, video_id: str | None = None, k: int = 8) -> list[Hit]:
     """Merge keyword (FTS5 bm25) and vector (cosine) hits, best-of-both scoring."""
     conn = connect()
@@ -174,6 +329,10 @@ def hybrid_search(query: str, video_id: str | None = None, k: int = 8) -> list[H
                     hit.score = weighted
                     merged[key] = hit
         ranked = sorted(merged.values(), key=lambda h: h.score, reverse=True)
+        # Collapse BEFORE the cut, over the whole candidate pool. Doing it
+        # after would dedup a top-k that redundancy had already filled, which
+        # is the bug wearing a smaller hat.
+        ranked = collapse_ocr_duplicates(ranked, conn)
         return ranked[:k]
     finally:
         conn.close()

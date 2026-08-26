@@ -74,7 +74,7 @@ Runnable counterparts live in the [example catalog](../examples/README.md).
 
 ### Interfaces
 
-- [MCP tools](tools/README.md) — all 37 tools and their REST/CLI twins.
+- [MCP tools](tools/README.md) — all 39 tools and their REST/CLI twins.
 - [Configuration](configuration.md) — the source of truth for `WATCHSKILL_*`
   settings.
 

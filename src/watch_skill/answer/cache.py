@@ -2,8 +2,12 @@
 
 Lives in the index DB (``answers`` table, migration v5). Lookup is exact on
 the normalized question first, then cosine similarity over stored question
-embeddings. Invalidation: per-video on re-watch (store deletes the rows) or
-``watch-skill clean --cache-answers``.
+embeddings. Invalidation: per-video on re-watch (store deletes the rows),
+``watch-skill clean --cache-answers``, or a change of ``ANSWER_SCHEMA`` — an
+entry is only ever served to the algorithm that wrote it.
+
+For a one-off uncached run that deletes nothing, set
+``WATCHSKILL_ANSWER_CACHE_ENABLED=false`` for that invocation.
 """
 from __future__ import annotations
 
@@ -17,6 +21,14 @@ from watch_skill.index import embeddings as emb
 from watch_skill.index.db import connect, get_meta, set_meta
 from watch_skill.index.textnorm import normalize_for_search
 
+# Bump whenever the answer engine, the escalation ladder, confidence scoring
+# or retrieval ranking changes in a way that would make the same question
+# produce different evidence or a different confidence. Entries stamped with
+# any other value are ignored on lookup, so an algorithm change can never keep
+# serving the numbers the previous algorithm produced. Rows predating the
+# stamp hold NULL and are ignored for the same reason.
+ANSWER_SCHEMA = "2026-08-25/deadline+ocr-dedup"
+
 
 def lookup(video_id: str, question: str) -> Answer | None:
     """Return a cached Answer for this (video, question-ish) or None."""
@@ -28,8 +40,8 @@ def lookup(video_id: str, question: str) -> Answer | None:
     try:
         row = conn.execute(
             "SELECT answer_json FROM answers WHERE video_id = ? AND question_norm = ? "
-            "ORDER BY id DESC LIMIT 1",
-            (video_id, norm),
+            "AND engine_schema = ? ORDER BY id DESC LIMIT 1",
+            (video_id, norm, ANSWER_SCHEMA),
         ).fetchone()
         if row is not None:
             return _revive(row["answer_json"])
@@ -43,8 +55,8 @@ def _semantic_lookup(
 ) -> Answer | None:
     rows = conn.execute(
         "SELECT embedding, dim, answer_json FROM answers "
-        "WHERE video_id = ? AND embedding IS NOT NULL",
-        (video_id,),
+        "WHERE video_id = ? AND embedding IS NOT NULL AND engine_schema = ?",
+        (video_id, ANSWER_SCHEMA),
     ).fetchall()
     if not rows:
         return None
@@ -81,12 +93,13 @@ def put(answer: Answer) -> None:
         blob, dim = (emb.pack_vector(vecs[0]), len(vecs[0])) if vecs else (None, None)
         with conn:
             conn.execute(
-                "INSERT INTO answers (video_id, question, question_norm, embedding, dim, answer_json) "
-                "VALUES (?, ?, ?, ?, ?, ?)",
+                "INSERT INTO answers (video_id, question, question_norm, embedding, dim, "
+                "answer_json, engine_schema) VALUES (?, ?, ?, ?, ?, ?, ?)",
                 (
                     answer.video_id, answer.question,
                     normalize_for_search(answer.question),
                     blob, dim, json.dumps(answer.to_dict(), ensure_ascii=False),
+                    ANSWER_SCHEMA,
                 ),
             )
     finally:

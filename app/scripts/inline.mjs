@@ -100,6 +100,73 @@ function escapeForScript(code) {
     .replace(/<!--/g, "<\\!--");
 }
 
+/**
+ * Every chunk webpack can ask for at run time, by id and hash.
+ *
+ * This is the part a string scan cannot see. Webpack does not leave an async
+ * chunk URL in the document; it leaves a builder and a table:
+ *
+ *   r.u = e => "static/chunks/" + e + "." + ({751:"86f3175086c57402"})[e] + ".js"
+ *
+ * so `workspace.html` can contain no literal `/_next/` reference and still
+ * fetch a file. That is exactly how chunk 751 — the MCP SDK, needed only on
+ * the MCP-host path — escaped for three releases: the dev host served it from
+ * `out/`, and the one place it was missing was the one place nobody tested.
+ *
+ * Reading the table rather than matching a name is what makes this survive
+ * the next build: whatever webpack splits out next appears here as soon as it
+ * exists, under whatever id and hash it happens to get.
+ */
+function asyncChunkTable(html) {
+  const marker = html.indexOf('"static/chunks/"');
+  if (marker === -1) return [];
+  // The builder is `… + ({<id>:"<hash>", …})[e] + …`; take the first object
+  // literal after the marker.
+  const region = html.slice(marker, marker + 4000);
+  const match = region.match(/\(\{([^{}]*)\}\)/);
+  if (!match) return [];
+  const entries = [...match[1].matchAll(/(\d+)\s*:\s*"([0-9a-f]+)"/g)];
+  return entries.map(([, id, hash]) => ({ id, hash }));
+}
+
+/**
+ * Fold the async chunks into the document so the table can never be acted on.
+ *
+ * A webpack chunk registers itself by pushing onto `self.webpackChunk_N_E`,
+ * and the runtime replaces that array's `push` with its own callback. So a
+ * chunk that is already in the document is already installed, and `r.e()`
+ * resolves from memory instead of reaching for a URL. Appending them is
+ * therefore enough — no ordering games, and no patching of webpack internals.
+ */
+function inlineAsyncChunks(html) {
+  const table = asyncChunkTable(html);
+  const inlined = [];
+  const missing = [];
+  let scripts = "";
+  for (const { id, hash } of table) {
+    // Through `assetPath`, so the export layout is described in exactly one
+    // place and the `_next` prefix cannot drift between the two readers.
+    const path = assetPath(`/_next/static/chunks/${id}.${hash}.js`);
+    if (!existsSync(path)) {
+      missing.push(`${id}.${hash}.js`);
+      continue;
+    }
+    scripts += `<script>${escapeForScript(readFileSync(path, "utf8"))}</script>`;
+    inlined.push(id);
+  }
+  if (missing.length > 0) {
+    console.error(
+      `refusing to write: webpack can request ${missing.length} chunk(s) that ` +
+        `are not in the export: ${missing.join(", ")}`,
+    );
+    process.exit(1);
+  }
+  const out = scripts
+    ? html.replace(/<\/body>/i, `${scripts}</body>`)
+    : html;
+  return { html: out, inlined, table };
+}
+
 function main() {
   const indexPath = join(OUT_DIR, "index.html");
   if (!existsSync(indexPath)) {
@@ -159,6 +226,23 @@ function main() {
     html = stripFlightStylesheet(html, url);
   }
 
+  // Fold in every chunk the webpack table can name, then prove the table is
+  // fully covered. Done after script inlining, because the runtime that holds
+  // the table is itself one of the scripts being inlined above.
+  const { html: withChunks, inlined, table } = inlineAsyncChunks(html);
+  html = withChunks;
+
+  const uncovered = table
+    .map(({ id }) => id)
+    .filter((id) => !inlined.includes(id));
+  if (uncovered.length > 0) {
+    console.error(
+      `refusing to write: ${uncovered.length} async chunk(s) remain ` +
+        `fetchable: ${uncovered.join(", ")}`,
+    );
+    process.exit(1);
+  }
+
   // Any surviving `/_next/` reference is a request that will be made and will
   // fail — a 404 against the dev host, a CSP refusal inside an MCP host. The
   // check is deliberately blunt: an earlier version of this script exempted
@@ -180,8 +264,8 @@ function main() {
 
   const kib = (Buffer.byteLength(html, "utf8") / 1024).toFixed(1);
   console.log(
-    `inlined ${inlinedScripts} script(s) and ${inlinedStyles} stylesheet(s) ` +
-      `-> ${TARGET} (${kib} KiB)`,
+    `inlined ${inlinedScripts} script(s), ${inlinedStyles} stylesheet(s) and ` +
+      `${inlined.length} async chunk(s) -> ${TARGET} (${kib} KiB)`,
   );
 }
 
