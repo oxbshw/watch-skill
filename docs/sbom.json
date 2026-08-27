@@ -3,6 +3,13 @@
   "note": "A repository licence covers code. Model weights are a separate grant, and weightsLicenseReviewed records whether anyone has actually established the right to distribute them. The two are never merged.",
   "firstParty": [
     {
+      "name": "@watchskill/dsh-adapters",
+      "version": "0.1.0-preview.0",
+      "license": "MIT",
+      "path": "packages/watch/adapters",
+      "kind": "first_party"
+    },
+    {
       "name": "@watchskill/dsh-client-brand",
       "version": "0.1.0-preview.0",
       "license": "MIT",
@@ -1266,7 +1273,7 @@
     }
   ],
   "counts": {
-    "firstParty": 14,
+    "firstParty": 15,
     "thirdParty": 160,
     "modelWeights": 5,
     "distributableWeights": 3

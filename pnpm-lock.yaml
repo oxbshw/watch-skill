@@ -38,6 +38,9 @@ importers:
       '@types/react':
         specifier: ~18.3.31
         version: 18.3.31
+      '@watchskill/dsh-adapters':
+        specifier: workspace:*
+        version: link:packages/watch/adapters
       '@watchskill/dsh-client-brand':
         specifier: workspace:*
         version: link:packages/watch/brand
@@ -92,6 +95,15 @@ importers:
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
+
+  packages/watch/adapters:
+    dependencies:
+      '@watchskill/dsh-memory':
+        specifier: workspace:^
+        version: link:../memory
+      '@watchskill/dsh-wiki':
+        specifier: workspace:^
+        version: link:../wiki
 
   packages/watch/brand:
     devDependencies:

@@ -9,8 +9,8 @@ Baseline: DeepSeek Harness `0.1.1-rc.2 @ b150a551b8d465e31e418e1b2eaf5e79bbb7d28
 
 | Status | Count |
 |---|---:|
-| ✅ tested | 30 |
-| ⬜ not started | 5 |
+| ✅ tested | 32 |
+| ⬜ not started | 3 |
 | **total** | **35** |
 
 `implemented` means real behavior exists, not that a package does.
@@ -185,8 +185,8 @@ Baseline: DeepSeek Harness `0.1.1-rc.2 @ b150a551b8d465e31e418e1b2eaf5e79bbb7d28
 
 | Subsystem | Status | Owner | Tests |
 |---|---|---|---|
-| `adapters.llmwiki` — LLMWiki-compatible import and export | ⬜ not started | watch-workspace | — |
-| `adapters.obsidian` — Optional Obsidian vault adapter | ⬜ not started | watch-workspace | — |
+| `adapters.llmwiki` — LLMWiki-compatible import and export | ✅ tested | watch-workspace | 1 |
+| `adapters.obsidian` — Optional Obsidian vault adapter | ✅ tested | watch-workspace | 1 |
 | `compare.surface` — Compare runs, revisions and before/after states | ✅ tested | watch-workspace | 3 |
 | `library.surface` — Library of sources and evidence, separate from memory | ✅ tested | watch-workspace | 2 |
 | `live.surface` — Live mode with gaps, clocks and reconnect | ✅ tested | watch-workspace | 3 |
@@ -194,6 +194,17 @@ Baseline: DeepSeek Harness `0.1.1-rc.2 @ b150a551b8d465e31e418e1b2eaf5e79bbb7d28
 | `wiki.projections` — Workspace wiki projections with provenance | ✅ tested | watch-workspace | 1 |
 
 <details><summary>Known limitations</summary>
+
+**`adapters.llmwiki`**
+
+- NOT MACHINE TESTED: written against LLMWiki’s documented file set; no LLMWiki release was available to exchange a bundle with.
+- Import is lossy by design. Origin and confidence are read, reported as claims, and discarded.
+
+**`adapters.obsidian`**
+
+- NOT MACHINE TESTED: no Obsidian installation is present, so whether an obsidian:// URI actually opens has not been observed. The URI is constructed and never executed.
+- NOT MACHINE TESTED: round-tripping through Obsidian’s own editor, which may normalise Markdown in ways this adapter has not seen.
+- Optional in the strong sense — a test asserts no core package knows the adapter exists.
 
 **`compare.surface`**
 

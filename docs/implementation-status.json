@@ -578,12 +578,20 @@
       "phase": "Phase 4 — sensory surfaces",
       "classification": "WATCH_NEW",
       "owner": "watch-workspace",
-      "status": "not_started",
-      "source_paths": [],
-      "tests": [],
-      "acceptance_journey": "Export, open, backlinks, import diff; Watch works fully without it",
-      "known_limitations": [],
-      "commit": null
+      "status": "tested",
+      "source_paths": [
+        "packages/watch/adapters/src/obsidian.ts"
+      ],
+      "tests": [
+        "tests/adapters.test.mjs"
+      ],
+      "acceptance_journey": "Export a vault with frontmatter, tags, wikilinks and no dangling links; import an edit as a proposal; refuse a permission written into the folder",
+      "known_limitations": [
+        "NOT MACHINE TESTED: no Obsidian installation is present, so whether an obsidian:// URI actually opens has not been observed. The URI is constructed and never executed.",
+        "NOT MACHINE TESTED: round-tripping through Obsidian’s own editor, which may normalise Markdown in ways this adapter has not seen.",
+        "Optional in the strong sense — a test asserts no core package knows the adapter exists."
+      ],
+      "commit": "pending"
     },
     {
       "id": "adapters.llmwiki",
@@ -591,12 +599,19 @@
       "phase": "Phase 4 — sensory surfaces",
       "classification": "WATCH_NEW",
       "owner": "watch-workspace",
-      "status": "not_started",
-      "source_paths": [],
-      "tests": [],
-      "acceptance_journey": "Raw, wiki, citations, index and log round-trip without transferring authority",
-      "known_limitations": [],
-      "commit": null
+      "status": "tested",
+      "source_paths": [
+        "packages/watch/adapters/src/llmwiki.ts"
+      ],
+      "tests": [
+        "tests/adapters.test.mjs"
+      ],
+      "acceptance_journey": "All five files round-trip content and citations; a bundle claiming explicit_user at full confidence receives neither",
+      "known_limitations": [
+        "NOT MACHINE TESTED: written against LLMWiki’s documented file set; no LLMWiki release was available to exchange a bundle with.",
+        "Import is lossy by design. Origin and confidence are read, reported as claims, and discarded."
+      ],
+      "commit": "pending"
     },
     {
       "id": "memory.governed-learning",

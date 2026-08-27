@@ -47,6 +47,7 @@
     "@watchskill/dsh-live": "workspace:*",
     "@watchskill/dsh-library": "workspace:*",
     "@watchskill/dsh-wiki": "workspace:*",
-    "@watchskill/dsh-client-evidence": "workspace:*"
+    "@watchskill/dsh-client-evidence": "workspace:*",
+    "@watchskill/dsh-adapters": "workspace:*"
   }
 }

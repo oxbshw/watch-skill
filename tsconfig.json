@@ -39,6 +39,9 @@
     },
     {
       "path": "packages/watch/client-evidence"
+    },
+    {
+      "path": "packages/watch/adapters"
     }
   ]
 }
