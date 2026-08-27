@@ -26,6 +26,10 @@ import type { GenericCallView, JsonValue } from '@deepseek-ai/dsh-tools'
 import type {} from '@deepseek-ai/dsh-system-prompt'
 import type {} from '@watchskill/dsh-core-bridge'
 import type { EvidenceRecord, VerificationOutcome, WatchResult } from '@watchskill/dsh-contracts'
+import { SENSORY_GUIDANCE, applySensoryTools } from './sensory.js'
+
+export { SENSORY_GUIDANCE, applySensoryTools } from './sensory.js'
+export type { SensoryConfig } from './sensory.js'
 
 export const name = 'watch-tools'
 export const inject = ['tools', 'watchCore', 'systemPrompt']
@@ -36,12 +40,18 @@ export interface Config {
   readonly queryTimeoutMs: number
   /** Deadline for one verification contract. */
   readonly verifyTimeoutMs: number
+  /** Deadline for a search or a moment lookup. */
+  readonly readTimeoutMs: number
+  /** Deadline for starting a live session, which may launch a browser. */
+  readonly liveStartTimeoutMs: number
 }
 
 /** Schemastery validation for the tool-surface policy. */
 export const Config: s<Config> = s.object({
   queryTimeoutMs: s.number().step(1).min(1_000).default(120_000),
   verifyTimeoutMs: s.number().step(1).min(1_000).default(60_000),
+  readTimeoutMs: s.number().step(1).min(1_000).default(30_000),
+  liveStartTimeoutMs: s.number().step(1).min(1_000).default(60_000),
 })
 
 /**
@@ -141,6 +151,11 @@ interface SourceAnswer {
 /** Register the Watch tool surface and the guidance that governs its use. */
 export function apply(ctx: Context, config: Config): void {
   ctx.systemPrompt.section({ name: 'tool:watch', order: 120, text: GUIDANCE })
+  // A separate section rather than one long block: the sensory rules only
+  // matter once the agent reaches for a source it has not identified yet, and
+  // splitting them keeps each part readable at the point it applies.
+  ctx.systemPrompt.section({ name: 'tool:watch-sensory', order: 121, text: SENSORY_GUIDANCE })
+  applySensoryTools(ctx, config)
 
   ctx.tools.register(defineTool({
     name: 'watch_capabilities',

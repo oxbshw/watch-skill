@@ -63,11 +63,19 @@ describe('the Watch tool surface', () => {
     const mounted = await mountTools()
     try {
       assert.deepEqual([...mounted.registered.keys()].sort(), [
+        'watch_ask_live',
         'watch_ask_source',
         'watch_capabilities',
+        'watch_capture_capabilities',
         'watch_get_evidence',
         'watch_list_sources',
+        'watch_live_status',
+        'watch_moment',
+        'watch_observe_live',
+        'watch_search_sources',
+        'watch_stop_live',
         'watch_verify',
+        'watch_watch_live',
       ])
     } finally {
       await mounted.dispose()
@@ -89,8 +97,10 @@ describe('the Watch tool surface', () => {
   test('the system prompt tells the model that a returned tool is not a verified outcome', async () => {
     const mounted = await mountTools()
     try {
-      assert.equal(mounted.sections.length, 1)
-      const text = mounted.sections[0].text
+      // Read across every section: the guidance is split by where each rule
+      // applies, and asserting on one of them would let the others rot.
+      const text = mounted.sections.map(section => section.text).join('\n\n')
+      assert.ok(mounted.sections.length >= 2)
       assert.match(text, /does not mean the thing/i)
       assert.match(text, /UNVERIFIED/)
       assert.match(text, /watch_verify/)

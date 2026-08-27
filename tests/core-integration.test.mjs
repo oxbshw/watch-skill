@@ -199,6 +199,52 @@ describe('the Bridge against a real Watch Core', { skip }, () => {
     assert.match(result.value.reason, /absent/)
   })
 
+  test('every Bridge method the tools call exists on the installed engine', async () => {
+    // A tool that calls a method the engine does not implement fails only when
+    // someone happens to use it, with an error that reads like a bug in the
+    // agent. This catches the mismatch at the boundary instead.
+    const methods = [
+      'watch.library.list',
+      'watch.library.search',
+      'watch.source.ask',
+      'watch.source.moment',
+      'watch.evidence.get',
+      'watch.verification.run',
+      'watch.capture.capabilities',
+      'watch.live.start',
+      'watch.live.observe',
+      'watch.live.ask',
+      'watch.live.aligned',
+      'watch.live.status',
+      'watch.live.stop',
+    ]
+    const missing = []
+    for (const method of methods) {
+      // Called with no params on purpose: a method that exists refuses with
+      // `bridge.invalid_params` or its own engine error, while one that does
+      // not exist refuses with `bridge.method_not_found`. Only the second is
+      // a mismatch.
+      const result = await ctx.watchCore.request(method, {})
+      if (!result.ok && result.error.error === 'bridge.method_not_found') missing.push(method)
+    }
+    assert.deepEqual(missing, [], 'the tools call methods the engine does not implement')
+  })
+
+  test('a live session that was never started is a refusal, not a crash', async () => {
+    const result = await ctx.watchCore.request('watch.live.observe', {
+      sessionId: 'live_does_not_exist',
+    })
+    assert.equal(result.ok, false)
+    assert.ok(result.error.fix.length > 0)
+    assert.equal(ctx.watchCore.health().phase, 'ready', 'the engine must survive it')
+  })
+
+  test('capture capabilities say what this machine can record', async () => {
+    const result = await ctx.watchCore.request('watch.capture.capabilities', {})
+    assert.equal(result.ok, true, JSON.stringify(result.error ?? {}))
+    assert.ok(result.value.capture, 'the matrix must be reported, even when everything is absent')
+  })
+
   test('an unknown method is refused with the fix, not a crash', async () => {
     const result = await ctx.watchCore.request('watch.does.not.exist', {})
     assert.equal(result.ok, false)
