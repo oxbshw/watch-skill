@@ -18,7 +18,7 @@
  */
 
 import { spawnSync } from 'node:child_process'
-import { existsSync, mkdirSync, readFileSync, writeFileSync, rmSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync, rmSync } from 'node:fs'
 import { join, dirname, resolve, basename } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -37,16 +37,47 @@ const PACKED = join(HOME, 'packed')
  */
 const PROFILE = 'web'
 
-/** Packages that must be installed together: the bundle plus what it mounts. */
-const PACKAGES = [
-  'packages/watch/contracts',
-  'packages/watch/core-bridge',
-  'packages/watch/tools',
-  'packages/watch/client-evidence',
-  'packages/watch/memory',
-  'packages/watch/trajectory',
-  'packages/watch/bundle',
-]
+/**
+ * Packages that must be installed together: the bundle plus what it mounts.
+ *
+ * Derived from the bundle's own dependencies rather than restated, because
+ * restating it is exactly how this broke: the document variant started mounting
+ * the technology package, the bundle gained the dependency, and this list did
+ * not — so `pnpm` failed inside the profile with nothing saying why.
+ */
+function bundleDependencies() {
+  const root = join(ROOT, 'packages', 'watch')
+  const byName = new Map()
+  for (const entry of readdirSync(root)) {
+    const path = join(root, entry, 'package.json')
+    if (!existsSync(path)) continue
+    const manifest = JSON.parse(readFileSync(path, 'utf8'))
+    byName.set(manifest.name, { dir: `packages/watch/${entry}`, manifest })
+  }
+
+  // Transitively. The first version walked only the bundle's own dependencies
+  // and this test failed with an ERR_PNPM_FETCH_404 on a package that is in
+  // this workspace: client-evidence had gained a dependency on the brand
+  // package, which is one hop further than the walk went. A registry 404 for a
+  // first-party package is precisely the failure this smoke exists to produce
+  // before a user sees it.
+  const seen = new Set()
+  const order = []
+  const visit = name => {
+    const found = byName.get(name)
+    if (found === undefined || seen.has(name)) return
+    seen.add(name)
+    for (const dependency of Object.keys(found.manifest.dependencies ?? {})) visit(dependency)
+    order.push(found.dir)
+  }
+  const bundle = byName.get('@watchskill/dsh-bundle')
+  for (const dependency of Object.keys(bundle?.manifest.dependencies ?? {})) visit(dependency)
+  return order
+}
+
+// Dependency order, deepest first, so a `file:` override always points at a
+// tarball that already exists.
+const PACKAGES = [...bundleDependencies(), 'packages/watch/bundle']
 
 /** Rows the composed profile must contain for the bundle to have worked. */
 const EXPECTED_ROWS = ['watch-core-bridge', 'watch-tools', 'watch-client-evidence', 'watch-memory']

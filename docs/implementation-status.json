@@ -503,19 +503,22 @@
       "status": "tested",
       "source_paths": [
         "packages/watch/live/src/session.ts",
+        "packages/watch/live/src/triggers.ts",
         "packages/watch/live/src/client/components.tsx",
         "packages/watch/tools/src/sensory.ts"
       ],
       "tests": [
         "tests/live.test.mjs",
+        "tests/triggers-replay.test.mjs",
         "tests/fixtures/live-session.mjs",
         "tests/watch-tools.test.mjs"
       ],
       "acceptance_journey": "Start, observe, cursor break, reconnect, resnapshot, continue, finalize, replay — on a fixed-clock fixture",
       "known_limitations": [
-        "The client half is complete and gated: cursors, delta recovery, explicit gaps, three clocks, reconnect and a bounded buffer.",
+        "The client half is complete and gated: cursors, delta recovery, explicit gaps, three clocks, reconnect, a bounded buffer and triggers.",
+        "A trigger may pin, notify or ask for a snapshot. It may not act, and the effect type has no member that could — a trigger fires on observed content, so one that reached the operator loop would let a page act by putting the right words on screen.",
         "The transport that carries deltas is the Bridge’s watch.live.observe long poll; a push subscription is not implemented.",
-        "Long-session bounding is proven against a 5,000-event fixture rather than against an eight-hour real capture."
+        "Long-session bounding is proven against a 100,000-event benchmark and a 5,000-event fixture rather than against an eight-hour real capture."
       ],
       "commit": "pending"
     },
@@ -635,15 +638,18 @@
       "owner": "watch-workspace",
       "status": "tested",
       "source_paths": [
-        "packages/watch/memory/src/learning.ts"
+        "packages/watch/memory/src/learning.ts",
+        "packages/watch/memory/src/replay.ts"
       ],
       "tests": [
-        "tests/learning.test.mjs"
+        "tests/learning.test.mjs",
+        "tests/triggers-replay.test.mjs"
       ],
-      "acceptance_journey": "A candidate that fails eval is not promoted, and rollback restores",
+      "acceptance_journey": "A candidate is replayed against a digested fixture set; a safety regression is refused however good everything else is, and a swap counts as a regression",
       "known_limitations": [
-        "The lifecycle is enforced; the replay harness that produces a CandidateEvaluation from real fixtures is not built, so evaluations are supplied by the caller.",
-        "No review UI. A candidate queue exists as data and describeCandidate() renders one line of it."
+        "The replay harness produces a CandidateEvaluation from real cases, run twice on the same fixtures in the same session so the baseline cannot drift.",
+        "The case runner is injected: the thing being replayed is an agent, and a harness that owned one could not be run in a test.",
+        "No review UI. A candidate queue exists as data, and describeEvaluation() renders the line a reviewer reads."
       ],
       "commit": "bd10e78"
     },

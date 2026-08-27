@@ -48,6 +48,7 @@ export * from './compiler.js'
 export * from './projector.js'
 export * from './tools.js'
 export * from './learning.js'
+export * from './replay.js'
 
 /** Deployment configuration for memory. */
 export interface Config {

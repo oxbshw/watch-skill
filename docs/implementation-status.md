@@ -195,8 +195,8 @@ Baseline: DeepSeek Harness `0.1.1-rc.2 @ b150a551b8d465e31e418e1b2eaf5e79bbb7d28
 | `adapters.obsidian` — Optional Obsidian vault adapter | ✅ tested | watch-workspace | 1 |
 | `compare.surface` — Compare runs, revisions and before/after states | ✅ tested | watch-workspace | 3 |
 | `library.surface` — Library of sources and evidence, separate from memory | ✅ tested | watch-workspace | 2 |
-| `live.surface` — Live mode with gaps, clocks and reconnect | ✅ tested | watch-workspace | 3 |
-| `memory.governed-learning` — Candidate lifecycle with eval, promotion, canary and rollback | ✅ tested | watch-workspace | 1 |
+| `live.surface` — Live mode with gaps, clocks and reconnect | ✅ tested | watch-workspace | 4 |
+| `memory.governed-learning` — Candidate lifecycle with eval, promotion, canary and rollback | ✅ tested | watch-workspace | 2 |
 | `wiki.projections` — Workspace wiki projections with provenance | ✅ tested | watch-workspace | 1 |
 
 <details><summary>Known limitations</summary>
@@ -224,14 +224,16 @@ Baseline: DeepSeek Harness `0.1.1-rc.2 @ b150a551b8d465e31e418e1b2eaf5e79bbb7d28
 
 **`live.surface`**
 
-- The client half is complete and gated: cursors, delta recovery, explicit gaps, three clocks, reconnect and a bounded buffer.
+- The client half is complete and gated: cursors, delta recovery, explicit gaps, three clocks, reconnect, a bounded buffer and triggers.
+- A trigger may pin, notify or ask for a snapshot. It may not act, and the effect type has no member that could — a trigger fires on observed content, so one that reached the operator loop would let a page act by putting the right words on screen.
 - The transport that carries deltas is the Bridge’s watch.live.observe long poll; a push subscription is not implemented.
-- Long-session bounding is proven against a 5,000-event fixture rather than against an eight-hour real capture.
+- Long-session bounding is proven against a 100,000-event benchmark and a 5,000-event fixture rather than against an eight-hour real capture.
 
 **`memory.governed-learning`**
 
-- The lifecycle is enforced; the replay harness that produces a CandidateEvaluation from real fixtures is not built, so evaluations are supplied by the caller.
-- No review UI. A candidate queue exists as data and describeCandidate() renders one line of it.
+- The replay harness produces a CandidateEvaluation from real cases, run twice on the same fixtures in the same session so the baseline cannot drift.
+- The case runner is injected: the thing being replayed is an agent, and a harness that owned one could not be run in a test.
+- No review UI. A candidate queue exists as data, and describeEvaluation() renders the line a reviewer reads.
 
 **`wiki.projections`**
 
