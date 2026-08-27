@@ -25,9 +25,14 @@
     "@deepseek-ai/cordis": "catalog:",
     "@deepseek-ai/schemastery": "^3.18.1",
     "@types/node": "^22.20.0",
+    "@types/react": "~18.3.31",
     "@watchskill/dsh-contracts": "workspace:*",
     "@watchskill/dsh-core-bridge": "workspace:*",
-    "typescript": "^5.9.3",
-    "@watchskill/dsh-tools": "workspace:*"
+    "@watchskill/dsh-tools": "workspace:*",
+    "lightningcss": "^1.32.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "tsdown": "^0.22.14",
+    "typescript": "^5.9.3"
   }
 }

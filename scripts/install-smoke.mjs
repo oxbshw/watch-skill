@@ -18,14 +18,24 @@
  */
 
 import { execFileSync, spawnSync } from 'node:child_process'
-import { existsSync, mkdirSync, readFileSync, rmSync } from 'node:fs'
-import { join, dirname, resolve } from 'node:path'
+import { existsSync, mkdirSync, readFileSync, writeFileSync, rmSync } from 'node:fs'
+import { join, dirname, resolve, basename } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const HOME = join(ROOT, '.dsh-home')
 const PACKED = join(HOME, 'packed')
-const PROFILE = 'watchsmoke'
+/**
+ * The profile a real user installs into.
+ *
+ * `web` rather than an invented name on purpose: DSH auto-initializes it from
+ * the shipped template (dsh-base + dsh-web-app), which is the layer stack the
+ * bundle actually has to coexist with. A profile with no template gets
+ * dsh-base alone, and passing against that would prove nothing about the
+ * client rows Watch sits beside. `$DSH_HOME` is a throwaway directory, so this
+ * cannot touch anyone's real profile.
+ */
+const PROFILE = 'web'
 
 /** Packages that must be installed together: the bundle plus what it mounts. */
 const PACKAGES = [
@@ -37,6 +47,28 @@ const PACKAGES = [
 
 /** Rows the composed profile must contain for the bundle to have worked. */
 const EXPECTED_ROWS = ['watch-core-bridge', 'watch-tools']
+
+/**
+ * Remove a directory, tolerating a Windows handle that has not closed yet.
+ *
+ * A package manager that just exited can still hold the tree for a moment, and
+ * a hermetic run that dies on EBUSY is not hermetic — it is flaky.
+ */
+function removeTree(target) {
+  for (let attempt = 0; attempt < 10; attempt += 1) {
+    try {
+      rmSync(target, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 })
+      return
+    } catch (cause) {
+      if (attempt === 9) {
+        fail(
+          `could not clear ${target}: ${String(cause)}`,
+          'A process is still holding it. Close any shell open in that directory and re-run.',
+        )
+      }
+    }
+  }
+}
 
 /** Fail with a message the reader can act on rather than a stack trace. */
 function fail(message, detail) {
@@ -62,12 +94,20 @@ function findCli() {
   return null
 }
 
-/** Run a command, returning its output and never throwing on a non-zero exit. */
+/**
+ * Run a command, returning its output and never throwing on a non-zero exit.
+ *
+ * `shell` is opt-in per call rather than "on for Windows". Windows needs a
+ * shell to resolve a `.cmd` shim such as pnpm, but running an absolute path
+ * through cmd.exe re-splits it on spaces — and `process.execPath` is normally
+ * under `C:\Program Files`.
+ */
 function run(command, args, options = {}) {
+  const { shell = false, ...rest } = options
   const result = spawnSync(command, args, {
     encoding: 'utf8',
-    shell: process.platform === 'win32',
-    ...options,
+    shell,
+    ...rest,
   })
   return {
     status: result.status,
@@ -81,6 +121,7 @@ function pack(relativeDir) {
   // `pnpm pack` resolves the `workspace:` protocol to a real version range,
   // which is what makes the tarballs installable outside this workspace.
   const result = run('pnpm', ['pack', '--pack-destination', PACKED], {
+    shell: process.platform === 'win32',
     cwd: join(ROOT, relativeDir),
   })
   if (result.status !== 0) fail(`could not pack ${relativeDir}`, result.stderr || result.stdout)
@@ -89,6 +130,32 @@ function pack(relativeDir) {
     fail(`pnpm pack did not report a tarball for ${relativeDir}`, result.stdout)
   }
   return tarball
+}
+
+/**
+ * Point the profile's package manager at the packed tarballs.
+ *
+ * The bundle depends on `@watchskill/dsh-core-bridge` and
+ * `@watchskill/dsh-tools` by version range, which is correct: once published,
+ * that is exactly how a user's `dsh plugin add @watchskill/dsh-bundle`
+ * resolves them. Passing sibling tarballs on the command line does not satisfy
+ * a registry range, so this run needs overrides to close the loop locally.
+ *
+ * This is the one accommodation the smoke test makes for being local, and it
+ * is deliberately narrow: it redirects resolution, and changes nothing about
+ * the layer stack, the patch, or the composition — which is what is under
+ * test.
+ */
+function linkLocalTarballs(tarballs) {
+  const manifestPath = join(HOME, 'profiles', PROFILE, 'package.json')
+  const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'))
+  const overrides = {}
+  for (const tarball of tarballs) {
+    const name = basename(tarball).replace(/-\d.*$/, '').replace(/^watchskill-/, '@watchskill/')
+    overrides[name] = `file:${tarball.split('\\').join('/')}`
+  }
+  manifest.pnpm = { ...manifest.pnpm, overrides }
+  writeFileSync(manifestPath, `${JSON.stringify(manifest, undefined, 2)}\n`)
 }
 
 function main() {
@@ -115,7 +182,7 @@ function main() {
 
   process.stdout.write(`dsh ${cli.version} at ${cli.entry}\n`)
 
-  rmSync(HOME, { recursive: true, force: true })
+  removeTree(HOME)
   mkdirSync(PACKED, { recursive: true })
 
   process.stdout.write('packing workspace packages\n')
@@ -125,7 +192,19 @@ function main() {
   // leaves nothing behind that the next run would silently inherit.
   const env = { ...process.env, DSH_HOME: HOME }
 
-  process.stdout.write(`installing the bundle into profile "${PROFILE}"\n`)
+  // Let DSH create the profile itself — the init path is part of what is
+  // being tested — before anything is written into its manifest.
+  process.stdout.write(`initializing profile "${PROFILE}"\n`)
+  const init = run(
+    process.execPath,
+    [cli.entry, 'plugin', '--profile', PROFILE, 'install'],
+    { env, cwd: ROOT },
+  )
+  if (init.status !== 0) fail('`dsh plugin install` failed', init.stderr || init.stdout)
+
+  linkLocalTarballs(tarballs)
+
+  process.stdout.write('installing the bundle\n')
   const install = run(
     process.execPath,
     [cli.entry, 'plugin', '--profile', PROFILE, 'add', ...tarballs],
@@ -185,7 +264,7 @@ function main() {
     process.stdout.write(`\nprofile kept at ${join(HOME, 'profiles', PROFILE)}\n`)
     return
   }
-  rmSync(HOME, { recursive: true, force: true })
+  removeTree(HOME)
 }
 
 main()
