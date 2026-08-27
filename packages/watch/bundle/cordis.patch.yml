@@ -72,3 +72,31 @@
     # simply render in DSH's generic tool card.
     - id: watch-client-evidence
       name: '@watchskill/dsh-client-evidence'
+
+    # Durable, correctable memory. `off` by default and deliberately so:
+    # durable memory about a person is not something a deployment should
+    # acquire because nobody changed a setting.
+    #
+    # Turn it on by restating this row's whole config with a different mode:
+    #   'off'              nothing written, nothing recalled
+    #   'session_only'     kept in memory only; never reaches a later session
+    #   'local_personal'   a local ledger on disk for this profile
+    #   'workspace_shared' knowledge and decisions shared; personal taste is not
+    #
+    # The mode values are quoted deliberately. YAML reads a bare `off` as the
+    # boolean false, which would silently become an invalid mode rather than
+    # the one written here.
+    #
+    # The ledger is the authority and every projection — taste.md, index.md,
+    # log.md — is rebuilt from it, which is what makes Forget remove a memory
+    # rather than hide it. The ledger is not yet encrypted at rest; on Desktop
+    # it will move behind the OS keychain, and until then `local_personal`
+    # means a plain file with the profile's own permissions.
+    - id: watch-memory
+      name: '@watchskill/dsh-memory'
+      config:
+        mode: 'off'
+        directory: .watch/memory
+        inferredThreshold: 0.8
+        tokenBudget: 600
+        writeProjections: true

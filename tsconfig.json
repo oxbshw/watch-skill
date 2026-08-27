@@ -9,6 +9,9 @@
     },
     {
       "path": "packages/watch/tools"
+    },
+    {
+      "path": "packages/watch/memory"
     }
   ]
 }

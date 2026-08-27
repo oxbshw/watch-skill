@@ -43,11 +43,12 @@ const PACKAGES = [
   'packages/watch/core-bridge',
   'packages/watch/tools',
   'packages/watch/client-evidence',
+  'packages/watch/memory',
   'packages/watch/bundle',
 ]
 
 /** Rows the composed profile must contain for the bundle to have worked. */
-const EXPECTED_ROWS = ['watch-core-bridge', 'watch-tools', 'watch-client-evidence']
+const EXPECTED_ROWS = ['watch-core-bridge', 'watch-tools', 'watch-client-evidence', 'watch-memory']
 
 /**
  * Remove a directory, tolerating a Windows handle that has not closed yet.

@@ -16,6 +16,7 @@
   "dependencies": {
     "@watchskill/dsh-core-bridge": "workspace:^",
     "@watchskill/dsh-tools": "workspace:^",
-    "@watchskill/dsh-client-evidence": "workspace:^"
+    "@watchskill/dsh-client-evidence": "workspace:^",
+    "@watchskill/dsh-memory": "workspace:^"
   }
 }
