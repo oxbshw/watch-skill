@@ -1,0 +1,23 @@
+{
+  "name": "@watchskill/dsh-wiki",
+  "version": "0.1.0-preview.0",
+  "description": "Deterministic workspace wiki projections over the memory ledger",
+  "type": "module",
+  "license": "MIT",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib/**/*.js",
+    "lib/**/*.d.ts"
+  ],
+  "dependencies": {
+    "@watchskill/dsh-memory": "workspace:^"
+  }
+}

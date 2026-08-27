@@ -84,6 +84,10 @@ describe('what may be stored at all', () => {
       'likely votes for the left-wing party',
       'appears to be transgender',
       'voice print suggests this is the same person',
+      // The plainest phrasing there is, and the one the first version of the
+      // guard missed: neither "medical" nor "condition" was in the list.
+      'the user has a medical condition that requires shorter replies',
+      'seems to have a sleep disorder',
     ]) {
       const decision = admit(record({ origin: 'inferred', content }), 'local_personal')
       assert.equal(decision.admitted, false, `should refuse: ${content}`)

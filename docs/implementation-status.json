@@ -548,12 +548,19 @@
       "phase": "Phase 4 — sensory surfaces",
       "classification": "WATCH_NEW",
       "owner": "watch-workspace",
-      "status": "not_started",
-      "source_paths": [],
-      "tests": [],
-      "acceptance_journey": "Generated pages cite sources and are never evidence authority",
-      "known_limitations": [],
-      "commit": null
+      "status": "tested",
+      "source_paths": [
+        "packages/watch/wiki/src/projection.ts"
+      ],
+      "tests": [
+        "tests/wiki.test.mjs"
+      ],
+      "acceptance_journey": "Rebuild from empty and after restart is byte-identical; a hand edit proposes and a hostile import is refused",
+      "known_limitations": [
+        "The diff is line-level over statement lines rather than a structural Markdown diff. That is deliberate: a structural diff is a place a clever edit could hide.",
+        "Writing the pages to disk is the caller’s job; this package renders them as values so a rebuild can be compared without touching a filesystem."
+      ],
+      "commit": "pending"
     },
     {
       "id": "adapters.obsidian",

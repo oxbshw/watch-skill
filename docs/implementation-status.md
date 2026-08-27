@@ -9,10 +9,10 @@ Baseline: DeepSeek Harness `0.1.1-rc.2 @ b150a551b8d465e31e418e1b2eaf5e79bbb7d28
 
 | Status | Count |
 |---|---:|
-| ✅ tested | 27 |
+| ✅ tested | 28 |
 | 🟩 implemented | 1 |
 | 🟨 in progress | 1 |
-| ⬜ not started | 6 |
+| ⬜ not started | 5 |
 | **total** | **35** |
 
 `implemented` means real behavior exists, not that a package does.
@@ -192,7 +192,7 @@ Baseline: DeepSeek Harness `0.1.1-rc.2 @ b150a551b8d465e31e418e1b2eaf5e79bbb7d28
 | `library.surface` — Library of sources and evidence, separate from memory | ✅ tested | watch-workspace | 2 |
 | `live.surface` — Live mode with gaps, clocks and reconnect | ✅ tested | watch-workspace | 3 |
 | `memory.governed-learning` — Candidate lifecycle with eval, promotion, canary and rollback | ✅ tested | watch-workspace | 1 |
-| `wiki.projections` — Workspace wiki projections with provenance | ⬜ not started | watch-workspace | — |
+| `wiki.projections` — Workspace wiki projections with provenance | ✅ tested | watch-workspace | 1 |
 
 <details><summary>Known limitations</summary>
 
@@ -217,6 +217,11 @@ Baseline: DeepSeek Harness `0.1.1-rc.2 @ b150a551b8d465e31e418e1b2eaf5e79bbb7d28
 
 - The lifecycle is enforced; the replay harness that produces a CandidateEvaluation from real fixtures is not built, so evaluations are supplied by the caller.
 - No review UI. A candidate queue exists as data and describeCandidate() renders one line of it.
+
+**`wiki.projections`**
+
+- The diff is line-level over statement lines rather than a structural Markdown diff. That is deliberate: a structural diff is a place a clever edit could hide.
+- Writing the pages to disk is the caller’s job; this package renders them as values so a rebuild can be compared without touching a filesystem.
 
 </details>
 

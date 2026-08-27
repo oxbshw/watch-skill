@@ -68,6 +68,9 @@ importers:
       '@watchskill/dsh-trajectory':
         specifier: workspace:*
         version: link:packages/watch/trajectory
+      '@watchskill/dsh-wiki':
+        specifier: workspace:*
+        version: link:packages/watch/wiki
       '@watchskill/dsh-workspace':
         specifier: workspace:*
         version: link:packages/watch/workspace
@@ -277,6 +280,12 @@ importers:
       '@watchskill/dsh-contracts':
         specifier: workspace:^
         version: link:../contracts
+
+  packages/watch/wiki:
+    dependencies:
+      '@watchskill/dsh-memory':
+        specifier: workspace:^
+        version: link:../memory
 
   packages/watch/workspace:
     dependencies:

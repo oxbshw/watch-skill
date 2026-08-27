@@ -87,6 +87,13 @@
       "kind": "first_party"
     },
     {
+      "name": "@watchskill/dsh-wiki",
+      "version": "0.1.0-preview.0",
+      "license": "MIT",
+      "path": "packages/watch/wiki",
+      "kind": "first_party"
+    },
+    {
       "name": "@watchskill/dsh-workspace",
       "version": "0.1.0-preview.0",
       "license": "MIT",
@@ -1251,7 +1258,7 @@
     }
   ],
   "counts": {
-    "firstParty": 13,
+    "firstParty": 14,
     "thirdParty": 160,
     "modelWeights": 4,
     "distributableWeights": 2

@@ -33,6 +33,9 @@
     },
     {
       "path": "packages/watch/library"
+    },
+    {
+      "path": "packages/watch/wiki"
     }
   ]
 }

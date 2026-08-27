@@ -266,7 +266,13 @@ export function modePolicy(mode: MemoryMode): ModePolicy {
  * have on screen.
  */
 const PROTECTED_SUBJECTS = [
-  /\b(health|ill|unwell|sick|illness|diagnos\w*|disabilit\w*|disabled|medication|therapy|pregnan\w*|depress\w*|anxiet\w*|addict\w*)\b/i,
+  // `medical` and `condition` were both missing from the first version, so
+  // the plainest phrasing of a health claim — "has a medical condition" —
+  // passed the guard entirely; a wiki-import test found it. The direction to
+  // err in here is refusal: a false positive costs an inferred memory that a
+  // person can still state themselves, and a false negative lets an agent
+  // conclude something about someone's health.
+  /\b(health|ill|unwell|sick|illness|disease|medical\w*|clinical|disorder|symptom\w*|diagnos\w*|disabilit\w*|disabled|medication|therapy|pregnan\w*|depress\w*|anxiet\w*|addict\w*)\b/i,
   /\b(religio\w*|faith|muslim|christian|jewish|hindu|buddhist|atheist)\b/i,
   /\b(politic\w*|left-wing|right-wing|votes? for|party affiliation)\b/i,
   /\b(sexual orientation|gay|lesbian|bisexual|transgender)\b/i,
