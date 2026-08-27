@@ -9,9 +9,9 @@ Baseline: DeepSeek Harness `0.1.1-rc.2 @ b150a551b8d465e31e418e1b2eaf5e79bbb7d28
 
 | Status | Count |
 |---|---:|
-| ✅ tested | 26 |
+| ✅ tested | 27 |
 | 🟩 implemented | 1 |
-| 🟨 in progress | 2 |
+| 🟨 in progress | 1 |
 | ⬜ not started | 6 |
 | **total** | **35** |
 
@@ -189,7 +189,7 @@ Baseline: DeepSeek Harness `0.1.1-rc.2 @ b150a551b8d465e31e418e1b2eaf5e79bbb7d28
 | `adapters.llmwiki` — LLMWiki-compatible import and export | ⬜ not started | watch-workspace | — |
 | `adapters.obsidian` — Optional Obsidian vault adapter | ⬜ not started | watch-workspace | — |
 | `compare.surface` — Compare runs, revisions and before/after states | ✅ tested | watch-workspace | 1 |
-| `library.surface` — Library of sources and evidence, separate from memory | 🟨 in progress | watch-workspace | 1 |
+| `library.surface` — Library of sources and evidence, separate from memory | ✅ tested | watch-workspace | 2 |
 | `live.surface` — Live mode with gaps, clocks and reconnect | ✅ tested | watch-workspace | 3 |
 | `memory.governed-learning` — Candidate lifecycle with eval, promotion, canary and rollback | ✅ tested | watch-workspace | 1 |
 | `wiki.projections` — Workspace wiki projections with provenance | ⬜ not started | watch-workspace | — |
@@ -204,7 +204,8 @@ Baseline: DeepSeek Harness `0.1.1-rc.2 @ b150a551b8d465e31e418e1b2eaf5e79bbb7d28
 
 **`library.surface`**
 
-- Search and listing exist as Bridge methods and tools. No facets, collections or UI surface.
+- Retrieval itself belongs to the engine. This is the model over its results: revisions, freshness, addressability, facets, filters and the stated retrieval path.
+- Entities are carried on a source but no extractor populates them here.
 
 **`live.surface`**
 

@@ -503,18 +503,23 @@
       "phase": "Phase 4 — sensory surfaces",
       "classification": "WATCH_EXISTING",
       "owner": "watch-workspace",
-      "status": "in_progress",
+      "status": "tested",
       "source_paths": [
+        "packages/watch/library/src/sources.ts",
+        "packages/watch/library/src/search.ts",
+        "packages/watch/library/src/client/components.tsx",
         "packages/watch/tools/src/sensory.ts"
       ],
       "tests": [
+        "tests/library.test.mjs",
         "tests/watch-tools.test.mjs"
       ],
-      "acceptance_journey": "Source revisions, hybrid search, facets, collections, stale state",
+      "acceptance_journey": "Index, search, cite an exact timestamp, re-index, and the old evidence still opens — marked stale",
       "known_limitations": [
-        "Search and listing exist as Bridge methods and tools. No facets, collections or UI surface."
+        "Retrieval itself belongs to the engine. This is the model over its results: revisions, freshness, addressability, facets, filters and the stated retrieval path.",
+        "Entities are carried on a source but no extractor populates them here."
       ],
-      "commit": "bbbff27"
+      "commit": "pending"
     },
     {
       "id": "compare.surface",
