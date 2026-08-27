@@ -430,3 +430,104 @@ describe('the context packet', () => {
     }
   })
 })
+
+describe('workspace_shared keeps personal taste private', () => {
+  test('a workspace-scoped decision is stored and recalled', async () => {
+    const m = await mountMemory({ mode: 'workspace_shared' })
+    try {
+      const result = m.ctx.watchMemory.remember(
+        stated('this team reviews architecture decisions before implementing', {
+          kind: 'decision', subjectScope: 'workspace', scopeId: 'ws_1',
+        }),
+        { userAuthenticated: true },
+      )
+      assert.equal(result.stored, true)
+      assert.equal(result.status, 'active')
+      assert.equal(m.ctx.watchMemory.compile(SCOPE).items.length, 1)
+    } finally {
+      await m.dispose()
+    }
+  })
+
+  test('a personal preference is refused, not silently shared', async () => {
+    // The failure this prevents: someone's taste ending up in a workspace
+    // their colleagues can read, because a mode changed and nothing stopped it.
+    const m = await mountMemory({ mode: 'workspace_shared' })
+    try {
+      const result = m.ctx.watchMemory.remember(
+        stated('prefers blunt feedback', { subjectScope: 'user', scopeId: 'user_1' }),
+        { userAuthenticated: true },
+      )
+      assert.equal(result.stored, false)
+      assert.equal(result.admission.reason, 'scope_not_allowed_by_mode')
+      assert.match(result.reason, /workspace_shared/)
+      assert.equal(m.ctx.watchMemory.list(SCOPE).length, 0)
+    } finally {
+      await m.dispose()
+    }
+  })
+
+  test('project scope is allowed alongside workspace scope', async () => {
+    const m = await mountMemory({ mode: 'workspace_shared' })
+    try {
+      for (const scope of ['workspace', 'project', 'session']) {
+        const scopeId = { workspace: 'ws_1', project: 'proj_1', session: 'sess_1' }[scope]
+        const result = m.ctx.watchMemory.remember(
+          stated(`a ${scope} convention`, { subjectScope: scope, scopeId }),
+          { userAuthenticated: true },
+        )
+        assert.equal(result.stored, true, `${scope} should be allowed`)
+      }
+    } finally {
+      await m.dispose()
+    }
+  })
+
+  test('shared memory still cannot cross into another workspace', async () => {
+    const m = await mountMemory({ mode: 'workspace_shared' })
+    try {
+      m.ctx.watchMemory.remember(
+        stated('belongs to a different team', { subjectScope: 'workspace', scopeId: 'ws_other' }),
+        { userAuthenticated: true },
+      )
+      assert.equal(m.ctx.watchMemory.compile(SCOPE).items.length, 0)
+      assert.equal(m.ctx.watchMemory.list(SCOPE).length, 0)
+    } finally {
+      await m.dispose()
+    }
+  })
+})
+
+describe('every mode does what it says', () => {
+  test('the four modes differ in behavior, not just in a label', async () => {
+    // Asserted together so a mode that quietly stopped differing from another
+    // shows up as a failure rather than as an unchanged dropdown.
+    const outcomes = {}
+    for (const mode of ['off', 'session_only', 'local_personal', 'workspace_shared']) {
+      const m = await mountMemory({ mode })
+      try {
+        const personal = m.ctx.watchMemory.remember(
+          stated('a personal preference'), { userAuthenticated: true },
+        )
+        const workspace = m.ctx.watchMemory.remember(
+          stated('a workspace convention', { subjectScope: 'workspace', scopeId: 'ws_1' }),
+          { userAuthenticated: true },
+        )
+        outcomes[mode] = { personal: personal.stored, workspace: workspace.stored }
+      } finally {
+        await m.dispose()
+      }
+    }
+
+    assert.deepEqual(outcomes, {
+      // Nothing at all.
+      off: { personal: false, workspace: false },
+      // Session scope only, so neither of these is admissible.
+      session_only: { personal: false, workspace: false },
+      // Everything.
+      local_personal: { personal: true, workspace: true },
+      // Shared knowledge, private taste.
+      workspace_shared: { personal: false, workspace: true },
+    })
+  })
+})
