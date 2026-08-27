@@ -20,6 +20,7 @@ import { execFileSync } from 'node:child_process'
 
 import { Context } from '@deepseek-ai/cordis'
 import WatchCoreService from '@watchskill/dsh-core-bridge'
+import { detectSchemaDrift } from '@watchskill/dsh-contracts'
 
 /**
  * Resolve how to start Watch Core, or report that it is not installed.
@@ -83,6 +84,25 @@ describe('the Bridge against a real Watch Core', { skip }, () => {
     assert.equal(ctx.watchCore.health().transport, 'stdio')
     assert.equal(handshake.value.protocolVersion, 1)
     assert.match(handshake.value.coreVersion, /^\d+\.\d+/)
+  })
+
+  test('the installed engine publishes the contract this build was written against', () => {
+    // The check that keeps ADR-004 honest. The engine's Pydantic models are
+    // the source of truth and these types are a face over them; if that face
+    // ever stops matching, this fails here rather than as an undefined field
+    // in someone's session.
+    const drift = detectSchemaDrift(handshake.value.schemaDigests)
+    assert.deepEqual(
+      drift,
+      [],
+      'contract drift: regenerate schemas/bridge/manifest.json in watch-skill '
+      + 'and update EXPECTED_SCHEMA_DIGESTS',
+    )
+    assert.equal(
+      ctx.watchCore.health().error,
+      null,
+      'a matching contract must leave no warning behind',
+    )
   })
 
   test('reports how it knows each capability, not just whether it has one', () => {

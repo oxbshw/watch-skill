@@ -25,7 +25,12 @@ import type {
   WatchError,
   WatchResult,
 } from '@watchskill/dsh-contracts'
-import { WATCH_PROTOCOL_VERSION, watchError } from '@watchskill/dsh-contracts'
+import {
+  WATCH_PROTOCOL_VERSION,
+  detectSchemaDrift,
+  isContractUnverified,
+  watchError,
+} from '@watchskill/dsh-contracts'
 import type { Transport } from './transport.js'
 import { MockTransport } from './transport/mock.js'
 import { StdioTransport } from './transport/stdio.js'
@@ -110,6 +115,13 @@ export class WatchCoreService extends Service {
   private connecting: Promise<WatchResult<HandshakeResult>> | null = null
   private readonly healthListeners = new Set<(health: WatchCoreHealth) => void>()
   private admitting = true
+  /**
+   * Capabilities withheld because their contract family drifted.
+   *
+   * Held separately from the handshake so {@link isCapable} can refuse one
+   * capability without every caller re-deriving which families it needs.
+   */
+  private driftAffected = new Set<string>()
 
   constructor(ctx: Context, private readonly config: Config) {
     super(ctx, 'watchCore')
@@ -151,6 +163,10 @@ export class WatchCoreService extends Service {
    */
   isCapable(capabilityId: string): boolean {
     if (this.state.phase !== 'ready' && this.state.phase !== 'degraded') return false
+    // A capability whose contract family drifted is not usable, whatever
+    // the engine says about it: the two sides disagree on what its payload
+    // means, so a successful call would return something unreadable.
+    if (this.driftAffected.has(capabilityId)) return false
     const truth = this.capabilities().find(entry => entry.capabilityId === capabilityId)
     return truth?.status === 'machine_tested' || truth?.status === 'implemented'
   }
@@ -272,6 +288,62 @@ export class WatchCoreService extends Service {
       }
       this.publish({ phase: 'degraded', handshake: handshake.value, error })
       return { ok: false, error }
+    }
+
+    // Contract drift is checked after the protocol, because a matching
+    // protocol version says only that both sides speak the same *shape* of
+    // conversation, not that they agree on what is in it.
+    //
+    // The "published nothing" case is checked first, and it has to be: an
+    // empty map drifts against every family, so testing for drift first would
+    // report a Watch Core older than this check as six mismatches and take
+    // every capability offline — breaking a working setup to enforce a check
+    // that version predates.
+    this.driftAffected = new Set()
+    if (isContractUnverified(handshake.value.schemaDigests)) {
+      this.publish({
+        phase: 'ready',
+        handshake: handshake.value,
+        error: {
+          error: 'bridge.contract_unverified',
+          message:
+            'Watch Core published no contract digests, so its wire could not be checked '
+            + 'against this build.',
+          fix: 'Update Watch Core to a version that publishes schemas/bridge/manifest.json.',
+          details: {},
+          retryable: false,
+          correlationId: null,
+        },
+      })
+      return handshake
+    }
+
+    const drift = detectSchemaDrift(handshake.value.schemaDigests)
+    if (drift.length > 0) {
+      const families = drift.map(entry => entry.family).join(', ')
+      const affected = [...new Set(drift.flatMap(entry => entry.affects))]
+      const error: WatchError = {
+        error: 'bridge.schema_drift',
+        message:
+          `Watch Core's contract differs from this Workspace's build for: ${families}. `
+          + `${affected.length} capability(ies) are unavailable until they match.`,
+        fix: 'Update Watch Core or the Workspace so their contract versions match.',
+        details: {
+          drift: drift.map(entry => ({
+            family: entry.family,
+            expected: entry.expected,
+            actual: entry.actual,
+          })),
+          affectedCapabilities: affected,
+        },
+        retryable: false,
+        correlationId: null,
+      }
+      this.driftAffected = new Set(affected)
+      // Degraded, not failed: the families that still agree keep working, and
+      // the Workspace itself is entirely unaffected.
+      this.publish({ phase: 'degraded', handshake: handshake.value, error })
+      return handshake
     }
 
     this.publish({ phase: 'ready', handshake: handshake.value, error: null })
