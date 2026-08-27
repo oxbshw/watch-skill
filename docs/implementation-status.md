@@ -9,10 +9,10 @@ Baseline: DeepSeek Harness `0.1.1-rc.2 @ b150a551b8d465e31e418e1b2eaf5e79bbb7d28
 
 | Status | Count |
 |---|---:|
-| ✅ tested | 24 |
+| ✅ tested | 25 |
 | 🟩 implemented | 1 |
 | 🟨 in progress | 3 |
-| ⬜ not started | 7 |
+| ⬜ not started | 6 |
 | **total** | **35** |
 
 `implemented` means real behavior exists, not that a package does.
@@ -116,6 +116,7 @@ Baseline: DeepSeek Harness `0.1.1-rc.2 @ b150a551b8d465e31e418e1b2eaf5e79bbb7d28
 **`memory.ledger`**
 
 - The local ledger is not encrypted at rest. Desktop keychain integration is Phase 5.
+- Rejection tombstones like a forget, so a declined proposal cannot be recovered. That is deliberate: a suggestion somebody said no to must not stay in the list they said no to it from.
 
 **`memory.projections`**
 
@@ -129,7 +130,7 @@ Baseline: DeepSeek Harness `0.1.1-rc.2 @ b150a551b8d465e31e418e1b2eaf5e79bbb7d28
 |---|---|---|---|
 | `brand.package` — Watch brand and theme over DSH's token system | ✅ tested | watch-workspace | 1 |
 | `i18n.evidence` — Language-aware evidence contract | ✅ tested | both | 1 |
-| `memory.product-ui` — Memory surfaces: taste, timeline, wiki, decisions, lessons, failures | ⬜ not started | watch-workspace | — |
+| `memory.product-ui` — Memory surfaces: taste, timeline, wiki, decisions, lessons, failures | ✅ tested | watch-workspace | 1 |
 | `ocr.engines` — OCR engine family with isolated workers | 🟨 in progress | both | 1 |
 | `providers.role-bindings` — Role bindings over DSH Models and Providers | ✅ tested | watch-workspace | 1 |
 | `technology.center` — Technology descriptors and capability lifecycle | ✅ tested | watch-workspace | 1 |
@@ -148,6 +149,11 @@ Baseline: DeepSeek Harness `0.1.1-rc.2 @ b150a551b8d465e31e418e1b2eaf5e79bbb7d28
 - Script detection is range-based rather than full ICU: it reports which scripts appear, which is what direction and routing need. It is not language identification, and languageTags stay empty rather than guessed.
 - RTL-safe layout primitives exist as a contract (needsDirectionIsolation) but no UI consumes them yet.
 - No UI locale bundles are shipped. Claiming launch locales without reviewed translations would be worse than shipping none.
+
+**`memory.product-ui`**
+
+- The Wiki view renders the generated projection; the projection itself is wiki.projections.
+- Editing is a correction through the ledger, which is what the service supports. There is no in-place text field that writes a record directly, by design.
 
 **`ocr.engines`**
 

@@ -204,7 +204,8 @@
       ],
       "acceptance_journey": "Correct on next turn; forget survives restart and rebuild",
       "known_limitations": [
-        "The local ledger is not encrypted at rest. Desktop keychain integration is Phase 5."
+        "The local ledger is not encrypted at rest. Desktop keychain integration is Phase 5.",
+        "Rejection tombstones like a forget, so a declined proposal cannot be recovered. That is deliberate: a suggestion somebody said no to must not stay in the list they said no to it from."
       ],
       "commit": "7604db4"
     },
@@ -373,12 +374,21 @@
       "phase": "Phase 3 — web product",
       "classification": "WATCH_NEW",
       "owner": "watch-workspace",
-      "status": "not_started",
-      "source_paths": [],
-      "tests": [],
-      "acceptance_journey": "Confirm, edit, reject, dispute, forget, move scope, export",
-      "known_limitations": [],
-      "commit": null
+      "status": "tested",
+      "source_paths": [
+        "packages/watch/client-memory/src/views.ts",
+        "packages/watch/client-memory/src/client/components.tsx",
+        "packages/watch/memory/src/index.ts"
+      ],
+      "tests": [
+        "tests/memory-product.test.mjs"
+      ],
+      "acceptance_journey": "The second vertical slice end to end: correct, see it in Taste, new session, Why remembered?, edit, forget, restart, replay, export",
+      "known_limitations": [
+        "The Wiki view renders the generated projection; the projection itself is wiki.projections.",
+        "Editing is a correction through the ledger, which is what the service supports. There is no in-place text field that writes a record directly, by design."
+      ],
+      "commit": "pending"
     },
     {
       "id": "providers.role-bindings",

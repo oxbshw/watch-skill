@@ -42,6 +42,7 @@
     "@watchskill/dsh-trajectory": "workspace:*",
     "@watchskill/dsh-client-brand": "workspace:*",
     "@watchskill/dsh-technology": "workspace:*",
-    "@watchskill/dsh-workspace": "workspace:*"
+    "@watchskill/dsh-workspace": "workspace:*",
+    "@watchskill/dsh-client-memory": "workspace:*"
   }
 }

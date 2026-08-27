@@ -24,6 +24,13 @@
       "kind": "first_party"
     },
     {
+      "name": "@watchskill/dsh-client-memory",
+      "version": "0.1.0-preview.0",
+      "license": "MIT",
+      "path": "packages/watch/client-memory",
+      "kind": "first_party"
+    },
+    {
       "name": "@watchskill/dsh-contracts",
       "version": "0.1.0-preview.0",
       "license": "MIT",
@@ -1230,7 +1237,7 @@
     }
   ],
   "counts": {
-    "firstParty": 10,
+    "firstParty": 11,
     "thirdParty": 160,
     "modelWeights": 4,
     "distributableWeights": 2

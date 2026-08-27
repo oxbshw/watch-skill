@@ -115,6 +115,8 @@ export type MemoryEventKind =
   | 'record.activated'
   | 'record.confirmed'
   | 'record.disputed'
+  /** A proposal was declined. Tombstoned, like a forget, and for the same reason. */
+  | 'record.rejected'
   | 'record.superseded'
   | 'record.forgotten'
   | 'record.scope_moved'

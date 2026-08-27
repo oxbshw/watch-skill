@@ -24,6 +24,9 @@
     },
     {
       "path": "packages/watch/workspace"
+    },
+    {
+      "path": "packages/watch/client-memory"
     }
   ]
 }

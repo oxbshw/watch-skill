@@ -112,7 +112,10 @@ export class MemoryLedger {
     const forgotten = new Set<string>()
 
     for (const event of this.events()) {
-      if (event.kind === 'record.forgotten') {
+      // A rejection tombstones exactly like a forget. A declined proposal that
+      // stayed readable would be a suggestion the person said no to, still
+      // sitting in the list they said no to it from.
+      if (event.kind === 'record.forgotten' || event.kind === 'record.rejected') {
         forgotten.add(event.memoryId)
         current.delete(event.memoryId)
         continue
@@ -153,7 +156,7 @@ export class MemoryLedger {
   isForgotten(memoryId: string): boolean {
     const row = this.db.prepare(
       `SELECT 1 AS present FROM memory_events
-       WHERE memory_id = ? AND kind = 'record.forgotten' LIMIT 1`,
+       WHERE memory_id = ? AND kind IN ('record.forgotten', 'record.rejected') LIMIT 1`,
     ).get(memoryId)
     return row !== undefined
   }

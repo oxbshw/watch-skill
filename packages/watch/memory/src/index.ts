@@ -27,6 +27,7 @@ import { Context, Service } from '@deepseek-ai/cordis'
 import s from '@deepseek-ai/schemastery'
 import type {
   AdmissionDecision,
+  MemoryEvent,
   MemoryKind,
   MemoryMode,
   MemoryOrigin,
@@ -91,6 +92,23 @@ export interface RememberResult {
   /** Why it was refused, or why it is proposed rather than active. */
   readonly reason: string
   readonly admission: AdmissionDecision
+}
+
+/** One recorded reason a memory reached a turn's context. */
+export interface InjectionReason {
+  readonly at: string
+  readonly sessionId: string | null
+  readonly reason: string
+  readonly tokenEstimate: number
+}
+
+/** A portable copy of what one scope can see. */
+export interface MemoryExport {
+  readonly exportedAt: string
+  readonly scope: ScopeContext
+  readonly mode: MemoryMode
+  readonly records: readonly MemoryRecord[]
+  readonly events: readonly MemoryEvent[]
 }
 
 /** Durable memory as a Cordis service. */
@@ -280,6 +298,148 @@ export class WatchMemoryService extends Service {
     })
     this.rebuildProjections()
     return true
+  }
+
+  /**
+   * Decline a proposal.
+   *
+   * Distinct from forgetting, and only valid on something still `proposed`.
+   * Rejecting an active memory would be a way to remove it without the word
+   * "forget" appearing anywhere, and the ledger would then record a deletion
+   * as a decline. It tombstones, because a suggestion somebody said no to must
+   * not still be sitting in the list they said no to it from.
+   */
+  reject(memoryId: string, reason: string): boolean {
+    const record = this.ledger.record(memoryId)
+    if (record === null) return false
+    if (record.status !== 'proposed') return false
+    this.ledger.append({
+      kind: 'record.rejected',
+      memoryId,
+      at: new Date().toISOString(),
+      actor: 'user',
+      record: null,
+      // The reason, never the content. An audit trail of what was declined,
+      // containing the thing that was declined, is not a decline.
+      detail: { reason },
+    })
+    this.rebuildProjections()
+    return true
+  }
+
+  /**
+   * Move a memory to a different scope.
+   *
+   * The guard is the point. Personal taste is private by default, so widening
+   * a preference or anything sensitive into a shared workspace scope needs the
+   * person to say so in this call rather than in a setting they changed once.
+   * Narrowing is always allowed: pulling something back out of a shared scope
+   * should never need permission.
+   */
+  moveScope(memoryId: string, target: {
+    readonly subjectScope: MemoryScope
+    readonly scopeId: string
+  }, options: { readonly shareExplicitly?: boolean } = {}): {
+    readonly moved: boolean
+    readonly reason: string
+  } {
+    const record = this.ledger.record(memoryId)
+    if (record === null) return { moved: false, reason: 'No such memory.' }
+
+    const widening = target.subjectScope === 'workspace' && record.subjectScope !== 'workspace'
+    const personal = record.kind === 'preference'
+      || record.sensitivity === 'sensitive'
+      || record.sensitivity === 'restricted'
+    if (widening && personal && options.shareExplicitly !== true) {
+      return {
+        moved: false,
+        reason: 'Personal taste is private by default. Sharing it with the workspace '
+          + 'has to be chosen explicitly for this memory.',
+      }
+    }
+
+    const now = new Date().toISOString()
+    this.ledger.append({
+      kind: 'record.scope_moved',
+      memoryId,
+      at: now,
+      actor: 'user',
+      record: {
+        ...record,
+        subjectScope: target.subjectScope,
+        scopeId: target.scopeId,
+        updatedAt: now,
+      },
+      detail: { from: record.subjectScope, to: target.subjectScope, shared: widening },
+    })
+    this.rebuildProjections()
+    return { moved: true, reason: '' }
+  }
+
+  /**
+   * Export what one scope can see.
+   *
+   * Built from the same fold every other reader uses, which is what makes the
+   * guarantee hold: a forgotten memory is absent from the export for the same
+   * reason it is absent from the next context packet, rather than because the
+   * export remembered to filter it.
+   *
+   * Sensitive content is withheld unless asked for. The record still appears —
+   * an export that silently omitted rows would misrepresent what is held — but
+   * its content is replaced by a marker.
+   */
+  export(scope: ScopeContext, options: {
+    readonly includeSensitive?: boolean
+    readonly includeEvents?: boolean
+  } = {}): MemoryExport {
+    const records = this.ledger.visible(scope).map(record =>
+      record.sensitivity === 'public' || record.sensitivity === 'private'
+        || options.includeSensitive === true
+        ? record
+        : { ...record, content: '[withheld: sensitive]' })
+
+    const forgotten = new Set(
+      this.ledger.events()
+        .filter(event => event.kind === 'record.forgotten' || event.kind === 'record.rejected')
+        .map(event => event.memoryId),
+    )
+
+    return {
+      exportedAt: new Date().toISOString(),
+      scope,
+      mode: this.config.mode,
+      records,
+      events: options.includeEvents === true
+        // Tombstoned ids are dropped from the event stream too. Exporting the
+        // history of something that was deleted would export the deletion and
+        // everything it deleted.
+        ? this.ledger.events().filter(event => !forgotten.has(event.memoryId))
+        : [],
+    }
+  }
+
+  /**
+   * Why a memory was retrieved, in the words the compiler used.
+   *
+   * Read out of the ledger's own `context.injected` events rather than
+   * recomputed, so the answer is what actually happened on that turn and not
+   * what would happen if the same question were asked now.
+   */
+  whyRemembered(memoryId: string, sessionId?: string): readonly InjectionReason[] {
+    return this.ledger.history(memoryId)
+      .filter(event => event.kind === 'context.injected')
+      .filter(event => sessionId === undefined || event.detail['sessionId'] === sessionId)
+      .map(event => ({
+        at: event.at,
+        sessionId: typeof event.detail['sessionId'] === 'string' ? event.detail['sessionId'] : null,
+        reason: typeof event.detail['reason'] === 'string' ? event.detail['reason'] : 'no reason recorded',
+        tokenEstimate: typeof event.detail['tokens'] === 'number' ? event.detail['tokens'] : 0,
+      }))
+  }
+
+  /** Every event in the ledger, for the Memory timeline surface. */
+  events(sinceSeq = 0): readonly MemoryEvent[] {
+    return this.ledger.events(sinceSeq)
   }
 
   /** Everything visible from a scope, whatever its status. For the UI. */
