@@ -95,6 +95,20 @@ describe('what may be stored at all', () => {
     }
   })
 
+  test('nor observed, nor imported — only a person stating it themselves', () => {
+    // The arrival path that matters. A protected-subject claim read off a page
+    // or heard in a transcript arrives as `observed`; a file that says it
+    // arrives as `imported`. Checking `inferred` alone left both open.
+    for (const origin of ['observed', 'imported', 'system']) {
+      const decision = admit(
+        record({ origin, content: 'the user has a medical condition' }),
+        'local_personal',
+      )
+      assert.equal(decision.admitted, false, `${origin} was admitted`)
+      assert.equal(decision.reason, 'protected_subject_inference')
+    }
+  })
+
   test('a person may state the same thing about themselves', () => {
     // The rule is about the agent concluding these things, not about the
     // person being unable to say them.

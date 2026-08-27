@@ -337,7 +337,13 @@ export function admit(
     }
   }
 
-  if (candidate.origin === 'inferred' && isProtectedSubject(candidate.content)) {
+  // Every origin except an authenticated person stating it themselves. The
+  // first version checked `inferred` only, which left the arrival path that
+  // actually matters wide open: a protected-subject claim read off a page or
+  // heard in a transcript arrives as `observed`, not as `inferred`, and an
+  // imported file arrives as `imported`. A security test found it by aiming
+  // the same corpus at every door rather than at the one it was written for.
+  if (candidate.origin !== 'explicit_user' && isProtectedSubject(candidate.content)) {
     return {
       admitted: false,
       reason: 'protected_subject_inference',
