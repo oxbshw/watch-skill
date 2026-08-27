@@ -15,7 +15,7 @@
     "inventory": "node scripts/gen-inventory.mjs",
     "inventory:check": "node scripts/gen-inventory.mjs --check",
     "verify:parity": "node scripts/verify-parity.mjs",
-    "build": "tsc -b && pnpm --filter \"./packages/watch/*\" run bundle",
+    "build": "node scripts/build.mjs",
     "test": "node --test --test-reporter spec \"tests/**/*.test.mjs\"",
     "smoke:install": "node scripts/install-smoke.mjs",
     "check": "npm run inventory:check && npm run verify:parity && npm run verify:bundle && npm run build && npm run verify:client && npm run test",

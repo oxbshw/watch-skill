@@ -22,6 +22,7 @@
  */
 
 import { Buffer } from 'node:buffer'
+import { EXPECTED_SCHEMA_DIGESTS } from '@watchskill/dsh-contracts'
 
 const HEADER_TERMINATOR = '\r\n\r\n'
 
@@ -64,7 +65,10 @@ function handshake() {
       fixes: [],
       lastCheckedAt: new Date(0).toISOString(),
     }],
-    schemaDigests: { evidence: 'sha256:fixture' },
+    // The fixture stands in for an engine whose contract matches, so the
+    // transport tests exercise the transport rather than the drift path.
+    // Drift has its own suite, with a backend built to disagree.
+    schemaDigests: { ...EXPECTED_SCHEMA_DIGESTS },
     policy: {
       offlineOnly: true,
       cloudPerceptionOptIn: false,

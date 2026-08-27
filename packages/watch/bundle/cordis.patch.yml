@@ -17,24 +17,31 @@
     # The Bridge to Watch Core. Everything Watch can perceive, prove or
     # remember reaches the Harness through this one service.
     #
-    # The default transport is `mock`, which answers the handshake and refuses
-    # everything else with a stated fix. That is deliberate: a fresh install
-    # has no Python engine, and spawning an absent binary at boot would turn
-    # "Watch is not set up yet" into a startup failure. Switching to `stdio`
-    # is what connects the real engine:
+    # `auto` connects the real engine when `watch-skill` is installed, and
+    # falls back to the mock backend only when the command is genuinely not
+    # there. Nothing is hidden by that fallback: the mock reports every
+    # capability as `not_tested` and carries the install step, and a Watch Core
+    # that *is* present and fails is reported as a fault rather than replaced
+    # by a mock that answers nothing.
+    #
+    # A deployment that requires the engine should pin `stdio`, which never
+    # falls back and so fails loudly when it is missing. A patch replaces the
+    # targeted row's whole `config`, so an overlay must restate every key it
+    # wants to keep:
     #
     #   - id: watch-core-bridge
     #     config:
     #       transport: stdio
     #       command: watch-skill
     #       args: [bridge]
-    #
-    # A patch replaces the targeted row's whole `config`, so an overlay that
-    # changes the transport must restate every key it wants to keep.
+    #       cwd: ''
+    #       startupTimeoutMs: 10000
+    #       requestTimeoutMs: 30000
+    #       autoConnect: true
     - id: watch-core-bridge
       name: '@watchskill/dsh-core-bridge'
       config:
-        transport: mock
+        transport: auto
         command: watch-skill
         args: [bridge]
         cwd: ''

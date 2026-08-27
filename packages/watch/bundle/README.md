@@ -1,7 +1,7 @@
 # Watch for DSH
 
 The installable Watch capability bundle for an existing DeepSeek Harness
-profile. It gives an agent you already run senses and an independent answer to
+profile. It gives an agent you already run senses, and an independent answer to
 *did that actually work?* — without asking you to move to a different product.
 
 ## Install
@@ -10,9 +10,17 @@ profile. It gives an agent you already run senses and an independent answer to
 dsh plugin --profile web add @watchskill/dsh-bundle
 ```
 
-That is the whole installation. The package declares `dsh.bundle.patch`, so
-DSH reconciles it into the profile's layer stack and applies
+That is the whole installation. The package declares `dsh.bundle.patch`, so DSH
+reconciles it into the profile's layer stack and applies
 [`cordis.patch.yml`](cordis.patch.yml) after its own layers.
+
+For the full experience, install the engine too:
+
+```bash
+pip install watch-skill
+```
+
+The Bridge finds it on `PATH` and connects on its own.
 
 ## What you get
 
@@ -24,36 +32,36 @@ DSH reconciles it into the profile's layer stack and applies
 | `watch_get_evidence` | resolve a citation and check whether it is still current |
 | `watch_verify` | run a verification contract and return an independent verdict |
 
-Plus a system-prompt section telling the agent that a tool returning without
-error is not proof that anything worked, and that `UNVERIFIED` is an honest
-answer to report rather than a failure to paper over.
+Plus a browser half that renders verification results as themselves —
+`UNVERIFIED` looks like `UNVERIFIED`, and green is reserved for `VERIFIED` —
+and a system-prompt section telling the agent that a tool returning without
+error is not proof that anything worked.
 
-## Before you connect Watch Core
+## Without Watch Core installed
 
-Out of the box the Bridge runs on its mock backend. It answers the handshake,
-reports every capability as `not_tested`, and refuses every real call with a
-stated fix. Nothing pretends to work.
+The Bridge runs on its mock backend. It answers the handshake, reports every
+capability as `not_tested`, and refuses every real call with the install step
+attached. Nothing pretends to work, and the rest of your Workspace is
+unaffected.
 
-To connect the real engine, install Watch Core and override the transport in
-your profile's `cordis.patch.yml`:
+If Watch Core is installed but fails to start, that is reported as a fault
+rather than quietly replaced by the mock — otherwise you would have a green
+Workspace and no indication that nothing you ask will ever be answered.
 
-```yaml
-- id: watch-core-bridge
-  config:
-    transport: stdio
-    command: watch-skill
-    args: [bridge]
-    cwd: ''
-    startupTimeoutMs: 10000
-    requestTimeoutMs: 30000
-    autoConnect: true
-```
+## Configuration
 
-A patch replaces the targeted row's whole `config`, so restate every key you
-want to keep.
+| Key | Default | Meaning |
+|---|---|---|
+| `transport` | `auto` | `auto` connects the engine if installed, else mock. `stdio` requires it. `mock` never starts it. |
+| `command` | `watch-skill` | the executable that starts Watch Core in Bridge mode |
+| `args` | `[bridge]` | its arguments |
+| `startupTimeoutMs` | `10000` | how long the engine has to start |
+| `requestTimeoutMs` | `30000` | deadline for a request that carries none |
+| `autoConnect` | `true` | connect during activation rather than on first use |
 
-If Watch Core cannot start, the profile still boots: the Workspace opens, the
-Watch tools report the failure and its fix, and nothing else is affected.
+A deployment that requires the engine should pin `transport: stdio`, which
+never falls back and so fails loudly when it is missing. A patch replaces the
+targeted row's whole `config`, so restate every key you want to keep.
 
 ## Uninstall
 

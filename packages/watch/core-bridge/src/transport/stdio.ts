@@ -46,6 +46,20 @@ function describe(cause: unknown): string {
   return cause instanceof Error ? cause.message : String(cause)
 }
 
+/**
+ * Whether a spawn failure means the command simply is not installed.
+ *
+ * The distinction matters more than it looks. "Watch Core is not on this
+ * machine" is a normal state with a friendly answer; "Watch Core is here and
+ * would not start" is a fault that has to be reported. Conflating them either
+ * nags people who never installed the engine, or hides a broken one behind a
+ * mock.
+ */
+function isNotInstalled(cause: unknown): boolean {
+  const code = (cause as { code?: unknown } | null)?.code
+  return code === 'ENOENT' || code === 'EACCES'
+}
+
 /** Local child-process Bridge backend. */
 export class StdioTransport implements Transport {
   readonly kind = 'stdio' as const
@@ -74,7 +88,7 @@ export class StdioTransport implements Transport {
         windowsHide: true,
       })
     } catch (cause) {
-      return Promise.resolve(this.spawnFailure(describe(cause)))
+      return Promise.resolve(this.spawnFailure(describe(cause), isNotInstalled(cause)))
     }
 
     this.child = child
@@ -101,7 +115,7 @@ export class StdioTransport implements Transport {
       }
 
       child.once('spawn', () => { finish({ ok: true, value: undefined }) })
-      child.once('error', (cause) => { finish(this.spawnFailure(describe(cause))) })
+      child.once('error', (cause) => { finish(this.spawnFailure(describe(cause), isNotInstalled(cause))) })
       child.once('exit', (code, signal) => { this.handleExit(code, signal); finish(this.spawnFailure(
         `Watch Core exited during startup (${signal ?? `code ${String(code)}`}).`,
       )) })
@@ -341,13 +355,25 @@ export class StdioTransport implements Transport {
     this.fail(error)
   }
 
-  /** Build the connect-time failure result, keeping the spawn detail intact. */
-  private spawnFailure(reason: string): WatchResult<never> {
+  /**
+   * Build the connect-time failure result, keeping the spawn detail intact.
+   *
+   * `notInstalled` travels in the details so the service can offer a fresh
+   * machine the mock backend without also hiding a Watch Core that is present
+   * and failing.
+   */
+  private spawnFailure(reason: string, notInstalled = false): WatchResult<never> {
     return watchError(
-      'bridge.start_failed',
+      notInstalled ? 'bridge.core_not_installed' : 'bridge.start_failed',
       reason,
-      `Verify that "${this.options.command}" is installed and on PATH, or set the Watch Core command in Settings → Watch.`,
-      { details: { command: this.options.command }, retryable: true },
+      // Both halves matter, and which one is wrong is not knowable from here:
+      // the engine may be missing, or the configured command may be. Naming
+      // the command is what lets someone tell those apart at a glance.
+      notInstalled
+        ? `Install Watch Core with \`pip install watch-skill\`, or correct the command `
+          + `"${this.options.command}" in Settings → Watch.`
+        : `Verify that "${this.options.command}" is installed and on PATH, or set the Watch Core command in Settings → Watch.`,
+      { details: { command: this.options.command, notInstalled }, retryable: true },
     )
   }
 }

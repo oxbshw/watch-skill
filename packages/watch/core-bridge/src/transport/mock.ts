@@ -16,7 +16,11 @@
  */
 
 import type { CapabilityTruth, HandshakeResult, WatchResult } from '@watchskill/dsh-contracts'
-import { WATCH_PROTOCOL_VERSION, watchError } from '@watchskill/dsh-contracts'
+import {
+  EXPECTED_SCHEMA_DIGESTS,
+  WATCH_PROTOCOL_VERSION,
+  watchError,
+} from '@watchskill/dsh-contracts'
 import type { Transport, TransportEvent, TransportRequest } from '../transport.js'
 
 /** Capabilities the product declares, every one of them unproven here. */
@@ -104,7 +108,12 @@ export class MockTransport implements Transport {
       coreBuild: null,
       protocolVersion: WATCH_PROTOCOL_VERSION,
       capabilities: DECLARED_CAPABILITIES.map(untested),
-      schemaDigests: {},
+      // This backend runs in-process, so by construction it speaks exactly the
+      // contract this build was written against. Reporting the expected
+      // digests is the accurate answer, not a convenience: reporting nothing
+      // would claim an unverifiable wire, and reporting something else would
+      // claim a disagreement that does not exist.
+      schemaDigests: { ...EXPECTED_SCHEMA_DIGESTS },
       policy: {
         // A backend that observes nothing sends nothing, so the strictest
         // policy is also the accurate one to report.

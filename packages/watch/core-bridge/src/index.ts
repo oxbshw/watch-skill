@@ -42,13 +42,19 @@ export { StdioTransport } from './transport/stdio.js'
 /** Deployment configuration for the Bridge. */
 export interface Config {
   /**
-   * `stdio` runs Watch Core as a local child; `mock` answers handshake only.
+   * How to reach Watch Core.
    *
-   * The default is `mock` on purpose. A fresh install has no Python engine, and
-   * silently spawning an absent binary at boot would turn "Watch is not set up
-   * yet" into a startup error.
+   * `auto` (the default) tries the local engine and falls back to the mock
+   * backend only when the command is genuinely not installed. That is the
+   * difference that makes an automatic default acceptable: a machine without
+   * Watch Core gets a working Workspace and an invitation to install it, while
+   * a Watch Core that *is* present and fails is reported as a fault rather
+   * than hidden behind a mock that answers nothing.
+   *
+   * `stdio` and `mock` pin the choice for a deployment that has already made
+   * it.
    */
-  readonly transport: 'stdio' | 'mock'
+  readonly transport: 'auto' | 'stdio' | 'mock'
   /** Executable that starts Watch Core in Bridge mode. */
   readonly command: string
   readonly args: string[]
@@ -100,7 +106,7 @@ const DISCONNECTED: WatchCoreHealth = Object.freeze({
 export class WatchCoreService extends Service {
   /** Loader validation for the Bridge's deployment-varying values. */
   static Config: s<Config> = s.object({
-    transport: s.union(['stdio', 'mock'] as const).default('mock'),
+    transport: s.union(['auto', 'stdio', 'mock'] as const).default('auto'),
     command: s.string().default('watch-skill'),
     args: s.array(s.string()).default(['bridge']),
     cwd: s.string().default(''),
@@ -248,13 +254,29 @@ export class WatchCoreService extends Service {
 
   /** Bring the Bridge up, negotiate the protocol, and record the outcome. */
   private async runConnect(): Promise<WatchResult<HandshakeResult>> {
-    const transport = this.createTransport()
+    let transport = this.createTransport()
     this.transport = transport
     this.publish({ phase: 'connecting', transport: transport.kind, handshake: null, error: null })
 
     transport.onFailure((error) => { this.publish({ phase: 'failed', error }) })
 
-    const connected = await transport.connect()
+    let connected = await transport.connect()
+    let notInstalled: WatchError | null = null
+
+    if (!connected.ok
+      && this.config.transport === 'auto'
+      && connected.error.error === 'bridge.core_not_installed') {
+      // The engine is genuinely absent, not broken. Fall back so the Workspace
+      // is fully usable, and carry the reason forward so the UI can say what
+      // to install rather than showing capabilities that quietly do nothing.
+      notInstalled = connected.error
+      await transport.dispose()
+      transport = new MockTransport()
+      this.transport = transport
+      this.publish({ phase: 'connecting', transport: transport.kind, error: null })
+      connected = await transport.connect()
+    }
+
     if (!connected.ok) {
       this.publish({ phase: 'failed', error: connected.error })
       return connected
@@ -300,6 +322,14 @@ export class WatchCoreService extends Service {
     // every capability offline — breaking a working setup to enforce a check
     // that version predates.
     this.driftAffected = new Set()
+
+    if (notInstalled !== null) {
+      // Ready on the mock backend: the Workspace works, every capability
+      // honestly reports `not_tested`, and the error carries the install step.
+      this.publish({ phase: 'ready', handshake: handshake.value, error: notInstalled })
+      return handshake
+    }
+
     if (isContractUnverified(handshake.value.schemaDigests)) {
       this.publish({
         phase: 'ready',
@@ -361,6 +391,8 @@ export class WatchCoreService extends Service {
   /** Build the configured backend. */
   private createTransport(): Transport {
     if (this.config.transport === 'mock') return new MockTransport()
+    // 'auto' optimistically attempts the real engine; runConnect falls back
+    // to the mock only when the command turns out not to be installed.
     return new StdioTransport({
       command: this.config.command,
       args: this.config.args,
