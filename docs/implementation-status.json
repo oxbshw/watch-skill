@@ -194,7 +194,7 @@
         "The React halves are now type-checked as part of `tsc -b`; before this they were built only by the bundler and carried real errors.",
         "EvidenceInspector itself imports a CSS module and is covered by the presentation rules test rather than by a rendering gate; CompareView, which has no stylesheet, is rendered directly."
       ],
-      "commit": "77c6c25"
+      "commit": "ec2579a"
     },
     {
       "id": "memory.ledger",
@@ -358,7 +358,7 @@
         "The shell composes the modes and renders from props; each mode body is supplied by its own package (Live, Library, Memory, Compare).",
         "Rendering is gated through react-dom/server rather than a real browser, so markup, roles and accessible names are asserted — not pixels or focus order."
       ],
-      "commit": "pending"
+      "commit": "05827ad"
     },
     {
       "id": "workspace.composer",
@@ -377,7 +377,7 @@
       "known_limitations": [
         "The eight sections are contract and validation. The progressive-disclosure interaction renders as a summary plus visible refusals rather than eight expandable editors."
       ],
-      "commit": "pending"
+      "commit": "05827ad"
     },
     {
       "id": "memory.product-ui",
@@ -399,7 +399,7 @@
         "The Wiki view renders the generated projection; the projection itself is wiki.projections.",
         "Editing is a correction through the ledger, which is what the service supports. There is no in-place text field that writes a record directly, by design."
       ],
-      "commit": "pending"
+      "commit": "a18b39a"
     },
     {
       "id": "providers.role-bindings",
@@ -465,7 +465,7 @@
         "Weight licences remain unreviewed, so mayDistributeWeights() refuses both and installPlan() blocks before hardware is even considered.",
         "The OOM branch is exercised through exit code 137 rather than a real SIGKILL, because Windows has no signals. The code path is the same one the Linux OOM killer reaches."
       ],
-      "commit": "pending"
+      "commit": "6fa2b85"
     },
     {
       "id": "i18n.evidence",
@@ -492,7 +492,7 @@
         "RTL-safe layout primitives are now consumed: Isolated() renders the seven kinds needsDirectionIsolation() names, and the surfaces are asserted to use logical offsets only.",
         "No UI locale bundles are shipped. Claiming launch locales without reviewed translations would be worse than shipping none."
       ],
-      "commit": "676a1e8"
+      "commit": "b9db4c4"
     },
     {
       "id": "live.surface",
@@ -520,7 +520,7 @@
         "The transport that carries deltas is the Bridge’s watch.live.observe long poll; a push subscription is not implemented.",
         "Long-session bounding is proven against a 100,000-event benchmark and a 5,000-event fixture rather than against an eight-hour real capture."
       ],
-      "commit": "pending"
+      "commit": "682c3f9"
     },
     {
       "id": "library.surface",
@@ -544,7 +544,7 @@
         "Retrieval itself belongs to the engine. This is the model over its results: revisions, freshness, addressability, facets, filters and the stated retrieval path.",
         "Entities are carried on a source but no extractor populates them here."
       ],
-      "commit": "pending"
+      "commit": "2e9d80d"
     },
     {
       "id": "compare.surface",
@@ -567,7 +567,7 @@
         "Channels are derived from resolved evidence modality; unresolved evidence stays on the text channel rather than being guessed onto a sense.",
         "Console divergences are typed but nothing populates them: Watch records carry no console channel today."
       ],
-      "commit": "pending"
+      "commit": "ec2579a"
     },
     {
       "id": "wiki.projections",
@@ -587,7 +587,7 @@
         "The diff is line-level over statement lines rather than a structural Markdown diff. That is deliberate: a structural diff is a place a clever edit could hide.",
         "Writing the pages to disk is the caller’s job; this package renders them as values so a rebuild can be compared without touching a filesystem."
       ],
-      "commit": "pending"
+      "commit": "35dc582"
     },
     {
       "id": "adapters.obsidian",
@@ -608,7 +608,7 @@
         "NOT MACHINE TESTED: round-tripping through Obsidian’s own editor, which may normalise Markdown in ways this adapter has not seen.",
         "Optional in the strong sense — a test asserts no core package knows the adapter exists."
       ],
-      "commit": "pending"
+      "commit": "4ca9466"
     },
     {
       "id": "adapters.llmwiki",
@@ -628,7 +628,7 @@
         "NOT MACHINE TESTED: written against LLMWiki’s documented file set; no LLMWiki release was available to exchange a bundle with.",
         "Import is lossy by design. Origin and confidence are read, reported as claims, and discarded."
       ],
-      "commit": "pending"
+      "commit": "4ca9466"
     },
     {
       "id": "memory.governed-learning",
@@ -651,7 +651,7 @@
         "The case runner is injected: the thing being replayed is an agent, and a harness that owned one could not be run in a test.",
         "No review UI. A candidate queue exists as data, and describeEvaluation() renders the line a reviewer reads."
       ],
-      "commit": "bd10e78"
+      "commit": "9bc63af"
     },
     {
       "id": "desktop.shell",
@@ -684,7 +684,7 @@
         "The renderer mounts the shipped Workspace packages; the smoke test asserts the bridge and the isolation rather than a fully composed shell.",
         "The launch smoke is deliberately outside `npm run check`: it needs a desktop session, and a gate that fails headless is a gate people disable."
       ],
-      "commit": "pending"
+      "commit": "d9b16ed"
     },
     {
       "id": "ecosystem.sdk",
@@ -706,7 +706,7 @@
         "The worked example ships as compiled source exercised by the SDK’s own tests, so an example that stops working is a failing build.",
         "The client-plugin half of a third-party capability reuses the same client-bundle build the Watch browser halves use; no separate SDK bundler exists."
       ],
-      "commit": "pending"
+      "commit": "bbf1091"
     },
     {
       "id": "supply-chain.metadata",
@@ -733,7 +733,7 @@
         "Integrity digests are over first-party package source. They identify a build; they are not a signature, and signing is PRODUCTION SIGNING NOT PROVEN.",
         "SPDX licences are declared, never concluded: nobody has audited the files to conclude anything stronger."
       ],
-      "commit": "676a1e8"
+      "commit": "7412337"
     },
     {
       "id": "security.offline-proof",
@@ -779,7 +779,7 @@
         "Authentication itself belongs to the deployment. This package takes a Principal and enforces what it may reach; it issues no sessions and stores no passwords.",
         "Cross-user isolation is proven within a tenant (an admin cannot read another member’s taste) as well as across tenants."
       ],
-      "commit": "pending"
+      "commit": "51e2297"
     }
   ]
 }
