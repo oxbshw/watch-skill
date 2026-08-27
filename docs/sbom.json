@@ -1255,12 +1255,20 @@
       "revision": "2f3699ebbb96fa8af32212e8c170f2cc28730fad",
       "reviewed": false,
       "mayDistribute": false
+    },
+    {
+      "id": "ocr.cloud",
+      "codeLicense": "proprietary",
+      "weightsLicense": "proprietary",
+      "revision": null,
+      "reviewed": true,
+      "mayDistribute": true
     }
   ],
   "counts": {
     "firstParty": 14,
     "thirdParty": 160,
-    "modelWeights": 4,
-    "distributableWeights": 2
+    "modelWeights": 5,
+    "distributableWeights": 3
   }
 }

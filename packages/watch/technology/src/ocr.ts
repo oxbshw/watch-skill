@@ -410,9 +410,116 @@ export const DEEPSEEK_OCR2: TechnologyDescriptor = {
   },
 }
 
+/**
+ * A cloud OCR route, behind an explicit consent.
+ *
+ * Present as a descriptor rather than as an integration: the point of having
+ * it here is that the routing rules can *refuse* it. `requiresEgressConsent`
+ * and `worksOffline: false` together mean `routeOcr` excludes it under an
+ * offline-only profile and under a profile where cloud perception was never
+ * agreed to — which is a different consent from holding a provider API key.
+ *
+ * No endpoint is baked in. A deployment that wants a cloud OCR route names its
+ * own, and the route it names is what appears in the receipt.
+ */
+export const CLOUD_OCR: TechnologyDescriptor = {
+  id: 'ocr.cloud',
+  displayName: 'Cloud OCR (deployment-configured)',
+  version: '1.0',
+  kind: 'engine',
+  capabilities: ['document_ocr', 'visual'],
+  modalities: ['image'],
+  roles: ['ocr_layout'],
+  runtime: 'remote',
+  protocols: ['https'],
+  endpoints: [],
+  credentialReference: 'dsh:connection',
+  hardware: { gpu: 'none', minVramGb: null, minRamGb: 0, accelerators: [] },
+  privacy: { egress: 'content', worksOffline: false, requiresEgressConsent: true },
+  install: { method: 'none', downloadBytes: null, automatic: false },
+  provenance: {
+    codeLicense: 'proprietary',
+    weightsLicense: 'proprietary',
+    revision: null,
+    sourceUrl: '',
+    // A hosted service's terms are the deployment's to accept, and the flag
+    // here is about redistributing weights — which never applies to a service
+    // whose weights nobody receives.
+    weightsLicenseReviewed: true,
+  },
+  resources: { maxConcurrency: 4, timeoutMs: 60_000, maxMemoryMb: 256 },
+  trust: 'untrusted',
+  probeMethod: 'endpoint reachability',
+  testMethod: 'recognize a bundled fixture image over the wire',
+}
+
+/**
+ * Build a descriptor for a third-party OCR engine.
+ *
+ * The custom-provider seam. A capability author supplies what they know and
+ * gets a descriptor that the same routing, health and licence rules apply to —
+ * which is the point: a third-party engine is subject to every gate a built-in
+ * one is, and cannot opt out of any of them.
+ *
+ * Two fields are forced regardless of what the caller passes. `trust` is
+ * `third_party`, and `install.automatic` is false. Neither is something a
+ * plugin gets to decide about itself.
+ */
+export function customOcrEngine(input: {
+  readonly id: string
+  readonly displayName: string
+  readonly version: string
+  readonly runtime: TechnologyDescriptor['runtime']
+  readonly hardware: TechnologyDescriptor['hardware']
+  readonly privacy: TechnologyDescriptor['privacy']
+  readonly provenance: TechnologyDescriptor['provenance']
+  readonly resources: TechnologyDescriptor['resources']
+  readonly probeMethod: string
+  readonly testMethod: string
+  readonly endpoints?: readonly string[]
+  readonly credentialReference?: string | null
+}): TechnologyDescriptor {
+  return {
+    id: input.id,
+    displayName: input.displayName,
+    version: input.version,
+    kind: 'engine',
+    capabilities: ['document_ocr'],
+    modalities: ['image'],
+    roles: ['ocr_layout'],
+    runtime: input.runtime,
+    protocols: [],
+    endpoints: input.endpoints ?? [],
+    credentialReference: input.credentialReference ?? null,
+    hardware: input.hardware,
+    privacy: input.privacy,
+    install: { method: 'none', downloadBytes: null, automatic: false },
+    provenance: input.provenance,
+    resources: input.resources,
+    // Not the plugin's call. A third-party engine is assumed hostile however
+    // it describes itself, and the trust tier is what decides whether its code
+    // is allowed anywhere except a worker.
+    trust: 'untrusted',
+    probeMethod: input.probeMethod,
+    testMethod: input.testMethod,
+  }
+}
+
+/**
+ * Whether an engine's code may run in the host process.
+ *
+ * Only a built-in library. Everything else — third party, and anything marked
+ * `isolated` because its inference path executes code fetched from a model
+ * repository — runs in a worker, and this is what a caller checks before
+ * choosing how to run it.
+ */
+export function mayRunInProcess(descriptor: TechnologyDescriptor): boolean {
+  return descriptor.trust === 'built_in' && descriptor.runtime === 'local_library'
+}
+
 /** The engines this build knows about. */
 export const OCR_ENGINES: readonly TechnologyDescriptor[] = [
-  RAPID_OCR, TESSERACT, DEEPSEEK_OCR, DEEPSEEK_OCR2,
+  RAPID_OCR, TESSERACT, DEEPSEEK_OCR, DEEPSEEK_OCR2, CLOUD_OCR,
 ]
 
 /**

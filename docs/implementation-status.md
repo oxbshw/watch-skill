@@ -9,8 +9,7 @@ Baseline: DeepSeek Harness `0.1.1-rc.2 @ b150a551b8d465e31e418e1b2eaf5e79bbb7d28
 
 | Status | Count |
 |---|---:|
-| ✅ tested | 29 |
-| 🟨 in progress | 1 |
+| ✅ tested | 30 |
 | ⬜ not started | 5 |
 | **total** | **35** |
 
@@ -130,7 +129,7 @@ Baseline: DeepSeek Harness `0.1.1-rc.2 @ b150a551b8d465e31e418e1b2eaf5e79bbb7d28
 | `brand.package` — Watch brand and theme over DSH's token system | ✅ tested | watch-workspace | 1 |
 | `i18n.evidence` — Language-aware evidence contract | ✅ tested | both | 1 |
 | `memory.product-ui` — Memory surfaces: taste, timeline, wiki, decisions, lessons, failures | ✅ tested | watch-workspace | 1 |
-| `ocr.engines` — OCR engine family with isolated workers | 🟨 in progress | both | 1 |
+| `ocr.engines` — OCR engine family with isolated workers | ✅ tested | both | 3 |
 | `providers.role-bindings` — Role bindings over DSH Models and Providers | ✅ tested | watch-workspace | 1 |
 | `technology.center` — Technology descriptors and capability lifecycle | ✅ tested | watch-workspace | 1 |
 | `workspace.composer` — Composer extensions: sources, scope, observe, remember, act, verify, budget, privacy | ✅ tested | watch-workspace | 1 |
@@ -156,10 +155,11 @@ Baseline: DeepSeek Harness `0.1.1-rc.2 @ b150a551b8d465e31e418e1b2eaf5e79bbb7d28
 
 **`ocr.engines`**
 
-- Descriptors, routing, canonical output shape and qualification contracts are implemented and tested.
-- The DeepSeek-OCR and OCR2 isolated Python workers are not implemented; only their descriptors, pinned revisions and admission rules exist.
-- No GPU is available on this machine, so neither DeepSeek engine is machine-tested. Both are correctly reported as requiring a GPU and are excluded by routing here.
-- Weight licences are unreviewed, so mayDistributeWeights() refuses both.
+- Five routes exist: the lightweight local default, a deterministic system fallback, both DeepSeek engines, a cloud route behind explicit consent, and a seam for a third-party engine that cannot declare itself trusted.
+- The worker supervisor is proven against a real child process that hangs, crashes, exits 137, announces the wrong revision and speaks the wrong protocol. The Python worker that would load DeepSeek-OCR is not written; the descriptor, pinning, install plan and admission rules that govern it are.
+- This machine has no GPU, so neither DeepSeek engine is machine-tested and no quality number for either exists. Every matrix cell for them is NOT_TESTED, and a test asserts no code path can produce otherwise.
+- Weight licences remain unreviewed, so mayDistributeWeights() refuses both and installPlan() blocks before hardware is even considered.
+- The OOM branch is exercised through exit code 137 rather than a real SIGKILL, because Windows has no signals. The code path is the same one the Linux OOM killer reaches.
 
 **`providers.role-bindings`**
 

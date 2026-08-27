@@ -438,21 +438,26 @@
       "phase": "Phase 3 — web product",
       "classification": "WATCH_NEW",
       "owner": "both",
-      "status": "in_progress",
+      "status": "tested",
       "source_paths": [
-        "packages/watch/technology/src/ocr.ts"
+        "packages/watch/technology/src/ocr.ts",
+        "packages/watch/technology/src/ocr-worker.ts",
+        "packages/watch/technology/src/ocr-qualification.ts"
       ],
       "tests": [
-        "tests/technology.test.mjs"
+        "tests/technology.test.mjs",
+        "tests/ocr-engines.test.mjs",
+        "tests/fixtures/ocr-worker-stub.mjs"
       ],
-      "acceptance_journey": "Routed engine, canonical output, qualification state per workload",
+      "acceptance_journey": "Worker isolation, pinned-revision refusal, crash/OOM/timeout/cancel semantics, routing fallback, and a qualification matrix that stays NOT_TESTED without a run",
       "known_limitations": [
-        "Descriptors, routing, canonical output shape and qualification contracts are implemented and tested.",
-        "The DeepSeek-OCR and OCR2 isolated Python workers are not implemented; only their descriptors, pinned revisions and admission rules exist.",
-        "No GPU is available on this machine, so neither DeepSeek engine is machine-tested. Both are correctly reported as requiring a GPU and are excluded by routing here.",
-        "Weight licences are unreviewed, so mayDistributeWeights() refuses both."
+        "Five routes exist: the lightweight local default, a deterministic system fallback, both DeepSeek engines, a cloud route behind explicit consent, and a seam for a third-party engine that cannot declare itself trusted.",
+        "The worker supervisor is proven against a real child process that hangs, crashes, exits 137, announces the wrong revision and speaks the wrong protocol. The Python worker that would load DeepSeek-OCR is not written; the descriptor, pinning, install plan and admission rules that govern it are.",
+        "This machine has no GPU, so neither DeepSeek engine is machine-tested and no quality number for either exists. Every matrix cell for them is NOT_TESTED, and a test asserts no code path can produce otherwise.",
+        "Weight licences remain unreviewed, so mayDistributeWeights() refuses both and installPlan() blocks before hardware is even considered.",
+        "The OOM branch is exercised through exit code 137 rather than a real SIGKILL, because Windows has no signals. The code path is the same one the Linux OOM killer reaches."
       ],
-      "commit": "bc23fc2"
+      "commit": "pending"
     },
     {
       "id": "i18n.evidence",

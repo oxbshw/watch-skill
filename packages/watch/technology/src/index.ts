@@ -13,3 +13,5 @@
 
 export * from './descriptor.js'
 export * from './ocr.js'
+export * from './ocr-worker.js'
+export * from './ocr-qualification.js'
