@@ -114,6 +114,7 @@ Baseline: DeepSeek Harness `0.1.1-rc.2 @ b150a551b8d465e31e418e1b2eaf5e79bbb7d28
 **`memory.compiler`**
 
 - Relevance is lexical overlap. Semantic retrieval via an embeddings role binding is not wired.
+- The ledger fold is incremental and cached: an append-only log can advance a fold by reading its suffix, and a benchmark found every reader re-parsing the whole event table. records() is now 0.03ms on a 500-record ledger.
 
 **`memory.ledger`**
 

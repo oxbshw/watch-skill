@@ -51,6 +51,24 @@ export class MemoryLedger {
   private readonly db: DatabaseSync
 
   /**
+   * The fold, kept between calls and advanced incrementally.
+   *
+   * A benchmark found `compile()` at a 231ms p95 on a 500-record ledger
+   * against a 50ms budget, and the whole of it was here: every caller of
+   * `records()` re-read and re-parsed the entire event table, and `record()`
+   * called `records()` for a single lookup.
+   *
+   * An append-only log is exactly the shape where this is safe. New events
+   * only ever arrive after the ones already folded, so the cache advances by
+   * reading `events(sinceSeq)` rather than by being invalidated — and there is
+   * no update path that could make an already-folded event wrong, because
+   * there is no update path at all.
+   */
+  private folded: Map<string, MemoryRecord> = new Map()
+  private tombstoned: Set<string> = new Set()
+  private foldedUpToSeq = 0
+
+  /**
    * @param path - the database file, or `:memory:` for an ephemeral ledger.
    *   `session_only` mode uses the latter, which is what makes that mode a
    *   property of the storage rather than a rule someone has to enforce.
@@ -82,6 +100,8 @@ export class MemoryLedger {
     const row = this.db.prepare('SELECT seq FROM memory_events WHERE event_id = ?')
       .get(eventId) as { seq: number }
     return { eventId, seq: row.seq }
+    // The fold is not advanced here. It advances lazily on the next read,
+    // which keeps a write that nobody reads from paying for a fold.
   }
 
   /** Read the whole ledger in order. Used to rebuild every projection. */
@@ -108,10 +128,25 @@ export class MemoryLedger {
    * it and would eventually be forgotten by one of them.
    */
   records(): readonly MemoryRecord[] {
-    const current = new Map<string, MemoryRecord>()
-    const forgotten = new Set<string>()
+    this.advanceFold()
+    return [...this.folded.values()]
+  }
 
-    for (const event of this.events()) {
+  /**
+   * Read whatever has arrived since the last fold and apply it.
+   *
+   * The same rules as the original whole-log fold, applied to a suffix. The
+   * tombstone set has to persist across calls for the "never comes back" rule
+   * to survive: a `record.forgotten` in an earlier batch must still suppress a
+   * record carried by an event in a later one.
+   */
+  private advanceFold(): void {
+    const current = this.folded
+    const forgotten = this.tombstoned
+    let highest = this.foldedUpToSeq
+
+    for (const event of this.eventsWithSeq(this.foldedUpToSeq)) {
+      highest = Math.max(highest, event.seq)
       // A rejection tombstones exactly like a forget. A declined proposal that
       // stayed readable would be a suggestion the person said no to, still
       // sitting in the list they said no to it from.
@@ -126,12 +161,21 @@ export class MemoryLedger {
       if (event.record !== null) current.set(event.memoryId, event.record)
     }
 
-    return [...current.values()]
+    this.foldedUpToSeq = highest
+  }
+
+  /** Events after a sequence, carrying their sequence for the fold cursor. */
+  private eventsWithSeq(sinceSeq: number): readonly (MemoryEvent & { seq: number })[] {
+    const rows = this.db.prepare(
+      'SELECT * FROM memory_events WHERE seq > ? ORDER BY seq ASC',
+    ).all(sinceSeq) as readonly Record<string, unknown>[]
+    return rows.map(row => ({ ...toEvent(row), seq: Number(row['seq']) }))
   }
 
   /** One current record, or null when it never existed or was forgotten. */
   record(memoryId: string): MemoryRecord | null {
-    return this.records().find(entry => entry.memoryId === memoryId) ?? null
+    this.advanceFold()
+    return this.folded.get(memoryId) ?? null
   }
 
   /**
@@ -154,11 +198,8 @@ export class MemoryLedger {
 
   /** Whether an id has been tombstoned. */
   isForgotten(memoryId: string): boolean {
-    const row = this.db.prepare(
-      `SELECT 1 AS present FROM memory_events
-       WHERE memory_id = ? AND kind IN ('record.forgotten', 'record.rejected') LIMIT 1`,
-    ).get(memoryId)
-    return row !== undefined
+    this.advanceFold()
+    return this.tombstoned.has(memoryId)
   }
 
   /** Count events by kind, for diagnostics and the memory dashboard. */
