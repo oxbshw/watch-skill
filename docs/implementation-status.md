@@ -9,8 +9,7 @@ Baseline: DeepSeek Harness `0.1.1-rc.2 @ b150a551b8d465e31e418e1b2eaf5e79bbb7d28
 
 | Status | Count |
 |---|---:|
-| ✅ tested | 34 |
-| ⬜ not started | 1 |
+| ✅ tested | 35 |
 | **total** | **35** |
 
 `implemented` means real behavior exists, not that a package does.
@@ -290,4 +289,14 @@ Baseline: DeepSeek Harness `0.1.1-rc.2 @ b150a551b8d465e31e418e1b2eaf5e79bbb7d28
 
 | Subsystem | Status | Owner | Tests |
 |---|---|---|---|
-| `team.tenancy` — Tenant model, RBAC, remote workers and audit | ⬜ not started | watch-workspace | — |
+| `team.tenancy` — Tenant model, RBAC, remote workers and audit | ✅ tested | watch-workspace | 1 |
+
+<details><summary>Known limitations</summary>
+
+**`team.tenancy`**
+
+- The authorization model, the worker coordinator and the audit log are in-memory implementations of the rules. Persistence is a backing store implementing the same transitions; no database is bundled here.
+- Authentication itself belongs to the deployment. This package takes a Principal and enforces what it may reach; it issues no sessions and stores no passwords.
+- Cross-user isolation is proven within a tenant (an admin cannot read another member’s taste) as well as across tenants.
+
+</details>

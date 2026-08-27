@@ -51,7 +51,8 @@
     "@watchskill/dsh-client-evidence": "workspace:*",
     "@watchskill/dsh-adapters": "workspace:*",
     "@watchskill/watch-desktop": "workspace:*",
-    "@watchskill/dsh-sdk": "workspace:*"
+    "@watchskill/dsh-sdk": "workspace:*",
+    "@watchskill/dsh-tenancy": "workspace:*"
   },
   "pnpm": {
     "onlyBuiltDependencies": [

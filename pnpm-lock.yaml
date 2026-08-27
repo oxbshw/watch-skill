@@ -71,6 +71,9 @@ importers:
       '@watchskill/dsh-technology':
         specifier: workspace:*
         version: link:packages/watch/technology
+      '@watchskill/dsh-tenancy':
+        specifier: workspace:*
+        version: link:packages/watch/tenancy
       '@watchskill/dsh-tools':
         specifier: workspace:*
         version: link:packages/watch/tools
@@ -153,6 +156,9 @@ importers:
       '@watchskill/dsh-memory':
         specifier: workspace:^
         version: link:../memory
+      '@watchskill/dsh-technology':
+        specifier: workspace:^
+        version: link:../technology
       '@watchskill/dsh-tools':
         specifier: workspace:^
         version: link:../tools
@@ -301,6 +307,12 @@ importers:
       '@deepseek-ai/schemastery':
         specifier: ^3.18.1
         version: 3.18.1
+
+  packages/watch/tenancy:
+    dependencies:
+      '@watchskill/dsh-contracts':
+        specifier: workspace:^
+        version: link:../contracts
 
   packages/watch/tools:
     dependencies:

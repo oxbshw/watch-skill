@@ -87,6 +87,13 @@
       "kind": "first_party"
     },
     {
+      "name": "@watchskill/dsh-tenancy",
+      "version": "0.1.0-preview.0",
+      "license": "MIT",
+      "path": "packages/watch/tenancy",
+      "kind": "first_party"
+    },
+    {
       "name": "@watchskill/dsh-tools",
       "version": "0.1.0-preview.0",
       "license": "MIT",
@@ -1749,7 +1756,7 @@
     }
   ],
   "counts": {
-    "firstParty": 16,
+    "firstParty": 17,
     "thirdParty": 227,
     "modelWeights": 5,
     "distributableWeights": 3

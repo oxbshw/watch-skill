@@ -743,12 +743,24 @@
       "phase": "Phase 7 — team",
       "classification": "WATCH_NEW",
       "owner": "watch-workspace",
-      "status": "not_started",
-      "source_paths": [],
-      "tests": [],
-      "acceptance_journey": "Two tenants, zero cross-tenant leakage, audit, deletion",
-      "known_limitations": [],
-      "commit": null
+      "status": "tested",
+      "source_paths": [
+        "packages/watch/tenancy/src/identity.ts",
+        "packages/watch/tenancy/src/rbac.ts",
+        "packages/watch/tenancy/src/workers.ts",
+        "packages/watch/tenancy/src/collaboration.ts",
+        "packages/watch/tenancy/src/audit.ts"
+      ],
+      "tests": [
+        "tests/tenancy.test.mjs"
+      ],
+      "acceptance_journey": "Two tenants, adversarially: workspace, memory, artifact, credential and worker-job access all refused across the boundary; authorized sharing works; deletion and revocation take effect on the next request",
+      "known_limitations": [
+        "The authorization model, the worker coordinator and the audit log are in-memory implementations of the rules. Persistence is a backing store implementing the same transitions; no database is bundled here.",
+        "Authentication itself belongs to the deployment. This package takes a Principal and enforces what it may reach; it issues no sessions and stores no passwords.",
+        "Cross-user isolation is proven within a tenant (an admin cannot read another member’s taste) as well as across tenants."
+      ],
+      "commit": "pending"
     }
   ]
 }

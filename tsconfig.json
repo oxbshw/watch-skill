@@ -48,6 +48,9 @@
     },
     {
       "path": "packages/watch/sdk"
+    },
+    {
+      "path": "packages/watch/tenancy"
     }
   ]
 }

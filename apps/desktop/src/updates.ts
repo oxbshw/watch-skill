@@ -3,8 +3,9 @@
  *
  * The whole mechanism is here — Ed25519 signature verification, package
  * integrity, a migration preflight before anything is applied, and a rollback
- * that restores the previous build. What is *not* here is a production signing key, and the
- * distinction is stated in the code rather than left to a release checklist:
+ * that restores the previous build. What is *not* here is a production signing
+ * key, and the distinction is stated in code rather than in a release
+ * checklist:
  * {@link SIGNING_STATUS} says PRODUCTION SIGNING NOT PROVEN, and it stays that
  * way until a real credential exists.
  *

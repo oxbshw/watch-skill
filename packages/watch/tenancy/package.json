@@ -1,0 +1,23 @@
+{
+  "name": "@watchskill/dsh-tenancy",
+  "version": "0.1.0-preview.0",
+  "description": "Tenants, roles, remote workers, sharing and audit \u2014 enforced server-side",
+  "type": "module",
+  "license": "MIT",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib/**/*.js",
+    "lib/**/*.d.ts"
+  ],
+  "dependencies": {
+    "@watchskill/dsh-contracts": "workspace:^"
+  }
+}
