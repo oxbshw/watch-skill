@@ -9,9 +9,13 @@
       "patch": "./cordis.patch.yml"
     }
   },
-  "files": ["cordis.patch.yml", "README.md"],
+  "files": [
+    "cordis.patch.yml",
+    "README.md"
+  ],
   "dependencies": {
     "@watchskill/dsh-core-bridge": "workspace:^",
-    "@watchskill/dsh-tools": "workspace:^"
+    "@watchskill/dsh-tools": "workspace:^",
+    "@watchskill/dsh-client-evidence": "workspace:^"
   }
 }

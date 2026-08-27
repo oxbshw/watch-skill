@@ -385,3 +385,4 @@ export function negotiateProtocol(peerMin: number, peerMax: number): number | nu
   const agreed = Math.min(peerMax, WATCH_PROTOCOL_VERSION)
   return agreed >= Math.max(peerMin, WATCH_PROTOCOL_MIN) ? agreed : null
 }
+export * from './presentation.js'

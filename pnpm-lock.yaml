@@ -65,6 +65,9 @@ importers:
 
   packages/watch/bundle:
     dependencies:
+      '@watchskill/dsh-client-evidence':
+        specifier: workspace:^
+        version: link:../client-evidence
       '@watchskill/dsh-core-bridge':
         specifier: workspace:^
         version: link:../core-bridge
@@ -73,6 +76,10 @@ importers:
         version: link:../tools
 
   packages/watch/client-evidence:
+    dependencies:
+      '@watchskill/dsh-contracts':
+        specifier: workspace:^
+        version: link:../contracts
     devDependencies:
       '@deepseek-ai/cordis':
         specifier: 'catalog:'

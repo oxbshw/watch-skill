@@ -1,0 +1,151 @@
+/*
+ * Verdict card styling.
+ *
+ * Colour is carried by DSH's own semantic tokens rather than by hex values, so
+ * the card follows the workspace theme and stays legible in both light and
+ * dark. The success token is used in exactly one place — `[data-tone=success]`
+ * — and that selector is only ever reached by VERIFIED.
+ *
+ * Every state is also distinguished without colour: the verdict word is the
+ * badge, each check carries a symbol, and the accent border differs in weight
+ * as well as hue. A monochrome display, a colour-blind reader and a screen
+ * reader all get the same distinction.
+ */
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-inline-start-width: 3px;
+  border-radius: 8px;
+  background: var(--dsw-alias-bg-layer-1);
+  color: var(--dsw-alias-label-primary);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.card[data-tone='success'] {
+  border-inline-start-color: var(--dsw-alias-state-success-primary);
+}
+
+.card[data-tone='error'] {
+  border-inline-start-color: var(--dsw-alias-state-error-primary);
+}
+
+/* Caution, not error: an unproven result is not a broken one, and styling it
+   as a failure teaches people to dismiss it. */
+.card[data-tone='caution'] {
+  border-inline-start-color: var(--dsw-alias-state-warn-label);
+}
+
+.head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.badge {
+  flex: none;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  /* The verdict word is latin and fixed-vocabulary; isolate it so it keeps its
+     direction inside a right-to-left conversation. */
+  unicode-bidi: isolate;
+  direction: ltr;
+}
+
+.badge[data-tone='success'] {
+  background: var(--dsw-alias-state-success-secondary);
+  color: var(--dsw-alias-state-success-primary);
+}
+
+.badge[data-tone='error'] {
+  background: var(--dsw-alias-state-error-secondary);
+  color: var(--dsw-alias-state-error-primary);
+}
+
+.badge[data-tone='caution'] {
+  background: var(--dsw-alias-bg-layer-2);
+  color: var(--dsw-alias-state-warn-label);
+}
+
+.reason {
+  margin: 0;
+  flex: 1 1 16ch;
+  color: var(--dsw-alias-label-secondary);
+}
+
+.checks {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.check {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.mark {
+  flex: none;
+  width: 1.2em;
+  text-align: center;
+  font-weight: 600;
+  color: var(--dsw-alias-label-tertiary);
+}
+
+.check[data-passed='true'] .mark {
+  color: var(--dsw-alias-state-success-primary);
+}
+
+.check[data-passed='false'] .mark {
+  color: var(--dsw-alias-state-error-primary);
+}
+
+.checkName {
+  color: var(--dsw-alias-label-primary);
+}
+
+.detail {
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 12px;
+  /* Check details quote observed values, which are often code or paths. */
+  unicode-bidi: isolate;
+}
+
+.foot {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 12px;
+}
+
+.digest {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  unicode-bidi: isolate;
+  direction: ltr;
+}
+
+/* Available to assistive technology, absent from the visual layout. */
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}

@@ -54,3 +54,14 @@
       config:
         queryTimeoutMs: 120000
         verifyTimeoutMs: 60000
+
+    # The browser half. It is a `dsh.client` row, so the modules package scans
+    # it into the boot graph and serves its bundle under /plugins.
+    #
+    # It reads what the conversation already carries and makes no Host call at
+    # all, which is why it can render a verdict correctly even when the Bridge
+    # is on its mock backend: there is no second source of truth to fall out of
+    # sync. Remove this row and the Watch tools still work — their results
+    # simply render in DSH's generic tool card.
+    - id: watch-client-evidence
+      name: '@watchskill/dsh-client-evidence'
