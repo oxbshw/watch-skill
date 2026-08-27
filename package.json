@@ -18,7 +18,8 @@
     "build": "tsc -b",
     "test": "node --test --test-reporter spec \"tests/**/*.test.mjs\"",
     "smoke:install": "node scripts/install-smoke.mjs",
-    "check": "npm run inventory:check && npm run verify:parity && npm run build && npm run test"
+    "check": "npm run inventory:check && npm run verify:parity && npm run verify:bundle && npm run build && npm run test",
+    "verify:bundle": "node scripts/verify-bundle.mjs"
   },
   "devDependencies": {
     "@deepseek-ai/cordis": "catalog:",
@@ -26,6 +27,7 @@
     "@types/node": "^22.20.0",
     "@watchskill/dsh-contracts": "workspace:*",
     "@watchskill/dsh-core-bridge": "workspace:*",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "@watchskill/dsh-tools": "workspace:*"
   }
 }

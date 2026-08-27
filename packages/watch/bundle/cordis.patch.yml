@@ -1,0 +1,56 @@
+# Watch for DSH — the capability bundle applied over an existing profile.
+#
+# This file is the whole distribution mechanism. A package declaring
+# `dsh.bundle.patch` in its manifest becomes a profile layer when it is
+# installed with `dsh plugin --profile <name> add @watchskill/dsh-bundle`, and
+# the rows below are appended to whatever the profile already composes.
+#
+# It is a patch overlay, not a tree: it is applied after the dsh-base and
+# dsh-web-app layers, so it can add Watch without restating — or disturbing —
+# a single upstream row. That is why this distribution needs no fork and
+# carries no upstream patches.
+#
+# Rows are additive on purpose. Removing this bundle removes Watch and leaves
+# the host profile exactly as it was.
+
+- insert:
+    # The Bridge to Watch Core. Everything Watch can perceive, prove or
+    # remember reaches the Harness through this one service.
+    #
+    # The default transport is `mock`, which answers the handshake and refuses
+    # everything else with a stated fix. That is deliberate: a fresh install
+    # has no Python engine, and spawning an absent binary at boot would turn
+    # "Watch is not set up yet" into a startup failure. Switching to `stdio`
+    # is what connects the real engine:
+    #
+    #   - id: watch-core-bridge
+    #     config:
+    #       transport: stdio
+    #       command: watch-skill
+    #       args: [bridge]
+    #
+    # A patch replaces the targeted row's whole `config`, so an overlay that
+    # changes the transport must restate every key it wants to keep.
+    - id: watch-core-bridge
+      name: '@watchskill/dsh-core-bridge'
+      config:
+        transport: mock
+        command: watch-skill
+        args: [bridge]
+        cwd: ''
+        startupTimeoutMs: 10000
+        requestTimeoutMs: 30000
+        autoConnect: true
+
+    # The model-facing surface: Watch's senses and its proof step as ordinary
+    # Harness tools, plus the system-prompt section that tells the agent a
+    # tool returning without error is not a verified outcome.
+    #
+    # This row injects `watchCore`, so the Loader resolves it only after the
+    # Bridge exists. Removing the Bridge row leaves the agent with no Watch
+    # tools at all rather than with tools that fail when called.
+    - id: watch-tools
+      name: '@watchskill/dsh-tools'
+      config:
+        queryTimeoutMs: 120000
+        verifyTimeoutMs: 60000

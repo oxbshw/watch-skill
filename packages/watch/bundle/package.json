@@ -1,0 +1,17 @@
+{
+  "name": "@watchskill/dsh-bundle",
+  "version": "0.1.0-preview.0",
+  "description": "Watch for DSH — the installable Watch capability bundle for a DeepSeek Harness profile",
+  "type": "module",
+  "license": "MIT",
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "files": ["cordis.patch.yml", "README.md"],
+  "dependencies": {
+    "@watchskill/dsh-core-bridge": "workspace:^",
+    "@watchskill/dsh-tools": "workspace:^"
+  }
+}
