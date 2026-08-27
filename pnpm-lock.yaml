@@ -65,6 +65,9 @@ importers:
       '@watchskill/dsh-memory':
         specifier: workspace:*
         version: link:packages/watch/memory
+      '@watchskill/dsh-sdk':
+        specifier: workspace:*
+        version: link:packages/watch/sdk
       '@watchskill/dsh-technology':
         specifier: workspace:*
         version: link:packages/watch/technology
@@ -277,6 +280,18 @@ importers:
       '@deepseek-ai/schemastery':
         specifier: ^3.18.1
         version: 3.18.1
+
+  packages/watch/sdk:
+    dependencies:
+      '@watchskill/dsh-contracts':
+        specifier: workspace:^
+        version: link:../contracts
+      '@watchskill/dsh-technology':
+        specifier: workspace:^
+        version: link:../technology
+      '@watchskill/dsh-trajectory':
+        specifier: workspace:^
+        version: link:../trajectory
 
   packages/watch/technology:
     devDependencies:

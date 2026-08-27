@@ -45,6 +45,9 @@
     },
     {
       "path": "apps/desktop"
+    },
+    {
+      "path": "packages/watch/sdk"
     }
   ]
 }

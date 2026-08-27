@@ -73,6 +73,13 @@
       "kind": "first_party"
     },
     {
+      "name": "@watchskill/dsh-sdk",
+      "version": "0.1.0-preview.0",
+      "license": "MIT",
+      "path": "packages/watch/sdk",
+      "kind": "first_party"
+    },
+    {
       "name": "@watchskill/dsh-technology",
       "version": "0.1.0-preview.0",
       "license": "MIT",
@@ -1742,7 +1749,7 @@
     }
   ],
   "counts": {
-    "firstParty": 15,
+    "firstParty": 16,
     "thirdParty": 227,
     "modelWeights": 5,
     "distributableWeights": 3

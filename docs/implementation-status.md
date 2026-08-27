@@ -9,8 +9,8 @@ Baseline: DeepSeek Harness `0.1.1-rc.2 @ b150a551b8d465e31e418e1b2eaf5e79bbb7d28
 
 | Status | Count |
 |---|---:|
-| ✅ tested | 33 |
-| ⬜ not started | 2 |
+| ✅ tested | 34 |
+| ⬜ not started | 1 |
 | **total** | **35** |
 
 `implemented` means real behavior exists, not that a package does.
@@ -43,6 +43,11 @@ Baseline: DeepSeek Harness `0.1.1-rc.2 @ b150a551b8d465e31e418e1b2eaf5e79bbb7d28
 **`bridge.transport`**
 
 - Remote HTTPS transport is defined in ADR-004 but not implemented; only stdio and mock exist.
+
+**`bundle.install`**
+
+- Watch ships as five shapes — Full, Media, Browser, Memory and Document — and every one is checked for baseline collisions, duplicate rows, missing modules and missing dependencies.
+- The install smoke runs the Full bundle against a stock profile. The four narrow variants are gated statically rather than installed one at a time.
 
 </details>
 
@@ -256,11 +261,17 @@ Baseline: DeepSeek Harness `0.1.1-rc.2 @ b150a551b8d465e31e418e1b2eaf5e79bbb7d28
 
 | Subsystem | Status | Owner | Tests |
 |---|---|---|---|
-| `ecosystem.sdk` — Third-party Watch capability developer path | ⬜ not started | watch-workspace | — |
+| `ecosystem.sdk` — Third-party Watch capability developer path | ✅ tested | watch-workspace | 1 |
 | `security.offline-proof` — Socket-level proof that offline_only means zero non-loopback egress | ✅ tested | both | 1 |
 | `supply-chain.metadata` — SBOM, licences, notices and model provenance gates | ✅ tested | watch-workspace | 1 |
 
 <details><summary>Known limitations</summary>
+
+**`ecosystem.sdk`**
+
+- The boundary is proven two ways: no SDK export returns a verdict or an evidence record, and every submission is sanitized with an allowlist so tomorrow’s authority field cannot slip through a denylist.
+- The worked example ships as compiled source exercised by the SDK’s own tests, so an example that stops working is a failing build.
+- The client-plugin half of a third-party capability reuses the same client-bundle build the Watch browser halves use; no separate SDK bundler exists.
 
 **`security.offline-proof`**
 

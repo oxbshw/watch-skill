@@ -63,6 +63,57 @@ function workspacePackages() {
   return names
 }
 
+/**
+ * Check one patch overlay against the same rules as the full bundle.
+ *
+ * A narrow bundle is where a stale row survives longest, because nobody
+ * installs it as often. So the gate treats "Watch Memory" exactly as seriously
+ * as "Watch Full".
+ */
+function checkPatch(label, patchFile, manifest, baseline, packages) {
+  const problems = []
+  const rows = readPatchRows(patchFile)
+  if (rows.length === 0) {
+    problems.push(`${label}: the patch declares no rows`)
+    return { problems, rows }
+  }
+
+  for (const row of rows) {
+    if (baseline.has(row.id)) {
+      problems.push(
+        `${label}: row id "${row.id}" collides with a DSH baseline row — an overlay would replace `
+        + "that row's config instead of inserting a new one, silently changing upstream behavior",
+      )
+    }
+  }
+
+  const seen = new Set()
+  for (const row of rows) {
+    if (seen.has(row.id)) problems.push(`${label}: duplicate row id ${row.id}`)
+    seen.add(row.id)
+  }
+
+  const dependencies = new Set(Object.keys(manifest.dependencies ?? {}))
+  for (const row of rows) {
+    if (row.module === null) {
+      problems.push(`${label}: row "${row.id}" names no module, so the Loader has nothing to import`)
+      continue
+    }
+    if (row.module.startsWith("@watchskill/") && !packages.has(row.module)) {
+      problems.push(`${label}: row "${row.id}" names ${row.module}, which is not a package in this workspace`)
+    }
+    if (row.module.startsWith("@watchskill/") && !dependencies.has(row.module)) {
+      problems.push(
+        `${label}: row "${row.id}" mounts ${row.module}, but the bundle does not depend on it — `
+        + "the profile install would resolve the layer and then fail to import the module",
+      )
+    }
+  }
+
+  return { problems, rows }
+}
+
+
 function main() {
   const problems = []
 
@@ -130,6 +181,27 @@ function main() {
     }
   }
 
+  // ── the narrow bundles ────────────────────────────────────────────────────
+  // Watch ships as five installable shapes, and a deployment that needs only
+  // one should not have to accept the others. Each is checked here, so "Watch
+  // Memory" cannot quietly reference a package that was renamed.
+  const variants = manifest.dsh?.bundle?.variants ?? {}
+  const variantSummaries = []
+  for (const [name, relative] of Object.entries(variants)) {
+    const file = join(BUNDLE, relative)
+    if (!existsSync(file)) {
+      problems.push(`variant "${name}" names ${relative}, which does not exist`)
+      continue
+    }
+    const checked = checkPatch(`variant ${name}`, file, manifest, baseline, packages)
+    problems.push(...checked.problems)
+    variantSummaries.push(`  ${name.padEnd(10)} ${String(checked.rows.length)} row(s)`)
+  }
+  if (variantSummaries.length === 0) {
+    problems.push("the bundle declares no variants; Watch ships as five installable shapes")
+  }
+
+
   if (problems.length > 0) {
     for (const problem of problems) process.stderr.write(`watch: ${problem}\n`)
     process.stderr.write(`\nwatch: ${problems.length} bundle problem(s)\n`)
@@ -138,7 +210,9 @@ function main() {
 
   process.stdout.write(
     `bundle: ${rows.length} additive row(s), no collision with ${baseline.size} DSH baseline rows\n`
-    + rows.map(row => `  ${row.id.padEnd(20)} ${row.module}\n`).join(''),
+    + rows.map(row => `  ${row.id.padEnd(20)} ${row.module}\n`).join('')
+    + `bundle variants:\n`
+    + variantSummaries.map(line => `${line}\n`).join(''),
   )
 }
 

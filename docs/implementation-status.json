@@ -96,14 +96,21 @@
       "status": "tested",
       "source_paths": [
         "packages/watch/bundle/cordis.patch.yml",
+        "packages/watch/bundle/variants/media.patch.yml",
+        "packages/watch/bundle/variants/browser.patch.yml",
+        "packages/watch/bundle/variants/memory.patch.yml",
+        "packages/watch/bundle/variants/document.patch.yml",
         "scripts/install-smoke.mjs"
       ],
       "tests": [
         "scripts/install-smoke.mjs",
         "scripts/verify-bundle.mjs"
       ],
-      "acceptance_journey": "Install and uninstall against stock DSH 0.1.1-rc.2, upstream rows intact",
-      "known_limitations": [],
+      "acceptance_journey": "Install and uninstall against stock DSH 0.1.1-rc.2, upstream rows intact; five installable shapes, each gated",
+      "known_limitations": [
+        "Watch ships as five shapes — Full, Media, Browser, Memory and Document — and every one is checked for baseline collisions, duplicate rows, missing modules and missing dependencies.",
+        "The install smoke runs the Full bundle against a stock profile. The four narrow variants are gated statically rather than installed one at a time."
+      ],
       "commit": "77c6c25"
     },
     {
@@ -672,12 +679,21 @@
       "phase": "Phase 6 — distribution",
       "classification": "WATCH_NEW",
       "owner": "watch-workspace",
-      "status": "not_started",
-      "source_paths": [],
-      "tests": [],
-      "acceptance_journey": "A third-party capability installs without a fork and cannot mint VERIFIED",
-      "known_limitations": [],
-      "commit": null
+      "status": "tested",
+      "source_paths": [
+        "packages/watch/sdk/src/capability.ts",
+        "packages/watch/sdk/src/example.ts"
+      ],
+      "tests": [
+        "tests/sdk.test.mjs"
+      ],
+      "acceptance_journey": "A third-party capability declares, probes, observes and submits — and cannot mint VERIFIED by shape or at runtime",
+      "known_limitations": [
+        "The boundary is proven two ways: no SDK export returns a verdict or an evidence record, and every submission is sanitized with an allowlist so tomorrow’s authority field cannot slip through a denylist.",
+        "The worked example ships as compiled source exercised by the SDK’s own tests, so an example that stops working is a failing build.",
+        "The client-plugin half of a third-party capability reuses the same client-bundle build the Watch browser halves use; no separate SDK bundler exists."
+      ],
+      "commit": "pending"
     },
     {
       "id": "supply-chain.metadata",
