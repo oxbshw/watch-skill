@@ -46,6 +46,7 @@ export { MemoryLedger } from './ledger.js'
 export * from './compiler.js'
 export * from './projector.js'
 export * from './tools.js'
+export * from './learning.js'
 
 /** Deployment configuration for memory. */
 export interface Config {

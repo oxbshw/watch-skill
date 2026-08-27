@@ -9,10 +9,10 @@ Baseline: DeepSeek Harness `0.1.1-rc.2 @ b150a551b8d465e31e418e1b2eaf5e79bbb7d28
 
 | Status | Count |
 |---|---:|
-| ✅ tested | 21 |
+| ✅ tested | 22 |
 | 🟩 implemented | 1 |
 | 🟨 in progress | 3 |
-| ⬜ not started | 10 |
+| ⬜ not started | 9 |
 | **total** | **35** |
 
 `implemented` means real behavior exists, not that a package does.
@@ -176,7 +176,7 @@ Baseline: DeepSeek Harness `0.1.1-rc.2 @ b150a551b8d465e31e418e1b2eaf5e79bbb7d28
 | `compare.surface` — Compare runs, revisions and before/after states | ✅ tested | watch-workspace | 1 |
 | `library.surface` — Library of sources and evidence, separate from memory | 🟨 in progress | watch-workspace | 1 |
 | `live.surface` — Live mode with gaps, clocks and reconnect | 🟨 in progress | watch-workspace | 1 |
-| `memory.governed-learning` — Candidate lifecycle with eval, promotion, canary and rollback | ⬜ not started | watch-workspace | — |
+| `memory.governed-learning` — Candidate lifecycle with eval, promotion, canary and rollback | ✅ tested | watch-workspace | 1 |
 | `wiki.projections` — Workspace wiki projections with provenance | ⬜ not started | watch-workspace | — |
 
 <details><summary>Known limitations</summary>
@@ -194,6 +194,11 @@ Baseline: DeepSeek Harness `0.1.1-rc.2 @ b150a551b8d465e31e418e1b2eaf5e79bbb7d28
 **`live.surface`**
 
 - Bridge methods and agent tools exist. No Live UI surface, and no long-session or reconnect gate.
+
+**`memory.governed-learning`**
+
+- The lifecycle is enforced; the replay harness that produces a CandidateEvaluation from real fixtures is not built, so evaluations are supplied by the caller.
+- No review UI. A candidate queue exists as data and describeCandidate() renders one line of it.
 
 </details>
 

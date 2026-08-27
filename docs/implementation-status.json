@@ -549,11 +549,18 @@
       "phase": "Phase 4 — sensory surfaces",
       "classification": "WATCH_NEW",
       "owner": "watch-workspace",
-      "status": "not_started",
-      "source_paths": [],
-      "tests": [],
+      "status": "tested",
+      "source_paths": [
+        "packages/watch/memory/src/learning.ts"
+      ],
+      "tests": [
+        "tests/learning.test.mjs"
+      ],
       "acceptance_journey": "A candidate that fails eval is not promoted, and rollback restores",
-      "known_limitations": [],
+      "known_limitations": [
+        "The lifecycle is enforced; the replay harness that produces a CandidateEvaluation from real fixtures is not built, so evaluations are supplied by the caller.",
+        "No review UI. A candidate queue exists as data and describeCandidate() renders one line of it."
+      ],
       "commit": null
     },
     {
