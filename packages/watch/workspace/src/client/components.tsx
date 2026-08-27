@@ -23,6 +23,7 @@
 
 import type { ReactNode } from 'react'
 import { toneFor, tokenFor } from '@watchskill/dsh-client-brand'
+import { needsDirectionIsolation } from '@watchskill/dsh-contracts'
 import {
   MODE_DESCRIPTORS,
   WORKSPACE_MODES,
@@ -92,6 +93,36 @@ export function StatusBadge({ status, label }: {
     >
       <span aria-hidden="true">{STATUS_GLYPH[status] ?? '·'}</span>
       <span>{label ?? status}</span>
+    </span>
+  )
+}
+
+/** Props for {@link Isolated}. */
+export interface IsolatedProps {
+  /** What kind of thing this is: `path`, `url`, `identifier`, `timestamp`… */
+  readonly kind: string
+  readonly children: ReactNode
+}
+
+/**
+ * A span that keeps its own direction inside a paragraph that has another.
+ *
+ * `needsDirectionIsolation` has existed in the contracts since the i18n work
+ * and nothing rendered it, which meant the rule was documented and not
+ * enforced. This is the enforcement.
+ *
+ * The failure it prevents is specific and easy to miss if you do not read the
+ * language in question: inside an Arabic sentence, an unisolated `12:30` is
+ * reordered by the bidi algorithm into `30:12`, and an unisolated path has its
+ * segments reversed. Both look like plausible values. Neither is the value.
+ */
+export function Isolated({ kind, children }: IsolatedProps): ReactNode {
+  if (!needsDirectionIsolation(kind)) {
+    return <span dir="auto" data-watch-auto="" data-watch-kind={kind}>{children}</span>
+  }
+  return (
+    <span dir="ltr" data-watch-ltr="" data-watch-kind={kind}>
+      {children}
     </span>
   )
 }
@@ -248,7 +279,9 @@ export function SessionHeaderBar({ state }: SessionHeaderProps): ReactNode {
       data-watch-session={state.sessionId}
       style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}
     >
-      <span data-watch-field="model">{state.agentModel ?? 'no model selected'}</span>
+      <span data-watch-field="model">
+        <Isolated kind="identifier">{state.agentModel ?? 'no model selected'}</Isolated>
+      </span>
       <span data-watch-field="roles">
         {state.roleBindings.length === 0
           ? 'no Watch roles bound'
@@ -275,7 +308,11 @@ export function SessionHeaderBar({ state }: SessionHeaderProps): ReactNode {
           ? <StatusBadge status="UNVERIFIED" label="nothing verified" />
           : <StatusBadge status={state.verification} />}
       </span>
-      {state.runId !== null && <span data-watch-field="run">{`run ${state.runId}`}</span>}
+      {state.runId !== null && (
+        <span data-watch-field="run">
+          {'run '}<Isolated kind="identifier">{state.runId}</Isolated>
+        </span>
+      )}
       {state.costLabel !== null && <span data-watch-field="cost">{state.costLabel}</span>}
       {state.degraded.length > 0 && (
         <span data-watch-field="degraded">
@@ -412,7 +449,10 @@ export function SensoryTimelineStrip(
                   }}
                 >
                   {entry.kind === 'gap' && <span aria-hidden="true">⌇ </span>}
-                  {entry.label}
+                  {entry.range !== null && (
+                    <Isolated kind="timestamp">{`${String(entry.range.startMs)}ms `}</Isolated>
+                  )}
+                  <span dir="auto" data-watch-auto="">{entry.label}</span>
                 </button>
               </li>
             ))}

@@ -474,15 +474,21 @@
       "owner": "both",
       "status": "tested",
       "source_paths": [
-        "packages/watch/contracts/src/language.ts"
+        "packages/watch/contracts/src/language.ts",
+        "packages/watch/workspace/src/client/components.tsx",
+        "packages/watch/brand/src/client/theme.css"
       ],
       "tests": [
-        "tests/language.test.mjs"
+        "tests/language.test.mjs",
+        "tests/multilingual.test.mjs",
+        "tests/fixtures/multilingual.mjs",
+        "tests/accessibility.test.mjs"
       ],
-      "acceptance_journey": "Original text stays evidence authority; translation is derived",
+      "acceptance_journey": "Six scripts round-trip byte for byte through index, search, citation and render; a translation is a view and never what a citation resolves to",
       "known_limitations": [
-        "Script detection is range-based rather than full ICU: it reports which scripts appear, which is what direction and routing need. It is not language identification, and languageTags stay empty rather than guessed.",
-        "RTL-safe layout primitives exist as a contract (needsDirectionIsolation) but no UI consumes them yet.",
+        "Script detection is range-based rather than full ICU. It reports which scripts appear, which is what direction and routing need, and it deliberately reports `Han` rather than claiming a simplified/traditional distinction it cannot make — a test asserts that difference from the OCR matrix vocabulary is deliberate.",
+        "languageTags stay empty rather than guessed: Arabic script is used by several languages.",
+        "RTL-safe layout primitives are now consumed: Isolated() renders the seven kinds needsDirectionIsolation() names, and the surfaces are asserted to use logical offsets only.",
         "No UI locale bundles are shipped. Claiming launch locales without reviewed translations would be worse than shipping none."
       ],
       "commit": "676a1e8"

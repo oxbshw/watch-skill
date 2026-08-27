@@ -131,7 +131,7 @@ Baseline: DeepSeek Harness `0.1.1-rc.2 @ b150a551b8d465e31e418e1b2eaf5e79bbb7d28
 | Subsystem | Status | Owner | Tests |
 |---|---|---|---|
 | `brand.package` — Watch brand and theme over DSH's token system | ✅ tested | watch-workspace | 1 |
-| `i18n.evidence` — Language-aware evidence contract | ✅ tested | both | 1 |
+| `i18n.evidence` — Language-aware evidence contract | ✅ tested | both | 4 |
 | `memory.product-ui` — Memory surfaces: taste, timeline, wiki, decisions, lessons, failures | ✅ tested | watch-workspace | 1 |
 | `ocr.engines` — OCR engine family with isolated workers | ✅ tested | both | 3 |
 | `providers.role-bindings` — Role bindings over DSH Models and Providers | ✅ tested | watch-workspace | 1 |
@@ -148,8 +148,9 @@ Baseline: DeepSeek Harness `0.1.1-rc.2 @ b150a551b8d465e31e418e1b2eaf5e79bbb7d28
 
 **`i18n.evidence`**
 
-- Script detection is range-based rather than full ICU: it reports which scripts appear, which is what direction and routing need. It is not language identification, and languageTags stay empty rather than guessed.
-- RTL-safe layout primitives exist as a contract (needsDirectionIsolation) but no UI consumes them yet.
+- Script detection is range-based rather than full ICU. It reports which scripts appear, which is what direction and routing need, and it deliberately reports `Han` rather than claiming a simplified/traditional distinction it cannot make — a test asserts that difference from the OCR matrix vocabulary is deliberate.
+- languageTags stay empty rather than guessed: Arabic script is used by several languages.
+- RTL-safe layout primitives are now consumed: Isolated() renders the seven kinds needsDirectionIsolation() names, and the surfaces are asserted to use logical offsets only.
 - No UI locale bundles are shipped. Claiming launch locales without reviewed translations would be worse than shipping none.
 
 **`memory.product-ui`**

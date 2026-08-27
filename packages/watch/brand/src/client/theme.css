@@ -90,3 +90,81 @@
     animation: none;
   }
 }
+
+/*
+ * Focus, made impossible to lose.
+ *
+ * The default focus ring is the first thing a design system overrides and the
+ * last thing anybody checks. Watch draws its own, on `:focus-visible` so a
+ * mouse click does not leave a ring behind, and with an offset so it survives
+ * a button that has its own border — which is most of them here.
+ *
+ * `outline` rather than `box-shadow`: an outline is not clipped by `overflow:
+ * hidden`, and the timeline and the inspector both scroll.
+ */
+:where(button, a, [tabindex], input, select, textarea):focus-visible {
+  outline: 2px solid var(--watch-amber);
+  outline-offset: 2px;
+  /* In forced-colours mode the amber is replaced by the system colour, and
+     the ring has to keep existing rather than becoming invisible. */
+  border-radius: 2px;
+}
+
+@media (forced-colors: active) {
+  :where(button, a, [tabindex], input, select, textarea):focus-visible {
+    outline: 3px solid Highlight;
+  }
+}
+
+/*
+ * Right-to-left, by construction rather than by override.
+ *
+ * Every offset in the Watch surfaces is a logical property — `margin-inline`,
+ * `padding-inline-start`, `border-inline-start`, `text-align: start`. That is
+ * why there is no `[dir='rtl']` block undoing a pile of left-hand values: an
+ * RTL stylesheet that mirrors a LTR one by hand is a stylesheet that will be
+ * mirrored incompletely.
+ *
+ * What does need saying explicitly is the isolation. A path, a URL, a
+ * timestamp or a digest inside an Arabic paragraph reads left to right, and
+ * without isolation the bidi algorithm reorders the surrounding text into
+ * something that looks plausible and is wrong — a timestamp reading 30:2, a
+ * path with its segments reversed.
+ */
+[data-watch-ltr] {
+  unicode-bidi: isolate;
+  direction: ltr;
+}
+
+[data-watch-auto] {
+  unicode-bidi: isolate;
+}
+
+/*
+ * Zoom to 200% without losing anything.
+ *
+ * The requirement is that nothing is cut off and nothing needs horizontal
+ * scrolling at 200%. Fixed pixel heights are what break it, so the surfaces
+ * use `min-height` and let content grow; the timeline scrolls in its own axis
+ * rather than forcing the page to.
+ */
+[data-watch-timeline] {
+  overflow-x: auto;
+  min-height: 3rem;
+}
+
+[data-watch-timeline] ul {
+  flex-wrap: wrap;
+}
+
+/*
+ * The accessible alternative to the timeline is the timeline.
+ *
+ * There is no canvas here and no second text rendering to keep in sync: the
+ * lanes are lists and the entries are buttons with text labels, and the visual
+ * layout is applied over that. A separate "accessible version" is a version
+ * that goes stale.
+ */
+[data-watch-timeline] [data-watch-lane] {
+  display: block;
+}
