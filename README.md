@@ -67,17 +67,20 @@ patch budget is zero. See [ADR-001](docs/adr/ADR-001-dsh-foundation.md).
 | DSH baseline | pinned to `0.1.1-rc.2` @ `b150a551`, consumed as published packages, zero patches |
 | Source audit | 247 packages, 488 composition rows, 44 UI slots, 7 Remote services inventoried |
 | Parity register | all 40 DSH client product packages classified, enforced by a gate |
-| ADRs 001–008 | written and binding |
-| Bridge | JSON-RPC over stdio, with deadlines, cancellation, correlation and idempotency |
-| Watch Core side | `watch-skill bridge`, with capability truth and published contract digests |
-| Agent tools | capabilities, list, ask, evidence, verify — plus the guidance that governs them |
+| ADRs 001-008 | written and binding |
+| Bridge | JSON-RPC over stdio: deadlines, cancellation, correlation, durable idempotency |
+| Watch Core side | `watch-skill bridge` — 17 methods, capability truth, published contract digests |
+| Agent tools | 16 tools: senses, search, live, browser operator, verification |
+| Memory | event ledger, correction precedence, real forgetting, `taste.md`, Context Compiler |
+| Browser operator | observe -> act -> re-observe -> verdict, with approval and receipt replay |
 | Browser half | verdict and evidence cards, in DSH's own tool-view slot |
 | Contract drift | detected at connect time, scoped to the affected capabilities |
 | Install path | proven against a real stock DSH profile by the install smoke |
-| Tests | 87 passing, including the wire protocol against the real Python engine |
+| Tests | 141 workspace + 159 Watch Core surfaces, all passing |
 
-Not yet built: Live, Browser Operator, Library, Compare, Memory, Desktop. The
-plan's phase order is deliberate and is being followed.
+Not yet built: the branded Workspace shell, the Technology & Capability
+Center, Compare, Desktop, and team multi-tenancy. The plan's phase order is
+deliberate and is being followed.
 
 ## Requirements
 

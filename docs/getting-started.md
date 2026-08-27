@@ -119,22 +119,61 @@ mkdir ../watch-smoke && cd ../watch-smoke && npm install @deepseek-ai/dsh@0.1.1-
 
 ---
 
+## The tools an agent gets
+
+| Tool | What it does |
+|---|---|
+| `watch_capabilities` | what Watch can do here, and what is missing |
+| `watch_list_sources` / `watch_search_sources` | what is indexed; which source mentioned something |
+| `watch_ask_source` | ask about a source, answered with timestamped evidence |
+| `watch_moment` | what was on screen when they said that |
+| `watch_get_evidence` | resolve a citation and check it is still current |
+| `watch_capture_capabilities` | what this machine can actually record |
+| `watch_watch_live` and friends | start, read, question, inspect and stop a live session |
+| `watch_browser_observe` / `_act` / `_receipt` | act on a page and prove what happened |
+| `watch_verify` | run a contract and return an independent verdict |
+| `watch_remember` and friends | memory, when the Memory service is mounted |
+
+## Turning memory on
+
+Memory ships `off`. Durable memory about a person is not something a
+deployment should acquire because nobody changed a setting.
+
+Add this to your profile's `cordis.patch.yml`:
+
+```yaml
+- id: watch-memory
+  config:
+    mode: 'local_personal'
+    directory: .watch/memory
+    inferredThreshold: 0.8
+    tokenBudget: 600
+    writeProjections: true
+```
+
+The quotes on `'local_personal'` are not decoration — YAML reads a bare
+`off` as the boolean false. A patch replaces the whole config, so restate
+every key you want to keep.
+
+What you get is a `taste.md` you can read and edit, a correction that takes
+effect on the agent's next turn, and a Forget that removes a memory from
+retrieval, from the files, and from every rebuild rather than hiding it.
+
 ## What is actually built
 
 | Area | State |
 |---|---|
 | DSH baseline | pinned to `0.1.1-rc.2` @ `b150a551`, consumed as published packages, zero patches |
 | Parity register | all 40 DSH client product packages classified, enforced by a gate |
-| Bridge | JSON-RPC over stdio, with deadlines, cancellation, correlation and idempotency |
+| Bridge | JSON-RPC over stdio: deadlines, cancellation, correlation, durable idempotency |
 | Watch Core side | `watch-skill bridge`, with capability truth and contract digests |
-| Agent tools | capabilities, list, ask, evidence, verify — plus the guidance that governs them |
-| Browser half | verdict and evidence cards, registered into DSH's own tool-view slot |
+| Agent tools | 16, covering the senses, the browser operator and verification |
+| Memory | event ledger, correction precedence, real forgetting, Context Compiler |
+| Browser half | verdict and evidence cards in DSH's own tool-view slot |
 | Contract drift | detected at connect time, scoped to the affected capabilities |
 
-Not yet built: Live, Browser Operator, Library, Compare, Memory, Desktop. The
-plan's phase order is deliberate and is being followed.
-
----
+Not yet built: the branded Workspace shell, the Technology & Capability
+Center, Compare, Desktop, and team multi-tenancy.
 
 ## When something is wrong
 
