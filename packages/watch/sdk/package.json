@@ -11,7 +11,11 @@
       "types": "./lib/index.d.ts",
       "default": "./lib/index.js"
     },
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./client-example": {
+      "types": "./lib/client/example.d.ts",
+      "default": "./lib/client/example.js"
+    }
   },
   "files": [
     "lib/**/*.js",
@@ -21,5 +25,18 @@
     "@watchskill/dsh-contracts": "workspace:^",
     "@watchskill/dsh-technology": "workspace:^",
     "@watchskill/dsh-trajectory": "workspace:^"
+  },
+  "peerDependencies": {
+    "react": "^18.2.0"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@types/react": "~18.3.1",
+    "react": "^18.2.0",
+    "@watchskill/dsh-client-brand": "workspace:*"
   }
 }

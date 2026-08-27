@@ -110,8 +110,8 @@
       {
         "name": "@watchskill/dsh-sdk",
         "version": "0.1.0-preview.0",
-        "integrity": "sha256:d8a66cb9285122879c7d60c5c5c928f5d38281a9ec0ac00cccdffff0f899975e",
-        "sourceFiles": 5
+        "integrity": "sha256:633c7f2166121876ab803619d7abab7c260e5c1fb14460fd3b6b9bb00113ddb1",
+        "sourceFiles": 6
       },
       {
         "name": "@watchskill/dsh-technology",
@@ -152,7 +152,7 @@
       {
         "name": "@watchskill/watch-desktop",
         "version": "0.1.0-preview.0",
-        "integrity": "sha256:e58d0e090944604ae7a70de4718333ae57d86f9283bfc7d6d94fd4447edb5255",
+        "integrity": "sha256:92418af35630a62cb63ca10e68adc27997e45ae5cc7c916f0f77a30435e6c532",
         "sourceFiles": 11
       }
     ]
@@ -162,12 +162,12 @@
     "dataLicense": "CC0-1.0",
     "SPDXID": "SPDXRef-DOCUMENT",
     "name": "@watchskill/watch-workspace-0.1.0-preview.0",
-    "documentNamespace": "https://github.com/oxbshw/watch-workspace/spdx/0.1.0-preview.0/mtc2w3hy",
+    "documentNamespace": "https://github.com/oxbshw/watch-workspace/spdx/0.1.0-preview.0/mtc3e5oj",
     "creationInfo": {
       "creators": [
         "Tool: watch-gen-release-manifest"
       ],
-      "created": "2026-08-27T22:12:28Z"
+      "created": "2026-08-27T22:26:31Z"
     },
     "packages": [
       {
@@ -342,7 +342,7 @@
         "checksums": [
           {
             "algorithm": "SHA256",
-            "checksumValue": "d8a66cb9285122879c7d60c5c5c928f5d38281a9ec0ac00cccdffff0f899975e"
+            "checksumValue": "633c7f2166121876ab803619d7abab7c260e5c1fb14460fd3b6b9bb00113ddb1"
           }
         ]
       },
@@ -454,7 +454,7 @@
         "checksums": [
           {
             "algorithm": "SHA256",
-            "checksumValue": "e58d0e090944604ae7a70de4718333ae57d86f9283bfc7d6d94fd4447edb5255"
+            "checksumValue": "92418af35630a62cb63ca10e68adc27997e45ae5cc7c916f0f77a30435e6c532"
           }
         ]
       }

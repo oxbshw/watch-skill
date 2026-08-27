@@ -18,6 +18,8 @@
 
 import { test, describe } from 'node:test'
 import assert from 'node:assert/strict'
+import { renderToStaticMarkup } from 'react-dom/server'
+import { createElement } from 'react'
 
 import {
   AUTHORITY_FIELDS,
@@ -30,6 +32,12 @@ import {
   sanitizeCandidate,
   validateDeclaration,
 } from '@watchskill/dsh-sdk'
+import {
+  SubtitleReadingView,
+  readToolValue,
+  registerExampleView,
+} from '@watchskill/dsh-sdk/client-example'
+import { toneFor, tokenFor } from '@watchskill/dsh-client-brand'
 
 /** A stand-in for Watch Core, recording everything it is asked. */
 function fakeCore(overrides = {}) {
@@ -350,5 +358,91 @@ describe('the example capability, end to end', () => {
     host.recordTrajectory({ type: 'observation.created', summary: '2 cues read', evidenceIds: ['ev_core_1'] })
     assert.equal(state.records.length, 1)
     assert.deepEqual(Object.keys(state.records[0]).sort(), ['evidenceIds', 'summary', 'type'])
+  })
+})
+
+// ── the browser half ────────────────────────────────────────────────────────
+
+describe('a capability’s own view cannot show a verdict nobody issued', () => {
+  /** A settled tool block, as the conversation carries one. */
+  function block(value) {
+    return {
+      kind: 'result',
+      isError: false,
+      content: [{ type: 'text', text: JSON.stringify(value) }],
+    }
+  }
+
+  const READING = {
+    ok: true,
+    cues: [{ startMs: 1_000, text: 'Starting the deployment now.' }],
+    evidenceIds: ['ev_core_1'],
+  }
+
+  test('it renders what the tool returned', () => {
+    const markup = renderToStaticMarkup(createElement(SubtitleReadingView, {
+      toolName: 'example_read_subtitles',
+      block: block(READING),
+    }))
+    assert.match(markup, /data-example-capability="subtitle-reader"/)
+    assert.match(markup, /Starting the deployment now/)
+    assert.match(markup, /Evidence: ev_core_1/)
+  })
+
+  test('with no verdict, it draws no verdict element at all', () => {
+    const markup = renderToStaticMarkup(createElement(SubtitleReadingView, {
+      toolName: 'example_read_subtitles',
+      block: block(READING),
+    }))
+    assert.equal(/data-example-verdict/.test(markup), false,
+      'a view rendered a verification state nobody issued')
+    assert.equal(/UNVERIFIED/.test(markup), false)
+  })
+
+  test('a verdict Core issued is rendered verbatim, in the brand’s tone', () => {
+    const markup = renderToStaticMarkup(createElement(SubtitleReadingView, {
+      toolName: 'example_read_subtitles',
+      block: block({ ...READING, verdict: 'FAILED' }),
+      tokenForStatus: status => tokenFor(toneFor(status)),
+    }))
+    assert.match(markup, /data-example-verdict="FAILED"/)
+    assert.match(markup, /var\(--watch-tone-error\)/)
+  })
+
+  test('a verdict this build has no tone for is not rendered', () => {
+    const parsed = readToolValue(block({ ...READING, verdict: 'DEFINITELY_FINE' }))
+    assert.equal(parsed.verdict, null, 'an unknown verdict was passed through')
+  })
+
+  test('absent and UNVERIFIED stay different facts', () => {
+    assert.equal(readToolValue(block(READING)).verdict, null)
+    assert.equal(readToolValue(block({ ...READING, verdict: 'UNVERIFIED' })).verdict, 'UNVERIFIED')
+  })
+
+  test('an unreadable result renders nothing, so the generic row takes over', () => {
+    for (const bad of [null, {}, { kind: 'result', isError: true, content: [] }, { content: [] }]) {
+      assert.equal(readToolValue(bad), null)
+      assert.equal(
+        renderToStaticMarkup(createElement(SubtitleReadingView, { toolName: 't', block: bad })),
+        '',
+      )
+    }
+  })
+
+  test('a refusal is not rendered as a reading', () => {
+    assert.equal(readToolValue(block({ ok: false, error: 'engine.unavailable' })), null)
+  })
+
+  test('registration is additive and keyed to the capability’s own tool', () => {
+    const registered = []
+    const slots = {
+      inject: (name, register) => { register() },
+      register: (entry, component) => { registered.push({ entry, component }) },
+    }
+    registerExampleView(slots, 'example_read_subtitles')
+    assert.equal(registered.length, 1)
+    assert.equal(registered[0].entry.name, 'tool.call.toolview')
+    assert.equal(registered[0].entry.key, 'example_read_subtitles')
+    assert.equal(registered[0].component, SubtitleReadingView)
   })
 })

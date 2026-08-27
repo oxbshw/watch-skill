@@ -214,11 +214,48 @@ export function mediaCapabilities(): readonly CapabilityReport[] {
   }))
 }
 
+/**
+ * Detect a local OCR engine.
+ *
+ * Probes only the lightweight routes, and deliberately does not probe the
+ * DeepSeek engines. Loading one of those executes code fetched from a model
+ * repository, which is the entire reason they run in a worker — a startup
+ * detector that imported them to see whether they were there would be running
+ * the thing the isolation exists to contain.
+ *
+ * So the answer for a heavy engine is `unknown` until somebody starts its
+ * worker deliberately, which is what `OcrWorker.start()` is for.
+ */
+export function detectOcrEngine(): CapabilityReport {
+  const tesseract = probe('tesseract', ['--version'])
+  if (tesseract !== null) {
+    return {
+      id: 'ocr_engine',
+      present: 'yes',
+      method: 'tesseract --version',
+      detail: tesseract,
+      promptsOnUse: false,
+    }
+  }
+  // RapidOCR is a Python library rather than a binary, so its presence is a
+  // question for the engine rather than for this process.
+  return {
+    id: 'ocr_engine',
+    present: 'unknown',
+    method: 'no local OCR binary on PATH; library routes are the engine’s to report',
+    detail:
+      'Heavier engines are not probed here: loading one executes code from a '
+      + 'model repository, which is what the worker exists to contain.',
+    promptsOnUse: false,
+  }
+}
+
 /** Everything the desktop can say about this machine without asking for anything. */
 export function detectCapabilities(): readonly CapabilityReport[] {
   return [
     detectFfmpeg(),
     detectBrowser(),
+    detectOcrEngine(),
     {
       id: 'file_dialog',
       present: 'yes',

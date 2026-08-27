@@ -252,10 +252,10 @@ Baseline: DeepSeek Harness `0.1.1-rc.2 @ b150a551b8d465e31e418e1b2eaf5e79bbb7d28
 
 **`desktop.shell`**
 
-- MACHINE TESTED on win32 (Windows 10 Pro 19045): a real Electron launch, via `node scripts/desktop-smoke.mjs`. Not run on macOS or Linux.
+- MACHINE TESTED on win32 (Windows 10 Pro 19045): a real Electron 33.4.11 launch via `node scripts/desktop-smoke.mjs` — sandbox and context isolation held, the preload exposed exactly nine operations, window.require/process/module were absent, and the renderer reached ready. Not run on macOS or Linux.
 - At-rest encryption is proven by writing a sealed record and reading the bytes back outside the application. The OS-backed key store is exercised through an injected stand-in; safeStorage itself is NOT MACHINE TESTED, and the fallback labels itself as not equivalent to OS protection.
 - PRODUCTION SIGNING NOT PROVEN. The update path verifies Ed25519 signatures, package digests, downgrades and migration preflight, against development keys only.
-- The renderer mounts the shipped Workspace packages; the smoke test asserts the bridge and the isolation rather than a fully composed shell.
+- Heavy OCR engines are deliberately not probed at startup: loading one executes code fetched from a model repository, which is what the worker exists to contain. They report unknown until a worker is started.
 - The launch smoke is deliberately outside `npm run check`: it needs a desktop session, and a gate that fails headless is a gate people disable.
 
 </details>
@@ -272,9 +272,10 @@ Baseline: DeepSeek Harness `0.1.1-rc.2 @ b150a551b8d465e31e418e1b2eaf5e79bbb7d28
 
 **`ecosystem.sdk`**
 
-- The boundary is proven two ways: no SDK export returns a verdict or an evidence record, and every submission is sanitized with an allowlist so tomorrow’s authority field cannot slip through a denylist.
-- The worked example ships as compiled source exercised by the SDK’s own tests, so an example that stops working is a failing build.
-- The client-plugin half of a third-party capability reuses the same client-bundle build the Watch browser halves use; no separate SDK bundler exists.
+- The boundary is proven two ways: no SDK export returns a verdict or an evidence record, and every submission is rebuilt from an allowlist so tomorrow’s authority field cannot slip through a denylist.
+- Both halves ship as compiled source exercised by the SDK’s own tests — a host example that submits observations, and a client example whose view renders a verdict verbatim or draws no verdict element at all.
+- The client example takes the brand’s tone lookup as a parameter rather than importing it: the brand package is a shell baseline module for Watch’s own halves, not for a third-party plugin.
+- A third-party capability is installed through the same bundle mechanism Watch itself uses; no separate marketplace exists, and the governing document defers one.
 
 **`security.offline-proof`**
 
