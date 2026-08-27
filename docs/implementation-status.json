@@ -711,15 +711,21 @@
       "status": "tested",
       "source_paths": [
         "scripts/gen-sbom.mjs",
-        "docs/sbom.json"
+        "scripts/gen-release-manifest.mjs",
+        "docs/sbom.json",
+        "docs/release-manifest.json",
+        "THIRD_PARTY_NOTICES.md"
       ],
       "tests": [
-        "scripts/gen-sbom.mjs"
+        "scripts/gen-sbom.mjs",
+        "scripts/gen-release-manifest.mjs",
+        "tests/supply-chain.test.mjs"
       ],
-      "acceptance_journey": "Repository licence never stands in for a model weight licence",
+      "acceptance_journey": "Repository licence never stands in for a model weight licence; every first-party package is digested and described in a real SPDX document; the compatibility and migration blocks are asserted against the code they describe",
       "known_limitations": [
         "Covers the Node tree. The Python side of watch-skill has its own dependency set that this SBOM does not enumerate.",
-        "Package integrity digests and a release manifest are not implemented."
+        "Integrity digests are over first-party package source. They identify a build; they are not a signature, and signing is PRODUCTION SIGNING NOT PROVEN.",
+        "SPDX licences are declared, never concluded: nobody has audited the files to conclude anything stronger."
       ],
       "commit": "676a1e8"
     },

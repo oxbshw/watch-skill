@@ -264,7 +264,7 @@ Baseline: DeepSeek Harness `0.1.1-rc.2 @ b150a551b8d465e31e418e1b2eaf5e79bbb7d28
 |---|---|---|---|
 | `ecosystem.sdk` — Third-party Watch capability developer path | ✅ tested | watch-workspace | 1 |
 | `security.offline-proof` — Socket-level proof that offline_only means zero non-loopback egress | ✅ tested | both | 1 |
-| `supply-chain.metadata` — SBOM, licences, notices and model provenance gates | ✅ tested | watch-workspace | 1 |
+| `supply-chain.metadata` — SBOM, licences, notices and model provenance gates | ✅ tested | watch-workspace | 3 |
 
 <details><summary>Known limitations</summary>
 
@@ -283,7 +283,8 @@ Baseline: DeepSeek Harness `0.1.1-rc.2 @ b150a551b8d465e31e418e1b2eaf5e79bbb7d28
 **`supply-chain.metadata`**
 
 - Covers the Node tree. The Python side of watch-skill has its own dependency set that this SBOM does not enumerate.
-- Package integrity digests and a release manifest are not implemented.
+- Integrity digests are over first-party package source. They identify a build; they are not a signature, and signing is PRODUCTION SIGNING NOT PROVEN.
+- SPDX licences are declared, never concluded: nobody has audited the files to conclude anything stronger.
 
 </details>
 
