@@ -27,8 +27,10 @@ import type {} from '@deepseek-ai/dsh-system-prompt'
 import type {} from '@watchskill/dsh-core-bridge'
 import type { EvidenceRecord, VerificationOutcome, WatchResult } from '@watchskill/dsh-contracts'
 import { SENSORY_GUIDANCE, applySensoryTools } from './sensory.js'
+import { applyMemory } from './memory.js'
 
 export { SENSORY_GUIDANCE, applySensoryTools } from './sensory.js'
+export { applyMemory } from './memory.js'
 export type { SensoryConfig } from './sensory.js'
 
 export const name = 'watch-tools'
@@ -156,6 +158,17 @@ export function apply(ctx: Context, config: Config): void {
   // splitting them keeps each part readable at the point it applies.
   ctx.systemPrompt.section({ name: 'tool:watch-sensory', order: 121, text: SENSORY_GUIDANCE })
   applySensoryTools(ctx, config)
+  // Memory is optional, and this is how Cordis says so. A child plugin whose
+  // injects are unsatisfied stays pending rather than failing, and activates
+  // by itself if the Memory service is mounted later. Reading ctx.watchMemory
+  // directly would throw, because Cordis refuses a service the plugin did not
+  // declare; adding it to this plugin's own inject would instead make the
+  // whole Watch tool surface wait for a service the bundle may never mount.
+  ctx.plugin({
+    name: 'watch-memory-tools',
+    inject: ['watchMemory', 'tools'],
+    apply: applyMemory,
+  })
 
   ctx.tools.register(defineTool({
     name: 'watch_capabilities',

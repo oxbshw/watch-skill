@@ -135,6 +135,9 @@ importers:
       '@watchskill/dsh-core-bridge':
         specifier: workspace:^
         version: link:../core-bridge
+      '@watchskill/dsh-memory':
+        specifier: workspace:^
+        version: link:../memory
     devDependencies:
       '@deepseek-ai/cordis':
         specifier: 'catalog:'

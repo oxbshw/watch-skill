@@ -110,6 +110,53 @@ describe('the Watch tool surface', () => {
   })
 })
 
+describe('memory is optional', () => {
+  test('the Watch tools work with no Memory service mounted', async () => {
+    // Reading ctx.watchMemory directly threw here once: Cordis refuses a
+    // service a plugin did not declare. Declaring it instead would have made
+    // the whole tool surface wait for something the bundle may never mount.
+    // The memory wiring is a child plugin, so it simply stays pending.
+    const mounted = await mountTools()
+    try {
+      assert.ok(mounted.registered.has('watch_verify'))
+      assert.ok(
+        !mounted.registered.has('watch_remember'),
+        'memory tools must not appear without the Memory service',
+      )
+    } finally {
+      await mounted.dispose()
+    }
+  })
+
+  test('the memory tools appear once the service is mounted', async () => {
+    const { mkdtempSync, rmSync } = await import('node:fs')
+    const { tmpdir } = await import('node:os')
+    const { join } = await import('node:path')
+    const WatchMemoryService = (await import('@watchskill/dsh-memory')).default
+
+    const directory = mkdtempSync(join(tmpdir(), 'watch-opt-memory-'))
+    const mounted = await mountTools()
+    try {
+      const memory = await mounted.ctx.plugin(WatchMemoryService, {
+        mode: 'local_personal',
+        directory,
+      })
+      try {
+        assert.ok(
+          mounted.registered.has('watch_remember'),
+          'the pending child plugin should activate when its service arrives',
+        )
+        assert.ok(mounted.registered.has('watch_forget'))
+      } finally {
+        await memory.dispose()
+      }
+    } finally {
+      await mounted.dispose()
+      rmSync(directory, { recursive: true, force: true, maxRetries: 5 })
+    }
+  })
+})
+
 describe('watch_capabilities', () => {
   test('answers even when Watch Core was never connected', async () => {
     const mounted = await mountTools()

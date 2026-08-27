@@ -4,11 +4,22 @@
     "outDir": "lib",
     "rootDir": "src",
     "tsBuildInfoFile": "lib/.tsbuildinfo",
-    "types": ["node"]
+    "types": [
+      "node"
+    ]
   },
-  "include": ["src/**/*.ts"],
+  "include": [
+    "src/**/*.ts"
+  ],
   "references": [
-    { "path": "../contracts" },
-    { "path": "../core-bridge" }
+    {
+      "path": "../contracts"
+    },
+    {
+      "path": "../core-bridge"
+    },
+    {
+      "path": "../memory"
+    }
   ]
 }

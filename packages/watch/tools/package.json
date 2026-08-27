@@ -13,10 +13,14 @@
     },
     "./package.json": "./package.json"
   },
-  "files": ["lib/**/*.js", "lib/**/*.d.ts"],
+  "files": [
+    "lib/**/*.js",
+    "lib/**/*.d.ts"
+  ],
   "dependencies": {
     "@watchskill/dsh-contracts": "workspace:^",
-    "@watchskill/dsh-core-bridge": "workspace:^"
+    "@watchskill/dsh-core-bridge": "workspace:^",
+    "@watchskill/dsh-memory": "workspace:^"
   },
   "peerDependencies": {
     "@deepseek-ai/cordis": "catalog:",
