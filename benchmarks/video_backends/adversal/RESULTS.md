@@ -230,12 +230,14 @@ Every probe below is refused by argument validation before any upload, so none c
 
 One MCP subprocess per call, so every call includes process start-up. The exact-frame path runs ffmpeg locally once per requested timestamp.
 
-Cost is kept in four separate columns because they are four different kinds of claim — a vendor's published price is not a measurement:
+Cost is kept in separate rows because they are different kinds of claim, and three quantities get confused with each other constantly: what the provider has billed in total to obtain the artifacts this report is built from, what this particular execution added, and what re-rendering the report costs. A vendor's published price is not a measurement and does not appear at all.
 
 | kind | value |
 |---|---|
-| measured | 0 processing minutes — no job reached the backend; nothing was billed |
-| provider-reported | not obtained |
+| measured — billed to obtain these artifacts | 21 provider minutes across 4 jobs, for 19.18 minutes of source (1.82 min of per-job rounding up to a whole minute) |
+| measured — added by this execution | 0 — every file was already in the provider's registry, and submissions deduplicate on the MD5 of the bytes, so resubmitting the same media reuses its existing job |
+| measured — cost of re-rendering with `--from-raw` | zero provider calls; the report is rebuilt from the committed JSON and never contacts the service |
+| provider-reported | quota endpoint: 21 minutes used, 579 remaining at the measured point |
 | documented pricing | not quoted here |
 | inferred | none — nothing is inferred |
 
@@ -415,7 +417,7 @@ Whether Watch Skill could ingest this into durable evidence — not whether a hu
 
 ## Qualification gates
 
-Defined from the criteria this evaluation was set up against, before any measurement existed, then applied mechanically to the raw result so the verdict is not a matter of impression. A gate whose evidence could not be gathered reads *not established*, which is deliberately neither a pass nor a failure: several of them here simply need an authenticated run.
+Defined from the criteria this evaluation was set up against, before any measurement existed, then applied mechanically to the raw result so the verdict is not a matter of impression. Three outcomes rather than two: a gate whose evidence could not be gathered reads *not established*, which is deliberately neither a pass nor a failure. In this run every gate had the evidence it needed, so each one below is a pass or a fail on what was actually measured.
 
 | gate | principle | result | detail |
 |---|---|---|---|
@@ -443,7 +445,7 @@ What 0.1.4 gets right is worth stating first, because it is the hard part. On th
 
 The blocker is delivery rather than accuracy: on real footage the call stalls before returning the frames it has already written correctly. Fixing that is worth doing before anything else here, because it is the one item that makes the rest unmeasurable.
 
-The remaining items are about shape rather than correctness. The paths a video backend exists for — provider-chosen frames, OCR and transcripts — needed an authenticated account this run did not have, so they are untested rather than found wanting. And the interface currently answers in prose where a consumer storing durable evidence needs fields.
+The backend paths were exercised, not skipped: jobs were submitted and polled to completion, and `analyze`, `transcribe` and `extract_frames` all returned artifacts that were scored. What they showed is a mix. Transcript text came back exact on the controlled fixture — not one word wrong — while its timing is quantised to whole seconds and lands materially coarser than the frame path. Provider-selected frames carried timestamps that do not match the content they show. And the interface answers in prose where a consumer storing durable evidence needs fields.
 
 What would unblock an integration, in order:
 

@@ -523,10 +523,11 @@ def _transcript_section(data: dict[str, Any]) -> list[str]:
         return [
             "## Transcript",
             "",
-            "**Not measured.** `transcribe` downloads the transcript of a job the "
-            "backend has already completed, and no job reached the backend in this "
-            "run. No word error rate, cue timing or segmentation figure is reported "
-            "here, because none was obtained. See "
+            "**Not measured in this run.** `transcribe` downloads the transcript "
+            "of a job the backend has already completed, and no completed job was "
+            "available here — commonly because the run did not poll for one. No "
+            "word error rate, cue timing or segmentation figure is reported, "
+            "because none was obtained. See "
             "[What was not measured](#what-was-not-measured).",
             "",
         ]
@@ -610,7 +611,7 @@ def _latency_section(data: dict[str, Any]) -> list[str]:
     usage = data.get("usage") or {}
     if not latency:
         return []
-    return [
+    lines = [
         "## Latency and usage",
         "",
         "| | |",
@@ -624,18 +625,59 @@ def _latency_section(data: dict[str, Any]) -> list[str]:
         "",
         latency.get("note", ""),
         "",
-        "Cost is kept in four separate columns because they are four different "
-        "kinds of claim — a vendor's published price is not a measurement:",
+        "Cost is kept in separate rows because they are different kinds of "
+        "claim, and three quantities get confused with each other constantly: "
+        "what the provider has billed in total to obtain the artifacts this "
+        "report is built from, what this particular execution added, and what "
+        "re-rendering the report costs. A vendor's published price is not a "
+        "measurement and does not appear at all.",
         "",
         "| kind | value |",
         "|---|---|",
-        f"| measured | {usage.get('measured', {}).get('processing_minutes_consumed')} "
-        f"processing minutes — {usage.get('measured', {}).get('why')} |",
-        f"| provider-reported | {usage.get('provider_reported') or 'not obtained'} |",
+    ]
+    # The provider's own quota reconciliation is the authority here. An earlier
+    # revision read a `usage.measured` block that the runner hardcoded to zero
+    # with the note "no job reached the backend" — true of one unauthenticated
+    # run, and printed unchanged by every authenticated one after it.
+    reconciled = (data.get("head_to_head") or {}).get("usage") or {}
+    if reconciled.get("lifetime_billed_minutes") is not None:
+        this_run = reconciled.get("this_run_billed_minutes")
+        lines += [
+            "| measured — billed to obtain these artifacts | "
+            f"{reconciled.get('lifetime_billed_minutes'):g} provider minutes "
+            f"across {reconciled.get('jobs_in_registry')} jobs, for "
+            f"{reconciled.get('lifetime_submitted_minutes')} minutes of source "
+            f"({reconciled.get('rounding_overhead_minutes')} min of per-job "
+            "rounding up to a whole minute) |",
+            "| measured — added by this execution | "
+            + (
+                "0 — every file was already in the provider's registry, and "
+                "submissions deduplicate on the MD5 of the bytes, so resubmitting "
+                "the same media reuses its existing job"
+                if this_run == 0 else f"{this_run:g} provider minutes"
+            )
+            + " |",
+            "| measured — cost of re-rendering with `--from-raw` | zero provider "
+            "calls; the report is rebuilt from the committed JSON and never "
+            "contacts the service |",
+            "| provider-reported | quota endpoint: "
+            f"{reconciled.get('lifetime_billed_minutes'):g} minutes used, "
+            f"{reconciled.get('remaining_after'):g} remaining at the measured "
+            "point |",
+        ]
+    else:
+        lines.append(
+            "| measured | not obtained — no quota reading was taken for this run |"
+        )
+        lines.append(
+            f"| provider-reported | {usage.get('provider_reported') or 'not obtained'} |"
+        )
+    lines += [
         f"| documented pricing | {usage.get('documented_pricing') or 'not quoted here'} |",
         f"| inferred | {usage.get('inferred') or 'none — nothing is inferred'} |",
         "",
     ]
+    return lines
 
 
 def _real_media_section(data: dict[str, Any]) -> list[str]:
@@ -940,20 +982,31 @@ def _gates_section(gates: list[Any]) -> list[str]:
     if not gates:
         return []
     symbol = {"pass": "pass", "fail": "**FAIL**", "not_established": "not established"}
+    rows = [g.to_dict() if hasattr(g, "to_dict") else g for g in gates]
+    unestablished = [r for r in rows if r["result"] == "not_established"]
+    # Derived, not asserted: an earlier revision hardcoded "several of them
+    # here simply need an authenticated run", which survived into a report
+    # whose every gate had in fact been measured.
+    closing = (
+        "In this run every gate had the evidence it needed, so each one below "
+        "is a pass or a fail on what was actually measured."
+        if not unestablished else
+        f"{len(unestablished)} of them could not be established in this run: "
+        + ", ".join(f"{r['name']}" for r in unestablished) + "."
+    )
     lines = [
         "## Qualification gates",
         "",
         "Defined from the criteria this evaluation was set up against, before any "
         "measurement existed, then applied mechanically to the raw result so the "
-        "verdict is not a matter of impression. A gate whose evidence could not be "
-        "gathered reads *not established*, which is deliberately neither a pass nor "
-        "a failure: several of them here simply need an authenticated run.",
+        "verdict is not a matter of impression. Three outcomes rather than two: a "
+        "gate whose evidence could not be gathered reads *not established*, which "
+        "is deliberately neither a pass nor a failure. " + closing,
         "",
         "| gate | principle | result | detail |",
         "|---|---|---|---|",
     ]
-    for gate in gates:
-        row = gate.to_dict() if hasattr(gate, "to_dict") else gate
+    for row in rows:
         required = "" if row.get("required", True) else " _(advisory)_"
         lines.append(
             f"| {row['name']}{required} | {row['principle']} | "
@@ -1075,12 +1128,15 @@ def _recommendation_section(
                 "",
             ]
         lines += [
-            "The remaining items are about shape rather than correctness. The "
-            "paths a video backend exists for — provider-chosen frames, OCR and "
-            "transcripts — needed an authenticated account this run did not "
-            "have, so they are untested rather than found wanting. And the "
-            "interface currently answers in prose where a consumer storing "
-            "durable evidence needs fields.",
+            "The backend paths were exercised, not skipped: jobs were submitted "
+            "and polled to completion, and `analyze`, `transcribe` and "
+            "`extract_frames` all returned artifacts that were scored. What they "
+            "showed is a mix. Transcript text came back exact on the controlled "
+            "fixture — not one word wrong — while its timing is quantised to "
+            "whole seconds and lands materially coarser than the frame path. "
+            "Provider-selected frames carried timestamps that do not match the "
+            "content they show. And the interface answers in prose where a "
+            "consumer storing durable evidence needs fields.",
             "",
             "What would unblock an integration, in order:",
             "",

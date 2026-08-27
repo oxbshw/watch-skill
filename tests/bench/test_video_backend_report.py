@@ -290,7 +290,11 @@ def test_no_transcript_number_is_printed_when_no_transcript_was_obtained() -> No
     verdict, reasons = decide(gates)
     out = render(result, verdict=verdict, verdict_reasons=reasons, gates=gates)
 
-    assert "**Not measured.**" in out
+    assert "**Not measured in this run.**" in out
+    # The fallback must not assert *why* the job was missing. An earlier
+    # version blamed a missing account, which stayed in the report long after
+    # the run was authenticated and every backend path had been exercised.
+    assert "authenticated account" not in out
     assert "WER" not in out.split("## Failure semantics")[0].split("## Transcript")[1]
     assert "## What was not measured" in out
     assert "transcript accuracy" in out
@@ -462,6 +466,57 @@ def test_no_reliability_section_when_nothing_stalled() -> None:
     verdict, reasons = decide(gates)
     out = render(result, verdict=verdict, verdict_reasons=reasons, gates=gates)
     assert "## Reliability" not in out
+
+
+def test_a_completed_run_never_claims_the_backend_was_unreachable() -> None:
+    """The stale-text bug this test exists to prevent.
+
+    The report carried sentences from an early unauthenticated pass — that no
+    job reached the backend, that provider frames and transcripts went
+    untested for want of an account — and kept printing them after the run
+    that measured all of it. The generator read hardcoded strings instead of
+    the result, so re-rendering could not fix it.
+    """
+    result = _healthy()
+    result.pipeline = {"completed": True, "stages": [
+        {"stage": "submit", "status": "ok"},
+        {"stage": "extract_frames", "status": "ok"},
+        {"stage": "transcribe", "status": "ok"},
+    ]}
+    result.head_to_head = {"usage": {
+        "this_run_billed_minutes": 0.0, "lifetime_billed_minutes": 21.0,
+        "lifetime_submitted_minutes": 19.18, "rounding_overhead_minutes": 1.82,
+        "jobs_in_registry": 4, "remaining_after": 579.0,
+    }}
+    gates = _gates_for(result)
+    verdict, reasons = decide(gates)
+    out = render(result, verdict=verdict, verdict_reasons=reasons, gates=gates)
+
+    for stale in (
+        "no job reached the backend",
+        "needed an authenticated account",
+        "needs an authenticated session",
+        "nothing was billed",
+        "0 processing minutes",
+    ):
+        assert stale not in out, f"stale pre-auth text survived: {stale!r}"
+
+    # And the cost figures must be the provider's own, not a hardcoded zero.
+    assert "21 provider minutes" in out
+    assert "19.18 minutes of source" in out
+    assert "579" in out
+
+
+def test_the_gates_intro_reflects_whether_gates_were_established() -> None:
+    """It hardcoded "several of them need an authenticated run" regardless."""
+    result = _healthy()
+    gates = _gates_for(result)
+    verdict, reasons = decide(gates)
+    out = render(result, verdict=verdict, verdict_reasons=reasons, gates=gates)
+    established = [g for g in gates if g.result.value != "not_established"]
+    if len(established) == len(gates):
+        assert "every gate had the evidence it needed" in out
+        assert "need an authenticated run" not in out
 
 
 def test_cost_columns_stay_separate_so_nothing_inferred_reads_as_measured() -> None:

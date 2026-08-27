@@ -995,7 +995,9 @@ def evidence_matrix(observations: dict[str, Any]) -> list[dict[str, str]]:
     """
     frames_ok = observations.get("frames_measured", False)
     pipeline_ok = observations.get("pipeline_completed", False)
-    unverified = "not measured — needs an authenticated session"
+    # Only reached when the pipeline did not complete in *this* run. The
+    # published evaluation did complete it, so none of these fire there.
+    unverified = "not measured in this run — no completed backend job"
 
     rows = [
         ("source identity", "derivable without ambiguity",
@@ -1254,11 +1256,13 @@ def run_benchmark(
             "The exact-frame path runs ffmpeg locally once per requested timestamp."
         ),
     }
+    # Filled in below from the provider's own quota readings once the
+    # head-to-head stage has taken them. It was previously hardcoded to zero
+    # with the note "no job reached the backend", which was true of an early
+    # unauthenticated run and false of every run since — the report kept
+    # printing it regardless of what the provider had actually billed.
     result.usage = {
-        "measured": {
-            "processing_minutes_consumed": 0,
-            "why": "no job reached the backend; nothing was billed",
-        },
+        "measured": None,
         "provider_reported": None,
         "documented_pricing": None,
         "inferred": None,
@@ -1334,8 +1338,26 @@ def run_benchmark(
 
     if quota_before is not None:
         after = adapter.quota()
-        result.head_to_head["usage"] = vb_comparison.reconcile_usage(
-            quota_before, after.detail
+        usage = vb_comparison.reconcile_usage(quota_before, after.detail)
+        result.head_to_head["usage"] = usage
+        # The cost table reads from here. Every figure is the provider's own —
+        # its quota readings and its own job registry — so "measured" means
+        # measured, and the three speculative columns stay empty unless
+        # something real fills them.
+        result.usage["measured"] = {
+            "provider_billed_minutes_this_run": usage.get("this_run_billed_minutes"),
+            "provider_billed_minutes_lifetime": usage.get("lifetime_billed_minutes"),
+            "source_minutes_submitted_lifetime": usage.get(
+                "lifetime_submitted_minutes"
+            ),
+            "per_job_rounding_minutes": usage.get("rounding_overhead_minutes"),
+            "jobs_in_provider_registry": usage.get("jobs_in_registry"),
+            "remaining_minutes": usage.get("remaining_after"),
+        }
+        result.usage["provider_reported"] = (
+            "quota endpoint: "
+            f"{usage.get('lifetime_billed_minutes')} minutes used, "
+            f"{usage.get('remaining_after')} remaining"
         )
 
     # --- baseline -----------------------------------------------------------

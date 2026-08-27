@@ -141,11 +141,23 @@ def test_the_speech_fixture_has_known_non_overlapping_cues() -> None:
 
 
 def test_verify_fixture_notices_a_manifest_that_has_drifted(tmp_path) -> None:
+    """A digest that no longer matches its media must fail the precondition.
+
+    Built against a copy in `tmp_path` rather than against the committed
+    fixture directory: the generated `.mp4` is deliberately not committed, so
+    on a fresh clone the real directory has a manifest and no media. An
+    earlier version of this test read the real directory and passed only on a
+    machine that had already run the generator — it failed on CI, which is a
+    fresh clone every time.
+    """
     fixture = load_manifest(FIXTURES)["fixtures"]["visual_events"]
-    tampered = {**fixture, "sha256": "0" * 64}
-    report = verify_fixture(FIXTURES, tampered)
+    media = tmp_path / fixture["file"]
+    media.write_bytes(b"not the media the manifest describes")
+
+    report = verify_fixture(tmp_path, {**fixture, "sha256": "0" * 64})
     assert report["present"] is True
     assert report["matches_manifest"] is False
+    assert report["sha256"] != report["expected_sha256"]
 
 
 def test_a_missing_fixture_is_reported_rather_than_assumed(tmp_path) -> None:

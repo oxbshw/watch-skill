@@ -49,29 +49,31 @@ refresh token at `~/.adversal/auth.txt`. The benchmark never reads that file
 and never prints it; sanitization runs at the moment a value is recorded, not
 as a pass over the finished file.
 
-Without a session, the backend pipeline cannot be reached. The benchmark
-still runs — see below — and reports every unreachable path by name rather
-than skipping it.
+**The published run was authenticated.** Sign-in was completed with the
+`authenticate` tool, and the committed results come from a session that
+reached the real backend: jobs were submitted and polled to completion,
+`analyze`, `transcribe` and `extract_frames` all returned artifacts, and
+provider quota was read before and after. Every path the benchmark covers
+produced a measurement.
 
-## What runs without an account, and why
+A fresh live run needs its own session — see [Running it live](#running-it-live).
+Re-rendering the committed results does not.
 
-This is the detail that made the run worth doing at all.
+## What the exact-frame path shows without a session
+
+Worth recording because it shaped the first pass, and because it is a finding
+in its own right.
 
 `process_video(timestamps=[...])` — the exact-frame extraction 0.1.4 added —
 is served by **ffmpeg on the local machine**, and in 0.1.4's code that
-extraction happens *before* `_get_access_token()` is called. So the frames
-are written, and only then does the tool return `AUTHENTICATION REQUIRED`.
+extraction happens *before* `_get_access_token()` is called. The frames are
+written to disk, and only then does the tool return `AUTHENTICATION REQUIRED`.
 
-That means timestamp precision, frame identity, ordering, repeatability and
-the whole argument-validation surface are measurable against the real 0.1.4
-code with no account. What is not measurable is everything the backend does:
-provider-chosen key frames, `frames.json`, OCR, transcripts, the analysis
-report, quota and real pipeline latency.
-
-It is also a finding in its own right. A call that reported failure left 52
-usable JPEGs on disk. A consumer trusting the status alone discards good
-evidence; one trusting the files alone ingests evidence from a call that
-said it failed. Watch Skill would have to reconcile those explicitly.
+So a call that reported failure left 52 usable JPEGs behind. A consumer
+trusting the status alone discards good evidence; one trusting the files alone
+ingests evidence from a call that said it failed. Watch Skill would have to
+reconcile those two explicitly, and the same shape shows up again in the
+long-HD stall documented in [RESULTS.md](RESULTS.md#reliability).
 
 ## Real footage
 
@@ -144,41 +146,60 @@ watch-skill bench video-backend adversal --from-raw benchmarks/video_backends/ad
 Re-render and diff: if the committed report and the raw data disagree, one of
 them is wrong.
 
-## Schemas that could not be verified
+## Artifact schemas, as observed
 
-`read_frames_json` and `read_transcript_json` in the adapter are written
-against the documentation's description — "every frame with its timestamp and
-OCR text" — not against a payload anyone has seen. They are tolerant, they
-keep every field they did not understand in `raw`, and they are the one place
-that may need correcting after an authenticated run. Nothing in RESULTS.md is
-derived from them.
+`read_frames_json` and `read_transcript_json` were written against the
+documentation's description before any payload had been seen, and have since
+been corrected against the live service. 0.1.4 returns:
 
-## Unblocking the rest
+| artifact | shape |
+|---|---|
+| `frames.json` | a JSON list of `{frame, timestamp, text}` — `timestamp` an `HH:MM:SS` clock string at whole-second resolution, `text` the OCR of that frame. An empty list is a valid answer and means the pipeline selected no frames |
+| `transcript.json` | a JSON list of `{start, end, text}`, both times `HH:MM:SS` at whole-second resolution |
 
-One manual step, and only one:
+The first version assumed numeric seconds and would have turned every cue into
+a cue with no time at all. Both readers stay tolerant of other shapes and keep
+unrecognised fields in `raw`, because one observed release is not a contract.
 
-> **Sign in to Adversal once.** Call the `authenticate` MCP tool from an
-> agent connected to `adversal-cli` (or run the server and invoke it), finish
-> the browser sign-in, and confirm `~/.adversal/auth.txt` exists.
+## Running it live
 
-Then re-run the command above with `--poll 12`. Nothing else changes: the
-fixtures, the probes, the scorer and the gates are the same, so the numbers
-will be directly comparable to the run already recorded here.
+Re-rendering the committed results needs nothing at all — see
+[Re-rendering without re-running](#re-rendering-without-re-running). A *fresh*
+run against the provider needs a session of your own:
+
+> **Sign in to Adversal once.** Call the `authenticate` MCP tool from an agent
+> connected to `adversal-cli`, finish the browser sign-in, and confirm
+> `~/.adversal/auth.txt` exists.
+
+Then run the command above with `--poll 30`, which lets submitted jobs finish
+so the backend paths are exercised. Nothing else changes: the fixtures, the
+probes, the scorer and the gates are identical, so the numbers come out
+directly comparable to the run recorded here.
 
 Signing in is a deliberate act with a real account and a real quota, which is
-why it is left to a person rather than automated.
+why it is left to a person rather than automated. The benchmark never reads
+`~/.adversal/auth.txt`, never prints it, and never commits it; sanitization
+runs at the moment a value is recorded rather than as a pass over the
+finished file.
 
 ## Cost
 
-Nothing was billed for the recorded run: no job reached the backend, so no
-processing minute was consumed. The failure probes are all rejected by
-argument validation before any upload. Rate limits were deliberately not
-provoked — burning quota to read an error message is not a measurement worth
-taking.
+Two different numbers, and they are easy to confuse.
 
-An authenticated run will consume real minutes. `check_remaining_quota`
-before submitting; the fixtures are 20 s and 15 s, so the cost is small, but
-it is not zero.
+**Re-rendering costs nothing.** `--from-raw` rebuilds the report from the
+committed JSON and makes zero provider calls.
+
+**A fresh live run consumes real minutes.** Obtaining the artifacts behind the
+committed results cost 21 provider minutes across 4 jobs, for 19.18 minutes of
+source — about 1.82 minutes of that is billing rounding up to a whole minute
+per job. Repeating a submission is free: the provider deduplicates on the MD5
+of the bytes, so the same file reuses its existing job, which is why the final
+recorded execution added nothing to the total.
+
+Call `check_remaining_quota` before submitting. Rate limits were deliberately
+not provoked — burning quota to read an error message is not a measurement
+worth taking — and the failure probes are all rejected by argument validation
+before any upload, so none of them cost anything.
 
 ## Related
 

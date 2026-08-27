@@ -390,13 +390,15 @@ def parse_time_value(value: Any) -> float | None:
 def read_frames_json(directory: Path) -> list[BackendFrame]:
     """Parse the ``frames.json`` that ``extract_frames`` extracts.
 
-    **The exact schema is not verified against the live service.** Producing
-    it needs a completed backend job, which needs an authenticated account;
-    this run did not have one. The reader is therefore written to be tolerant
-    of the shapes the documentation describes — "every frame with its
-    timestamp and OCR text" — and every field it did not understand is kept
-    verbatim in ``raw`` so nothing is silently dropped. When the authenticated
-    run happens, this function is the one place that may need correcting.
+    The schema has been observed against the live service. 0.1.4 returns a
+    JSON list of ``{frame, timestamp, text}``, where ``frame`` names a file in
+    the extracted ``frames/`` directory, ``timestamp`` is an ``HH:MM:SS``
+    clock string quantised to whole seconds, and ``text`` carries the OCR of
+    that frame. An empty list is a valid answer and means the pipeline chose
+    no frames for that video.
+
+    The reader stays tolerant of other shapes and keeps every field it did not
+    understand in ``raw``, because one observed release is not a contract.
     """
     manifest = directory / "frames.json"
     if not manifest.is_file():
@@ -444,12 +446,18 @@ def read_frames_json(directory: Path) -> list[BackendFrame]:
 
 
 def read_transcript_json(directory: Path) -> tuple[list[BackendCue], str | None]:
-    """Parse ``transcript.json``. Schema unverified — see `read_frames_json`.
+    """Parse ``transcript.json``, observed against the live service.
+
+    0.1.4 returns a JSON list of ``{start, end, text}``, with both times as
+    ``HH:MM:SS`` clock strings at whole-second resolution. The quantisation is
+    preserved rather than smoothed — interpolating would report precision the
+    provider never sent.
 
     The transcript's *origin* — embedded captions, provider ASR, something
-    else — is reported only if the payload states it. It is never inferred:
-    "probably Whisper" is not evidence, and Watch Skill records a transcript's
-    source as provenance, so a guess there would corrupt real evidence.
+    else — is reported only if the payload states it, and 0.1.4 does not. It
+    is never inferred: "probably Whisper" is not evidence, and Watch Skill
+    records a transcript's source as provenance, so a guess there would
+    corrupt real evidence.
     """
     path = directory / "transcript.json"
     if not path.is_file():

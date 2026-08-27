@@ -336,8 +336,30 @@ def test_request_ids_are_kept_because_the_vendor_needs_them() -> None:
 
 
 def test_the_environment_summary_is_a_class_of_machine_not_a_fingerprint() -> None:
+    """Family and release, never the exact build string or the host's name.
+
+    Asserted against `platform` rather than against a shape: an earlier
+    version counted dots, which encodes "Windows 10" and fails on any Linux
+    kernel release such as `6.11.0-1018-azure`. The property that actually
+    matters is that `platform.platform()` — the full build fingerprint the
+    other benches deliberately avoid — does not appear, and neither does
+    anything identifying this particular machine.
+    """
+    import os
+    import platform
+
     summary = environment_summary()
     assert set(summary) == {"os", "machine", "python"}
-    # "Windows 10", never "Windows-10-10.0.19045-SP0".
-    assert summary["os"].count(".") == 0
+    assert summary["os"] == f"{platform.system()} {platform.release()}"
+    assert summary["os"] != platform.platform()
+    assert platform.platform() not in summary["os"]
+
+    for identifying in (
+        platform.node(),
+        os.environ.get("COMPUTERNAME") or "",
+        os.environ.get("USERNAME") or os.environ.get("USER") or "",
+    ):
+        if len(identifying) > 2:
+            assert identifying not in " ".join(summary.values())
+
     assert build_placeholders(), "there is always at least the home directory to mask"
