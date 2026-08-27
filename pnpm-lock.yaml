@@ -50,6 +50,9 @@ importers:
       '@watchskill/dsh-tools':
         specifier: workspace:*
         version: link:packages/watch/tools
+      '@watchskill/dsh-trajectory':
+        specifier: workspace:*
+        version: link:packages/watch/trajectory
       lightningcss:
         specifier: ^1.32.0
         version: 1.32.0
@@ -80,12 +83,18 @@ importers:
       '@watchskill/dsh-tools':
         specifier: workspace:^
         version: link:../tools
+      '@watchskill/dsh-trajectory':
+        specifier: workspace:^
+        version: link:../trajectory
 
   packages/watch/client-evidence:
     dependencies:
       '@watchskill/dsh-contracts':
         specifier: workspace:^
         version: link:../contracts
+      '@watchskill/dsh-trajectory':
+        specifier: workspace:^
+        version: link:../trajectory
     devDependencies:
       '@deepseek-ai/cordis':
         specifier: 'catalog:'
@@ -151,6 +160,12 @@ importers:
       '@deepseek-ai/schemastery':
         specifier: ^3.18.1
         version: 3.18.1
+
+  packages/watch/trajectory:
+    dependencies:
+      '@watchskill/dsh-contracts':
+        specifier: workspace:^
+        version: link:../contracts
 
 packages:
 

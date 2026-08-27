@@ -1,0 +1,145 @@
+/*
+ * Evidence Inspector styling.
+ *
+ * Functionality first — Phase 3 owns the visual design. What is deliberate
+ * here is the same rule as the verdict card: the success tone is reachable
+ * only from `[data-tone=success]`, which only a VERIFIED verdict produces, and
+ * every state is legible without colour.
+ */
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px;
+  color: var(--dsw-alias-label-primary);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.empty,
+.error,
+.fix {
+  margin: 0;
+  color: var(--dsw-alias-label-tertiary);
+}
+
+.error {
+  color: var(--dsw-alias-state-error-primary);
+}
+
+.head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--dsw-alias-border-l1);
+}
+
+/* Identifiers are latin and read left-to-right in every locale. */
+.id,
+.facts code,
+.receipt code,
+.trace code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+  unicode-bidi: isolate;
+  direction: ltr;
+  word-break: break-all;
+}
+
+.link {
+  flex: none;
+  padding: 2px 8px;
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: 4px;
+  background: var(--dsw-alias-bg-layer-2);
+  color: var(--dsw-alias-label-secondary);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.link:hover {
+  background: var(--dsw-alias-interactive-bg-hover);
+}
+
+.facts {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: minmax(7rem, 30%) 1fr;
+  gap: 10px;
+  align-items: baseline;
+}
+
+.label {
+  color: var(--dsw-alias-label-tertiary);
+}
+
+.value {
+  margin: 0;
+  unicode-bidi: isolate;
+}
+
+.warn {
+  color: var(--dsw-alias-state-warn-label);
+}
+
+.artifacts {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Quoted source text keeps its own direction, not the panel's. */
+.quote {
+  margin: 0;
+  padding: 8px 10px;
+  border-inline-start: 2px solid var(--dsw-alias-border-l2);
+  background: var(--dsw-alias-bg-layer-2);
+  color: var(--dsw-alias-label-secondary);
+  unicode-bidi: isolate;
+  white-space: pre-wrap;
+}
+
+.foot {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-top: 8px;
+  border-top: 1px solid var(--dsw-alias-border-l1);
+  font-size: 12px;
+}
+
+.unverified {
+  margin: 0;
+  color: var(--dsw-alias-state-warn-label);
+}
+
+.verdict {
+  margin: 0;
+}
+
+.verdict[data-tone='success'] {
+  color: var(--dsw-alias-state-success-primary);
+}
+
+.verdict[data-tone='error'] {
+  color: var(--dsw-alias-state-error-primary);
+}
+
+.verdict[data-tone='caution'] {
+  color: var(--dsw-alias-state-warn-label);
+}
+
+.receipt,
+.trace {
+  margin: 0;
+  color: var(--dsw-alias-label-tertiary);
+}

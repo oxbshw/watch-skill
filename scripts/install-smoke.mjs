@@ -44,6 +44,7 @@ const PACKAGES = [
   'packages/watch/tools',
   'packages/watch/client-evidence',
   'packages/watch/memory',
+  'packages/watch/trajectory',
   'packages/watch/bundle',
 ]
 
@@ -256,10 +257,41 @@ function main() {
     )
   }
 
+  // The other half of "additive": removing it must leave the profile as it
+  // was. A bundle that installs cleanly and cannot be removed cleanly is not
+  // additive — it is a one-way change someone discovers later.
+  process.stdout.write('removing the bundle\n')
+  const removal = run(
+    process.execPath,
+    [cli.entry, 'plugin', '--profile', PROFILE, 'remove', '@watchskill/dsh-bundle'],
+    { env, cwd: ROOT },
+  )
+  if (removal.status !== 0) {
+    fail('`dsh plugin remove` failed', removal.stderr || removal.stdout)
+  }
+
+  const afterRemoval = run(
+    process.execPath,
+    [cli.entry, '--profile', PROFILE, '--dump-config'],
+    { env, cwd: ROOT },
+  )
+  if (afterRemoval.status !== 0) {
+    fail('the profile no longer composes after Watch was removed', afterRemoval.stderr)
+  }
+  const lingering = EXPECTED_ROWS.filter(row => afterRemoval.stdout.includes(row))
+  if (lingering.length > 0) {
+    fail(`removing the bundle left rows behind: ${lingering.join(', ')}`)
+  }
+  const lostOnRemoval = upstreamRows.filter(row => !afterRemoval.stdout.includes(row))
+  if (lostOnRemoval.length > 0) {
+    fail(`removing Watch took upstream rows with it: ${lostOnRemoval.join(', ')}`)
+  }
+
   process.stdout.write(
     `\nPASS  the Watch bundle composes into stock DSH ${cli.version}\n`
     + `      Watch rows present:    ${EXPECTED_ROWS.join(', ')}\n`
-    + `      upstream rows intact:  ${upstreamRows.join(', ')}\n`,
+    + `      upstream rows intact:  ${upstreamRows.join(', ')}\n`
+    + '      uninstall:             clean, upstream untouched\n',
   )
 
   if (keep) {

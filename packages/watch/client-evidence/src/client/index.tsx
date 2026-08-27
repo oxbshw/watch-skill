@@ -22,6 +22,17 @@ import { SourceAnswerRow } from './SourceAnswerRow.tsx'
 
 export { VerdictRow } from './VerdictRow.tsx'
 export { SourceAnswerRow } from './SourceAnswerRow.tsx'
+export { EvidenceInspector } from './EvidenceInspector.tsx'
+export type { EvidenceInspectorProps, InspectableEvidence, InspectorState } from './EvidenceInspector.tsx'
+// Re-exported from the trajectory package, which owns them: they have no DOM
+// dependency, and the browser bundle inlines them rather than duplicating them.
+export {
+  WATCH_TARGET,
+  WatchSelectionStore,
+  WatchViewBuilder,
+  registerWatchTrajectory,
+  watchTrajectoryDefinition,
+} from '@watchskill/dsh-trajectory'
 
 /** Services this half needs before it can register anything. */
 export const inject = ['slots']

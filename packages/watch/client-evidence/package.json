@@ -20,7 +20,8 @@
   "dsh": {
     "client": {
       "inject": [
-        "@deepseek-ai/dsh-client-ui-tool"
+        "@deepseek-ai/dsh-client-ui-tool",
+        "@deepseek-ai/dsh-client-runtime"
       ],
       "platform": "web"
     }
@@ -46,6 +47,7 @@
     "react": "^18.2.0"
   },
   "dependencies": {
-    "@watchskill/dsh-contracts": "workspace:^"
+    "@watchskill/dsh-contracts": "workspace:^",
+    "@watchskill/dsh-trajectory": "workspace:^"
   }
 }

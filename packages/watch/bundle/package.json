@@ -17,6 +17,7 @@
     "@watchskill/dsh-core-bridge": "workspace:^",
     "@watchskill/dsh-tools": "workspace:^",
     "@watchskill/dsh-client-evidence": "workspace:^",
-    "@watchskill/dsh-memory": "workspace:^"
+    "@watchskill/dsh-memory": "workspace:^",
+    "@watchskill/dsh-trajectory": "workspace:^"
   }
 }

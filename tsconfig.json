@@ -12,6 +12,9 @@
     },
     {
       "path": "packages/watch/memory"
+    },
+    {
+      "path": "packages/watch/trajectory"
     }
   ]
 }
