@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <!--
+      The CSP is set as a response header by the main process as well. Repeating
+      it here is deliberate: a header can be missed on a file:// load, and a
+      renderer that ends up with no policy at all is the one case where getting
+      this wrong costs everything.
+    -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; font-src 'self'; connect-src 'self' http://127.0.0.1:* ws://127.0.0.1:*; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
+    />
+    <title>Watch Workspace</title>
+  </head>
+  <body>
+    <div id="watch-root"></div>
+    <script type="module" src="./renderer.js"></script>
+  </body>
+</html>

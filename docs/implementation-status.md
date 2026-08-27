@@ -9,8 +9,8 @@ Baseline: DeepSeek Harness `0.1.1-rc.2 @ b150a551b8d465e31e418e1b2eaf5e79bbb7d28
 
 | Status | Count |
 |---|---:|
-| ✅ tested | 32 |
-| ⬜ not started | 3 |
+| ✅ tested | 33 |
+| ⬜ not started | 2 |
 | **total** | **35** |
 
 `implemented` means real behavior exists, not that a package does.
@@ -238,7 +238,19 @@ Baseline: DeepSeek Harness `0.1.1-rc.2 @ b150a551b8d465e31e418e1b2eaf5e79bbb7d28
 
 | Subsystem | Status | Owner | Tests |
 |---|---|---|---|
-| `desktop.shell` — Electron shell around the same Workspace packages | ⬜ not started | watch-workspace | — |
+| `desktop.shell` — Electron shell around the same Workspace packages | ✅ tested | watch-workspace | 4 |
+
+<details><summary>Known limitations</summary>
+
+**`desktop.shell`**
+
+- MACHINE TESTED on win32 (Windows 10 Pro 19045): a real Electron launch, via `node scripts/desktop-smoke.mjs`. Not run on macOS or Linux.
+- At-rest encryption is proven by writing a sealed record and reading the bytes back outside the application. The OS-backed key store is exercised through an injected stand-in; safeStorage itself is NOT MACHINE TESTED, and the fallback labels itself as not equivalent to OS protection.
+- PRODUCTION SIGNING NOT PROVEN. The update path verifies Ed25519 signatures, package digests, downgrades and migration preflight, against development keys only.
+- The renderer mounts the shipped Workspace packages; the smoke test asserts the bridge and the isolation rather than a fully composed shell.
+- The launch smoke is deliberately outside `npm run check`: it needs a desktop session, and a gate that fails headless is a gate people disable.
+
+</details>
 
 ## Phase 6 — distribution
 

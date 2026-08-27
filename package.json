@@ -18,12 +18,13 @@
     "build": "node scripts/build.mjs",
     "test": "node --test --test-reporter spec \"tests/**/*.test.mjs\"",
     "smoke:install": "node scripts/install-smoke.mjs",
-    "check": "npm run inventory:check && npm run verify:parity && npm run verify:bundle && npm run status:check && npm run build && npm run verify:client && npm run sbom && npm run test",
+    "check": "npm run inventory:check && npm run verify:parity && npm run verify:bundle && npm run verify:desktop && npm run status:check && npm run build && npm run verify:client && npm run sbom && npm run test",
     "verify:bundle": "node scripts/verify-bundle.mjs",
     "verify:client": "node scripts/verify-client-bundles.mjs",
     "sbom": "node scripts/gen-sbom.mjs",
     "status": "node scripts/gen-status.mjs",
-    "status:check": "node scripts/gen-status.mjs --check"
+    "status:check": "node scripts/gen-status.mjs --check",
+    "verify:desktop": "node scripts/verify-desktop-security.mjs"
   },
   "devDependencies": {
     "@deepseek-ai/cordis": "catalog:",
@@ -48,6 +49,12 @@
     "@watchskill/dsh-library": "workspace:*",
     "@watchskill/dsh-wiki": "workspace:*",
     "@watchskill/dsh-client-evidence": "workspace:*",
-    "@watchskill/dsh-adapters": "workspace:*"
+    "@watchskill/dsh-adapters": "workspace:*",
+    "@watchskill/watch-desktop": "workspace:*"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "electron"
+    ]
   }
 }

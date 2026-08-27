@@ -639,12 +639,32 @@
       "phase": "Phase 5 — desktop",
       "classification": "WATCH_NEW",
       "owner": "watch-workspace",
-      "status": "not_started",
-      "source_paths": [],
-      "tests": [],
-      "acceptance_journey": "Clean install, supervised Host and Core, deep link, safe shutdown",
-      "known_limitations": [],
-      "commit": null
+      "status": "tested",
+      "source_paths": [
+        "apps/desktop/src/security.ts",
+        "apps/desktop/src/supervisor.ts",
+        "apps/desktop/src/startup.ts",
+        "apps/desktop/src/vault.ts",
+        "apps/desktop/src/updates.ts",
+        "apps/desktop/src/capabilities.ts",
+        "apps/desktop/src/main.ts",
+        "apps/desktop/preload.cjs"
+      ],
+      "tests": [
+        "tests/desktop.test.mjs",
+        "tests/fixtures/supervised-child.mjs",
+        "scripts/verify-desktop-security.mjs",
+        "scripts/desktop-smoke.mjs"
+      ],
+      "acceptance_journey": "Electron 33.4.11 launched on win32: sandbox and context isolation held, the preload exposed exactly nine operations, window.require/process/module were all absent, and the renderer reached ready",
+      "known_limitations": [
+        "MACHINE TESTED on win32 (Windows 10 Pro 19045): a real Electron launch, via `node scripts/desktop-smoke.mjs`. Not run on macOS or Linux.",
+        "At-rest encryption is proven by writing a sealed record and reading the bytes back outside the application. The OS-backed key store is exercised through an injected stand-in; safeStorage itself is NOT MACHINE TESTED, and the fallback labels itself as not equivalent to OS protection.",
+        "PRODUCTION SIGNING NOT PROVEN. The update path verifies Ed25519 signatures, package digests, downgrades and migration preflight, against development keys only.",
+        "The renderer mounts the shipped Workspace packages; the smoke test asserts the bridge and the isolation rather than a fully composed shell.",
+        "The launch smoke is deliberately outside `npm run check`: it needs a desktop session, and a gate that fails headless is a gate people disable."
+      ],
+      "commit": "pending"
     },
     {
       "id": "ecosystem.sdk",
