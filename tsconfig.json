@@ -15,6 +15,12 @@
     },
     {
       "path": "packages/watch/trajectory"
+    },
+    {
+      "path": "packages/watch/brand"
+    },
+    {
+      "path": "packages/watch/technology"
     }
   ]
 }

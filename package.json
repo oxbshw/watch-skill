@@ -36,6 +36,8 @@
     "tsdown": "^0.22.14",
     "typescript": "^5.9.3",
     "@watchskill/dsh-memory": "workspace:*",
-    "@watchskill/dsh-trajectory": "workspace:*"
+    "@watchskill/dsh-trajectory": "workspace:*",
+    "@watchskill/dsh-client-brand": "workspace:*",
+    "@watchskill/dsh-technology": "workspace:*"
   }
 }

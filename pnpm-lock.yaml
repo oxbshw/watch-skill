@@ -38,6 +38,9 @@ importers:
       '@types/react':
         specifier: ~18.3.31
         version: 18.3.31
+      '@watchskill/dsh-client-brand':
+        specifier: workspace:*
+        version: link:packages/watch/brand
       '@watchskill/dsh-contracts':
         specifier: workspace:*
         version: link:packages/watch/contracts
@@ -47,6 +50,9 @@ importers:
       '@watchskill/dsh-memory':
         specifier: workspace:*
         version: link:packages/watch/memory
+      '@watchskill/dsh-technology':
+        specifier: workspace:*
+        version: link:packages/watch/technology
       '@watchskill/dsh-tools':
         specifier: workspace:*
         version: link:packages/watch/tools
@@ -68,6 +74,21 @@ importers:
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
+
+  packages/watch/brand:
+    devDependencies:
+      '@deepseek-ai/cordis':
+        specifier: 'catalog:'
+        version: 4.0.1
+      '@deepseek-ai/dsh-client-ui-slots':
+        specifier: 'catalog:'
+        version: 0.1.1-rc.2(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.1-rc.2(@deepseek-ai/cordis@4.0.1))
+      '@types/react':
+        specifier: ~18.3.1
+        version: 18.3.31
+      react:
+        specifier: ^18.2.0
+        version: 18.3.1
 
   packages/watch/bundle:
     dependencies:
@@ -128,6 +149,15 @@ importers:
         version: 3.18.1
 
   packages/watch/memory:
+    devDependencies:
+      '@deepseek-ai/cordis':
+        specifier: 'catalog:'
+        version: 4.0.1
+      '@deepseek-ai/schemastery':
+        specifier: ^3.18.1
+        version: 3.18.1
+
+  packages/watch/technology:
     devDependencies:
       '@deepseek-ai/cordis':
         specifier: 'catalog:'

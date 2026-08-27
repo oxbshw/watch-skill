@@ -1,0 +1,92 @@
+/*
+ * The Watch palette, as semantic tokens over DSH's theme.
+ *
+ * Layered on top of `--dsw-*` rather than replacing it: DSH owns light/dark
+ * switching, contrast and the surfaces every inherited panel already uses, and
+ * Watch adds only what the product's own vocabulary needs.
+ *
+ * Two rules are enforced here rather than in review.
+ *
+ * `--watch-tone-success` is defined once and referenced only by VERIFIED. No
+ * other status in the product can reach it, because no other status maps to
+ * the success tone in identity.ts.
+ *
+ * Feature packages use `--watch-tone-*` and never a hex value. A colour spelled
+ * out in a panel is a colour that will be spelled out slightly differently in
+ * the next one, and a theme change then misses it.
+ */
+
+:root {
+  /* Watch Amber: brand, focus, active observation. The product's own colour,
+     used where something is being watched right now — never for success. */
+  --watch-amber: #d99026;
+  --watch-amber-dim: #8a5d17;
+  --watch-amber-wash: rgba(217, 144, 38, 0.12);
+
+  /* Graphite and ink surfaces, sitting under DSH's own layers. */
+  --watch-graphite: #16181c;
+  --watch-ink: #0d0e11;
+
+  /* Status tones. Each maps to exactly one meaning. */
+  --watch-tone-success: var(--dsw-alias-state-success-primary);
+  --watch-tone-error: var(--dsw-alias-state-error-primary);
+  --watch-tone-caution: var(--watch-amber);
+  --watch-tone-info: var(--dsw-alias-label-primary-bluish);
+  --watch-tone-active: var(--watch-amber);
+  --watch-tone-neutral: var(--dsw-alias-label-tertiary);
+
+  /* Matching washes, for a badge background that keeps its label readable. */
+  --watch-wash-success: var(--dsw-alias-state-success-secondary);
+  --watch-wash-error: var(--dsw-alias-state-error-secondary);
+  --watch-wash-caution: var(--watch-amber-wash);
+  --watch-wash-info: var(--dsw-alias-bg-layer-2);
+  --watch-wash-active: var(--watch-amber-wash);
+  --watch-wash-neutral: var(--dsw-alias-bg-layer-2);
+
+  /* The observation accent: a left rule on anything currently being watched. */
+  --watch-observing-rule: 3px solid var(--watch-amber);
+}
+
+/* Light themes need a darker amber to stay legible on pale surfaces. DSH
+   stamps its own theme attribute; Watch follows it rather than sniffing. */
+:root[data-dsw-theme='light'] {
+  --watch-amber: #a8690f;
+  --watch-amber-wash: rgba(168, 105, 15, 0.1);
+}
+
+/*
+ * Every status carries a non-colour signal too.
+ *
+ * A verdict distinguished only by hue disappears on a monochrome display, in
+ * high contrast, and for a colour-blind reader — and this is the one place in
+ * the product where being unable to tell two states apart is unacceptable.
+ */
+[data-watch-tone] {
+  color: var(--watch-tone-neutral);
+}
+
+[data-watch-tone='success'] { color: var(--watch-tone-success); }
+[data-watch-tone='error'] { color: var(--watch-tone-error); }
+[data-watch-tone='caution'] { color: var(--watch-tone-caution); }
+[data-watch-tone='info'] { color: var(--watch-tone-info); }
+[data-watch-tone='active'] { color: var(--watch-tone-active); }
+
+/* High contrast: let the platform take over rather than fighting it. */
+@media (prefers-contrast: more) {
+  :root {
+    --watch-amber: CanvasText;
+    --watch-amber-wash: Canvas;
+  }
+  [data-watch-tone] {
+    outline: 1px solid currentColor;
+    outline-offset: 1px;
+  }
+}
+
+/* Reduced motion: the observation pulse is decoration, and decoration that
+   moves is the first thing to drop. */
+@media (prefers-reduced-motion: reduce) {
+  [data-watch-observing] {
+    animation: none;
+  }
+}
