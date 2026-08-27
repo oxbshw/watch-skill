@@ -1,5 +1,5 @@
 {
-  "measuredAt": "2026-08-27T21:35:23.249Z",
+  "measuredAt": "2026-08-27T21:49:23.058Z",
   "machine": {
     "platform": "win32-x64",
     "cores": 4,
@@ -16,19 +16,19 @@
       "what": "Fold a 200-event session into the Watch projection",
       "budgetMs": 16,
       "iterations": 200,
-      "p50Ms": 0.371,
-      "p95Ms": 1.119,
-      "p99Ms": 1.505,
-      "maxMs": 2.01
+      "p50Ms": 0.372,
+      "p95Ms": 1.276,
+      "p99Ms": 1.621,
+      "maxMs": 1.787
     },
     {
       "id": "trajectory.projection.100k",
       "what": "Fold a 100,000-event session once",
       "budgetMs": 5000,
-      "p50Ms": 255.9,
-      "p95Ms": 255.9,
-      "p99Ms": 255.9,
-      "maxMs": 255.9,
+      "p50Ms": 264.1,
+      "p95Ms": 264.1,
+      "p99Ms": 264.1,
+      "maxMs": 264.1,
       "iterations": 1,
       "note": "50000 Watch records extracted"
     },
@@ -36,10 +36,10 @@
       "id": "trajectory.projection.100k.replay",
       "what": "Hash a 100,000-event projection, which is what replay determinism costs",
       "budgetMs": 2000,
-      "p50Ms": 679.9,
-      "p95Ms": 679.9,
-      "p99Ms": 679.9,
-      "maxMs": 679.9,
+      "p50Ms": 679.3,
+      "p95Ms": 679.3,
+      "p99Ms": 679.3,
+      "maxMs": 679.3,
       "iterations": 1
     },
     {
@@ -47,8 +47,8 @@
       "what": "Resolve a selection against a 100,000-event projection",
       "budgetMs": 16,
       "iterations": 200,
-      "p50Ms": 0.001,
-      "p95Ms": 0.001,
+      "p50Ms": 0,
+      "p95Ms": 0,
       "p99Ms": 0.001,
       "maxMs": 0.005
     },
@@ -57,37 +57,37 @@
       "what": "Serialize a selection to a deep link and restore it",
       "budgetMs": 4,
       "iterations": 200,
-      "p50Ms": 0.032,
+      "p50Ms": 0.027,
       "p95Ms": 0.056,
-      "p99Ms": 0.108,
-      "maxMs": 0.259
+      "p99Ms": 0.114,
+      "maxMs": 0.116
     },
     {
       "id": "timeline.build",
       "what": "Build the sensory timeline over a 200-event session",
       "budgetMs": 16,
       "iterations": 200,
-      "p50Ms": 0.111,
-      "p95Ms": 0.172,
-      "p99Ms": 0.309,
-      "maxMs": 0.69
+      "p50Ms": 0.187,
+      "p95Ms": 0.231,
+      "p99Ms": 0.401,
+      "maxMs": 0.642
     },
     {
       "id": "memory.compile",
       "what": "Compile a context packet from a 500-record ledger",
       "budgetMs": 50,
       "iterations": 50,
-      "p50Ms": 6.877,
-      "p95Ms": 7.832,
-      "p99Ms": 10.929,
-      "maxMs": 10.929
+      "p50Ms": 5.734,
+      "p95Ms": 9.552,
+      "p99Ms": 35.9,
+      "maxMs": 35.9
     },
     {
       "id": "memory.context.tokens",
       "what": "Tokens memory adds to one turn, against a 600-token budget",
       "budgetMs": null,
       "budgetTokens": 600,
-      "tokens": 103,
+      "tokens": 104,
       "items": 4,
       "droppedForBudget": 496
     },
@@ -96,20 +96,20 @@
       "what": "Resolve evidence freshness against a 5,000-source library",
       "budgetMs": 16,
       "iterations": 200,
-      "p50Ms": 0.203,
-      "p95Ms": 0.341,
-      "p99Ms": 0.702,
-      "maxMs": 0.737
+      "p50Ms": 0.156,
+      "p95Ms": 0.177,
+      "p99Ms": 0.217,
+      "maxMs": 0.224
     },
     {
       "id": "library.facets",
       "what": "Compute facets over 200 results in a 5,000-source library",
       "budgetMs": 32,
       "iterations": 50,
-      "p50Ms": 1.495,
-      "p95Ms": 7.142,
-      "p99Ms": 31.514,
-      "maxMs": 31.514
+      "p50Ms": 1.062,
+      "p95Ms": 2.202,
+      "p99Ms": 5.747,
+      "maxMs": 5.747
     },
     {
       "id": "live.bounded",
@@ -125,10 +125,10 @@
       "what": "Render the whole workspace shell, server-side",
       "budgetMs": 50,
       "iterations": 100,
-      "p50Ms": 0.844,
-      "p95Ms": 2.829,
-      "p99Ms": 5.526,
-      "maxMs": 5.526
+      "p50Ms": 0.865,
+      "p95Ms": 2.77,
+      "p99Ms": 7.364,
+      "maxMs": 7.364
     },
     {
       "id": "host.readiness",

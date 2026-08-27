@@ -166,7 +166,12 @@ async function main() {
     id: 'selection.resolve',
     what: 'Resolve a selection against a 100,000-event projection',
     budgetMs: 16,
-    ...measure(() => trajectory.resolveRecord(bigProjection.value, someRecord.recordId)),
+    // The whole selection, not just its id. Passing a bare string made both
+    // lookups miss and measured the null path, which is why this row read
+    // 0.001ms — a journey test caught the same mistake at its own call site.
+    ...measure(() => trajectory.resolveRecord(bigProjection.value, {
+      recordId: someRecord.recordId, evidenceId: null,
+    })),
   })
 
   const selection = trajectory.selectRecord(
