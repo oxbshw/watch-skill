@@ -186,5 +186,35 @@ reason text does not leak through it.
 
 ## Exit gates
 
-Recorded verbatim in the final report accompanying this document. Phase 2 is
-called closed only when every one of them actually passed.
+| Gate | Result |
+|---|---|
+| `npm run inventory:check` | pass — inventory matches the pinned baseline |
+| `npm run verify:parity` | pass — 40/40 DSH client products classified |
+| `npm run verify:bundle` | pass — 4 additive rows, no collision with 137 baseline rows |
+| `npm run build` (`tsc -b`, strict) | pass |
+| `npm run verify:client` | pass — 1 bundle matches the DSH loader contract |
+| `npm test` | pass — 187 / 187 |
+| live-engine integration | pass — 15 / 15 against `watch-skill bridge` |
+| `npm run smoke:install` | pass — installs **and** uninstalls cleanly on stock DSH `0.1.1-rc.2` |
+| `watch-skill` pytest | 1925 passed, 33 skipped, **1 failed**, exit code 1 |
+
+### The one red
+
+`tests/test_plugin_packaging.py::test_bundled_mcp_server_is_path_based_not_repo_bound`
+
+Pre-existing and unrelated to Phase 2. The repository's `.mcp.json` carries an
+uncommitted local edit to a `uv --directory <repo>` form for local
+development, and the test correctly refuses to let that ship. It was present
+before this work started and was deliberately not touched.
+
+Nothing in Phase 2 depends on it, and no Phase 2 gate is red.
+
+### Typecheck and lint
+
+`tsc -b` is the typecheck, under `strict` plus `exactOptionalPropertyTypes`,
+`noUncheckedIndexedAccess`, `noUnusedLocals` and `noUnusedParameters`.
+
+**No separate linter is configured in this repository yet.** Saying the lint
+gate passed would be untrue; there is no lint gate. Adding one is Phase 3
+groundwork, and it should be upstream's `oxlint` configuration so the two
+codebases agree on style rather than diverging.
