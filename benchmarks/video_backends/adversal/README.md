@@ -59,10 +59,13 @@ produced a measurement.
 A fresh live run needs its own session — see [Running it live](#running-it-live).
 Re-rendering the committed results does not.
 
-## What the exact-frame path shows without a session
+## Pre-auth diagnostic: exact-frame extraction behavior
 
-Worth recording because it shaped the first pass, and because it is a finding
-in its own right.
+This was observed during the earlier pre-auth diagnostic pass, before the
+session used for the published run existed. It is retained because it exposed
+a useful failure-semantic edge in 0.1.4, not because it describes the state of
+the benchmark — the published evaluation was authenticated and exercised the
+backend paths in full.
 
 `process_video(timestamps=[...])` — the exact-frame extraction 0.1.4 added —
 is served by **ffmpeg on the local machine**, and in 0.1.4's code that
