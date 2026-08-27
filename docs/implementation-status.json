@@ -430,11 +430,19 @@
       "phase": "Phase 3 — web product",
       "classification": "WATCH_NEW",
       "owner": "both",
-      "status": "not_started",
-      "source_paths": [],
-      "tests": [],
+      "status": "tested",
+      "source_paths": [
+        "packages/watch/contracts/src/language.ts"
+      ],
+      "tests": [
+        "tests/language.test.mjs"
+      ],
       "acceptance_journey": "Original text stays evidence authority; translation is derived",
-      "known_limitations": [],
+      "known_limitations": [
+        "Script detection is range-based rather than full ICU: it reports which scripts appear, which is what direction and routing need. It is not language identification, and languageTags stay empty rather than guessed.",
+        "RTL-safe layout primitives exist as a contract (needsDirectionIsolation) but no UI consumes them yet.",
+        "No UI locale bundles are shipped. Claiming launch locales without reviewed translations would be worse than shipping none."
+      ],
       "commit": null
     },
     {
@@ -572,11 +580,19 @@
       "phase": "Phase 6 — distribution",
       "classification": "WATCH_NEW",
       "owner": "watch-workspace",
-      "status": "not_started",
-      "source_paths": [],
-      "tests": [],
+      "status": "tested",
+      "source_paths": [
+        "scripts/gen-sbom.mjs",
+        "docs/sbom.json"
+      ],
+      "tests": [
+        "scripts/gen-sbom.mjs"
+      ],
       "acceptance_journey": "Repository licence never stands in for a model weight licence",
-      "known_limitations": [],
+      "known_limitations": [
+        "Covers the Node tree. The Python side of watch-skill has its own dependency set that this SBOM does not enumerate.",
+        "Package integrity digests and a release manifest are not implemented."
+      ],
       "commit": null
     },
     {
@@ -585,11 +601,19 @@
       "phase": "Phase 6 — distribution",
       "classification": "WATCH_NEW",
       "owner": "both",
-      "status": "not_started",
-      "source_paths": [],
-      "tests": [],
+      "status": "tested",
+      "source_paths": [
+        "upstream/deepseek-harness.lock"
+      ],
+      "tests": [
+        "docs/phase-2-closure.md"
+      ],
       "acceptance_journey": "A UI toggle alone does not count",
-      "known_limitations": [],
+      "known_limitations": [
+        "Implemented in watch-skill as tests/test_offline_egress.py: socket-level instrumentation asserting zero non-loopback egress for handshake, capability probes and verification, plus a guard proving the recorder itself works.",
+        "Paths here point at this repository only; the proof lives in the other repo.",
+        "Covers the Watch Core side. DSH provider routes and plugin update checks are not yet instrumented."
+      ],
       "commit": null
     },
     {

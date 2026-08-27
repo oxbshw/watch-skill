@@ -18,9 +18,12 @@
     "build": "node scripts/build.mjs",
     "test": "node --test --test-reporter spec \"tests/**/*.test.mjs\"",
     "smoke:install": "node scripts/install-smoke.mjs",
-    "check": "npm run inventory:check && npm run verify:parity && npm run verify:bundle && npm run build && npm run verify:client && npm run test",
+    "check": "npm run inventory:check && npm run verify:parity && npm run verify:bundle && npm run status:check && npm run build && npm run verify:client && npm run sbom && npm run test",
     "verify:bundle": "node scripts/verify-bundle.mjs",
-    "verify:client": "node scripts/verify-client-bundles.mjs"
+    "verify:client": "node scripts/verify-client-bundles.mjs",
+    "sbom": "node scripts/gen-sbom.mjs",
+    "status": "node scripts/gen-status.mjs",
+    "status:check": "node scripts/gen-status.mjs --check"
   },
   "devDependencies": {
     "@deepseek-ai/cordis": "catalog:",

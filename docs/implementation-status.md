@@ -9,10 +9,10 @@ Baseline: DeepSeek Harness `0.1.1-rc.2 @ b150a551b8d465e31e418e1b2eaf5e79bbb7d28
 
 | Status | Count |
 |---|---:|
-| ✅ tested | 17 |
+| ✅ tested | 20 |
 | 🟩 implemented | 1 |
 | 🟨 in progress | 3 |
-| ⬜ not started | 14 |
+| ⬜ not started | 11 |
 | **total** | **35** |
 
 `implemented` means real behavior exists, not that a package does.
@@ -128,7 +128,7 @@ Baseline: DeepSeek Harness `0.1.1-rc.2 @ b150a551b8d465e31e418e1b2eaf5e79bbb7d28
 | Subsystem | Status | Owner | Tests |
 |---|---|---|---|
 | `brand.package` — Watch brand and theme over DSH's token system | ✅ tested | watch-workspace | 1 |
-| `i18n.evidence` — Language-aware evidence contract | ⬜ not started | both | — |
+| `i18n.evidence` — Language-aware evidence contract | ✅ tested | both | 1 |
 | `memory.product-ui` — Memory surfaces: taste, timeline, wiki, decisions, lessons, failures | ⬜ not started | watch-workspace | — |
 | `ocr.engines` — OCR engine family with isolated workers | 🟨 in progress | both | 1 |
 | `providers.role-bindings` — Role bindings over DSH Models and Providers | ✅ tested | watch-workspace | 1 |
@@ -142,6 +142,12 @@ Baseline: DeepSeek Harness `0.1.1-rc.2 @ b150a551b8d465e31e418e1b2eaf5e79bbb7d28
 
 - Occupies DSH brand slots and defines the token layer. The full workspace shell composition is a separate item.
 - No browser test harness, so the React slot occupancy is not covered by a gate; the tone rules are.
+
+**`i18n.evidence`**
+
+- Script detection is range-based rather than full ICU: it reports which scripts appear, which is what direction and routing need. It is not language identification, and languageTags stay empty rather than guessed.
+- RTL-safe layout primitives exist as a contract (needsDirectionIsolation) but no UI consumes them yet.
+- No UI locale bundles are shipped. Claiming launch locales without reviewed translations would be worse than shipping none.
 
 **`ocr.engines`**
 
@@ -196,8 +202,23 @@ Baseline: DeepSeek Harness `0.1.1-rc.2 @ b150a551b8d465e31e418e1b2eaf5e79bbb7d28
 | Subsystem | Status | Owner | Tests |
 |---|---|---|---|
 | `ecosystem.sdk` — Third-party Watch capability developer path | ⬜ not started | watch-workspace | — |
-| `security.offline-proof` — Socket-level proof that offline_only means zero non-loopback egress | ⬜ not started | both | — |
-| `supply-chain.metadata` — SBOM, licences, notices and model provenance gates | ⬜ not started | watch-workspace | — |
+| `security.offline-proof` — Socket-level proof that offline_only means zero non-loopback egress | ✅ tested | both | 1 |
+| `supply-chain.metadata` — SBOM, licences, notices and model provenance gates | ✅ tested | watch-workspace | 1 |
+
+<details><summary>Known limitations</summary>
+
+**`security.offline-proof`**
+
+- Implemented in watch-skill as tests/test_offline_egress.py: socket-level instrumentation asserting zero non-loopback egress for handshake, capability probes and verification, plus a guard proving the recorder itself works.
+- Paths here point at this repository only; the proof lives in the other repo.
+- Covers the Watch Core side. DSH provider routes and plugin update checks are not yet instrumented.
+
+**`supply-chain.metadata`**
+
+- Covers the Node tree. The Python side of watch-skill has its own dependency set that this SBOM does not enumerate.
+- Package integrity digests and a release manifest are not implemented.
+
+</details>
 
 ## Phase 7 — team
 

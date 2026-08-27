@@ -387,3 +387,4 @@ export function negotiateProtocol(peerMin: number, peerMax: number): number | nu
 }
 export * from './presentation.js'
 export * from './digests.js'
+export * from './language.js'
