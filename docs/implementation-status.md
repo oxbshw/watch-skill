@@ -9,10 +9,10 @@ Baseline: DeepSeek Harness `0.1.1-rc.2 @ b150a551b8d465e31e418e1b2eaf5e79bbb7d28
 
 | Status | Count |
 |---|---:|
-| ✅ tested | 22 |
+| ✅ tested | 24 |
 | 🟩 implemented | 1 |
 | 🟨 in progress | 3 |
-| ⬜ not started | 9 |
+| ⬜ not started | 7 |
 | **total** | **35** |
 
 `implemented` means real behavior exists, not that a package does.
@@ -133,8 +133,8 @@ Baseline: DeepSeek Harness `0.1.1-rc.2 @ b150a551b8d465e31e418e1b2eaf5e79bbb7d28
 | `ocr.engines` — OCR engine family with isolated workers | 🟨 in progress | both | 1 |
 | `providers.role-bindings` — Role bindings over DSH Models and Providers | ✅ tested | watch-workspace | 1 |
 | `technology.center` — Technology descriptors and capability lifecycle | ✅ tested | watch-workspace | 1 |
-| `workspace.composer` — Composer extensions: sources, scope, observe, remember, act, verify, budget, privacy | ⬜ not started | watch-workspace | — |
-| `workspace.modes` — Agent / Watch / Live / Memory / Library / Compare / Trajectory modes | ⬜ not started | watch-workspace | — |
+| `workspace.composer` — Composer extensions: sources, scope, observe, remember, act, verify, budget, privacy | ✅ tested | watch-workspace | 1 |
+| `workspace.modes` — Agent / Watch / Live / Memory / Library / Compare / Trajectory modes | ✅ tested | watch-workspace | 1 |
 
 <details><summary>Known limitations</summary>
 
@@ -164,6 +164,15 @@ Baseline: DeepSeek Harness `0.1.1-rc.2 @ b150a551b8d465e31e418e1b2eaf5e79bbb7d28
 **`technology.center`**
 
 - Descriptor, lifecycle and health contracts are implemented. The Settings surface that renders them is not built.
+
+**`workspace.composer`**
+
+- The eight sections are contract and validation. The progressive-disclosure interaction renders as a summary plus visible refusals rather than eight expandable editors.
+
+**`workspace.modes`**
+
+- The shell composes the modes and renders from props; each mode body is supplied by its own package (Live, Library, Memory, Compare).
+- Rendering is gated through react-dom/server rather than a real browser, so markup, roles and accessible names are asserted — not pixels or focus order.
 
 </details>
 

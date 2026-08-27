@@ -64,6 +64,13 @@
       "license": "MIT",
       "path": "packages/watch/trajectory",
       "kind": "first_party"
+    },
+    {
+      "name": "@watchskill/dsh-workspace",
+      "version": "0.1.0-preview.0",
+      "license": "MIT",
+      "path": "packages/watch/workspace",
+      "kind": "first_party"
     }
   ],
   "thirdParty": [
@@ -1223,7 +1230,7 @@
     }
   ],
   "counts": {
-    "firstParty": 9,
+    "firstParty": 10,
     "thirdParty": 160,
     "modelWeights": 4,
     "distributableWeights": 2

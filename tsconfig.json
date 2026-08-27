@@ -21,6 +21,9 @@
     },
     {
       "path": "packages/watch/technology"
+    },
+    {
+      "path": "packages/watch/workspace"
     }
   ]
 }

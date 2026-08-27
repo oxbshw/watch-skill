@@ -1,7 +1,7 @@
 {
   "name": "@watchskill/watch-workspace",
   "version": "0.1.0-preview.0",
-  "description": "Watch Workspace — an evidence-native agent distribution built on DeepSeek Harness",
+  "description": "Watch Workspace \u2014 an evidence-native agent distribution built on DeepSeek Harness",
   "private": true,
   "type": "module",
   "license": "MIT",
@@ -41,6 +41,7 @@
     "@watchskill/dsh-memory": "workspace:*",
     "@watchskill/dsh-trajectory": "workspace:*",
     "@watchskill/dsh-client-brand": "workspace:*",
-    "@watchskill/dsh-technology": "workspace:*"
+    "@watchskill/dsh-technology": "workspace:*",
+    "@watchskill/dsh-workspace": "workspace:*"
   }
 }

@@ -1,0 +1,57 @@
+{
+  "name": "@watchskill/dsh-workspace",
+  "version": "0.1.0-preview.0",
+  "description": "Browser half: the Watch Workspace product shell \u2014 modes, header, inspector and sensory timeline",
+  "type": "module",
+  "license": "MIT",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./client": {
+      "types": "./lib/client/index.d.ts",
+      "default": "./lib/client.js"
+    },
+    "./package.json": "./package.json",
+    "./components": {
+      "types": "./lib/client/components.d.ts",
+      "default": "./lib/client/components.js"
+    }
+  },
+  "dsh": {
+    "client": {
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-slots"
+      ],
+      "platform": "web"
+    }
+  },
+  "files": [
+    "lib/index.js",
+    "lib/client.js",
+    "lib/client.js.map",
+    "lib/**/*.js",
+    "lib/**/*.d.ts"
+  ],
+  "scripts": {
+    "bundle": "tsdown"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "catalog:",
+    "react": "^18.2.0"
+  },
+  "devDependencies": {
+    "@deepseek-ai/cordis": "catalog:",
+    "@deepseek-ai/dsh-client-ui-slots": "catalog:",
+    "@types/react": "~18.3.1",
+    "react": "^18.2.0"
+  },
+  "dependencies": {
+    "@watchskill/dsh-contracts": "workspace:^",
+    "@watchskill/dsh-client-brand": "workspace:^",
+    "@watchskill/dsh-trajectory": "workspace:^"
+  }
+}

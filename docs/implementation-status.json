@@ -322,7 +322,7 @@
         "Occupies DSH brand slots and defines the token layer. The full workspace shell composition is a separate item.",
         "No browser test harness, so the React slot occupancy is not covered by a gate; the tone rules are."
       ],
-      "commit": "pending"
+      "commit": "bc23fc2"
     },
     {
       "id": "workspace.modes",
@@ -330,12 +330,23 @@
       "phase": "Phase 3 — web product",
       "classification": "WATCH_NEW",
       "owner": "watch-workspace",
-      "status": "not_started",
-      "source_paths": [],
-      "tests": [],
-      "acceptance_journey": "Each mode functions with real data",
-      "known_limitations": [],
-      "commit": null
+      "status": "tested",
+      "source_paths": [
+        "packages/watch/workspace/src/modes.ts",
+        "packages/watch/workspace/src/shell.ts",
+        "packages/watch/workspace/src/timeline.ts",
+        "packages/watch/workspace/src/client/components.tsx",
+        "packages/watch/workspace/src/client/index.tsx"
+      ],
+      "tests": [
+        "tests/workspace.test.mjs"
+      ],
+      "acceptance_journey": "Seven modes over one session; an absent capability is stated, never hidden or faked",
+      "known_limitations": [
+        "The shell composes the modes and renders from props; each mode body is supplied by its own package (Live, Library, Memory, Compare).",
+        "Rendering is gated through react-dom/server rather than a real browser, so markup, roles and accessible names are asserted — not pixels or focus order."
+      ],
+      "commit": "pending"
     },
     {
       "id": "workspace.composer",
@@ -343,12 +354,18 @@
       "phase": "Phase 3 — web product",
       "classification": "DSH_EXTENDED",
       "owner": "watch-workspace",
-      "status": "not_started",
-      "source_paths": [],
-      "tests": [],
-      "acceptance_journey": "Agent cannot silently widen source, egress or assurance scope",
-      "known_limitations": [],
-      "commit": null
+      "status": "tested",
+      "source_paths": [
+        "packages/watch/workspace/src/composer.ts"
+      ],
+      "tests": [
+        "tests/workspace.test.mjs"
+      ],
+      "acceptance_journey": "The agent may narrow every axis and widen none; a refused proposal is refused in full",
+      "known_limitations": [
+        "The eight sections are contract and validation. The progressive-disclosure interaction renders as a summary plus visible refusals rather than eight expandable editors."
+      ],
+      "commit": "pending"
     },
     {
       "id": "memory.product-ui",
@@ -381,7 +398,7 @@
         "Contracts, lifecycle and admission rules are implemented and tested. The DSH Settings UI that edits bindings is not built.",
         "Credential references point at DSH; no Watch credential store exists, by design."
       ],
-      "commit": "pending"
+      "commit": "bc23fc2"
     },
     {
       "id": "technology.center",
@@ -400,7 +417,7 @@
       "known_limitations": [
         "Descriptor, lifecycle and health contracts are implemented. The Settings surface that renders them is not built."
       ],
-      "commit": "pending"
+      "commit": "bc23fc2"
     },
     {
       "id": "ocr.engines",
@@ -422,7 +439,7 @@
         "No GPU is available on this machine, so neither DeepSeek engine is machine-tested. Both are correctly reported as requiring a GPU and are excluded by routing here.",
         "Weight licences are unreviewed, so mayDistributeWeights() refuses both."
       ],
-      "commit": "pending"
+      "commit": "bc23fc2"
     },
     {
       "id": "i18n.evidence",
@@ -443,7 +460,7 @@
         "RTL-safe layout primitives exist as a contract (needsDirectionIsolation) but no UI consumes them yet.",
         "No UI locale bundles are shipped. Claiming launch locales without reviewed translations would be worse than shipping none."
       ],
-      "commit": null
+      "commit": "676a1e8"
     },
     {
       "id": "live.surface",
@@ -502,7 +519,7 @@
         "Aligns on channel and timestamp. Visual, DOM, network and console channels are typed but only the record-derived ones are populated today.",
         "No Compare UI surface exists."
       ],
-      "commit": null
+      "commit": "3b311d4"
     },
     {
       "id": "wiki.projections",
@@ -561,7 +578,7 @@
         "The lifecycle is enforced; the replay harness that produces a CandidateEvaluation from real fixtures is not built, so evaluations are supplied by the caller.",
         "No review UI. A candidate queue exists as data and describeCandidate() renders one line of it."
       ],
-      "commit": null
+      "commit": "bd10e78"
     },
     {
       "id": "desktop.shell",
@@ -608,7 +625,7 @@
         "Covers the Node tree. The Python side of watch-skill has its own dependency set that this SBOM does not enumerate.",
         "Package integrity digests and a release manifest are not implemented."
       ],
-      "commit": null
+      "commit": "676a1e8"
     },
     {
       "id": "security.offline-proof",
@@ -629,7 +646,7 @@
         "Paths here point at this repository only; the proof lives in the other repo.",
         "Covers the Watch Core side. DSH provider routes and plugin update checks are not yet instrumented."
       ],
-      "commit": null
+      "commit": "90264b6 (watch-skill)"
     },
     {
       "id": "team.tenancy",
