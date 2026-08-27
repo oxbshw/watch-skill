@@ -1,0 +1,28 @@
+{
+  "name": "@watchskill/dsh-core-bridge",
+  "version": "0.1.0-preview.0",
+  "description": "Host plugin: the typed Bridge between DeepSeek Harness and Watch Core",
+  "type": "module",
+  "license": "MIT",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": ["lib/**/*.js", "lib/**/*.d.ts"],
+  "dependencies": {
+    "@watchskill/dsh-contracts": "workspace:^"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "catalog:",
+    "@deepseek-ai/schemastery": "^3.18.1"
+  },
+  "devDependencies": {
+    "@deepseek-ai/cordis": "catalog:",
+    "@deepseek-ai/schemastery": "^3.18.1"
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "files": [],
+  "references": [
+    { "path": "packages/watch/contracts" },
+    { "path": "packages/watch/core-bridge" }
+  ]
+}

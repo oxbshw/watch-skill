@@ -1,0 +1,31 @@
+{
+  "name": "@watchskill/watch-workspace",
+  "version": "0.1.0-preview.0",
+  "description": "Watch Workspace — an evidence-native agent distribution built on DeepSeek Harness",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "packageManager": "pnpm@10.29.1",
+  "engines": {
+    "node": "^22.19.0 || >=24.0.0"
+  },
+  "scripts": {
+    "upstream:sync": "node scripts/upstream-sync.mjs",
+    "upstream:verify": "node scripts/upstream-sync.mjs --verify",
+    "inventory": "node scripts/gen-inventory.mjs",
+    "inventory:check": "node scripts/gen-inventory.mjs --check",
+    "verify:parity": "node scripts/verify-parity.mjs",
+    "build": "tsc -b",
+    "test": "node --test --test-reporter spec \"tests/**/*.test.mjs\"",
+    "smoke:install": "node scripts/install-smoke.mjs",
+    "check": "npm run inventory:check && npm run verify:parity && npm run build && npm run test"
+  },
+  "devDependencies": {
+    "@deepseek-ai/cordis": "catalog:",
+    "@deepseek-ai/schemastery": "^3.18.1",
+    "@types/node": "^22.20.0",
+    "@watchskill/dsh-contracts": "workspace:*",
+    "@watchskill/dsh-core-bridge": "workspace:*",
+    "typescript": "^5.9.3"
+  }
+}

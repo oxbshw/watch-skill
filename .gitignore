@@ -1,0 +1,14 @@
+node_modules/
+lib/
+dist/
+out/
+.turbo/
+*.tsbuildinfo
+.DS_Store
+*.log
+
+# The pinned upstream checkout is script-managed, never vendored.
+upstream/deepseek-harness/
+
+# Local profile scratch used by install smoke tests.
+.dsh-home/

@@ -1,0 +1,2940 @@
+{
+  "generatedFrom": {
+    "repository": "https://github.com/deepseek-ai/deepseek-harness",
+    "commit": "b150a551b8d465e31e418e1b2eaf5e79bbb7d28e",
+    "version": "0.1.1-rc.2",
+    "tag": "dsh-v0.1.1-rc.2"
+  },
+  "generator": "scripts/gen-inventory.mjs",
+  "count": 488,
+  "rows": [
+    {
+      "source": "apps/cli/config/agent-presets/code/agent.cordis.yml",
+      "id": "persona",
+      "module": "@deepseek-ai/dsh-persona",
+      "disabled": false
+    },
+    {
+      "source": "apps/cli/config/agent-presets/code/agent.cordis.yml",
+      "id": "agent-instructions",
+      "module": "@deepseek-ai/dsh-agent-instructions",
+      "disabled": false
+    },
+    {
+      "source": "apps/cli/config/agent-presets/code/agent.cordis.yml",
+      "id": "tool-bash",
+      "module": "@deepseek-ai/dsh-tool-bash",
+      "disabled": false
+    },
+    {
+      "source": "apps/cli/config/agent-presets/code/agent.cordis.yml",
+      "id": "tool-pwsh",
+      "module": "@deepseek-ai/dsh-tool-pwsh",
+      "disabled": false
+    },
+    {
+      "source": "apps/cli/config/agent-presets/code/agent.cordis.yml",
+      "id": "tool-fs",
+      "module": "@deepseek-ai/dsh-tool-fs",
+      "disabled": false
+    },
+    {
+      "source": "apps/cli/config/agent-presets/code/agent.cordis.yml",
+      "id": "tool-fs-search",
+      "module": "@deepseek-ai/dsh-tool-fs-search",
+      "disabled": false
+    },
+    {
+      "source": "apps/cli/config/agent-presets/code/agent.cordis.yml",
+      "id": "tool-jobs",
+      "module": "@deepseek-ai/dsh-tool-jobs",
+      "disabled": false
+    },
+    {
+      "source": "apps/cli/config/agent-presets/code/agent.cordis.yml",
+      "id": "skill-filesystem",
+      "module": "@deepseek-ai/dsh-skill-filesystem",
+      "disabled": false
+    },
+    {
+      "source": "apps/cli/config/agent-presets/code/agent.cordis.yml",
+      "id": "tool-skill",
+      "module": "@deepseek-ai/dsh-tool-skill",
+      "disabled": false
+    },
+    {
+      "source": "apps/cli/config/agent-presets/code/agent.cordis.yml",
+      "id": "tool-goal",
+      "module": "@deepseek-ai/dsh-tool-goal",
+      "disabled": false
+    },
+    {
+      "source": "apps/cli/config/agent-presets/code/agent.cordis.yml",
+      "id": "planning",
+      "module": "cordis:group",
+      "disabled": false
+    },
+    {
+      "source": "apps/cli/config/agent-presets/code/agent.cordis.yml",
+      "id": "plan-mode",
+      "module": "@deepseek-ai/dsh-plan-mode",
+      "disabled": false
+    },
+    {
+      "source": "apps/cli/config/agent-presets/code/agent.cordis.yml",
+      "id": "compaction",
+      "module": "cordis:group",
+      "disabled": false
+    },
+    {
+      "source": "apps/cli/config/agent-presets/code/agent.cordis.yml",
+      "id": "compaction-basic",
+      "module": "@deepseek-ai/dsh-compaction-basic",
+      "disabled": false
+    },
+    {
+      "source": "apps/cli/config/agent-presets/code/agent.cordis.yml",
+      "id": "command-compact",
+      "module": "@deepseek-ai/dsh-command-compact",
+      "disabled": false
+    },
+    {
+      "source": "apps/cli/config/agent-presets/code/agent.cordis.yml",
+      "id": "tool-result-pruner",
+      "module": "@deepseek-ai/dsh-compaction-tool-result-pruner",
+      "disabled": false
+    },
+    {
+      "source": "apps/cli/config/agent-presets/code/agent.cordis.yml",
+      "id": "delegation",
+      "module": "cordis:group",
+      "disabled": false
+    },
+    {
+      "source": "apps/cli/config/agent-presets/code/agent.cordis.yml",
+      "id": "tool-subagent-control",
+      "module": "@deepseek-ai/dsh-tool-subagent-control",
+      "disabled": false
+    },
+    {
+      "source": "apps/cli/config/agent-presets/code/agent.cordis.yml",
+      "id": "tool-subagent-list-agents",
+      "module": "@deepseek-ai/dsh-tool-subagent-control/list-agents",
+      "disabled": false
+    },
+    {
+      "source": "apps/cli/config/agent-presets/code/agent.cordis.yml",
+      "id": "tool-subagent",
+      "module": "@deepseek-ai/dsh-tool-subagent",
+      "disabled": false
+    },
+    {
+      "source": "apps/cli/config/agent-presets/code/agent.cordis.yml",
+      "id": "tool-subagent-fork",
+      "module": "@deepseek-ai/dsh-tool-subagent",
+      "disabled": false
+    },
+    {
+      "source": "apps/cli/config/agent-presets/code/agent.cordis.yml",
+      "id": "tool-subagent-codex",
+      "module": "@deepseek-ai/dsh-tool-subagent",
+      "disabled": true
+    },
+    {
+      "source": "apps/cli/config/agent-presets/code/agent.cordis.yml",
+      "id": "tool-subagent-claude-code",
+      "module": "@deepseek-ai/dsh-tool-subagent",
+      "disabled": true
+    },
+    {
+      "source": "apps/cli/config/agent-presets/code/agent.cordis.yml",
+      "id": "workflow-worker-thread",
+      "module": "@deepseek-ai/dsh-workflow-worker-thread",
+      "disabled": false
+    },
+    {
+      "source": "apps/cli/config/agent-presets/code/agent.cordis.yml",
+      "id": "tool-workflow",
+      "module": "@deepseek-ai/dsh-tool-workflow",
+      "disabled": false
+    },
+    {
+      "source": "apps/cli/config/agent-presets/code/agent.cordis.yml",
+      "id": "tool-ralph",
+      "module": "@deepseek-ai/dsh-tool-ralph",
+      "disabled": false
+    },
+    {
+      "source": "apps/cli/config/agent-presets/code/agent.cordis.yml",
+      "id": "tool-ask-user",
+      "module": "@deepseek-ai/dsh-tool-ask-user",
+      "disabled": false
+    },
+    {
+      "source": "apps/cli/config/agent-presets/code/agent.cordis.yml",
+      "id": "tool-todo",
+      "module": "@deepseek-ai/dsh-tool-todo",
+      "disabled": false
+    },
+    {
+      "source": "apps/cli/config/agent-presets/code/agent.cordis.yml",
+      "id": "tool-web",
+      "module": "@deepseek-ai/dsh-tool-web",
+      "disabled": false
+    },
+    {
+      "source": "apps/cli/config/agent-presets/code/agent.cordis.yml",
+      "id": "tool-presentation",
+      "module": "@deepseek-ai/dsh-agent-tool-presentation",
+      "disabled": false
+    },
+    {
+      "source": "apps/cli/config/agent-presets/cordis/agent.cordis.yml",
+      "id": "persona",
+      "module": "@deepseek-ai/dsh-persona",
+      "disabled": false
+    },
+    {
+      "source": "apps/cli/config/agent-presets/cordis/agent.cordis.yml",
+      "id": "agent-instructions",
+      "module": "@deepseek-ai/dsh-agent-instructions",
+      "disabled": false
+    },
+    {
+      "source": "apps/cli/config/agent-presets/cordis/agent.cordis.yml",
+      "id": "tool-bash",
+      "module": "@deepseek-ai/dsh-tool-bash",
+      "disabled": false
+    },
+    {
+      "source": "apps/cli/config/agent-presets/cordis/agent.cordis.yml",
+      "id": "tool-pwsh",
+      "module": "@deepseek-ai/dsh-tool-pwsh",
+      "disabled": false
+    },
+    {
+      "source": "apps/cli/config/agent-presets/cordis/agent.cordis.yml",
+      "id": "tool-fs",
+      "module": "@deepseek-ai/dsh-tool-fs",
+      "disabled": false
+    },
+    {
+      "source": "apps/cli/config/agent-presets/cordis/agent.cordis.yml",
+      "id": "tool-fs-search",
+      "module": "@deepseek-ai/dsh-tool-fs-search",
+      "disabled": false
+    },
+    {
+      "source": "apps/cli/config/agent-presets/cordis/agent.cordis.yml",
+      "id": "tool-jobs",
+      "module": "@deepseek-ai/dsh-tool-jobs",
+      "disabled": false
+    },
+    {
+      "source": "apps/cli/config/agent-presets/cordis/agent.cordis.yml",
+      "id": "tool-goal",
+      "module": "@deepseek-ai/dsh-tool-goal",
+      "disabled": false
+    },
+    {
+      "source": "apps/cli/config/agent-presets/cordis/agent.cordis.yml",
+      "id": "planning",
+      "module": "cordis:group",
+      "disabled": false
+    },
+    {
+      "source": "apps/cli/config/agent-presets/cordis/agent.cordis.yml",
+      "id": "plan-mode",
+      "module": "@deepseek-ai/dsh-plan-mode",
+      "disabled": false
+    },
+    {
+      "source": "apps/cli/config/agent-presets/cordis/agent.cordis.yml",
+      "id": "compaction",
+      "module": "cordis:group",
+      "disabled": false
+    },
+    {
+      "source": "apps/cli/config/agent-presets/cordis/agent.cordis.yml",
+      "id": "compaction-basic",
+      "module": "@deepseek-ai/dsh-compaction-basic",
+      "disabled": false
+    },
+    {
+      "source": "apps/cli/config/agent-presets/cordis/agent.cordis.yml",
+      "id": "command-compact",
+      "module": "@deepseek-ai/dsh-command-compact",
+      "disabled": false
+    },
+    {
+      "source": "apps/cli/config/agent-presets/cordis/agent.cordis.yml",
+      "id": "tool-result-pruner",
+      "module": "@deepseek-ai/dsh-compaction-tool-result-pruner",
+      "disabled": false
+    },
+    {
+      "source": "apps/cli/config/agent-presets/cordis/agent.cordis.yml",
+      "id": "delegation",
+      "module": "cordis:group",
+      "disabled": false
+    },
+    {
+      "source": "apps/cli/config/agent-presets/cordis/agent.cordis.yml",
+      "id": "tool-subagent-control",
+      "module": "@deepseek-ai/dsh-tool-subagent-control",
+      "disabled": false
+    },
+    {
+      "source": "apps/cli/config/agent-presets/cordis/agent.cordis.yml",
+      "id": "tool-subagent-list-agents",
+      "module": "@deepseek-ai/dsh-tool-subagent-control/list-agents",
+      "disabled": false
+    },
+    {
+      "source": "apps/cli/config/agent-presets/cordis/agent.cordis.yml",
+      "id": "tool-subagent",
+      "module": "@deepseek-ai/dsh-tool-subagent",
+      "disabled": false
+    },
+    {
+      "source": "apps/cli/config/agent-presets/cordis/agent.cordis.yml",
+      "id": "tool-subagent-fork",
+      "module": "@deepseek-ai/dsh-tool-subagent",
+      "disabled": false
+    },
+    {
+      "source": "apps/cli/config/agent-presets/cordis/agent.cordis.yml",
+      "id": "tool-subagent-codex",
+      "module": "@deepseek-ai/dsh-tool-subagent",
+      "disabled": true
+    },
+    {
+      "source": "apps/cli/config/agent-presets/cordis/agent.cordis.yml",
+      "id": "tool-subagent-claude-code",
+      "module": "@deepseek-ai/dsh-tool-subagent",
+      "disabled": true
+    },
+    {
+      "source": "apps/cli/config/agent-presets/cordis/agent.cordis.yml",
+      "id": "workflow-worker-thread",
+      "module": "@deepseek-ai/dsh-workflow-worker-thread",
+      "disabled": false
+    },
+    {
+      "source": "apps/cli/config/agent-presets/cordis/agent.cordis.yml",
+      "id": "tool-workflow",
+      "module": "@deepseek-ai/dsh-tool-workflow",
+      "disabled": false
+    },
+    {
+      "source": "apps/cli/config/agent-presets/cordis/agent.cordis.yml",
+      "id": "tool-ralph",
+      "module": "@deepseek-ai/dsh-tool-ralph",
+      "disabled": false
+    },
+    {
+      "source": "apps/cli/config/agent-presets/cordis/agent.cordis.yml",
+      "id": "tool-ask-user",
+      "module": "@deepseek-ai/dsh-tool-ask-user",
+      "disabled": false
+    },
+    {
+      "source": "apps/cli/config/agent-presets/cordis/agent.cordis.yml",
+      "id": "tool-todo",
+      "module": "@deepseek-ai/dsh-tool-todo",
+      "disabled": false
+    },
+    {
+      "source": "apps/cli/config/agent-presets/cordis/agent.cordis.yml",
+      "id": "tool-web",
+      "module": "@deepseek-ai/dsh-tool-web",
+      "disabled": false
+    },
+    {
+      "source": "apps/cli/config/agent-presets/cordis/agent.cordis.yml",
+      "id": "tool-cordis",
+      "module": "@deepseek-ai/dsh-tool-cordis",
+      "disabled": false
+    },
+    {
+      "source": "apps/cli/config/agent-presets/cordis/agent.cordis.yml",
+      "id": "skill-filesystem",
+      "module": "@deepseek-ai/dsh-skill-filesystem",
+      "disabled": false
+    },
+    {
+      "source": "apps/cli/config/agent-presets/cordis/agent.cordis.yml",
+      "id": "tool-skill",
+      "module": "@deepseek-ai/dsh-tool-skill",
+      "disabled": false
+    },
+    {
+      "source": "apps/cli/config/agent-presets/minimal/agent.cordis.yml",
+      "id": "persona",
+      "module": "@deepseek-ai/dsh-persona",
+      "disabled": false
+    },
+    {
+      "source": "apps/cli/config/agent-presets/minimal/agent.cordis.yml",
+      "id": "persistent-shell",
+      "module": "cordis:group",
+      "disabled": false
+    },
+    {
+      "source": "apps/cli/config/agent-presets/minimal/agent.cordis.yml",
+      "id": "pty",
+      "module": "@deepseek-ai/dsh-terminal",
+      "disabled": false
+    },
+    {
+      "source": "apps/cli/config/agent-presets/minimal/agent.cordis.yml",
+      "id": "terminal-bash",
+      "module": "@deepseek-ai/dsh-terminal-bash",
+      "disabled": false
+    },
+    {
+      "source": "apps/cli/config/agent-presets/minimal/agent.cordis.yml",
+      "id": "persistent-bash",
+      "module": "@deepseek-ai/dsh-tool-bash-persistent",
+      "disabled": false
+    },
+    {
+      "source": "apps/cli/config/agent-presets/minimal/agent.cordis.yml",
+      "id": "terminal-pwsh",
+      "module": "@deepseek-ai/dsh-terminal-bash",
+      "disabled": false
+    },
+    {
+      "source": "apps/cli/config/agent-presets/minimal/agent.cordis.yml",
+      "id": "persistent-pwsh",
+      "module": "@deepseek-ai/dsh-tool-pwsh-persistent",
+      "disabled": false
+    },
+    {
+      "source": "apps/cli/config/agent-presets/minimal/agent.cordis.yml",
+      "id": "filesystem",
+      "module": "cordis:group",
+      "disabled": false
+    },
+    {
+      "source": "apps/cli/config/agent-presets/minimal/agent.cordis.yml",
+      "id": "fs-local",
+      "module": "@deepseek-ai/dsh-fs-local",
+      "disabled": false
+    },
+    {
+      "source": "apps/cli/config/agent-presets/minimal/agent.cordis.yml",
+      "id": "str-replace-editor",
+      "module": "@deepseek-ai/dsh-tool-str-replace-editor",
+      "disabled": false
+    },
+    {
+      "source": "apps/cli/config/agent-presets/standard/agent.cordis.yml",
+      "id": "persona",
+      "module": "@deepseek-ai/dsh-persona",
+      "disabled": false
+    },
+    {
+      "source": "apps/cli/config/agent-presets/standard/agent.cordis.yml",
+      "id": "agent-instructions",
+      "module": "@deepseek-ai/dsh-agent-instructions",
+      "disabled": false
+    },
+    {
+      "source": "apps/cli/config/agent-presets/standard/agent.cordis.yml",
+      "id": "tool-bash",
+      "module": "@deepseek-ai/dsh-tool-bash",
+      "disabled": false
+    },
+    {
+      "source": "apps/cli/config/agent-presets/standard/agent.cordis.yml",
+      "id": "tool-pwsh",
+      "module": "@deepseek-ai/dsh-tool-pwsh",
+      "disabled": false
+    },
+    {
+      "source": "apps/cli/config/agent-presets/standard/agent.cordis.yml",
+      "id": "tool-fs",
+      "module": "@deepseek-ai/dsh-tool-fs",
+      "disabled": false
+    },
+    {
+      "source": "apps/cli/config/agent-presets/standard/agent.cordis.yml",
+      "id": "tool-fs-search",
+      "module": "@deepseek-ai/dsh-tool-fs-search",
+      "disabled": false
+    },
+    {
+      "source": "apps/cli/config/agent-presets/standard/agent.cordis.yml",
+      "id": "tool-jobs",
+      "module": "@deepseek-ai/dsh-tool-jobs",
+      "disabled": false
+    },
+    {
+      "source": "apps/cli/config/agent-presets/standard/agent.cordis.yml",
+      "id": "skill-filesystem",
+      "module": "@deepseek-ai/dsh-skill-filesystem",
+      "disabled": false
+    },
+    {
+      "source": "apps/cli/config/agent-presets/standard/agent.cordis.yml",
+      "id": "tool-skill",
+      "module": "@deepseek-ai/dsh-tool-skill",
+      "disabled": false
+    },
+    {
+      "source": "apps/cli/config/agent-presets/standard/agent.cordis.yml",
+      "id": "tool-goal",
+      "module": "@deepseek-ai/dsh-tool-goal",
+      "disabled": false
+    },
+    {
+      "source": "apps/cli/config/agent-presets/standard/agent.cordis.yml",
+      "id": "planning",
+      "module": "cordis:group",
+      "disabled": false
+    },
+    {
+      "source": "apps/cli/config/agent-presets/standard/agent.cordis.yml",
+      "id": "plan-mode",
+      "module": "@deepseek-ai/dsh-plan-mode",
+      "disabled": false
+    },
+    {
+      "source": "apps/cli/config/agent-presets/standard/agent.cordis.yml",
+      "id": "compaction",
+      "module": "cordis:group",
+      "disabled": false
+    },
+    {
+      "source": "apps/cli/config/agent-presets/standard/agent.cordis.yml",
+      "id": "compaction-basic",
+      "module": "@deepseek-ai/dsh-compaction-basic",
+      "disabled": false
+    },
+    {
+      "source": "apps/cli/config/agent-presets/standard/agent.cordis.yml",
+      "id": "command-compact",
+      "module": "@deepseek-ai/dsh-command-compact",
+      "disabled": false
+    },
+    {
+      "source": "apps/cli/config/agent-presets/standard/agent.cordis.yml",
+      "id": "tool-result-pruner",
+      "module": "@deepseek-ai/dsh-compaction-tool-result-pruner",
+      "disabled": false
+    },
+    {
+      "source": "apps/cli/config/agent-presets/standard/agent.cordis.yml",
+      "id": "delegation",
+      "module": "cordis:group",
+      "disabled": false
+    },
+    {
+      "source": "apps/cli/config/agent-presets/standard/agent.cordis.yml",
+      "id": "tool-subagent-control",
+      "module": "@deepseek-ai/dsh-tool-subagent-control",
+      "disabled": false
+    },
+    {
+      "source": "apps/cli/config/agent-presets/standard/agent.cordis.yml",
+      "id": "tool-subagent-list-agents",
+      "module": "@deepseek-ai/dsh-tool-subagent-control/list-agents",
+      "disabled": false
+    },
+    {
+      "source": "apps/cli/config/agent-presets/standard/agent.cordis.yml",
+      "id": "tool-subagent",
+      "module": "@deepseek-ai/dsh-tool-subagent",
+      "disabled": false
+    },
+    {
+      "source": "apps/cli/config/agent-presets/standard/agent.cordis.yml",
+      "id": "tool-subagent-fork",
+      "module": "@deepseek-ai/dsh-tool-subagent",
+      "disabled": false
+    },
+    {
+      "source": "apps/cli/config/agent-presets/standard/agent.cordis.yml",
+      "id": "tool-subagent-codex",
+      "module": "@deepseek-ai/dsh-tool-subagent",
+      "disabled": true
+    },
+    {
+      "source": "apps/cli/config/agent-presets/standard/agent.cordis.yml",
+      "id": "tool-subagent-claude-code",
+      "module": "@deepseek-ai/dsh-tool-subagent",
+      "disabled": true
+    },
+    {
+      "source": "apps/cli/config/agent-presets/standard/agent.cordis.yml",
+      "id": "workflow-worker-thread",
+      "module": "@deepseek-ai/dsh-workflow-worker-thread",
+      "disabled": false
+    },
+    {
+      "source": "apps/cli/config/agent-presets/standard/agent.cordis.yml",
+      "id": "tool-workflow",
+      "module": "@deepseek-ai/dsh-tool-workflow",
+      "disabled": false
+    },
+    {
+      "source": "apps/cli/config/agent-presets/standard/agent.cordis.yml",
+      "id": "tool-ralph",
+      "module": "@deepseek-ai/dsh-tool-ralph",
+      "disabled": false
+    },
+    {
+      "source": "apps/cli/config/agent-presets/standard/agent.cordis.yml",
+      "id": "tool-ask-user",
+      "module": "@deepseek-ai/dsh-tool-ask-user",
+      "disabled": false
+    },
+    {
+      "source": "apps/cli/config/agent-presets/standard/agent.cordis.yml",
+      "id": "tool-todo",
+      "module": "@deepseek-ai/dsh-tool-todo",
+      "disabled": false
+    },
+    {
+      "source": "apps/cli/config/agent-presets/standard/agent.cordis.yml",
+      "id": "tool-web",
+      "module": "@deepseek-ai/dsh-tool-web",
+      "disabled": false
+    },
+    {
+      "source": "examples/acp-agent/advanced.cordis.yml",
+      "id": "base",
+      "module": "@deepseek-ai/cordis-plugin-include",
+      "disabled": false
+    },
+    {
+      "source": "examples/acp-agent/advanced.cordis.yml",
+      "id": "acp-agent",
+      "module": "@deepseek-ai/dsh-acp-demo",
+      "disabled": false
+    },
+    {
+      "source": "examples/acp-agent/advanced.cordis.yml",
+      "id": "code-runtime",
+      "module": "@deepseek-ai/dsh-code-runtime-worker-thread",
+      "disabled": false
+    },
+    {
+      "source": "examples/acp-agent/advanced.cordis.yml",
+      "id": "cordis-host-runner",
+      "module": "@deepseek-ai/dsh-cordis-host-runner",
+      "disabled": false
+    },
+    {
+      "source": "examples/acp-agent/advanced.cordis.yml",
+      "id": "tool-cordis",
+      "module": "@deepseek-ai/dsh-tool-cordis",
+      "disabled": false
+    },
+    {
+      "source": "examples/acp-agent/agent-instructions.cordis.yml",
+      "id": "base",
+      "module": "@deepseek-ai/cordis-plugin-include",
+      "disabled": false
+    },
+    {
+      "source": "examples/acp-agent/agent-instructions.cordis.yml",
+      "id": "acp-agent",
+      "module": "@deepseek-ai/dsh-acp-demo",
+      "disabled": false
+    },
+    {
+      "source": "examples/acp-agent/background-job-admission.cordis.yml",
+      "id": "base",
+      "module": "@deepseek-ai/cordis-plugin-include",
+      "disabled": false
+    },
+    {
+      "source": "examples/acp-agent/background-job-admission.cordis.yml",
+      "id": "acp-agent",
+      "module": "@deepseek-ai/dsh-acp-demo",
+      "disabled": false
+    },
+    {
+      "source": "examples/acp-agent/both-mode.cordis.yml",
+      "id": "base",
+      "module": "@deepseek-ai/cordis-plugin-include",
+      "disabled": false
+    },
+    {
+      "source": "examples/acp-agent/both-mode.cordis.yml",
+      "id": "acp-agent",
+      "module": "@deepseek-ai/dsh-acp-demo",
+      "disabled": false
+    },
+    {
+      "source": "examples/acp-agent/both-mode.cordis.yml",
+      "id": "code-runtime",
+      "module": "@deepseek-ai/dsh-code-runtime-worker-thread",
+      "disabled": false
+    },
+    {
+      "source": "examples/acp-agent/child-question.cordis.yml",
+      "id": "base",
+      "module": "@deepseek-ai/cordis-plugin-include",
+      "disabled": false
+    },
+    {
+      "source": "examples/acp-agent/child-question.cordis.yml",
+      "id": "user-questions",
+      "module": "@deepseek-ai/dsh-user-questions",
+      "disabled": false
+    },
+    {
+      "source": "examples/acp-agent/child-question.cordis.yml",
+      "id": "tool-ask-user",
+      "module": "@deepseek-ai/dsh-tool-ask-user",
+      "disabled": false
+    },
+    {
+      "source": "examples/acp-agent/child-question.cordis.yml",
+      "id": "child-question-tripwire",
+      "module": "./tests/fixtures/child-question-tripwire.ts",
+      "disabled": false
+    },
+    {
+      "source": "examples/acp-agent/code-mode-image.cordis.yml",
+      "id": "base",
+      "module": "@deepseek-ai/cordis-plugin-include",
+      "disabled": false
+    },
+    {
+      "source": "examples/acp-agent/code-mode-image.cordis.yml",
+      "id": "acp-agent",
+      "module": "@deepseek-ai/dsh-acp-demo",
+      "disabled": false
+    },
+    {
+      "source": "examples/acp-agent/code-mode-image.cordis.yml",
+      "id": "attachment-local",
+      "module": "@deepseek-ai/dsh-attachment-local",
+      "disabled": false
+    },
+    {
+      "source": "examples/acp-agent/code-mode-image.cordis.yml",
+      "id": "code-runtime",
+      "module": "@deepseek-ai/dsh-code-runtime-worker-thread",
+      "disabled": false
+    },
+    {
+      "source": "examples/acp-agent/code-mode-workspace-context.cordis.yml",
+      "id": "base",
+      "module": "@deepseek-ai/cordis-plugin-include",
+      "disabled": false
+    },
+    {
+      "source": "examples/acp-agent/code-mode-workspace-context.cordis.yml",
+      "id": "acp-agent",
+      "module": "@deepseek-ai/dsh-acp-demo",
+      "disabled": false
+    },
+    {
+      "source": "examples/acp-agent/code-mode-workspace-context.cordis.yml",
+      "id": "code-runtime",
+      "module": "@deepseek-ai/dsh-code-runtime-worker-thread",
+      "disabled": false
+    },
+    {
+      "source": "examples/acp-agent/code-mode.cordis.yml",
+      "id": "base",
+      "module": "@deepseek-ai/cordis-plugin-include",
+      "disabled": false
+    },
+    {
+      "source": "examples/acp-agent/code-mode.cordis.yml",
+      "id": "acp-agent",
+      "module": "@deepseek-ai/dsh-acp-demo",
+      "disabled": false
+    },
+    {
+      "source": "examples/acp-agent/code-mode.cordis.yml",
+      "id": "code-runtime",
+      "module": "@deepseek-ai/dsh-code-runtime-worker-thread",
+      "disabled": false
+    },
+    {
+      "source": "examples/acp-agent/cordis-tools.cordis.yml",
+      "id": "base",
+      "module": "@deepseek-ai/cordis-plugin-include",
+      "disabled": false
+    },
+    {
+      "source": "examples/acp-agent/cordis-tools.cordis.yml",
+      "id": "cordis-host-runner",
+      "module": "@deepseek-ai/dsh-cordis-host-runner",
+      "disabled": false
+    },
+    {
+      "source": "examples/acp-agent/cordis-tools.cordis.yml",
+      "id": "tool-cordis",
+      "module": "@deepseek-ai/dsh-tool-cordis",
+      "disabled": false
+    },
+    {
+      "source": "examples/acp-agent/cordis.yml",
+      "id": "llm-deepseek",
+      "module": "@deepseek-ai/dsh-llm-deepseek",
+      "disabled": false
+    },
+    {
+      "source": "examples/acp-agent/cordis.yml",
+      "id": "deepseek-v4-flash",
+      "module": null,
+      "disabled": false
+    },
+    {
+      "source": "examples/acp-agent/cordis.yml",
+      "id": "deepseek-v4-pro",
+      "module": null,
+      "disabled": false
+    },
+    {
+      "source": "examples/acp-agent/cordis.yml",
+      "id": "deepseek-v4-flash-vision-exp",
+      "module": null,
+      "disabled": false
+    },
+    {
+      "source": "examples/acp-agent/cordis.yml",
+      "id": "sandbox",
+      "module": "@deepseek-ai/dsh-sandbox-local",
+      "disabled": false
+    },
+    {
+      "source": "examples/acp-agent/cordis.yml",
+      "id": "sandbox-policy",
+      "module": "@deepseek-ai/dsh-sandbox-policy",
+      "disabled": false
+    },
+    {
+      "source": "examples/acp-agent/cordis.yml",
+      "id": "subprocess",
+      "module": "@deepseek-ai/dsh-subprocess-local",
+      "disabled": false
+    },
+    {
+      "source": "examples/acp-agent/cordis.yml",
+      "id": "bash",
+      "module": "@deepseek-ai/dsh-bash-sandbox",
+      "disabled": false
+    },
+    {
+      "source": "examples/acp-agent/cordis.yml",
+      "id": "approval",
+      "module": "@deepseek-ai/dsh-user-approval",
+      "disabled": false
+    },
+    {
+      "source": "examples/acp-agent/cordis.yml",
+      "id": "acp-agent",
+      "module": "@deepseek-ai/dsh-acp-demo",
+      "disabled": false
+    },
+    {
+      "source": "examples/acp-agent/cordis.yml",
+      "id": "token-meter",
+      "module": "@deepseek-ai/dsh-token-meter",
+      "disabled": false
+    },
+    {
+      "source": "examples/acp-agent/cordis.yml",
+      "id": "compaction-basic",
+      "module": "@deepseek-ai/dsh-compaction-basic",
+      "disabled": false
+    },
+    {
+      "source": "examples/acp-agent/cordis.yml",
+      "id": "session-projection",
+      "module": "@deepseek-ai/dsh-session-projection",
+      "disabled": false
+    },
+    {
+      "source": "examples/acp-agent/cordis.yml",
+      "id": "subagent",
+      "module": "@deepseek-ai/dsh-subagent",
+      "disabled": false
+    },
+    {
+      "source": "examples/acp-agent/cordis.yml",
+      "id": "subagent-spawn-in-process",
+      "module": "@deepseek-ai/dsh-subagent-spawn-in-process",
+      "disabled": false
+    },
+    {
+      "source": "examples/acp-agent/cordis.yml",
+      "id": "subagent-fork-in-process",
+      "module": "@deepseek-ai/dsh-subagent-fork-in-process",
+      "disabled": false
+    },
+    {
+      "source": "examples/acp-agent/cordis.yml",
+      "id": "tool-subagent-control",
+      "module": "@deepseek-ai/dsh-tool-subagent-control",
+      "disabled": false
+    },
+    {
+      "source": "examples/acp-agent/cordis.yml",
+      "id": "tool-subagent-list-agents",
+      "module": "@deepseek-ai/dsh-tool-subagent-control/list-agents",
+      "disabled": false
+    },
+    {
+      "source": "examples/acp-agent/cordis.yml",
+      "id": "tool-subagent-report",
+      "module": "@deepseek-ai/dsh-tool-subagent-report",
+      "disabled": false
+    },
+    {
+      "source": "examples/acp-agent/cordis.yml",
+      "id": "tool-subagent",
+      "module": "@deepseek-ai/dsh-tool-subagent",
+      "disabled": false
+    },
+    {
+      "source": "examples/acp-agent/cordis.yml",
+      "id": "tool-subagent-fork",
+      "module": "@deepseek-ai/dsh-tool-subagent",
+      "disabled": false
+    },
+    {
+      "source": "examples/acp-agent/cordis.yml",
+      "id": "workflow-worker-thread",
+      "module": "@deepseek-ai/dsh-workflow-worker-thread",
+      "disabled": false
+    },
+    {
+      "source": "examples/acp-agent/cordis.yml",
+      "id": "tool-workflow",
+      "module": "@deepseek-ai/dsh-tool-workflow",
+      "disabled": false
+    },
+    {
+      "source": "examples/acp-agent/cordis.yml",
+      "id": "tool-ralph",
+      "module": "@deepseek-ai/dsh-tool-ralph",
+      "disabled": false
+    },
+    {
+      "source": "examples/acp-agent/cordis.yml",
+      "id": "tool-todo",
+      "module": "@deepseek-ai/dsh-tool-todo",
+      "disabled": false
+    },
+    {
+      "source": "examples/acp-agent/cordis.yml",
+      "id": "repeat-tool-reminder",
+      "module": "@deepseek-ai/dsh-repeat-tool-reminder",
+      "disabled": false
+    },
+    {
+      "source": "examples/acp-agent/cordis.yml",
+      "id": "fs-sandbox",
+      "module": "@deepseek-ai/dsh-fs-sandbox",
+      "disabled": false
+    },
+    {
+      "source": "examples/acp-agent/cordis.yml",
+      "id": "fs-observation-policy",
+      "module": "@deepseek-ai/dsh-fs-observation-policy",
+      "disabled": false
+    },
+    {
+      "source": "examples/acp-agent/cordis.yml",
+      "id": "tool-fs",
+      "module": "@deepseek-ai/dsh-tool-fs",
+      "disabled": false
+    },
+    {
+      "source": "examples/acp-agent/cordis.yml",
+      "id": "hooks-claude-code",
+      "module": "@deepseek-ai/dsh-hooks-claude-code",
+      "disabled": false
+    },
+    {
+      "source": "examples/acp-agent/cordis.yml",
+      "id": "hooks-codex",
+      "module": "@deepseek-ai/dsh-hooks-codex",
+      "disabled": false
+    },
+    {
+      "source": "examples/acp-agent/depth-two.cordis.yml",
+      "id": "base",
+      "module": "@deepseek-ai/cordis-plugin-include",
+      "disabled": false
+    },
+    {
+      "source": "examples/acp-agent/depth-two.cordis.yml",
+      "id": "tool-subagent",
+      "module": "@deepseek-ai/dsh-tool-subagent",
+      "disabled": false
+    },
+    {
+      "source": "examples/acp-agent/fs.cordis.yml",
+      "id": "base",
+      "module": "@deepseek-ai/cordis-plugin-include",
+      "disabled": false
+    },
+    {
+      "source": "examples/acp-agent/fs.cordis.yml",
+      "id": "spill-local",
+      "module": "@deepseek-ai/dsh-spill-local",
+      "disabled": false
+    },
+    {
+      "source": "examples/acp-agent/fs.cordis.yml",
+      "id": "spill-policy",
+      "module": "@deepseek-ai/dsh-spill-policy",
+      "disabled": false
+    },
+    {
+      "source": "examples/acp-agent/image-text-route.cordis.yml",
+      "id": "base",
+      "module": "@deepseek-ai/cordis-plugin-include",
+      "disabled": false
+    },
+    {
+      "source": "examples/acp-agent/image-text-route.cordis.yml",
+      "id": "acp-agent",
+      "module": "@deepseek-ai/dsh-acp-demo",
+      "disabled": false
+    },
+    {
+      "source": "examples/acp-agent/image-text-route.cordis.yml",
+      "id": "attachment-local",
+      "module": "@deepseek-ai/dsh-attachment-local",
+      "disabled": false
+    },
+    {
+      "source": "examples/acp-agent/image.cordis.yml",
+      "id": "base",
+      "module": "@deepseek-ai/cordis-plugin-include",
+      "disabled": false
+    },
+    {
+      "source": "examples/acp-agent/image.cordis.yml",
+      "id": "acp-agent",
+      "module": "@deepseek-ai/dsh-acp-demo",
+      "disabled": false
+    },
+    {
+      "source": "examples/acp-agent/image.cordis.yml",
+      "id": "attachment-local",
+      "module": "@deepseek-ai/dsh-attachment-local",
+      "disabled": false
+    },
+    {
+      "source": "examples/acp-agent/partial-landlock.cordis.yml",
+      "id": "base",
+      "module": "@deepseek-ai/cordis-plugin-include",
+      "disabled": false
+    },
+    {
+      "source": "examples/acp-agent/partial-landlock.cordis.yml",
+      "id": "sandbox",
+      "module": "@deepseek-ai/dsh-sandbox-local",
+      "disabled": true
+    },
+    {
+      "source": "examples/acp-agent/partial-landlock.cordis.yml",
+      "id": "partial-landlock-sandbox",
+      "module": "./tests/fixtures/partial-landlock-sandbox.ts",
+      "disabled": false
+    },
+    {
+      "source": "examples/acp-agent/product-subagent-both.cordis.yml",
+      "id": "base",
+      "module": "@deepseek-ai/cordis-plugin-include",
+      "disabled": false
+    },
+    {
+      "source": "examples/acp-agent/product-subagent-both.cordis.yml",
+      "id": "subagent-codex-primary",
+      "module": "@deepseek-ai/dsh-subagent-codex",
+      "disabled": false
+    },
+    {
+      "source": "examples/acp-agent/product-subagent-both.cordis.yml",
+      "id": "subagent-codex-secondary",
+      "module": "@deepseek-ai/dsh-subagent-codex",
+      "disabled": false
+    },
+    {
+      "source": "examples/acp-agent/product-subagent-both.cordis.yml",
+      "id": "subagent-claude-primary",
+      "module": "@deepseek-ai/dsh-subagent-claude-code",
+      "disabled": false
+    },
+    {
+      "source": "examples/acp-agent/product-subagent-both.cordis.yml",
+      "id": "subagent-claude-secondary",
+      "module": "@deepseek-ai/dsh-subagent-claude-code",
+      "disabled": false
+    },
+    {
+      "source": "examples/acp-agent/product-subagent-both.cordis.yml",
+      "id": "tool-subagent-codex-primary",
+      "module": "@deepseek-ai/dsh-tool-subagent",
+      "disabled": false
+    },
+    {
+      "source": "examples/acp-agent/product-subagent-both.cordis.yml",
+      "id": "tool-subagent-codex-secondary",
+      "module": "@deepseek-ai/dsh-tool-subagent",
+      "disabled": false
+    },
+    {
+      "source": "examples/acp-agent/product-subagent-both.cordis.yml",
+      "id": "tool-subagent-claude-primary",
+      "module": "@deepseek-ai/dsh-tool-subagent",
+      "disabled": false
+    },
+    {
+      "source": "examples/acp-agent/product-subagent-both.cordis.yml",
+      "id": "tool-subagent-claude-secondary",
+      "module": "@deepseek-ai/dsh-tool-subagent",
+      "disabled": false
+    },
+    {
+      "source": "examples/acp-agent/product-subagent-codex.cordis.yml",
+      "id": "base",
+      "module": "@deepseek-ai/cordis-plugin-include",
+      "disabled": false
+    },
+    {
+      "source": "examples/acp-agent/product-subagent-codex.cordis.yml",
+      "id": "subagent-codex-primary",
+      "module": "@deepseek-ai/dsh-subagent-codex",
+      "disabled": false
+    },
+    {
+      "source": "examples/acp-agent/product-subagent-codex.cordis.yml",
+      "id": "subagent-codex-secondary",
+      "module": "@deepseek-ai/dsh-subagent-codex",
+      "disabled": false
+    },
+    {
+      "source": "examples/acp-agent/product-subagent-codex.cordis.yml",
+      "id": "tool-subagent-codex-primary",
+      "module": "@deepseek-ai/dsh-tool-subagent",
+      "disabled": false
+    },
+    {
+      "source": "examples/acp-agent/product-subagent-codex.cordis.yml",
+      "id": "tool-subagent-codex-secondary",
+      "module": "@deepseek-ai/dsh-tool-subagent",
+      "disabled": false
+    },
+    {
+      "source": "examples/acp-agent/pty.cordis.yml",
+      "id": "base",
+      "module": "@deepseek-ai/cordis-plugin-include",
+      "disabled": false
+    },
+    {
+      "source": "examples/acp-agent/pty.cordis.yml",
+      "id": "pty",
+      "module": "@deepseek-ai/dsh-terminal",
+      "disabled": false
+    },
+    {
+      "source": "examples/acp-agent/pty.cordis.yml",
+      "id": "terminal-bash",
+      "module": "@deepseek-ai/dsh-terminal-bash",
+      "disabled": false
+    },
+    {
+      "source": "examples/acp-agent/pty.cordis.yml",
+      "id": "tool-terminal",
+      "module": "@deepseek-ai/dsh-tool-terminal",
+      "disabled": false
+    },
+    {
+      "source": "examples/acp-agent/retry.cordis.yml",
+      "id": "base",
+      "module": "@deepseek-ai/cordis-plugin-include",
+      "disabled": false
+    },
+    {
+      "source": "examples/acp-agent/retry.cordis.yml",
+      "id": "llm-deepseek",
+      "module": "@deepseek-ai/dsh-llm-deepseek",
+      "disabled": false
+    },
+    {
+      "source": "examples/acp-agent/retry.cordis.yml",
+      "id": "deepseek-v4-flash",
+      "module": null,
+      "disabled": false
+    },
+    {
+      "source": "examples/acp-agent/retry.cordis.yml",
+      "id": "deepseek-v4-pro",
+      "module": null,
+      "disabled": false
+    },
+    {
+      "source": "examples/acp-agent/retry.cordis.yml",
+      "id": "acp-agent",
+      "module": "@deepseek-ai/dsh-acp-demo",
+      "disabled": false
+    },
+    {
+      "source": "examples/acp-agent/session-query.cordis.yml",
+      "id": "base",
+      "module": "@deepseek-ai/cordis-plugin-include",
+      "disabled": false
+    },
+    {
+      "source": "examples/acp-agent/session-query.cordis.yml",
+      "id": "tool-session-query",
+      "module": "@deepseek-ai/dsh-tool-session-query",
+      "disabled": false
+    },
+    {
+      "source": "examples/acp-agent/session-query.cordis.yml",
+      "id": "timeout-policy",
+      "module": "@deepseek-ai/dsh-tool-call-timeout-policy",
+      "disabled": false
+    },
+    {
+      "source": "examples/acp-agent/session-sandbox-root.cordis.yml",
+      "id": "base",
+      "module": "@deepseek-ai/cordis-plugin-include",
+      "disabled": false
+    },
+    {
+      "source": "examples/acp-agent/session-sandbox-root.cordis.yml",
+      "id": "sandbox-policy",
+      "module": "@deepseek-ai/dsh-sandbox-policy",
+      "disabled": false
+    },
+    {
+      "source": "examples/acp-agent/session-title.cordis.yml",
+      "id": "base",
+      "module": "@deepseek-ai/cordis-plugin-include",
+      "disabled": false
+    },
+    {
+      "source": "examples/acp-agent/session-title.cordis.yml",
+      "id": "session-title-provider",
+      "module": "@deepseek-ai/dsh-session-title-first-prompt-llm",
+      "disabled": false
+    },
+    {
+      "source": "examples/acp-agent/subagent-continuable-inheritance.cordis.yml",
+      "id": "base",
+      "module": "@deepseek-ai/cordis-plugin-include",
+      "disabled": false
+    },
+    {
+      "source": "examples/acp-agent/subagent-continuable-inheritance.cordis.yml",
+      "id": "parent-sandbox-override",
+      "module": "./tests/fixtures/parent-sandbox-override.ts",
+      "disabled": false
+    },
+    {
+      "source": "examples/acp-agent/subagent-durability-failure.cordis.yml",
+      "id": "base",
+      "module": "@deepseek-ai/cordis-plugin-include",
+      "disabled": false
+    },
+    {
+      "source": "examples/acp-agent/subagent-durability-failure.cordis.yml",
+      "id": "subagent-durability-failure",
+      "module": "./tests/fixtures/subagent-durability-failure.ts",
+      "disabled": false
+    },
+    {
+      "source": "examples/acp-agent/subagent-report.cordis.yml",
+      "id": "base",
+      "module": "@deepseek-ai/cordis-plugin-include",
+      "disabled": false
+    },
+    {
+      "source": "examples/acp-agent/subagent-report.cordis.yml",
+      "id": "report-fence",
+      "module": "./tests/fixtures/subagent-report-fence.ts",
+      "disabled": false
+    },
+    {
+      "source": "examples/acp-agent/subagent-result-diagnostic.cordis.yml",
+      "id": "base",
+      "module": "@deepseek-ai/cordis-plugin-include",
+      "disabled": false
+    },
+    {
+      "source": "examples/acp-agent/subagent-result-diagnostic.cordis.yml",
+      "id": "subagent-result-diagnostic",
+      "module": "./tests/fixtures/subagent-result-diagnostic.ts",
+      "disabled": false
+    },
+    {
+      "source": "examples/acp-agent/subagent-result-diagnostic.cordis.yml",
+      "id": "tool-subagent-codex",
+      "module": "@deepseek-ai/dsh-tool-subagent",
+      "disabled": false
+    },
+    {
+      "source": "examples/acp-agent/web.cordis.yml",
+      "id": "base",
+      "module": "@deepseek-ai/cordis-plugin-include",
+      "disabled": false
+    },
+    {
+      "source": "examples/acp-agent/web.cordis.yml",
+      "id": "web",
+      "module": "@deepseek-ai/dsh-web",
+      "disabled": false
+    },
+    {
+      "source": "examples/acp-agent/web.cordis.yml",
+      "id": "web-fetch-http",
+      "module": "@deepseek-ai/dsh-web-fetch-http",
+      "disabled": false
+    },
+    {
+      "source": "examples/acp-agent/web.cordis.yml",
+      "id": "web-fetch-fixture",
+      "module": "./web-fetch-fixture-server.mjs",
+      "disabled": false
+    },
+    {
+      "source": "examples/acp-agent/web.cordis.yml",
+      "id": "tool-web",
+      "module": "@deepseek-ai/dsh-tool-web",
+      "disabled": false
+    },
+    {
+      "source": "examples/headless-agent/advanced.cordis.yml",
+      "id": "base",
+      "module": "@deepseek-ai/cordis-plugin-include",
+      "disabled": false
+    },
+    {
+      "source": "examples/headless-agent/advanced.cordis.yml",
+      "id": "agent-spine",
+      "module": "@deepseek-ai/dsh-agent-spine-demo",
+      "disabled": false
+    },
+    {
+      "source": "examples/headless-agent/advanced.cordis.yml",
+      "id": "main",
+      "module": null,
+      "disabled": false
+    },
+    {
+      "source": "examples/headless-agent/advanced.cordis.yml",
+      "id": "persistence",
+      "module": "@deepseek-ai/dsh-session-persistence-jsonl",
+      "disabled": false
+    },
+    {
+      "source": "examples/headless-agent/advanced.cordis.yml",
+      "id": "code-runtime",
+      "module": "@deepseek-ai/dsh-code-runtime-worker-thread",
+      "disabled": false
+    },
+    {
+      "source": "examples/headless-agent/advanced.cordis.yml",
+      "id": "cordis-host-runner",
+      "module": "@deepseek-ai/dsh-cordis-host-runner",
+      "disabled": false
+    },
+    {
+      "source": "examples/headless-agent/advanced.cordis.yml",
+      "id": "tool-cordis",
+      "module": "@deepseek-ai/dsh-tool-cordis",
+      "disabled": false
+    },
+    {
+      "source": "examples/headless-agent/cordis.yml",
+      "id": "settings",
+      "module": "@deepseek-ai/dsh-settings-file",
+      "disabled": false
+    },
+    {
+      "source": "examples/headless-agent/cordis.yml",
+      "id": "credentials",
+      "module": "@deepseek-ai/dsh-credentials-local",
+      "disabled": false
+    },
+    {
+      "source": "examples/headless-agent/cordis.yml",
+      "id": "llm-deepseek",
+      "module": "@deepseek-ai/dsh-llm-deepseek",
+      "disabled": false
+    },
+    {
+      "source": "examples/headless-agent/cordis.yml",
+      "id": "deepseek-v4-pro",
+      "module": null,
+      "disabled": false
+    },
+    {
+      "source": "examples/headless-agent/cordis.yml",
+      "id": "deepseek-v4-flash",
+      "module": null,
+      "disabled": false
+    },
+    {
+      "source": "examples/headless-agent/cordis.yml",
+      "id": "subprocess",
+      "module": "@deepseek-ai/dsh-subprocess-local",
+      "disabled": false
+    },
+    {
+      "source": "examples/headless-agent/cordis.yml",
+      "id": "bash",
+      "module": "@deepseek-ai/dsh-bash-local",
+      "disabled": false
+    },
+    {
+      "source": "examples/headless-agent/cordis.yml",
+      "id": "agent-spine",
+      "module": "@deepseek-ai/dsh-agent-spine-demo",
+      "disabled": false
+    },
+    {
+      "source": "examples/headless-agent/cordis.yml",
+      "id": "main",
+      "module": null,
+      "disabled": false
+    },
+    {
+      "source": "examples/headless-agent/cordis.yml",
+      "id": "persistence",
+      "module": "@deepseek-ai/dsh-session-persistence-jsonl",
+      "disabled": false
+    },
+    {
+      "source": "examples/headless-agent/cordis.yml",
+      "id": "checkpoint-policy",
+      "module": "@deepseek-ai/dsh-session-checkpoint-policy",
+      "disabled": false
+    },
+    {
+      "source": "examples/headless-agent/cordis.yml",
+      "id": "token-meter",
+      "module": "@deepseek-ai/dsh-token-meter",
+      "disabled": false
+    },
+    {
+      "source": "examples/headless-agent/cordis.yml",
+      "id": "compaction-basic",
+      "module": "@deepseek-ai/dsh-compaction-basic",
+      "disabled": false
+    },
+    {
+      "source": "examples/headless-agent/cordis.yml",
+      "id": "session-projection",
+      "module": "@deepseek-ai/dsh-session-projection",
+      "disabled": false
+    },
+    {
+      "source": "examples/headless-agent/cordis.yml",
+      "id": "subagent",
+      "module": "@deepseek-ai/dsh-subagent",
+      "disabled": false
+    },
+    {
+      "source": "examples/headless-agent/cordis.yml",
+      "id": "subagent-spawn-in-process",
+      "module": "@deepseek-ai/dsh-subagent-spawn-in-process",
+      "disabled": false
+    },
+    {
+      "source": "examples/headless-agent/cordis.yml",
+      "id": "subagent-fork-in-process",
+      "module": "@deepseek-ai/dsh-subagent-fork-in-process",
+      "disabled": false
+    },
+    {
+      "source": "examples/headless-agent/cordis.yml",
+      "id": "tool-subagent-control",
+      "module": "@deepseek-ai/dsh-tool-subagent-control",
+      "disabled": false
+    },
+    {
+      "source": "examples/headless-agent/cordis.yml",
+      "id": "tool-subagent-report",
+      "module": "@deepseek-ai/dsh-tool-subagent-report",
+      "disabled": false
+    },
+    {
+      "source": "examples/headless-agent/cordis.yml",
+      "id": "tool-subagent",
+      "module": "@deepseek-ai/dsh-tool-subagent",
+      "disabled": false
+    },
+    {
+      "source": "examples/headless-agent/cordis.yml",
+      "id": "tool-subagent-fork",
+      "module": "@deepseek-ai/dsh-tool-subagent",
+      "disabled": false
+    },
+    {
+      "source": "examples/headless-agent/cordis.yml",
+      "id": "workflow-worker-thread",
+      "module": "@deepseek-ai/dsh-workflow-worker-thread",
+      "disabled": false
+    },
+    {
+      "source": "examples/headless-agent/cordis.yml",
+      "id": "tool-workflow",
+      "module": "@deepseek-ai/dsh-tool-workflow",
+      "disabled": false
+    },
+    {
+      "source": "examples/headless-agent/cordis.yml",
+      "id": "tool-ralph",
+      "module": "@deepseek-ai/dsh-tool-ralph",
+      "disabled": false
+    },
+    {
+      "source": "examples/headless-agent/cordis.yml",
+      "id": "tool-todo",
+      "module": "@deepseek-ai/dsh-tool-todo",
+      "disabled": false
+    },
+    {
+      "source": "examples/headless-agent/cordis.yml",
+      "id": "fs-local",
+      "module": "@deepseek-ai/dsh-fs-local",
+      "disabled": false
+    },
+    {
+      "source": "examples/headless-agent/cordis.yml",
+      "id": "fs-observation-policy",
+      "module": "@deepseek-ai/dsh-fs-observation-policy",
+      "disabled": false
+    },
+    {
+      "source": "examples/headless-agent/cordis.yml",
+      "id": "tool-fs",
+      "module": "@deepseek-ai/dsh-tool-fs",
+      "disabled": false
+    },
+    {
+      "source": "examples/headless-agent/e2b.cordis.yml",
+      "id": "base",
+      "module": "@deepseek-ai/cordis-plugin-include",
+      "disabled": false
+    },
+    {
+      "source": "examples/headless-agent/e2b.cordis.yml",
+      "id": "subprocess",
+      "module": "@deepseek-ai/dsh-subprocess-local",
+      "disabled": true
+    },
+    {
+      "source": "examples/headless-agent/e2b.cordis.yml",
+      "id": "fs-local",
+      "module": "@deepseek-ai/dsh-fs-local",
+      "disabled": true
+    },
+    {
+      "source": "examples/headless-agent/e2b.cordis.yml",
+      "id": "e2b",
+      "module": "@deepseek-ai/dsh-e2b",
+      "disabled": false
+    },
+    {
+      "source": "examples/headless-agent/e2b.cordis.yml",
+      "id": "subprocess-e2b",
+      "module": "@deepseek-ai/dsh-subprocess-e2b",
+      "disabled": false
+    },
+    {
+      "source": "examples/headless-agent/e2b.cordis.yml",
+      "id": "fs-e2b",
+      "module": "@deepseek-ai/dsh-fs-e2b",
+      "disabled": false
+    },
+    {
+      "source": "examples/headless-agent/e2b.cordis.yml",
+      "id": "sandbox-policy",
+      "module": "@deepseek-ai/dsh-sandbox-policy",
+      "disabled": false
+    },
+    {
+      "source": "examples/headless-agent/e2b.cordis.yml",
+      "id": "pty",
+      "module": "@deepseek-ai/dsh-terminal",
+      "disabled": false
+    },
+    {
+      "source": "examples/headless-agent/e2b.cordis.yml",
+      "id": "terminal-bash",
+      "module": "@deepseek-ai/dsh-terminal-bash",
+      "disabled": false
+    },
+    {
+      "source": "examples/headless-agent/e2b.cordis.yml",
+      "id": "tool-terminal",
+      "module": "@deepseek-ai/dsh-tool-terminal",
+      "disabled": false
+    },
+    {
+      "source": "examples/headless-agent/e2b.cordis.yml",
+      "id": "lsp",
+      "module": "@deepseek-ai/dsh-lsp",
+      "disabled": false
+    },
+    {
+      "source": "examples/headless-agent/e2b.cordis.yml",
+      "id": "lsp-stdio",
+      "module": "@deepseek-ai/dsh-lsp-stdio",
+      "disabled": false
+    },
+    {
+      "source": "examples/headless-agent/e2b.cordis.yml",
+      "id": "tool-lsp",
+      "module": "@deepseek-ai/dsh-tool-lsp",
+      "disabled": false
+    },
+    {
+      "source": "examples/headless-agent/goal.cordis.yml",
+      "id": "base",
+      "module": "@deepseek-ai/cordis-plugin-include",
+      "disabled": false
+    },
+    {
+      "source": "examples/headless-agent/goal.cordis.yml",
+      "id": "goal",
+      "module": "@deepseek-ai/dsh-goal",
+      "disabled": false
+    },
+    {
+      "source": "examples/headless-agent/goal.cordis.yml",
+      "id": "tool-goal",
+      "module": "@deepseek-ai/dsh-tool-goal",
+      "disabled": false
+    },
+    {
+      "source": "examples/jsonrpc-agent/cordis.yml",
+      "id": "sdk-jsonrpc-server",
+      "module": "@deepseek-ai/dsh-sdk-jsonrpc-server",
+      "disabled": false
+    },
+    {
+      "source": "examples/jsonrpc-agent/cordis.yml",
+      "id": "llm-deepseek",
+      "module": "@deepseek-ai/dsh-llm-deepseek",
+      "disabled": false
+    },
+    {
+      "source": "examples/jsonrpc-agent/cordis.yml",
+      "id": "subprocess",
+      "module": "@deepseek-ai/dsh-subprocess-local",
+      "disabled": false
+    },
+    {
+      "source": "examples/jsonrpc-agent/cordis.yml",
+      "id": "bash",
+      "module": "@deepseek-ai/dsh-bash-local",
+      "disabled": false
+    },
+    {
+      "source": "examples/jsonrpc-agent/cordis.yml",
+      "id": "agent-spine",
+      "module": "@deepseek-ai/dsh-agent-spine-demo",
+      "disabled": false
+    },
+    {
+      "source": "examples/jsonrpc-agent/cordis.yml",
+      "id": "sessions",
+      "module": "@deepseek-ai/dsh-session-persistence-jsonl",
+      "disabled": false
+    },
+    {
+      "source": "examples/jsonrpc-agent/cordis.yml",
+      "id": "session-checkpoints",
+      "module": "@deepseek-ai/dsh-session-checkpoint-policy",
+      "disabled": false
+    },
+    {
+      "source": "examples/jsonrpc-agent/cordis.yml",
+      "id": "subagent",
+      "module": "@deepseek-ai/dsh-subagent",
+      "disabled": false
+    },
+    {
+      "source": "examples/jsonrpc-agent/cordis.yml",
+      "id": "subagent-spawn-in-process",
+      "module": "@deepseek-ai/dsh-subagent-spawn-in-process",
+      "disabled": false
+    },
+    {
+      "source": "examples/jsonrpc-agent/cordis.yml",
+      "id": "tool-subagent",
+      "module": "@deepseek-ai/dsh-tool-subagent",
+      "disabled": false
+    },
+    {
+      "source": "examples/jsonrpc-agent/cordis.yml",
+      "id": "tool-todo",
+      "module": "@deepseek-ai/dsh-tool-todo",
+      "disabled": false
+    },
+    {
+      "source": "examples/jsonrpc-agent/cordis.yml",
+      "id": "fs-local",
+      "module": "@deepseek-ai/dsh-fs-local",
+      "disabled": false
+    },
+    {
+      "source": "examples/jsonrpc-agent/cordis.yml",
+      "id": "fs-observation-policy",
+      "module": "@deepseek-ai/dsh-fs-observation-policy",
+      "disabled": false
+    },
+    {
+      "source": "examples/jsonrpc-agent/cordis.yml",
+      "id": "tool-fs",
+      "module": "@deepseek-ai/dsh-tool-fs",
+      "disabled": false
+    },
+    {
+      "source": "examples/jsonrpc-agent/cordis.yml",
+      "id": "token-meter",
+      "module": "@deepseek-ai/dsh-token-meter",
+      "disabled": false
+    },
+    {
+      "source": "examples/jsonrpc-agent/cordis.yml",
+      "id": "compaction-basic",
+      "module": "@deepseek-ai/dsh-compaction-basic",
+      "disabled": false
+    },
+    {
+      "source": "examples/jsonrpc-agent/minimal.cordis.yml",
+      "id": "sdk-jsonrpc-server",
+      "module": "@deepseek-ai/dsh-sdk-jsonrpc-server",
+      "disabled": false
+    },
+    {
+      "source": "examples/jsonrpc-agent/minimal.cordis.yml",
+      "id": "llm-deepseek",
+      "module": "@deepseek-ai/dsh-llm-deepseek",
+      "disabled": false
+    },
+    {
+      "source": "examples/jsonrpc-agent/minimal.cordis.yml",
+      "id": "!!js process.env.DSH_MODEL ?? 'deepseek-v4-flash",
+      "module": null,
+      "disabled": false
+    },
+    {
+      "source": "examples/jsonrpc-agent/minimal.cordis.yml",
+      "id": "sandbox",
+      "module": "@deepseek-ai/dsh-sandbox-local",
+      "disabled": false
+    },
+    {
+      "source": "examples/jsonrpc-agent/minimal.cordis.yml",
+      "id": "sandbox-policy",
+      "module": "@deepseek-ai/dsh-sandbox-policy",
+      "disabled": false
+    },
+    {
+      "source": "examples/jsonrpc-agent/minimal.cordis.yml",
+      "id": "subprocess",
+      "module": "@deepseek-ai/dsh-subprocess-local",
+      "disabled": false
+    },
+    {
+      "source": "examples/jsonrpc-agent/minimal.cordis.yml",
+      "id": "pty",
+      "module": "@deepseek-ai/dsh-terminal",
+      "disabled": false
+    },
+    {
+      "source": "examples/jsonrpc-agent/minimal.cordis.yml",
+      "id": "terminal-bash",
+      "module": "@deepseek-ai/dsh-terminal-bash",
+      "disabled": false
+    },
+    {
+      "source": "examples/jsonrpc-agent/minimal.cordis.yml",
+      "id": "fs-local",
+      "module": "@deepseek-ai/dsh-fs-local",
+      "disabled": false
+    },
+    {
+      "source": "examples/jsonrpc-agent/minimal.cordis.yml",
+      "id": "agent-spine",
+      "module": "@deepseek-ai/dsh-agent-spine-demo",
+      "disabled": false
+    },
+    {
+      "source": "examples/jsonrpc-agent/minimal.cordis.yml",
+      "id": "persistent-bash",
+      "module": "@deepseek-ai/dsh-tool-bash-persistent",
+      "disabled": false
+    },
+    {
+      "source": "examples/jsonrpc-agent/minimal.cordis.yml",
+      "id": "str-replace-editor",
+      "module": "@deepseek-ai/dsh-tool-str-replace-editor",
+      "disabled": false
+    },
+    {
+      "source": "examples/jsonrpc-agent/minimal.cordis.yml",
+      "id": "sessions",
+      "module": "@deepseek-ai/dsh-session-persistence-jsonl",
+      "disabled": false
+    },
+    {
+      "source": "examples/jsonrpc-agent/minimal.snapshot.cordis.yml",
+      "id": "base",
+      "module": "@deepseek-ai/cordis-plugin-include",
+      "disabled": false
+    },
+    {
+      "source": "examples/jsonrpc-agent/minimal.snapshot.cordis.yml",
+      "id": "llm-deepseek",
+      "module": "@deepseek-ai/dsh-llm-deepseek",
+      "disabled": true
+    },
+    {
+      "source": "examples/jsonrpc-agent/minimal.snapshot.cordis.yml",
+      "id": "llm-replay",
+      "module": "@deepseek-ai/dsh-llm-replay",
+      "disabled": false
+    },
+    {
+      "source": "examples/jsonrpc-agent/minimal.snapshot.cordis.yml",
+      "id": "deepseek-official",
+      "module": "DeepSeek",
+      "disabled": false
+    },
+    {
+      "source": "examples/jsonrpc-agent/minimal.snapshot.cordis.yml",
+      "id": "deepseek-v4-flash",
+      "module": null,
+      "disabled": false
+    },
+    {
+      "source": "examples/mcp-memory/engram.cordis.yml",
+      "id": "memory-engram",
+      "module": "@deepseek-ai/dsh-mcp-client",
+      "disabled": false
+    },
+    {
+      "source": "examples/mcp-memory/mcp-reference-memory.cordis.yml",
+      "id": "memory-mcp-reference",
+      "module": "@deepseek-ai/dsh-mcp-client",
+      "disabled": false
+    },
+    {
+      "source": "examples/mcp-memory/memorix.cordis.yml",
+      "id": "memory-memorix",
+      "module": "@deepseek-ai/dsh-mcp-client",
+      "disabled": false
+    },
+    {
+      "source": "examples/web-cordis/cordis.yml",
+      "id": "webserver",
+      "module": null,
+      "disabled": false
+    },
+    {
+      "source": "examples/web-cordis/cordis.yml",
+      "id": "cordis-host-runner",
+      "module": "@deepseek-ai/dsh-cordis-host-runner",
+      "disabled": false
+    },
+    {
+      "source": "examples/web-cordis/cordis.yml",
+      "id": "tool-cordis",
+      "module": "@deepseek-ai/dsh-tool-cordis",
+      "disabled": false
+    },
+    {
+      "source": "examples/web-schedule/cordis.yml",
+      "id": "time-context",
+      "module": "@deepseek-ai/dsh-time-context",
+      "disabled": false
+    },
+    {
+      "source": "examples/web-schedule/cordis.yml",
+      "id": "schedule",
+      "module": "@deepseek-ai/dsh-schedule",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/base/cordis.patch.yml",
+      "id": "timer",
+      "module": "@deepseek-ai/cordis-plugin-timer",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/base/cordis.patch.yml",
+      "id": "hmr",
+      "module": "@deepseek-ai/cordis-plugin-hmr",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/base/cordis.patch.yml",
+      "id": "llm",
+      "module": "@deepseek-ai/dsh-llm",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/base/cordis.patch.yml",
+      "id": "session",
+      "module": "@deepseek-ai/dsh-session",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/base/cordis.patch.yml",
+      "id": "typert",
+      "module": "@deepseek-ai/dsh-typert-registry",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/base/cordis.patch.yml",
+      "id": "typert-loader",
+      "module": "@deepseek-ai/dsh-typert-loader",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/base/cordis.patch.yml",
+      "id": "typert-gateway",
+      "module": "@deepseek-ai/dsh-api-gateway",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/base/cordis.patch.yml",
+      "id": "session-title",
+      "module": "@deepseek-ai/dsh-session-title",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/base/cordis.patch.yml",
+      "id": "session-title-llm",
+      "module": "@deepseek-ai/dsh-session-title-first-prompt-llm",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/base/cordis.patch.yml",
+      "id": "user-questions",
+      "module": "@deepseek-ai/dsh-user-questions",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/base/cordis.patch.yml",
+      "id": "agent",
+      "module": "@deepseek-ai/dsh-agent",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/base/cordis.patch.yml",
+      "id": "agent-default-model",
+      "module": "@deepseek-ai/dsh-agent-default-model",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/base/cordis.patch.yml",
+      "id": "jobs",
+      "module": "@deepseek-ai/dsh-jobs-local",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/base/cordis.patch.yml",
+      "id": "llm-retry",
+      "module": "@deepseek-ai/dsh-llm-retry",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/base/cordis.patch.yml",
+      "id": "settings",
+      "module": "@deepseek-ai/dsh-settings-file",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/base/cordis.patch.yml",
+      "id": "credentials",
+      "module": "@deepseek-ai/dsh-credentials-local",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/base/cordis.patch.yml",
+      "id": "llm-pi-ai",
+      "module": "@deepseek-ai/dsh-llm-pi-ai",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/base/cordis.patch.yml",
+      "id": "session-persistence-jsonl",
+      "module": "@deepseek-ai/dsh-session-persistence-jsonl",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/base/cordis.patch.yml",
+      "id": "attachment-local",
+      "module": "@deepseek-ai/dsh-attachment-local",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/base/cordis.patch.yml",
+      "id": "session-query-sqlite",
+      "module": "@deepseek-ai/dsh-session-query-sqlite",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/base/cordis.patch.yml",
+      "id": "session-projection",
+      "module": "@deepseek-ai/dsh-session-projection",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/base/cordis.patch.yml",
+      "id": "session-telemetry-otel",
+      "module": "@deepseek-ai/dsh-session-telemetry-otel",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/base/cordis.patch.yml",
+      "id": "subprocess",
+      "module": "@deepseek-ai/dsh-subprocess-local",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/base/cordis.patch.yml",
+      "id": "sandbox",
+      "module": "@deepseek-ai/dsh-sandbox-local",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/base/cordis.patch.yml",
+      "id": "sandbox-policy",
+      "module": "@deepseek-ai/dsh-sandbox-policy",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/base/cordis.patch.yml",
+      "id": "bash-sandbox",
+      "module": "@deepseek-ai/dsh-bash-sandbox",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/base/cordis.patch.yml",
+      "id": "pwsh-sandbox",
+      "module": "@deepseek-ai/dsh-pwsh-sandbox",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/base/cordis.patch.yml",
+      "id": "approval",
+      "module": "@deepseek-ai/dsh-user-approval",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/base/cordis.patch.yml",
+      "id": "permission",
+      "module": "@deepseek-ai/dsh-permission-presets",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/base/cordis.patch.yml",
+      "id": "shell-env",
+      "module": "@deepseek-ai/dsh-shell-env",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/base/cordis.patch.yml",
+      "id": "tool-bash",
+      "module": "@deepseek-ai/dsh-tool-bash",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/base/cordis.patch.yml",
+      "id": "tool-pwsh",
+      "module": "@deepseek-ai/dsh-tool-pwsh",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/base/cordis.patch.yml",
+      "id": "tool-jobs",
+      "module": "@deepseek-ai/dsh-tool-jobs",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/base/cordis.patch.yml",
+      "id": "fs-observation-policy",
+      "module": "@deepseek-ai/dsh-fs-observation-policy",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/base/cordis.patch.yml",
+      "id": "tool-fs",
+      "module": "@deepseek-ai/dsh-tool-fs",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/base/cordis.patch.yml",
+      "id": "tool-fs-search",
+      "module": "@deepseek-ai/dsh-tool-fs-search",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/base/cordis.patch.yml",
+      "id": "agent-instructions",
+      "module": "@deepseek-ai/dsh-agent-instructions",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/base/cordis.patch.yml",
+      "id": "skill",
+      "module": "@deepseek-ai/dsh-skill",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/base/cordis.patch.yml",
+      "id": "skill-filesystem",
+      "module": "@deepseek-ai/dsh-skill-filesystem",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/base/cordis.patch.yml",
+      "id": "skill-badge",
+      "module": "@deepseek-ai/dsh-skill-badge",
+      "disabled": true
+    },
+    {
+      "source": "packages/bundle/base/cordis.patch.yml",
+      "id": "tool-skill",
+      "module": "@deepseek-ai/dsh-tool-skill",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/base/cordis.patch.yml",
+      "id": "commands",
+      "module": "@deepseek-ai/dsh-commands",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/base/cordis.patch.yml",
+      "id": "command-feedback",
+      "module": "@deepseek-ai/dsh-command-feedback",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/base/cordis.patch.yml",
+      "id": "goal",
+      "module": "@deepseek-ai/dsh-goal",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/base/cordis.patch.yml",
+      "id": "goal-round-driver",
+      "module": "@deepseek-ai/dsh-goal-round-driver",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/base/cordis.patch.yml",
+      "id": "command-goal",
+      "module": "@deepseek-ai/dsh-command-goal",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/base/cordis.patch.yml",
+      "id": "plan-mode",
+      "module": "@deepseek-ai/dsh-plan-mode",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/base/cordis.patch.yml",
+      "id": "token-meter",
+      "module": "@deepseek-ai/dsh-token-meter",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/base/cordis.patch.yml",
+      "id": "compaction-basic",
+      "module": "@deepseek-ai/dsh-compaction-basic",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/base/cordis.patch.yml",
+      "id": "command-compact",
+      "module": "@deepseek-ai/dsh-command-compact",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/base/cordis.patch.yml",
+      "id": "subagent",
+      "module": "@deepseek-ai/dsh-subagent",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/base/cordis.patch.yml",
+      "id": "subagent-spawn-in-process",
+      "module": "@deepseek-ai/dsh-subagent-spawn-in-process",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/base/cordis.patch.yml",
+      "id": "subagent-fork-in-process",
+      "module": "@deepseek-ai/dsh-subagent-fork-in-process",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/base/cordis.patch.yml",
+      "id": "tool-subagent-control",
+      "module": "@deepseek-ai/dsh-tool-subagent-control",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/base/cordis.patch.yml",
+      "id": "tool-subagent-list-agents",
+      "module": "@deepseek-ai/dsh-tool-subagent-control/list-agents",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/base/cordis.patch.yml",
+      "id": "tool-subagent",
+      "module": "@deepseek-ai/dsh-tool-subagent",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/base/cordis.patch.yml",
+      "id": "tool-subagent-fork",
+      "module": "@deepseek-ai/dsh-tool-subagent",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/base/cordis.patch.yml",
+      "id": "tool-subagent-report",
+      "module": "@deepseek-ai/dsh-tool-subagent-report",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/base/cordis.patch.yml",
+      "id": "workflow-worker-thread",
+      "module": "@deepseek-ai/dsh-workflow-worker-thread",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/base/cordis.patch.yml",
+      "id": "tool-workflow",
+      "module": "@deepseek-ai/dsh-tool-workflow",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/base/cordis.patch.yml",
+      "id": "timeout-policy",
+      "module": "@deepseek-ai/dsh-tool-call-timeout-policy",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/base/cordis.patch.yml",
+      "id": "spill-local",
+      "module": "@deepseek-ai/dsh-spill-local",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/base/cordis.patch.yml",
+      "id": "spill-policy",
+      "module": "@deepseek-ai/dsh-spill-policy",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/base/cordis.patch.yml",
+      "id": "session-checkpoint-policy",
+      "module": "@deepseek-ai/dsh-session-checkpoint-policy",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/base/cordis.patch.yml",
+      "id": "tool-result-pruner",
+      "module": "@deepseek-ai/dsh-compaction-tool-result-pruner",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/base/cordis.patch.yml",
+      "id": "tool-todo",
+      "module": "@deepseek-ai/dsh-tool-todo",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/base/cordis.patch.yml",
+      "id": "tool-goal",
+      "module": "@deepseek-ai/dsh-tool-goal",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/base/cordis.patch.yml",
+      "id": "tool-ralph",
+      "module": "@deepseek-ai/dsh-tool-ralph",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/base/cordis.patch.yml",
+      "id": "tool-str-replace-editor",
+      "module": "@deepseek-ai/dsh-tool-str-replace-editor",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/base/cordis.patch.yml",
+      "id": "repeat-tool-reminder",
+      "module": "@deepseek-ai/dsh-repeat-tool-reminder",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/base/cordis.patch.yml",
+      "id": "web",
+      "module": "@deepseek-ai/dsh-web",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/base/cordis.patch.yml",
+      "id": "web-search-deepseek",
+      "module": "@deepseek-ai/dsh-web-search-deepseek",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/base/cordis.patch.yml",
+      "id": "tool-web",
+      "module": "@deepseek-ai/dsh-tool-web",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/base/cordis.patch.yml",
+      "id": "tools",
+      "module": "@deepseek-ai/dsh-tools",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/base/cordis.patch.yml",
+      "id": "system-prompt",
+      "module": "@deepseek-ai/dsh-system-prompt",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/base/cordis.patch.yml",
+      "id": "agent-loop",
+      "module": "@deepseek-ai/dsh-agent-loop",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/base/cordis.patch.yml",
+      "id": "fs-sandbox",
+      "module": "@deepseek-ai/dsh-fs-sandbox",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/base/cordis.patch.yml",
+      "id": "llm-deepseek",
+      "module": "@deepseek-ai/dsh-llm-deepseek",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/headless/cordis.patch.yml",
+      "id": "system-prompt",
+      "module": null,
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/headless/cordis.patch.yml",
+      "id": "hmr",
+      "module": null,
+      "disabled": true
+    },
+    {
+      "source": "packages/bundle/headless/cordis.patch.yml",
+      "id": "tools",
+      "module": null,
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/headless/cordis.patch.yml",
+      "id": "code-runtime",
+      "module": "@deepseek-ai/dsh-code-runtime-worker-thread",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/headless/cordis.patch.yml",
+      "id": "headless-startup",
+      "module": "@deepseek-ai/dsh-headless/startup",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/headless/cordis.patch.yml",
+      "id": "headless-runner",
+      "module": "@deepseek-ai/dsh-headless",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/web-app/cordis.patch.yml",
+      "id": "system-prompt",
+      "module": null,
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/web-app/cordis.patch.yml",
+      "id": "hmr",
+      "module": null,
+      "disabled": true
+    },
+    {
+      "source": "packages/bundle/web-app/cordis.patch.yml",
+      "id": "session-query-sqlite",
+      "module": null,
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/web-app/cordis.patch.yml",
+      "id": "tools",
+      "module": null,
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/web-app/cordis.patch.yml",
+      "id": "code-runtime",
+      "module": "@deepseek-ai/dsh-code-runtime-worker-thread",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/web-app/cordis.patch.yml",
+      "id": "storage",
+      "module": "@deepseek-ai/dsh-storage",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/web-app/cordis.patch.yml",
+      "id": "storage-json",
+      "module": "@deepseek-ai/dsh-storage-json",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/web-app/cordis.patch.yml",
+      "id": "storage-domain",
+      "module": "@deepseek-ai/dsh-storage-domain",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/web-app/cordis.patch.yml",
+      "id": "message-feedback",
+      "module": "@deepseek-ai/dsh-message-feedback",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/web-app/cordis.patch.yml",
+      "id": "session-log-download",
+      "module": "@deepseek-ai/dsh-session-log-export",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/web-app/cordis.patch.yml",
+      "id": "workspace",
+      "module": "@deepseek-ai/dsh-workspace",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/web-app/cordis.patch.yml",
+      "id": "session-projection-cache",
+      "module": "@deepseek-ai/dsh-session-projection-cache",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/web-app/cordis.patch.yml",
+      "id": "session-reference",
+      "module": "@deepseek-ai/dsh-session-reference",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/web-app/cordis.patch.yml",
+      "id": "file-reference-local",
+      "module": "@deepseek-ai/dsh-file-reference-local",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/web-app/cordis.patch.yml",
+      "id": "session-stats",
+      "module": "@deepseek-ai/dsh-session-stats",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/web-app/cordis.patch.yml",
+      "id": "directory-picker",
+      "module": "@deepseek-ai/dsh-host-directory-picker-auto",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/web-app/cordis.patch.yml",
+      "id": "plugin-inventory",
+      "module": "@deepseek-ai/dsh-host-plugin-inventory",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/web-app/cordis.patch.yml",
+      "id": "api-gateway",
+      "module": "@deepseek-ai/dsh-host-apiproxy",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/web-app/cordis.patch.yml",
+      "id": "cordis-host-runner",
+      "module": "@deepseek-ai/dsh-cordis-host-runner",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/web-app/cordis.patch.yml",
+      "id": "web-startup",
+      "module": "@deepseek-ai/dsh-web-app/startup",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/web-app/cordis.patch.yml",
+      "id": "webserver",
+      "module": "@deepseek-ai/dsh-host-webserver",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/web-app/cordis.patch.yml",
+      "id": "web-runtime",
+      "module": "@deepseek-ai/dsh-web-app",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/web-app/cordis.patch.yml",
+      "id": "client-hmr",
+      "module": "@deepseek-ai/dsh-client-hmr",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/web-app/cordis.patch.yml",
+      "id": "modules",
+      "module": "@deepseek-ai/dsh-client-modules",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/web-app/cordis.patch.yml",
+      "id": "connection",
+      "module": "@deepseek-ai/dsh-client-connection",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/web-app/cordis.patch.yml",
+      "id": "api-remotes",
+      "module": "@deepseek-ai/dsh-api-remotes",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/web-app/cordis.patch.yml",
+      "id": "client-runtime",
+      "module": "@deepseek-ai/dsh-client-runtime",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/web-app/cordis.patch.yml",
+      "id": "cordis-client-runner",
+      "module": "@deepseek-ai/dsh-cordis-client-runner",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/web-app/cordis.patch.yml",
+      "id": "ui-theme",
+      "module": "@deepseek-ai/dsh-client-ui-theme",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/web-app/cordis.patch.yml",
+      "id": "locale",
+      "module": "@deepseek-ai/dsh-client-locale",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/web-app/cordis.patch.yml",
+      "id": "ui-layout",
+      "module": "@deepseek-ai/dsh-client-ui-layout",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/web-app/cordis.patch.yml",
+      "id": "ui-renderer",
+      "module": "@deepseek-ai/dsh-client-ui-renderer",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/web-app/cordis.patch.yml",
+      "id": "ui-sidebar",
+      "module": "@deepseek-ai/dsh-client-ui-sidebar",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/web-app/cordis.patch.yml",
+      "id": "ui-settings",
+      "module": "@deepseek-ai/dsh-client-ui-settings",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/web-app/cordis.patch.yml",
+      "id": "ui-settings-general",
+      "module": "@deepseek-ai/dsh-client-ui-settings-general",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/web-app/cordis.patch.yml",
+      "id": "ui-settings-models",
+      "module": "@deepseek-ai/dsh-client-ui-settings-models",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/web-app/cordis.patch.yml",
+      "id": "ui-settings-plugin-inventory",
+      "module": "@deepseek-ai/dsh-client-ui-settings-plugin-inventory",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/web-app/cordis.patch.yml",
+      "id": "ui-conversation",
+      "module": "@deepseek-ai/dsh-client-ui-conversation",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/web-app/cordis.patch.yml",
+      "id": "ui-brand-official",
+      "module": "@deepseek-ai/dsh-client-ui-brand-official",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/web-app/cordis.patch.yml",
+      "id": "ui-attachment",
+      "module": "@deepseek-ai/dsh-client-ui-attachment",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/web-app/cordis.patch.yml",
+      "id": "ui-tool",
+      "module": "@deepseek-ai/dsh-client-ui-tool",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/web-app/cordis.patch.yml",
+      "id": "ui-cordis",
+      "module": "@deepseek-ai/dsh-client-ui-cordis",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/web-app/cordis.patch.yml",
+      "id": "ui-workflow-run",
+      "module": "@deepseek-ai/dsh-client-ui-workflow-run",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/web-app/cordis.patch.yml",
+      "id": "ui-deliverables",
+      "module": "@deepseek-ai/dsh-client-ui-deliverables",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/web-app/cordis.patch.yml",
+      "id": "ui-workspace",
+      "module": "@deepseek-ai/dsh-client-ui-workspace",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/web-app/cordis.patch.yml",
+      "id": "ui-input-trigger",
+      "module": "@deepseek-ai/dsh-client-ui-input-trigger",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/web-app/cordis.patch.yml",
+      "id": "ui-commands",
+      "module": "@deepseek-ai/dsh-client-ui-commands",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/web-app/cordis.patch.yml",
+      "id": "ui-skill",
+      "module": "@deepseek-ai/dsh-client-ui-skill",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/web-app/cordis.patch.yml",
+      "id": "ui-subagent",
+      "module": "@deepseek-ai/dsh-client-ui-subagent",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/web-app/cordis.patch.yml",
+      "id": "ui-reference",
+      "module": "@deepseek-ai/dsh-client-ui-reference",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/web-app/cordis.patch.yml",
+      "id": "ui-jobs",
+      "module": "@deepseek-ai/dsh-client-ui-jobs",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/web-app/cordis.patch.yml",
+      "id": "ui-goal",
+      "module": "@deepseek-ai/dsh-client-ui-goal",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/web-app/cordis.patch.yml",
+      "id": "ui-message-feedback",
+      "module": "@deepseek-ai/dsh-client-ui-message-feedback",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/web-app/cordis.patch.yml",
+      "id": "ui-model-selection",
+      "module": "@deepseek-ai/dsh-client-ui-model-selection",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/web-app/cordis.patch.yml",
+      "id": "ui-permission",
+      "module": "@deepseek-ai/dsh-client-ui-permission-presets",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/web-app/cordis.patch.yml",
+      "id": "ui-agent-preset",
+      "module": "@deepseek-ai/dsh-client-ui-agent-preset",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/web-app/cordis.patch.yml",
+      "id": "ui-settings-plugins",
+      "module": "@deepseek-ai/dsh-client-ui-settings-plugins",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/web-app/cordis.patch.yml",
+      "id": "ui-plan",
+      "module": "@deepseek-ai/dsh-client-ui-plan",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/web-app/cordis.patch.yml",
+      "id": "ui-user-questions",
+      "module": "@deepseek-ai/dsh-client-ui-user-questions",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/web-app/cordis.patch.yml",
+      "id": "ui-trajectory",
+      "module": "@deepseek-ai/dsh-client-ui-trajectory",
+      "disabled": false
+    },
+    {
+      "source": "packages/bundle/web-app/cordis.patch.yml",
+      "id": "tool-bash",
+      "module": null,
+      "disabled": true
+    },
+    {
+      "source": "packages/bundle/web-app/cordis.patch.yml",
+      "id": "tool-pwsh",
+      "module": null,
+      "disabled": true
+    },
+    {
+      "source": "packages/bundle/web-app/cordis.patch.yml",
+      "id": "tool-jobs",
+      "module": null,
+      "disabled": true
+    },
+    {
+      "source": "packages/bundle/web-app/cordis.patch.yml",
+      "id": "tool-fs",
+      "module": null,
+      "disabled": true
+    },
+    {
+      "source": "packages/bundle/web-app/cordis.patch.yml",
+      "id": "tool-fs-search",
+      "module": null,
+      "disabled": true
+    },
+    {
+      "source": "packages/bundle/web-app/cordis.patch.yml",
+      "id": "tool-str-replace-editor",
+      "module": null,
+      "disabled": true
+    },
+    {
+      "source": "packages/bundle/web-app/cordis.patch.yml",
+      "id": "skill-filesystem",
+      "module": null,
+      "disabled": true
+    },
+    {
+      "source": "packages/bundle/web-app/cordis.patch.yml",
+      "id": "tool-skill",
+      "module": null,
+      "disabled": true
+    },
+    {
+      "source": "packages/bundle/web-app/cordis.patch.yml",
+      "id": "tool-goal",
+      "module": null,
+      "disabled": true
+    },
+    {
+      "source": "packages/bundle/web-app/cordis.patch.yml",
+      "id": "plan-mode",
+      "module": null,
+      "disabled": true
+    },
+    {
+      "source": "packages/bundle/web-app/cordis.patch.yml",
+      "id": "compaction-basic",
+      "module": null,
+      "disabled": true
+    },
+    {
+      "source": "packages/bundle/web-app/cordis.patch.yml",
+      "id": "command-compact",
+      "module": null,
+      "disabled": true
+    },
+    {
+      "source": "packages/bundle/web-app/cordis.patch.yml",
+      "id": "tool-result-pruner",
+      "module": null,
+      "disabled": true
+    },
+    {
+      "source": "packages/bundle/web-app/cordis.patch.yml",
+      "id": "tool-subagent-control",
+      "module": null,
+      "disabled": true
+    },
+    {
+      "source": "packages/bundle/web-app/cordis.patch.yml",
+      "id": "tool-subagent-list-agents",
+      "module": null,
+      "disabled": true
+    },
+    {
+      "source": "packages/bundle/web-app/cordis.patch.yml",
+      "id": "tool-subagent",
+      "module": null,
+      "disabled": true
+    },
+    {
+      "source": "packages/bundle/web-app/cordis.patch.yml",
+      "id": "tool-subagent-fork",
+      "module": null,
+      "disabled": true
+    },
+    {
+      "source": "packages/bundle/web-app/cordis.patch.yml",
+      "id": "workflow-worker-thread",
+      "module": null,
+      "disabled": true
+    },
+    {
+      "source": "packages/bundle/web-app/cordis.patch.yml",
+      "id": "tool-workflow",
+      "module": null,
+      "disabled": true
+    },
+    {
+      "source": "packages/bundle/web-app/cordis.patch.yml",
+      "id": "tool-ralph",
+      "module": null,
+      "disabled": true
+    },
+    {
+      "source": "packages/bundle/web-app/cordis.patch.yml",
+      "id": "agent-instructions",
+      "module": null,
+      "disabled": true
+    },
+    {
+      "source": "packages/bundle/web-app/cordis.patch.yml",
+      "id": "tool-todo",
+      "module": null,
+      "disabled": true
+    },
+    {
+      "source": "packages/bundle/web-app/cordis.patch.yml",
+      "id": "tool-web",
+      "module": null,
+      "disabled": true
+    },
+    {
+      "source": "packages/bundle/web-app/cordis.patch.yml",
+      "id": "agent-presets",
+      "module": "@deepseek-ai/dsh-agent-presets",
+      "disabled": false
+    },
+    {
+      "source": "packages/subagent/subagent-claude-code/cordis.patch.yml",
+      "id": "subagent-claude-code",
+      "module": "@deepseek-ai/dsh-subagent-claude-code",
+      "disabled": false
+    },
+    {
+      "source": "packages/subagent/subagent-codex/cordis.patch.yml",
+      "id": "subagent-codex",
+      "module": "@deepseek-ai/dsh-subagent-codex",
+      "disabled": false
+    },
+    {
+      "source": "python/sdk-runtime/src/deepseek_harness_runtime/runtime/cordis.yml",
+      "id": "sdk-jsonrpc-server",
+      "module": "@deepseek-ai/dsh-sdk-jsonrpc-server",
+      "disabled": false
+    },
+    {
+      "source": "python/sdk-runtime/src/deepseek_harness_runtime/runtime/cordis.yml",
+      "id": "agent-core",
+      "module": "@deepseek-ai/dsh-agent-spine-demo",
+      "disabled": false
+    },
+    {
+      "source": "python/sdk-runtime/src/deepseek_harness_runtime/runtime/cordis.yml",
+      "id": "llm-deepseek",
+      "module": "@deepseek-ai/dsh-llm-deepseek",
+      "disabled": false
+    },
+    {
+      "source": "python/sdk-runtime/src/deepseek_harness_runtime/runtime/cordis.yml",
+      "id": "sessions",
+      "module": "@deepseek-ai/dsh-session-persistence-jsonl",
+      "disabled": false
+    },
+    {
+      "source": "python/sdk-runtime/src/deepseek_harness_runtime/runtime/cordis.yml",
+      "id": "session-checkpoints",
+      "module": "@deepseek-ai/dsh-session-checkpoint-policy",
+      "disabled": false
+    },
+    {
+      "source": "python/sdk-runtime/src/deepseek_harness_runtime/runtime/cordis.yml",
+      "id": "subprocess",
+      "module": "@deepseek-ai/dsh-subprocess-local",
+      "disabled": false
+    },
+    {
+      "source": "python/sdk-runtime/src/deepseek_harness_runtime/runtime/cordis.yml",
+      "id": "bash",
+      "module": "@deepseek-ai/dsh-bash-local",
+      "disabled": false
+    },
+    {
+      "source": "python/sdk-runtime/src/deepseek_harness_runtime/runtime/cordis.yml",
+      "id": "fs-local",
+      "module": "@deepseek-ai/dsh-fs-local",
+      "disabled": false
+    }
+  ]
+}
