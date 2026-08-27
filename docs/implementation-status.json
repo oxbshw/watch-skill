@@ -478,18 +478,24 @@
       "phase": "Phase 4 — sensory surfaces",
       "classification": "WATCH_EXISTING",
       "owner": "watch-workspace",
-      "status": "in_progress",
+      "status": "tested",
       "source_paths": [
+        "packages/watch/live/src/session.ts",
+        "packages/watch/live/src/client/components.tsx",
         "packages/watch/tools/src/sensory.ts"
       ],
       "tests": [
+        "tests/live.test.mjs",
+        "tests/fixtures/live-session.mjs",
         "tests/watch-tools.test.mjs"
       ],
-      "acceptance_journey": "Start, observe, gap, reconnect, finalize, replay",
+      "acceptance_journey": "Start, observe, cursor break, reconnect, resnapshot, continue, finalize, replay — on a fixed-clock fixture",
       "known_limitations": [
-        "Bridge methods and agent tools exist. No Live UI surface, and no long-session or reconnect gate."
+        "The client half is complete and gated: cursors, delta recovery, explicit gaps, three clocks, reconnect and a bounded buffer.",
+        "The transport that carries deltas is the Bridge’s watch.live.observe long poll; a push subscription is not implemented.",
+        "Long-session bounding is proven against a 5,000-event fixture rather than against an eight-hour real capture."
       ],
-      "commit": "bbbff27"
+      "commit": "pending"
     },
     {
       "id": "library.surface",

@@ -9,9 +9,9 @@ Baseline: DeepSeek Harness `0.1.1-rc.2 @ b150a551b8d465e31e418e1b2eaf5e79bbb7d28
 
 | Status | Count |
 |---|---:|
-| ✅ tested | 25 |
+| ✅ tested | 26 |
 | 🟩 implemented | 1 |
-| 🟨 in progress | 3 |
+| 🟨 in progress | 2 |
 | ⬜ not started | 6 |
 | **total** | **35** |
 
@@ -190,7 +190,7 @@ Baseline: DeepSeek Harness `0.1.1-rc.2 @ b150a551b8d465e31e418e1b2eaf5e79bbb7d28
 | `adapters.obsidian` — Optional Obsidian vault adapter | ⬜ not started | watch-workspace | — |
 | `compare.surface` — Compare runs, revisions and before/after states | ✅ tested | watch-workspace | 1 |
 | `library.surface` — Library of sources and evidence, separate from memory | 🟨 in progress | watch-workspace | 1 |
-| `live.surface` — Live mode with gaps, clocks and reconnect | 🟨 in progress | watch-workspace | 1 |
+| `live.surface` — Live mode with gaps, clocks and reconnect | ✅ tested | watch-workspace | 3 |
 | `memory.governed-learning` — Candidate lifecycle with eval, promotion, canary and rollback | ✅ tested | watch-workspace | 1 |
 | `wiki.projections` — Workspace wiki projections with provenance | ⬜ not started | watch-workspace | — |
 
@@ -208,7 +208,9 @@ Baseline: DeepSeek Harness `0.1.1-rc.2 @ b150a551b8d465e31e418e1b2eaf5e79bbb7d28
 
 **`live.surface`**
 
-- Bridge methods and agent tools exist. No Live UI surface, and no long-session or reconnect gate.
+- The client half is complete and gated: cursors, delta recovery, explicit gaps, three clocks, reconnect and a bounded buffer.
+- The transport that carries deltas is the Bridge’s watch.live.observe long poll; a push subscription is not implemented.
+- Long-session bounding is proven against a 5,000-event fixture rather than against an eight-hour real capture.
 
 **`memory.governed-learning`**
 

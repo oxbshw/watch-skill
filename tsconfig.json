@@ -27,6 +27,12 @@
     },
     {
       "path": "packages/watch/client-memory"
+    },
+    {
+      "path": "packages/watch/live"
+    },
+    {
+      "path": "packages/watch/library"
     }
   ]
 }
