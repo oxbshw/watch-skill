@@ -36,6 +36,9 @@
     },
     {
       "path": "packages/watch/wiki"
+    },
+    {
+      "path": "packages/watch/client-evidence"
     }
   ]
 }

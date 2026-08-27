@@ -17,13 +17,15 @@
 import type { Context } from '@deepseek-ai/cordis'
 import type { ReactNode } from 'react'
 import { parseVerdict, parseAnswer } from '@watchskill/dsh-contracts'
-import { VerdictRow } from './VerdictRow.tsx'
-import { SourceAnswerRow } from './SourceAnswerRow.tsx'
+import { VerdictRow } from './VerdictRow.js'
+import { SourceAnswerRow } from './SourceAnswerRow.js'
 
-export { VerdictRow } from './VerdictRow.tsx'
-export { SourceAnswerRow } from './SourceAnswerRow.tsx'
-export { EvidenceInspector } from './EvidenceInspector.tsx'
-export type { EvidenceInspectorProps, InspectableEvidence, InspectorState } from './EvidenceInspector.tsx'
+export { VerdictRow } from './VerdictRow.js'
+export { SourceAnswerRow } from './SourceAnswerRow.js'
+export { EvidenceInspector } from './EvidenceInspector.js'
+export { CompareView, DivergenceRow } from './CompareView.js'
+export type { CompareViewProps, DivergenceRowProps } from './CompareView.js'
+export type { EvidenceInspectorProps, InspectableEvidence, InspectorState } from './EvidenceInspector.js'
 // Re-exported from the trajectory package, which owns them: they have no DOM
 // dependency, and the browser bundle inlines them rather than duplicating them.
 export {
@@ -86,14 +88,26 @@ function WatchAskView({ block }: ToolCallOwnerProps): ReactNode {
   return <SourceAnswerRow payload={payload} />
 }
 
+/**
+ * The minimal shape of DSH's slot service this module uses.
+ *
+ * Declared locally rather than by augmenting `Context`: the augmentation
+ * belongs to upstream's own client packages, and restating it here would mean
+ * two declarations of the same service that can drift apart.
+ */
+interface SlotService {
+  inject(name: string, register: () => void): void
+  register(entry: Record<string, unknown>, component: unknown): void
+}
+
 /** Register the Watch tool views into the conversation. */
 export function apply(ctx: Context): void {
-  ctx.slots.inject('tool.call.toolview', () => ctx.slots.register(
-    { name: 'tool.call.toolview', key: 'watch_verify' },
-    WatchVerifyView,
-  ))
-  ctx.slots.inject('tool.call.toolview', () => ctx.slots.register(
-    { name: 'tool.call.toolview', key: 'watch_ask_source' },
-    WatchAskView,
-  ))
+  const slots = (ctx as unknown as { slots: SlotService }).slots
+  const view = (key: string, component: unknown): void => {
+    slots.inject('tool.call.toolview', () => {
+      slots.register({ name: 'tool.call.toolview', key }, component)
+    })
+  }
+  view('watch_verify', WatchVerifyView)
+  view('watch_ask_source', WatchAskView)
 }

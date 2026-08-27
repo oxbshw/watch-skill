@@ -15,7 +15,11 @@
       "types": "./lib/client/index.d.ts",
       "default": "./lib/client.js"
     },
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./compare": {
+      "types": "./lib/client/CompareView.d.ts",
+      "default": "./lib/client/CompareView.js"
+    }
   },
   "dsh": {
     "client": {
@@ -27,9 +31,8 @@
     }
   },
   "files": [
-    "lib/index.js",
-    "lib/client.js",
-    "lib/client.js.map",
+    "lib/**/*.js",
+    "lib/**/*.js.map",
     "lib/**/*.d.ts"
   ],
   "scripts": {
@@ -48,6 +51,7 @@
   },
   "dependencies": {
     "@watchskill/dsh-contracts": "workspace:^",
-    "@watchskill/dsh-trajectory": "workspace:^"
+    "@watchskill/dsh-trajectory": "workspace:^",
+    "@watchskill/dsh-client-brand": "workspace:^"
   }
 }

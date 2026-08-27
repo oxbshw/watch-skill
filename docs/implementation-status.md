@@ -9,8 +9,7 @@ Baseline: DeepSeek Harness `0.1.1-rc.2 @ b150a551b8d465e31e418e1b2eaf5e79bbb7d28
 
 | Status | Count |
 |---|---:|
-| ✅ tested | 28 |
-| 🟩 implemented | 1 |
+| ✅ tested | 29 |
 | 🟨 in progress | 1 |
 | ⬜ not started | 5 |
 | **total** | **35** |
@@ -54,7 +53,7 @@ Baseline: DeepSeek Harness `0.1.1-rc.2 @ b150a551b8d465e31e418e1b2eaf5e79bbb7d28
 |---|---|---|---|
 | `bridge.contracts` — Pydantic-sourced wire contracts with digest drift detection | ✅ tested | both | 2 |
 | `core.bridge-surface` — Watch Core Bridge: handshake, capability truth, sensory and operator methods | ✅ tested | watch-skill | 1 |
-| `evidence.inspector` — Evidence Inspector showing resolved records | 🟩 implemented | watch-workspace | — |
+| `evidence.inspector` — Evidence Inspector showing resolved records | ✅ tested | watch-workspace | 2 |
 | `tools.agent-surface` — Watch capabilities as DSH agent tools | ✅ tested | watch-workspace | 1 |
 | `trajectory.records` — Watch records in DSH's own event system, with replay determinism | ✅ tested | watch-workspace | 2 |
 | `trajectory.selection` — Unified Selection Model and deep links | ✅ tested | watch-workspace | 2 |
@@ -71,8 +70,8 @@ Baseline: DeepSeek Harness `0.1.1-rc.2 @ b150a551b8d465e31e418e1b2eaf5e79bbb7d28
 
 **`evidence.inspector`**
 
-- Functionality first; the visual design belongs to Phase 3.
-- No browser test harness exists, so the React rendering is not covered by a gate. The rules it renders are tested in tests/presentation.test.mjs.
+- The React halves are now type-checked as part of `tsc -b`; before this they were built only by the bundler and carried real errors.
+- EvidenceInspector itself imports a CSS module and is covered by the presentation rules test rather than by a rendering gate; CompareView, which has no stylesheet, is rendered directly.
 
 **`trajectory.records`**
 
@@ -188,7 +187,7 @@ Baseline: DeepSeek Harness `0.1.1-rc.2 @ b150a551b8d465e31e418e1b2eaf5e79bbb7d28
 |---|---|---|---|
 | `adapters.llmwiki` — LLMWiki-compatible import and export | ⬜ not started | watch-workspace | — |
 | `adapters.obsidian` — Optional Obsidian vault adapter | ⬜ not started | watch-workspace | — |
-| `compare.surface` — Compare runs, revisions and before/after states | ✅ tested | watch-workspace | 1 |
+| `compare.surface` — Compare runs, revisions and before/after states | ✅ tested | watch-workspace | 3 |
 | `library.surface` — Library of sources and evidence, separate from memory | ✅ tested | watch-workspace | 2 |
 | `live.surface` — Live mode with gaps, clocks and reconnect | ✅ tested | watch-workspace | 3 |
 | `memory.governed-learning` — Candidate lifecycle with eval, promotion, canary and rollback | ✅ tested | watch-workspace | 1 |
@@ -198,9 +197,8 @@ Baseline: DeepSeek Harness `0.1.1-rc.2 @ b150a551b8d465e31e418e1b2eaf5e79bbb7d28
 
 **`compare.surface`**
 
-- Alignment, first-divergence detection and a stable digest are implemented and tested over trajectory projections.
-- Aligns on channel and timestamp. Visual, DOM, network and console channels are typed but only the record-derived ones are populated today.
-- No Compare UI surface exists.
+- Channels are derived from resolved evidence modality; unresolved evidence stays on the text channel rather than being guessed onto a sense.
+- Console divergences are typed but nothing populates them: Watch records carry no console channel today.
 
 **`library.surface`**
 

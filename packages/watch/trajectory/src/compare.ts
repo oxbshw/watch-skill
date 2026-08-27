@@ -24,9 +24,31 @@
 
 import type { WatchTrajectoryRecord } from './events.js'
 import type { WatchProjection } from './projection.js'
+import { toDeepLink } from './selection.js'
 
 /** What is being compared. */
-export type CompareSubject = 'run' | 'source_revision' | 'temporal_region'
+export type CompareSubject =
+  /** Two runs of the same task. */
+  | 'run'
+  /** Two revisions of the same source. */
+  | 'source_revision'
+  /** Two time ranges, in the same source or in two. */
+  | 'temporal_region'
+  /**
+   * The same thing before and after a change was made.
+   *
+   * Named separately from `temporal_region` because it carries an
+   * expectation: somebody did something in between, and the question is
+   * whether the difference is the one they intended. Compare still issues no
+   * verdict — that remains a verification contract — but the surface reads
+   * differently when it knows a change was deliberate.
+   */
+  | 'before_after'
+
+/** Every subject, for enumerating the picker. */
+export const COMPARE_SUBJECTS: readonly CompareSubject[] = [
+  'run', 'source_revision', 'temporal_region', 'before_after',
+]
 
 /** Which signal a divergence was found in. */
 export type DivergenceChannel =
@@ -84,8 +106,48 @@ export interface Comparison {
   readonly agreements: number
 }
 
-/** Which channel a record's evidence belongs to. */
-function channelFor(record: WatchTrajectoryRecord): DivergenceChannel {
+/**
+ * The minimum of an evidence record Compare needs to place it on a channel.
+ *
+ * A structural subset rather than an import of `EvidenceRecord`: the
+ * trajectory package holds no evidence payloads, and taking the full type here
+ * would invite one to be stored.
+ */
+export interface ChannelHint {
+  readonly modality: 'visual' | 'text' | 'audio' | 'dom' | 'network' | 'filesystem'
+}
+
+/** Evidence ids to what sense produced them, when the caller has resolved any. */
+export type ChannelHints = ReadonlyMap<string, ChannelHint>
+
+/** The channel one evidence modality belongs to. */
+function channelForModality(modality: ChannelHint['modality']): DivergenceChannel {
+  switch (modality) {
+    case 'visual':
+      return 'visual'
+    case 'audio':
+      return 'transcript'
+    case 'text':
+      return 'ocr'
+    case 'dom':
+      return 'dom'
+    case 'network':
+      return 'network'
+    case 'filesystem':
+      return 'text'
+  }
+}
+
+/**
+ * Which channel a record's evidence belongs to.
+ *
+ * Verdicts and receipts are decided by the record type, because that is what
+ * they are. Everything else needs the evidence, and when the caller has not
+ * resolved it the answer is `text` rather than a guess — filing an unresolved
+ * record under `visual` because most evidence is visual is how a transcript
+ * divergence ends up reported as a picture changing.
+ */
+function channelFor(record: WatchTrajectoryRecord, hints: ChannelHints): DivergenceChannel {
   switch (record.type) {
     case 'verification.completed':
     case 'verification.requested':
@@ -93,11 +155,13 @@ function channelFor(record: WatchTrajectoryRecord): DivergenceChannel {
     case 'browser.action.receipt':
     case 'browser.action.dispatched':
       return 'receipt'
-    case 'evidence.created':
-    case 'observation.created':
+    default: {
+      for (const evidenceId of record.refs.evidenceIds) {
+        const hint = hints.get(evidenceId)
+        if (hint !== undefined) return channelForModality(hint.modality)
+      }
       return 'text'
-    default:
-      return 'text'
+    }
   }
 }
 
@@ -109,9 +173,9 @@ function channelFor(record: WatchTrajectoryRecord): DivergenceChannel {
  * removed. What makes two records comparable is what they are *about* — the
  * channel and the moment.
  */
-function alignmentKey(record: WatchTrajectoryRecord): string {
+function alignmentKey(record: WatchTrajectoryRecord, hints: ChannelHints): string {
   const at = record.refs.temporalRange?.startMs ?? null
-  return `${channelFor(record)}:${at === null ? 'untimed' : String(at)}`
+  return `${channelFor(record, hints)}:${at === null ? 'untimed' : String(at)}`
 }
 
 /** Whether two aligned records actually agree. */
@@ -162,11 +226,12 @@ export function compareProjections(
   right: WatchProjection,
   subject: CompareSubject,
   ids: { readonly leftId: string; readonly rightId: string },
+  hints: ChannelHints = new Map(),
 ): Comparison {
   const leftByKey = new Map<string, WatchTrajectoryRecord>()
   const rightByKey = new Map<string, WatchTrajectoryRecord>()
-  for (const record of left.records) leftByKey.set(alignmentKey(record), record)
-  for (const record of right.records) rightByKey.set(alignmentKey(record), record)
+  for (const record of left.records) leftByKey.set(alignmentKey(record, hints), record)
+  for (const record of right.records) rightByKey.set(alignmentKey(record, hints), record)
 
   const divergences: Divergence[] = []
   let agreements = 0
@@ -183,7 +248,7 @@ export function compareProjections(
       }
       const change = describeChange(leftRecord, rightRecord)
       divergences.push({
-        channel: channelFor(leftRecord),
+        channel: channelFor(leftRecord, hints),
         kind: change.kind,
         atMs: leftRecord.refs.temporalRange?.startMs ?? null,
         leftRecordId: leftRecord.recordId,
@@ -199,7 +264,7 @@ export function compareProjections(
     if (present === undefined) continue
     const removed = rightRecord === undefined
     divergences.push({
-      channel: channelFor(present),
+      channel: channelFor(present, hints),
       kind: removed ? 'removed' : 'added',
       atMs: present.refs.temporalRange?.startMs ?? null,
       leftRecordId: removed ? present.recordId : null,
@@ -271,4 +336,121 @@ export function comparisonDigest(comparison: Comparison): string {
     hash = ((hash ^ BigInt(byte)) * prime) & mask
   }
   return `fnv1a64:${hash.toString(16).padStart(16, '0')}`
+}
+
+/**
+ * The first divergence that changed what was *established*.
+ *
+ * Distinct from `firstDivergence`, and the distinction is the useful one. The
+ * earliest difference between two runs is frequently a timestamp or an extra
+ * frame; the earliest difference in a verdict or a receipt is the moment the
+ * two runs stopped being the same outcome. A surface that offered only the
+ * first would send people to the wrong second.
+ */
+export function firstMeaningfulDivergence(comparison: Comparison): Divergence | null {
+  return comparison.divergences.find(
+    divergence => divergence.channel === 'verification' || divergence.channel === 'receipt',
+  ) ?? comparison.firstDivergence
+}
+
+/**
+ * A deep link to one side of a divergence.
+ *
+ * Built from the same selection model everything else in the product uses, so
+ * a link out of Compare opens the same inspector a link out of Trajectory
+ * would. Returns null when the side has nothing to point at, rather than a
+ * link that resolves to an empty panel.
+ */
+export function divergenceLink(
+  comparison: Comparison,
+  divergence: Divergence,
+  side: 'left' | 'right',
+  context: { readonly workspaceId: string; readonly sessionId: string },
+): string | null {
+  const recordId = side === 'left' ? divergence.leftRecordId : divergence.rightRecordId
+  const evidenceId = side === 'left' ? divergence.leftEvidenceId : divergence.rightEvidenceId
+  if (recordId === null && evidenceId === null) return null
+
+  return toDeepLink({
+    workspaceId: context.workspaceId,
+    sessionId: side === 'left' ? comparison.leftId : comparison.rightId,
+    recordId,
+    evidenceId,
+    sourceId: null,
+    sourceRevisionId: null,
+    verificationId: null,
+    receiptId: null,
+    memoryId: null,
+    atMs: divergence.atMs,
+    endMs: null,
+    inspectorTab: divergence.channel === 'verification' ? 'verification' : 'evidence',
+    origin: 'compare',
+  })
+}
+
+/**
+ * A portable comparison.
+ *
+ * Identifiers, kinds and links — never evidence content, for the same reason
+ * `Divergence` carries none. An exported bundle that inlined what it compared
+ * would be a second copy of the evidence, and a second copy is one nobody can
+ * invalidate.
+ */
+export interface ComparisonBundle {
+  readonly digest: string
+  readonly subject: CompareSubject
+  readonly leftId: string
+  readonly rightId: string
+  readonly agreements: number
+  readonly divergences: readonly Divergence[]
+  readonly firstDivergence: Divergence | null
+  readonly firstMeaningfulDivergence: Divergence | null
+  readonly links: readonly { readonly side: 'left' | 'right'; readonly link: string }[]
+}
+
+/** Freeze a comparison into something that can be attached to a report. */
+export function exportComparison(
+  comparison: Comparison,
+  context: { readonly workspaceId: string; readonly sessionId: string },
+): ComparisonBundle {
+  const meaningful = firstMeaningfulDivergence(comparison)
+  const links: { side: 'left' | 'right'; link: string }[] = []
+  if (meaningful !== null) {
+    for (const side of ['left', 'right'] as const) {
+      const link = divergenceLink(comparison, meaningful, side, context)
+      if (link !== null) links.push({ side, link })
+    }
+  }
+  return {
+    digest: comparisonDigest(comparison),
+    subject: comparison.subject,
+    leftId: comparison.leftId,
+    rightId: comparison.rightId,
+    agreements: comparison.agreements,
+    divergences: comparison.divergences,
+    firstDivergence: comparison.firstDivergence,
+    firstMeaningfulDivergence: meaningful,
+    links,
+  }
+}
+
+/**
+ * One line summarizing a comparison.
+ *
+ * Deliberately never says "passed" or "failed". Compare reports where two
+ * things stopped agreeing; whether that was the change somebody asked for is a
+ * verification contract, and a summary that editorialized would be Compare
+ * issuing the verdict it is not allowed to issue.
+ */
+export function describeComparison(comparison: Comparison): string {
+  if (comparison.divergences.length === 0) {
+    return `No divergence across ${String(comparison.agreements)} aligned record(s).`
+  }
+  const meaningful = firstMeaningfulDivergence(comparison)
+  const where = meaningful?.atMs === null || meaningful === null
+    ? 'at an untimed record'
+    : `at ${String(meaningful.atMs)}ms`
+  return `${String(comparison.divergences.length)} divergence(s), `
+    + `${String(comparison.agreements)} agreement(s). `
+    + `First meaningful: ${meaningful?.channel ?? 'none'} ${where}.`
 }

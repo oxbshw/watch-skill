@@ -174,15 +174,18 @@
       "phase": "Phase 2 — evidence slice",
       "classification": "WATCH_NEW",
       "owner": "watch-workspace",
-      "status": "implemented",
+      "status": "tested",
       "source_paths": [
         "packages/watch/client-evidence/src/client/EvidenceInspector.tsx"
       ],
-      "tests": [],
+      "tests": [
+        "tests/presentation.test.mjs",
+        "tests/compare-surface.test.mjs"
+      ],
       "acceptance_journey": "Shows evidence id, revision, range, provenance, artifacts, freshness, verification",
       "known_limitations": [
-        "Functionality first; the visual design belongs to Phase 3.",
-        "No browser test harness exists, so the React rendering is not covered by a gate. The rules it renders are tested in tests/presentation.test.mjs."
+        "The React halves are now type-checked as part of `tsc -b`; before this they were built only by the bundler and carried real errors.",
+        "EvidenceInspector itself imports a CSS module and is covered by the presentation rules test rather than by a rendering gate; CompareView, which has no stylesheet, is rendered directly."
       ],
       "commit": "77c6c25"
     },
@@ -529,18 +532,20 @@
       "owner": "watch-workspace",
       "status": "tested",
       "source_paths": [
-        "packages/watch/trajectory/src/compare.ts"
+        "packages/watch/trajectory/src/compare.ts",
+        "packages/watch/client-evidence/src/client/CompareView.tsx"
       ],
       "tests": [
-        "tests/compare.test.mjs"
+        "tests/compare.test.mjs",
+        "tests/compare-surface.test.mjs",
+        "tests/fixtures/before-after.mjs"
       ],
-      "acceptance_journey": "First meaningful divergence, verified expected change, exported bundle",
+      "acceptance_journey": "Before and after: an innocuous first divergence, a verdict divergence that mattered, deep links into both sides, an exported bundle",
       "known_limitations": [
-        "Alignment, first-divergence detection and a stable digest are implemented and tested over trajectory projections.",
-        "Aligns on channel and timestamp. Visual, DOM, network and console channels are typed but only the record-derived ones are populated today.",
-        "No Compare UI surface exists."
+        "Channels are derived from resolved evidence modality; unresolved evidence stays on the text channel rather than being guessed onto a sense.",
+        "Console divergences are typed but nothing populates them: Watch records carry no console channel today."
       ],
-      "commit": "3b311d4"
+      "commit": "pending"
     },
     {
       "id": "wiki.projections",

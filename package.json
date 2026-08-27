@@ -46,6 +46,7 @@
     "@watchskill/dsh-client-memory": "workspace:*",
     "@watchskill/dsh-live": "workspace:*",
     "@watchskill/dsh-library": "workspace:*",
-    "@watchskill/dsh-wiki": "workspace:*"
+    "@watchskill/dsh-wiki": "workspace:*",
+    "@watchskill/dsh-client-evidence": "workspace:*"
   }
 }

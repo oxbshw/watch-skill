@@ -41,6 +41,9 @@ importers:
       '@watchskill/dsh-client-brand':
         specifier: workspace:*
         version: link:packages/watch/brand
+      '@watchskill/dsh-client-evidence':
+        specifier: workspace:*
+        version: link:packages/watch/client-evidence
       '@watchskill/dsh-client-memory':
         specifier: workspace:*
         version: link:packages/watch/client-memory
@@ -125,6 +128,9 @@ importers:
 
   packages/watch/client-evidence:
     dependencies:
+      '@watchskill/dsh-client-brand':
+        specifier: workspace:^
+        version: link:../brand
       '@watchskill/dsh-contracts':
         specifier: workspace:^
         version: link:../contracts
