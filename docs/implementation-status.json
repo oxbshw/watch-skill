@@ -489,11 +489,19 @@
       "phase": "Phase 4 — sensory surfaces",
       "classification": "WATCH_NEW",
       "owner": "watch-workspace",
-      "status": "not_started",
-      "source_paths": [],
-      "tests": [],
+      "status": "tested",
+      "source_paths": [
+        "packages/watch/trajectory/src/compare.ts"
+      ],
+      "tests": [
+        "tests/compare.test.mjs"
+      ],
       "acceptance_journey": "First meaningful divergence, verified expected change, exported bundle",
-      "known_limitations": [],
+      "known_limitations": [
+        "Alignment, first-divergence detection and a stable digest are implemented and tested over trajectory projections.",
+        "Aligns on channel and timestamp. Visual, DOM, network and console channels are typed but only the record-derived ones are populated today.",
+        "No Compare UI surface exists."
+      ],
       "commit": null
     },
     {

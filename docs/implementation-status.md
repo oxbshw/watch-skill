@@ -9,10 +9,10 @@ Baseline: DeepSeek Harness `0.1.1-rc.2 @ b150a551b8d465e31e418e1b2eaf5e79bbb7d28
 
 | Status | Count |
 |---|---:|
-| ✅ tested | 20 |
+| ✅ tested | 21 |
 | 🟩 implemented | 1 |
 | 🟨 in progress | 3 |
-| ⬜ not started | 11 |
+| ⬜ not started | 10 |
 | **total** | **35** |
 
 `implemented` means real behavior exists, not that a package does.
@@ -173,13 +173,19 @@ Baseline: DeepSeek Harness `0.1.1-rc.2 @ b150a551b8d465e31e418e1b2eaf5e79bbb7d28
 |---|---|---|---|
 | `adapters.llmwiki` — LLMWiki-compatible import and export | ⬜ not started | watch-workspace | — |
 | `adapters.obsidian` — Optional Obsidian vault adapter | ⬜ not started | watch-workspace | — |
-| `compare.surface` — Compare runs, revisions and before/after states | ⬜ not started | watch-workspace | — |
+| `compare.surface` — Compare runs, revisions and before/after states | ✅ tested | watch-workspace | 1 |
 | `library.surface` — Library of sources and evidence, separate from memory | 🟨 in progress | watch-workspace | 1 |
 | `live.surface` — Live mode with gaps, clocks and reconnect | 🟨 in progress | watch-workspace | 1 |
 | `memory.governed-learning` — Candidate lifecycle with eval, promotion, canary and rollback | ⬜ not started | watch-workspace | — |
 | `wiki.projections` — Workspace wiki projections with provenance | ⬜ not started | watch-workspace | — |
 
 <details><summary>Known limitations</summary>
+
+**`compare.surface`**
+
+- Alignment, first-divergence detection and a stable digest are implemented and tested over trajectory projections.
+- Aligns on channel and timestamp. Visual, DOM, network and console channels are typed but only the record-derived ones are populated today.
+- No Compare UI surface exists.
 
 **`library.surface`**
 
