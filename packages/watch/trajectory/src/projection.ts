@@ -131,7 +131,10 @@ export function withRecords(
 ): WatchProjection {
   if (extra.length === 0) return projection
   const merged = [...projection.records, ...extra]
-    .sort((a, b) => a.seq - b.seq || a.recordId.localeCompare(b.recordId))
+    .sort((a, b) => {
+      const bySeq = a.seq - b.seq
+      return bySeq !== 0 ? bySeq : a.recordId.localeCompare(b.recordId)
+    })
   return index(projection.sessionId, merged)
 }
 

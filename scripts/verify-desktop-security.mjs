@@ -174,7 +174,7 @@ function main() {
         problems.push(`preload.cjs exposes undeclared channel ${channel}`)
       }
     }
-    if (/require\((?!'electron'\))/.test(code(entry))) {
+    if (/\brequire\((?!'electron'\))/.test(code(entry))) {
       problems.push('preload.cjs requires something other than electron')
     }
   }

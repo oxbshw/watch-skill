@@ -23,7 +23,7 @@
 import { randomUUID } from 'node:crypto'
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
-import { Context, Service } from '@deepseek-ai/cordis'
+import { type Context, Service } from '@deepseek-ai/cordis'
 import s from '@deepseek-ai/schemastery'
 import type {
   AdmissionDecision,

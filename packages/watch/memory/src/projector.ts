@@ -33,7 +33,7 @@ const ORIGIN_LABEL: Record<MemoryRecord['origin'], string> = {
 function scopeTag(record: MemoryRecord): string {
   return record.subjectScope === 'user'
     ? '[global]'
-    : `[${record.subjectScope}${record.scopeId ? `:${record.scopeId}` : ''}]`
+    : `[${record.subjectScope}${record.scopeId === '' ? '' : `:${record.scopeId}`}]`
 }
 
 /** One entry, with everything needed to judge it. */
@@ -54,8 +54,10 @@ function entry(record: MemoryRecord): readonly string[] {
 
 /** Stable ordering: newest first, then by id so a redraw never reshuffles. */
 function ordered(records: readonly MemoryRecord[]): readonly MemoryRecord[] {
-  return [...records].sort((a, b) =>
-    b.createdAt.localeCompare(a.createdAt) || a.memoryId.localeCompare(b.memoryId))
+  return [...records].sort((a, b) => {
+    const byCreated = b.createdAt.localeCompare(a.createdAt)
+    return byCreated !== 0 ? byCreated : a.memoryId.localeCompare(b.memoryId)
+  })
 }
 
 /** Render one section, or nothing when it is empty. */

@@ -187,7 +187,14 @@ function toEvent(row: Record<string, unknown>): MemoryEvent {
     memoryId: String(row['memory_id']),
     at: String(row['at']),
     actor: String(row['actor']) as MemoryEvent['actor'],
-    record: row['record'] === null ? null : JSON.parse(String(row['record'])) as MemoryRecord,
-    detail: JSON.parse(String(row['detail'])) as Record<string, unknown>,
+    // Narrowed rather than stringified. `String()` on an unexpected column
+    // type produces "[object Object]", which then parses as nothing and hides
+    // a schema problem behind an empty record.
+    record: typeof row['record'] === 'string'
+      ? JSON.parse(row['record']) as MemoryRecord
+      : null,
+    detail: typeof row['detail'] === 'string'
+      ? JSON.parse(row['detail']) as Record<string, unknown>
+      : {},
   }
 }

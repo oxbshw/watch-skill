@@ -202,7 +202,10 @@ class WatchViewBuilder {
   private build(): WatchProjection {
     const records = [...this.nodes.values()]
       .flatMap(node => node.data.records)
-      .sort((a, b) => a.seq - b.seq || a.recordId.localeCompare(b.recordId))
+      .sort((a, b) => {
+        const bySeq = a.seq - b.seq
+        return bySeq !== 0 ? bySeq : a.recordId.localeCompare(b.recordId)
+      })
 
     const byEvidence = new Map<string, WatchTrajectoryRecord>()
     const byRecord = new Map<string, WatchTrajectoryRecord>()

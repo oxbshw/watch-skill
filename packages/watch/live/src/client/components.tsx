@@ -155,7 +155,7 @@ export function LiveSurface(props: LiveSurfaceProps): ReactNode {
       </div>
       <ul data-watch-live-events="" style={{ listStyle: 'none', margin: 0, padding: 0 }}>
         {state.events.map(event => (
-          <LiveEventRow key={`${String(event.seq)}`} event={event} onSelect={props.onSelect} />
+          <LiveEventRow key={String(event.seq)} event={event} onSelect={props.onSelect} />
         ))}
       </ul>
       {state.pinned.length > 0 && (

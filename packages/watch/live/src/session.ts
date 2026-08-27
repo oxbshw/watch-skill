@@ -306,7 +306,8 @@ export function applyDelta(
       gaps: mergeGaps(state.gaps, gap?.range === null || gap?.range === undefined ? [] : [gap.range]),
       clocks: clocksFrom(state, events, nowMs),
       needsSnapshot: true,
-      lastError: `cursor ${delta.fromCursor} does not continue from ${state.cursor || '(start)'}`,
+      lastError: `cursor ${delta.fromCursor} does not continue from `
+        + (state.cursor === '' ? '(start)' : state.cursor),
     }
   }
 

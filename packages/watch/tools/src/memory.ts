@@ -76,5 +76,5 @@ export function applyMemory(ctx: Context): void {
       // answer for a turn that has already finished.
       return ctx.watchMemory.render(resolveScope(ctx))
     },
-  } as { name: string; order: number; text: string })
+  })
 }

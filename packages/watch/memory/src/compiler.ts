@@ -155,8 +155,10 @@ export function compileContext(
   }))
   // Ties broken by id so the same inputs always produce the same packet;
   // a context that reshuffles between runs makes replay meaningless.
-  scored.sort((a, b) =>
-    b.score - a.score || a.record.memoryId.localeCompare(b.record.memoryId))
+  scored.sort((a, b) => {
+    const byScore = b.score - a.score
+    return byScore !== 0 ? byScore : a.record.memoryId.localeCompare(b.record.memoryId)
+  })
 
   const items: ContextItem[] = []
   const dropped: string[] = []

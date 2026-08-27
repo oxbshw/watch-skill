@@ -144,7 +144,7 @@ export class StdioTransport implements Transport {
     const id = this.nextId++
     return new Promise<WatchResult<T>>((resolve) => {
       const entry: Pending = {
-        resolve: resolve as Pending['resolve'],
+        resolve: resolve,
         method: request.method,
         correlationId: request.correlationId,
         settle: null,
@@ -193,7 +193,7 @@ export class StdioTransport implements Transport {
       child.stdin.write(
         `Content-Length: ${String(body.byteLength)}${HEADER_TERMINATOR}`,
         (cause) => {
-          if (cause) {
+          if (cause != null) {
             this.settle(id, watchError(
               'bridge.write_failed',
               `Could not send "${request.method}" to Watch Core: ${describe(cause)}`,

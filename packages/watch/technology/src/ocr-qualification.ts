@@ -91,9 +91,14 @@ function distance(left: readonly string[], right: readonly string[]): number {
  * that as perfect.
  */
 export function characterErrorRate(expected: string, actual: string): number {
+  // Code points, deliberately. Character error rate is defined over code
+  // points, and grapheme segmentation would score a decomposed sequence as one
+  // unit — which is exactly the difference an OCR engine got wrong.
+  /* eslint-disable @typescript-eslint/no-misused-spread */
   const left = [...expected]
   if (left.length === 0) return [...actual].length === 0 ? 0 : 1
   return distance(left, [...actual]) / left.length
+  /* eslint-enable @typescript-eslint/no-misused-spread */
 }
 
 /** Word error rate, over whitespace-separated tokens. */

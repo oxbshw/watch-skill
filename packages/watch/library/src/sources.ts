@@ -209,9 +209,9 @@ export function locate(
 export function withRevision(source: Source, revision: SourceRevision): Source {
   const existing = source.revisions.filter(
     entry => entry.sourceRevisionId !== revision.sourceRevisionId)
-  const superseded = existing.map(entry =>
+  const superseded: readonly SourceRevision[] = existing.map(entry =>
     entry.revision < revision.revision && entry.indexState === 'indexed'
-      ? { ...entry, indexState: 'stale' as IndexState }
+      ? { ...entry, indexState: 'stale' }
       : entry)
   return {
     ...source,

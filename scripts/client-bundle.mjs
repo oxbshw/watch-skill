@@ -1,3 +1,9 @@
+/* eslint-disable no-irregular-whitespace --
+ * The glob pattern quoted below contains zero-width separators so that the
+ * `*` and `/` in it do not close this comment block. They are deliberate, and
+ * removing them silently truncates the paragraph that explains why this file
+ * exists.
+ */
 /**
  * Build one Watch browser half into the artifact DeepSeek Harness serves.
  *

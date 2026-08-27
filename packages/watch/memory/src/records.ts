@@ -353,7 +353,7 @@ export function admit(
       reason: 'scope_not_allowed_by_mode',
       explanation:
         `A ${candidate.subjectScope}-scoped memory cannot be created in ${mode} mode. `
-        + `Allowed here: ${policy.allowedScopes.join(', ') || 'none'}.`,
+        + `Allowed here: ${policy.allowedScopes.length === 0 ? 'none' : policy.allowedScopes.join(', ')}.`,
     }
   }
 

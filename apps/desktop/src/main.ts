@@ -29,7 +29,7 @@ import {
   type PendingIntent,
 } from './security.js'
 import {
-  SupervisedChild,
+  type SupervisedChild,
   safeModeReason,
   shouldEnterSafeMode,
   type ChildStatus,
@@ -131,7 +131,7 @@ function createWindow(runtime: Runtime): InstanceType<ElectronApi['BrowserWindow
   // Every navigation the renderer attempts, refused unless it is ours.
   window.webContents.on('will-navigate', ((event: { preventDefault(): void }, url: string) => {
     if (!mayNavigate(url, policy)) event.preventDefault()
-  }) as never)
+  }))
 
   // A window the page tried to open is never opened here. It is either handed
   // to the browser under the external policy, or nothing happens.

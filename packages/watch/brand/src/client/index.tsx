@@ -78,7 +78,7 @@ export function apply(ctx: Context): void {
   }).slots
 
   const occupy = (name: string, id: string, component: unknown): void => {
-    slots.inject(name, () => slots.register({ name, id, order: 10 }, component))
+    slots.inject(name, () => { slots.register({ name, id, order: 10 }, component); })
   }
 
   occupy('sidebar.brand.mark', 'watch-mark', WatchMark)

@@ -148,7 +148,10 @@ function tally(values: readonly string[]): readonly FacetValue[] {
   for (const value of values) counts.set(value, (counts.get(value) ?? 0) + 1)
   return [...counts.entries()]
     .map(([value, count]) => ({ value, count }))
-    .sort((left, right) => right.count - left.count || left.value.localeCompare(right.value))
+    .sort((left, right) => {
+      const byCount = right.count - left.count
+      return byCount !== 0 ? byCount : left.value.localeCompare(right.value)
+    })
 }
 
 /**
