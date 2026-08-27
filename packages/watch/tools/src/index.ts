@@ -28,9 +28,12 @@ import type {} from '@watchskill/dsh-core-bridge'
 import type { EvidenceRecord, VerificationOutcome, WatchResult } from '@watchskill/dsh-contracts'
 import { SENSORY_GUIDANCE, applySensoryTools } from './sensory.js'
 import { applyMemory } from './memory.js'
+import { BROWSER_GUIDANCE, applyBrowserTools } from './browser.js'
 
 export { SENSORY_GUIDANCE, applySensoryTools } from './sensory.js'
 export { applyMemory } from './memory.js'
+export { BROWSER_GUIDANCE, applyBrowserTools } from './browser.js'
+export type { BrowserConfig } from './browser.js'
 export type { SensoryConfig } from './sensory.js'
 
 export const name = 'watch-tools'
@@ -46,6 +49,10 @@ export interface Config {
   readonly readTimeoutMs: number
   /** Deadline for starting a live session, which may launch a browser. */
   readonly liveStartTimeoutMs: number
+  /** Deadline for one browser action, including its re-observation. */
+  readonly actTimeoutMs: number
+  /** Deadline for a page observation. */
+  readonly observeTimeoutMs: number
 }
 
 /** Schemastery validation for the tool-surface policy. */
@@ -54,6 +61,8 @@ export const Config: s<Config> = s.object({
   verifyTimeoutMs: s.number().step(1).min(1_000).default(60_000),
   readTimeoutMs: s.number().step(1).min(1_000).default(30_000),
   liveStartTimeoutMs: s.number().step(1).min(1_000).default(60_000),
+  actTimeoutMs: s.number().step(1).min(1_000).default(60_000),
+  observeTimeoutMs: s.number().step(1).min(1_000).default(30_000),
 })
 
 /**
@@ -157,7 +166,9 @@ export function apply(ctx: Context, config: Config): void {
   // matter once the agent reaches for a source it has not identified yet, and
   // splitting them keeps each part readable at the point it applies.
   ctx.systemPrompt.section({ name: 'tool:watch-sensory', order: 121, text: SENSORY_GUIDANCE })
+  ctx.systemPrompt.section({ name: 'tool:watch-browser', order: 122, text: BROWSER_GUIDANCE })
   applySensoryTools(ctx, config)
+  applyBrowserTools(ctx, config)
   // Memory is optional, and this is how Cordis says so. A child plugin whose
   // injects are unsatisfied stays pending rather than failing, and activates
   // by itself if the Memory service is mounted later. Reading ctx.watchMemory

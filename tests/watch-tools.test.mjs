@@ -65,6 +65,9 @@ describe('the Watch tool surface', () => {
       assert.deepEqual([...mounted.registered.keys()].sort(), [
         'watch_ask_live',
         'watch_ask_source',
+        'watch_browser_act',
+        'watch_browser_observe',
+        'watch_browser_receipt',
         'watch_capabilities',
         'watch_capture_capabilities',
         'watch_get_evidence',
@@ -266,6 +269,78 @@ describe('a source answer is grounded, not proven', () => {
       const ask = mounted.registered.get('watch_ask_source')
       assert.match(ask.description, /does not verify/i)
       assert.match(ask.description, /watch_verify/)
+    } finally {
+      await mounted.dispose()
+    }
+  })
+})
+
+describe('acting on a page', () => {
+  test('the guidance states the loop, not just prohibitions', async () => {
+    const mounted = await mountTools()
+    try {
+      const text = mounted.sections.map(section => section.text).join('\n')
+      assert.match(text, /observe → state what should change → act → re-observe/)
+      assert.match(text, /is not a completed effect/i)
+      assert.match(text, /do \*\*not\*\* act again/i)
+    } finally {
+      await mounted.dispose()
+    }
+  })
+
+  test('acting refuses without an engine, and returns the key to check with', async () => {
+    // The important half: a failed acting call is not a statement that nothing
+    // happened, so it hands back the key needed to find out.
+    const mounted = await mountTools()
+    try {
+      await mounted.ctx.watchCore.connect()
+      const value = await mounted.registered.get('watch_browser_act').execute({
+        session_id: 'live_1',
+        kind: 'click',
+        intent: 'submit the form',
+        target_name: 'Submit',
+        expect_text_present: 'Thanks',
+        approval_id: 'apr_1',
+      }, EXEC)
+      assert.equal(value.ok, false)
+      assert.ok(value.idempotencyKey, 'a failed action must say which key to check')
+      assert.ok(value.fix.length > 0)
+    } finally {
+      await mounted.dispose()
+    }
+  })
+
+  test('the action card reports the verdict verbatim, or nothing', async () => {
+    const mounted = await mountTools()
+    try {
+      const act = mounted.registered.get('watch_browser_act')
+      // Real arguments: DSH validates a presenter's args softly and falls back
+      // to the generic card on a mismatch, so `{}` would prove nothing here.
+      const args = { session_id: 'live_1', kind: 'click', intent: 'submit the form' }
+      for (const verdict of ['succeeded', 'failed', 'unverified', 'refused']) {
+        assert.deepEqual(act.output.presentationMeta(args, { verdict }), { verdict })
+        assert.deepEqual(
+          act.presentResult(args, { content: [], isError: false, meta: { verdict } }),
+          { card: 'generic', title: `Action: ${verdict}` },
+        )
+      }
+      // A refusal carries no verdict, and must not acquire one here.
+      assert.deepEqual(
+        act.output.presentationMeta(args, { ok: false, error: 'bridge.core_unavailable' }),
+        { verdict: null },
+      )
+    } finally {
+      await mounted.dispose()
+    }
+  })
+
+  test('the tool description says an action without an expectation is not a success', async () => {
+    const mounted = await mountTools()
+    try {
+      const act = mounted.registered.get('watch_browser_act')
+      assert.match(act.description, /unverified/)
+      assert.match(act.description, /not a success/i)
+      assert.match(act.description, /approval_id/)
     } finally {
       await mounted.dispose()
     }
