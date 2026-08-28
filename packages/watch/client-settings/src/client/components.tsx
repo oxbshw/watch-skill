@@ -23,6 +23,7 @@ import type { BrandTone } from '@watchskill/dsh-client-brand'
 // Correct on the host, fatal in a browser bundle.
 import { OCR_ENGINES, ROLES } from '@watchskill/dsh-technology/descriptors'
 import { ReadinessList } from './readiness.js'
+import { OCR_BY_WORKLOAD, OCR_DEVICE, OCR_ENGINE, OCR_MEASURED } from '../ocr-measured.js'
 import {
   DEEPSEEK_IS_OPTIONAL, HOSTED_COUNT, PROVIDER_COUNT, SAMPLE_PROVIDERS, SELF_HOSTED_COUNT,
 } from '../providers.js'
@@ -314,13 +315,50 @@ export function EnginesSection(): ReactNode {
               {engine.install.method === 'bundled' ? 'Bundled' : engine.install.method}
               {engine.install.downloadBytes === null ? '' : ` · ${gigabytes(engine.install.downloadBytes)} download`}
             </Row>
-            <Row label="Quality">Not measured on this machine</Row>
+            <Row label="Quality">
+              {OCR_MEASURED && engine.id.includes(OCR_ENGINE)
+                ? 'Measured on this machine — see the table below.'
+                : 'Not measured on this machine'}
+            </Row>
             <Row label="How it would be checked">
               {engine.testMethod ?? engine.probeMethod ?? 'No check is defined for this engine'}
             </Row>
           </div>
         </div>
       ))}
+      {OCR_MEASURED
+        ? (
+            <>
+              <h2 style={T.h2}>{`Measured accuracy — ${OCR_ENGINE} on ${OCR_DEVICE}`}</h2>
+              <div style={T.card}>
+                <p style={{ ...T.lead, margin: '0 0 10px' }}>
+                  A real run over a versioned ground-truth corpus, scored against
+                  thresholds committed before the benchmark existed. Reported per
+                  workload rather than as one average: an engine can be entirely
+                  fit for reading a settings panel and entirely unfit for reading
+                  grey-on-grey, and a single number hides both.
+                </p>
+                <div style={T.meta}>
+                  {OCR_BY_WORKLOAD.map(row => (
+                    <Row key={row.workload} label={row.workload}>
+                      <StatusChip tone={row.passes ? 'active' : 'error'}>
+                        {row.passes ? 'Qualified' : 'Not qualified'}
+                      </StatusChip>
+                      {` CER ${String(row.cer)} · word accuracy ${String(row.wordAccuracy)} `}
+                      {`· invented words ${String(row.hallucination)} · ${String(row.samples)} sample(s)`}
+                    </Row>
+                  ))}
+                </div>
+                <p style={T.note}>
+                  Accuracy is not a GPU question and is measured here. GPU
+                  throughput is not, because there is no GPU on this machine —
+                  that remains externally unvalidated.
+                </p>
+              </div>
+            </>
+          )
+        : null}
+
       <p style={T.note}>
         An install is never automatic. Where a download is required, its size,
         hardware requirement and licence are shown before anything is fetched —
