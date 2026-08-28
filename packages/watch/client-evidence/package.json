@@ -15,11 +15,19 @@
       "types": "./lib/client/index.d.ts",
       "default": "./lib/client.js"
     },
-    "./package.json": "./package.json",
     "./compare": {
       "types": "./lib/client/CompareView.d.ts",
       "default": "./lib/client/CompareView.js"
-    }
+    },
+    "./compare-engine": {
+      "types": "./lib/compare-engine.d.ts",
+      "default": "./lib/compare-engine.js"
+    },
+    "./compare-mode": {
+      "types": "./lib/client/compare-mode.d.ts",
+      "default": "./lib/client/compare-mode.js"
+    },
+    "./package.json": "./package.json"
   },
   "dsh": {
     "client": {

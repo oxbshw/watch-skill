@@ -9,5 +9,7 @@
  * @module @watchskill/dsh-client-evidence
  */
 
+export * from './compare-engine.js'
+
 /** No host-side behavior: the views are pure presentation over the turn. */
 export function apply(): void {}

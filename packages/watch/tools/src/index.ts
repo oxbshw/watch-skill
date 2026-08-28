@@ -22,6 +22,7 @@ import { randomUUID } from 'node:crypto'
 import type { Context } from '@deepseek-ai/cordis'
 import s from '@deepseek-ai/schemastery'
 import { defineTool } from '@deepseek-ai/dsh-tools'
+import { applyLibrarySearch } from './library-search.js'
 import type { GenericCallView, JsonValue } from '@deepseek-ai/dsh-tools'
 import type {} from '@deepseek-ai/dsh-system-prompt'
 import type {} from '@watchskill/dsh-core-bridge'
@@ -53,6 +54,14 @@ export interface Config {
   readonly actTimeoutMs: number
   /** Deadline for a page observation. */
   readonly observeTimeoutMs: number
+  /**
+   * Directories the library index may read.
+   *
+   * Empty by default, and deliberately so: a deployment that has not said
+   * where its evidence lives should get a tool that reports having nothing to
+   * search, not one that guesses at a convenient directory.
+   */
+  readonly libraryRoots?: readonly string[]
 }
 
 /** Schemastery validation for the tool-surface policy. */
@@ -306,6 +315,11 @@ export function apply(ctx: Context, config: Config): void {
     presentCall: args => present('Open evidence', 'read', args.evidence_id),
   }))
 
+  // Library search runs on the host because that is the only place that can
+  // read the evidence store: a client plugin gets no config, and ctx.remote
+  // is an event bus rather than a query client.
+  applyLibrarySearch(ctx, { roots: config.libraryRoots ?? [] })
+
   ctx.tools.register(defineTool({
     name: 'watch_verify',
     description:
@@ -393,3 +407,5 @@ function abortOf(exec: { readonly signal?: AbortSignal }): { signal?: AbortSigna
  * `scripts/boot-smoke.mjs` is the gate that does catch it.
  */
 export default { name: 'watch-tools', inject, apply }
+
+export * from './library-search.js'

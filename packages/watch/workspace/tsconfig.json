@@ -4,13 +4,27 @@
     "outDir": "lib",
     "rootDir": "src",
     "jsx": "react-jsx",
-    "lib": ["ES2024", "DOM"],
-    "types": ["react"]
+    "lib": [
+      "ES2024",
+      "DOM"
+    ],
+    "types": [
+      "react"
+    ]
   },
-  "include": ["src/**/*.ts", "src/**/*.tsx"],
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.tsx"
+  ],
   "references": [
-    { "path": "../contracts" },
-    { "path": "../brand" },
-    { "path": "../trajectory" }
+    {
+      "path": "../contracts"
+    },
+    {
+      "path": "../brand"
+    },
+    {
+      "path": "../trajectory"
+    }
   ]
 }

@@ -15,10 +15,22 @@
       "types": "./lib/client/index.d.ts",
       "default": "./lib/client.js"
     },
-    "./package.json": "./package.json",
     "./components": {
       "types": "./lib/client/components.d.ts",
       "default": "./lib/client/components.js"
+    },
+    "./index-store": {
+      "types": "./lib/index-store.d.ts",
+      "default": "./lib/index-store.js"
+    },
+    "./library-mode": {
+      "types": "./lib/client/library-mode.d.ts",
+      "default": "./lib/client/library-mode.js"
+    },
+    "./package.json": "./package.json",
+    "./search-view": {
+      "types": "./lib/client/search-view.d.ts",
+      "default": "./lib/client/search-view.js"
     }
   },
   "dsh": {

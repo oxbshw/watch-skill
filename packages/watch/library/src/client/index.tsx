@@ -5,13 +5,11 @@
  */
 
 import type { Context } from '@deepseek-ai/cordis'
-import { LibraryModeView } from '@watchskill/dsh-workspace/mode-views'
-// `/mode-views` rather than `/client`: the `/client` entry is a loader
-// registration wrapped in `window.__ModuleLoader__.load(...)`, and a bundler
-// cannot read named exports out of a function body. The subpath is ordinary
-// ESM, so it inlines cleanly.
+import { LibraryModeView } from './library-mode.js'
 
 export * from './components.js'
+export * from './search-view.js'
+export * from './library-mode.js'
 export * from '../sources.js'
 export * from '../search.js'
 

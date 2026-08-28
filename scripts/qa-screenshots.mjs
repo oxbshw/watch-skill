@@ -318,5 +318,15 @@ app.whenReady().then(async () => {
 
   writeFileSync(join(OUT, 'index.json'), JSON.stringify(shots, null, 2) + '\n', 'utf8')
   say(String(shots.length) + ' shot(s) written')
+  say('qa profile: ' + QA_PROFILE)
+
+  // Removed on exit unless asked otherwise. A profile that survives between
+  // runs is how a capture stops being reproducible — the second run inherits
+  // the first one's storage and quietly photographs a different state.
+  if (process.env.WATCH_QA_KEEP_PROFILE !== '1') {
+    app.once('will-quit', () => {
+      try { rmSync(QA_PROFILE, { recursive: true, force: true }) } catch { /* best effort */ }
+    })
+  }
   app.quit()
 })

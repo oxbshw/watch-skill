@@ -5,6 +5,10 @@
  */
 
 export * from './session.js'
+export * from './capture.js'
+export * from './sources-catalogue.js'
+export * from './synthetic-source.js'
+
 export * from './triggers.js'
 
 /**

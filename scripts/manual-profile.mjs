@@ -33,11 +33,14 @@ import { spawnSync } from 'node:child_process'
 import {
   existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync, rmSync, copyFileSync,
 } from 'node:fs'
-import { join, dirname, resolve, basename } from 'node:path'
+import { join, dirname, resolve, basename, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const HOME = process.env.WATCH_MANUAL_HOME ?? 'G:/watch-manual/dsh-home'
+/** Windows paths in a YAML overlay read better, and parse safer, as POSIX. */
+const posixPath = value => value.split(sep).join('/')
+
 const PACKED = join(HOME, 'packed')
 const PROFILE = 'web'
 const FIXTURES = join(ROOT, 'fixtures', 'manual')
@@ -173,7 +176,7 @@ function linkTarballs(tarballs) {
  * survive is restated — which is exactly what the bundle's own comment warns
  * about, and the reason it is written out in full here rather than diffed.
  */
-function writeOverlay(corePath, memoryDir) {
+function writeOverlay(corePath, memoryDir, evidenceRoot) {
   const overlay = `# Watch manual-test overlay — DEVELOPMENT / MANUAL TEST ONLY.
 #
 # Applied after the Watch bundle layer. It changes two things and nothing else:
@@ -193,6 +196,17 @@ function writeOverlay(corePath, memoryDir) {
 #
 # And a patch replaces the targeted row's whole \`config\`, so every key that
 # should survive is restated below rather than diffed.
+
+- id: watch-tools
+  config:
+    queryTimeoutMs: 120000
+    verifyTimeoutMs: 60000
+    readTimeoutMs: 30000
+    liveStartTimeoutMs: 30000
+    actTimeoutMs: 60000
+    observeTimeoutMs: 30000
+    libraryRoots:
+      - ${evidenceRoot}
 
 - id: watch-core-bridge
   config:
@@ -264,11 +278,14 @@ function main() {
 
   const memoryDir = join(HOME, 'watch-memory').replace(/\\/g, '/')
   mkdirSync(memoryDir, { recursive: true })
-  const overlay = core === undefined ? null : writeOverlay(core, memoryDir)
+  // The fixture directory has to exist before the overlay names it, because
+  // the overlay is what tells the library index where to read.
+  const seedDir = posixPath(join(HOME, 'watch-fixtures'))
+  mkdirSync(seedDir, { recursive: true })
+
+  const overlay = core === undefined ? null : writeOverlay(core, memoryDir, seedDir)
 
   // Seed the deterministic demo fixtures where the profile can reach them.
-  const seedDir = join(HOME, 'watch-fixtures')
-  mkdirSync(seedDir, { recursive: true })
   if (existsSync(FIXTURES)) {
     for (const entry of readdirSync(FIXTURES)) {
       copyFileSync(join(FIXTURES, entry), join(seedDir, entry))

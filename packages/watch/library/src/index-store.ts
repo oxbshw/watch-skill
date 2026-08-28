@@ -491,7 +491,7 @@ function normalizeRecord(record: Partial<IndexableRecord>): IndexableRecord {
     recordId: record.recordId ?? '',
     revisionId: typeof record.revisionId === 'string' ? record.revisionId : '',
     title: typeof record.title === 'string' ? record.title : '',
-    kind: (typeof record.kind === 'string' ? record.kind : 'document') as SourceKind,
+    kind: record.kind ?? 'document',
     text: typeof record.text === 'string' ? record.text : '',
     source: typeof record.source === 'string' ? record.source : null,
     runId: typeof record.runId === 'string' ? record.runId : null,

@@ -5,13 +5,10 @@
  */
 
 import type { Context } from '@deepseek-ai/cordis'
-import { LiveModeView } from '@watchskill/dsh-workspace/mode-views'
-// `/mode-views` rather than `/client`: the `/client` entry is a loader
-// registration wrapped in `window.__ModuleLoader__.load(...)`, and a bundler
-// cannot read named exports out of a function body. The subpath is ordinary
-// ESM, so it inlines cleanly.
+import { LiveModeView } from './live-mode.js'
 
 export * from './components.js'
+export * from './live-mode.js'
 export * from '../session.js'
 
 /** Services this half needs before it can register anything. */

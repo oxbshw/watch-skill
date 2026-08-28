@@ -11,14 +11,30 @@
       "types": "./lib/index.d.ts",
       "default": "./lib/index.js"
     },
+    "./capture": {
+      "types": "./lib/capture.d.ts",
+      "default": "./lib/capture.js"
+    },
     "./client": {
       "types": "./lib/client/index.d.ts",
       "default": "./lib/client.js"
     },
-    "./package.json": "./package.json",
     "./components": {
       "types": "./lib/client/components.d.ts",
       "default": "./lib/client/components.js"
+    },
+    "./live-mode": {
+      "types": "./lib/client/live-mode.d.ts",
+      "default": "./lib/client/live-mode.js"
+    },
+    "./package.json": "./package.json",
+    "./sources-catalogue": {
+      "types": "./lib/sources-catalogue.d.ts",
+      "default": "./lib/sources-catalogue.js"
+    },
+    "./synthetic-source": {
+      "types": "./lib/synthetic-source.d.ts",
+      "default": "./lib/synthetic-source.js"
     }
   },
   "dsh": {
