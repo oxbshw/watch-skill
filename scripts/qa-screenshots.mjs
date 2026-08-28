@@ -43,6 +43,8 @@ const OUT = process.env.WATCH_QA_OUT ?? 'G:/watch-manual/qa/screenshots'
  * reports no tabs.
  */
 const SESSION_ID = process.env.WATCH_QA_SESSION ?? ''
+/** The directory a created session adopts. Any real directory will do. */
+const SESSION_CWD = process.env.WATCH_QA_CWD ?? process.cwd()
 
 /** Desktop, and a narrower desktop window — both sizes the product supports. */
 const VIEWPORTS = [
@@ -138,12 +140,31 @@ const MEASURE = `(function () {
   }
 })()`
 
-async function capture(win, name, note) {
+/**
+ * Photograph the screen, or record why there was nothing to photograph.
+ *
+ * `reached` is the precondition: whether the tool actually got to the thing
+ * the shot is named after. When it is false no PNG is written at all.
+ *
+ * That matters more than it sounds. An earlier run produced sixteen shots of
+ * an empty workspace — every mode, both viewports — each saved under the name
+ * of a mode nobody had reached. In a directory listing they were
+ * indistinguishable from real captures, and a reviewer scrolling past would
+ * have counted thirty-eight successes. A missing file cannot be mistaken for
+ * evidence; a duplicate one can.
+ */
+async function capture(win, name, note, reached = true) {
+  if (!reached) {
+    shots.push({ name, file: null, note, captured: false })
+    say('  ' + name.padEnd(38) + ' NOT CAPTURED — ' + note)
+    return false
+  }
   const image = await win.webContents.capturePage()
   const file = join(OUT, name + '.png')
   writeFileSync(file, image.toPNG())
-  shots.push({ name, file, note })
+  shots.push({ name, file, note, captured: true })
   say('  ' + name.padEnd(38) + ' ' + note)
+  return true
 }
 
 async function measure(win, label) {
@@ -197,7 +218,15 @@ async function run(win, viewport) {
   }
   await wait(4000)
 
-  await capture(win, p('01-onboarding'), 'the Watch first-run notice: orca mark, honest readiness, two ways out')
+  // Name the notice that is actually on screen. This claimed the Watch
+  // first-run notice unconditionally and photographed whichever dialog the
+  // queue happened to be showing — usually DSH's own testing notice, since
+  // Watch's comes after it.
+  const firstDialog = await win.webContents.executeJavaScript(
+    "(function(){var d=document.querySelector('[role=\"dialog\"]'); return d ? d.innerText.split('\\n')[0].slice(0,60) : ''})()",
+  )
+  await capture(win, p('01-onboarding'),
+    firstDialog === '' ? 'no dialog was on screen' : 'first-run dialog: ' + firstDialog)
   await measure(win, 'onboarding')
 
   const cleared = await clearOnboarding(win)
@@ -214,13 +243,40 @@ async function run(win, viewport) {
   // tabs and looks exactly like the registrations having failed, which is what
   // an earlier run reported. Selecting a seeded session with history and
   // reloading is deterministic, and the reload is what makes DSH pick it up.
-  const opened = await win.webContents.executeJavaScript(`(function () {
+  // Create a real session through DSH's own API.
+  //
+  // This used to read a session id out of an environment variable, and when
+  // nobody set one it silently opened nothing — which is how sixteen shots of
+  // an empty workspace came to be labelled as seven modes.
+  //
+  // `session.create` accepts a `cwd` directly, so no workspace is needed. That
+  // matters because adding a workspace goes through a native directory picker,
+  // which no automated capture can drive.
+  const opened = await win.webContents.executeJavaScript(`(async function () {
     var seeded = ${JSON.stringify(SESSION_ID)}
     if (seeded) {
       localStorage['dsh.sessions.current'] = JSON.stringify({ sessionId: seeded })
       return seeded
     }
-    return null
+    try {
+      var response = await fetch('/api/session.create', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          type: 'client-request',
+          rpcId: 'qa-' + String(Date.now()),
+          method: 'session.create',
+          payload: { cwd: ${JSON.stringify(SESSION_CWD)} }
+        })
+      })
+      var body = await response.json()
+      var id = body && body.result && body.result.ok && body.result.value.sessionId
+      if (!id) return null
+      localStorage['dsh.sessions.current'] = JSON.stringify({ sessionId: id })
+      return id
+    } catch (error) {
+      return 'error: ' + String(error)
+    }
   })()`)
   say('  session: ' + String(opened))
   await win.reload()
@@ -229,14 +285,21 @@ async function run(win, viewport) {
   await wait(2400)
   const session = await measure(win, 'session')
   say('  tabs: ' + JSON.stringify(session.tabs))
-  await capture(win, p('04-session-tabs'), 'the seven modes as a native DSH tablist')
+  // Report the tabs that are there. This asserted seven modes unconditionally
+  // while photographing a workspace with no tablist in it at all.
+  await capture(win, p('04-session-tabs'),
+    session.tabs.length === 0
+      ? 'no tablist: the session header is hidden while the session is blank'
+      : 'the mode tablist: ' + session.tabs.join(', '),
+    session.tabs.length > 0)
 
   for (const mode of ['Chat', 'Trajectory', 'Watch', 'Live', 'Memory', 'Library', 'Compare']) {
     const ok = await win.webContents.executeJavaScript(
       CLICK_BY_TEXT + "('[role=\"tab\"]', " + JSON.stringify(mode) + ')',
     )
     await wait(1200)
-    await capture(win, p('05-mode-' + mode.toLowerCase()), ok ? mode + ' mode' : mode + ' tab NOT FOUND')
+    await capture(win, p('05-mode-' + mode.toLowerCase()),
+      ok ? mode + ' mode' : mode + ' tab was not present, so nothing was photographed', ok)
   }
 
   // Settings, and every Watch section in it.

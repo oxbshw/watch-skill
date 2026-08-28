@@ -277,9 +277,9 @@ test('slot discipline', async t => {
 test('the Technology & Capability Center', async t => {
   const SECTIONS = [
     ['watch-roles', 'Role Bindings'],
-    ['watch-engines', 'Perception Engines'],
-    ['watch-sources', 'Sources & Devices'],
-    ['watch-memory', 'Memory & Retrieval'],
+    ['watch-engines', 'Perception'],
+    ['watch-sources', 'Sources'],
+    ['watch-memory', 'Memory'],
     ['watch-verification', 'Verification'],
     ['watch-diagnostics', 'Diagnostics'],
     ['watch-about', 'About'],
@@ -291,6 +291,25 @@ test('the Technology & Capability Center', async t => {
     })
   }
 
+  await t.test('every section label fits the nav that has to show it', () => {
+    // Measured in the running settings nav: the label slot is 112px, and it
+    // ellipsises. "Perception Engines" (118px), "Sources & Devices" (114px)
+    // and "Memory & Retrieval" (124px) all overflowed, so three of the eight
+    // Watch sections read as "Perception Engi…", "Sources & Devic…" and
+    // "Memory & Retri…" in every screenshot taken.
+    //
+    // Character count is a proxy for pixels and an imperfect one — the real
+    // check is a screenshot. It is used here because a unit test has no font
+    // to measure with, and 13 is the longest label observed to fit ("Role
+    // Bindings", 84px). Anything longer needs measuring before it ships.
+    const BUDGET = 13
+    for (const [, label] of SECTIONS) {
+      assert.ok(
+        label.length <= BUDGET,
+        `"${label}" is ${String(label.length)} characters; the nav ellipsises past about ${String(BUDGET)}`,
+      )
+    }
+  })
   await t.test('upstream sections keep the top of the list', () => {
     // DSH's General is 0 and Models is 10. Everything Watch adds starts at 20.
     const orders = [...SETTINGS.matchAll(/section\('[^']+', '[^']+', (\d+)/g)]

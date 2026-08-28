@@ -49,17 +49,28 @@ export function apply(ctx: Context): void {
     })
   }
 
+  // A section label has 112px, measured in the running settings nav.
+  //
+  // "Perception Engines", "Sources & Devices" and "Memory & Retrieval" were
+  // 118px, 114px and 124px, so all three ellipsised to "Perception Engi…",
+  // "Sources & Devic…" and "Memory & Retri…" — three of eight Watch sections
+  // unreadable in every screenshot. The one-word forms are 66px, 49px and
+  // 52px, and they sit consistently beside the labels that already fit:
+  // Role Bindings 84px, Verification 70px, Diagnostics 72px, About 39px.
+  //
+  // The nav width is DSH's, so the label is the half that has to give.
+
   // INTELLIGENCE — what the agent is, and what each capability is bound to.
   // DSH's own Models section stays where it is; this adds the per-role view it
   // has no reason to carry, since roles are a Watch concept.
   section('watch-roles', 'Role Bindings', 20, RoleBindingsSection)
 
   // PERCEPTION — what runs here, and what it is allowed to see.
-  section('watch-engines', 'Perception Engines', 30, EnginesSection)
-  section('watch-sources', 'Sources & Devices', 40, SourcesSection)
+  section('watch-engines', 'Perception', 30, EnginesSection)
+  section('watch-sources', 'Sources', 40, SourcesSection)
 
   // MEMORY — what is kept, under which rules.
-  section('watch-memory', 'Memory & Retrieval', 50, MemorySection)
+  section('watch-memory', 'Memory', 50, MemorySection)
 
   // TRUTH — what a verdict means and who may issue one.
   section('watch-verification', 'Verification', 60, VerificationSection)
