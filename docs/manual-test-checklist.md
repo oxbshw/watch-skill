@@ -12,11 +12,11 @@ so "the screen looked right" is never the pass condition on its own.
 
 | | |
 |---|---|
-| **Web** | http://127.0.0.1:8931 — open it in any browser |
+| **Web** | http://127.0.0.1:5411 — open it in any browser |
 | **Desktop** | already open as a window; if you closed it, run `npx electron .` in `G:/watch-workspace/apps/desktop` |
-| **Demo data home** | `G:/watch-manual/dsh-home` |
-| **Fixtures** | `G:/watch-manual/dsh-home/watch-fixtures` |
-| **Logs** | `G:/watch-manual/logs` |
+| **Demo data home** | `G:/watch-final-appdata/dsh-home` |
+| **Fixtures** | `G:/watch-final-appdata/dsh-home/watch-fixtures` |
+| **Logs** | `G:/watch-rc-appdata/desktop-logs` |
 
 Everything seeded is marked `demo: true` and prefixed `DEMO:`. If you see a
 record that looks real and is not marked, **that is a bug** — it means something
@@ -29,7 +29,7 @@ reply is not expected; a *refusal to reach the network* is.
 
 ## A. It opens, and it is Watch Workspace
 
-**A1 — Web loads, branded.** Open http://127.0.0.1:8931.
+**A1 — Web loads, branded.** Open http://127.0.0.1:5411.
 *Expect:* the browser tab reads **Watch Workspace** with the orca as its icon.
 The sidebar header shows the orca beside the words "Watch Workspace", and the
 sidebar footer carries "Built on DeepSeek Harness · Extended by Watch Skill"
@@ -116,7 +116,7 @@ check that did not run as a failure.
 ## C. Evidence and the verdict — the core claim
 
 This is the section that matters most. Fixtures for it are in
-`G:/watch-manual/dsh-home/watch-fixtures`.
+`G:/watch-final-appdata/dsh-home/watch-fixtures`.
 
 **C1 — A citation resolves to an exact place.** Open `01-recorded-source.json`
 through the Library / evidence surface.
@@ -328,7 +328,7 @@ media upload.
 ## K. Desktop-specific
 
 **K1 — Safe mode.** Stop the Desktop app's Host (or rename
-`G:/watch-manual/dsh-home` and relaunch).
+`G:/watch-final-appdata/dsh-home` and relaunch).
 *Expect:* the window opens in **safe mode**, naming the reason. It does not open
 onto nothing, and it does not open onto a dead origin.
 *Bug if:* a blank window, a crash, or an error dialog with no path forward.
@@ -368,11 +368,32 @@ build, which is the failure that made an earlier round of testing meaningless.
 
 ---
 
+## Before you reach the modes
+
+Six of the seven mode tabs are behind one thing, and it is worth knowing
+before you go looking for them.
+
+DSH hides the session header while a session is blank — `blank &&
+composerPhase === 'blank'` — and the mode tabs live in that header. A session
+stops being blank after a turn, and a turn needs a provider. With no key
+configured there is no turn, so there is no tablist.
+
+That is upstream behaviour, not a Watch defect, and it is why the automated
+capture records those shots as not taken rather than photographing an empty
+workspace seven times. See [screenshot-manifest.md](screenshot-manifest.md).
+
+**If you have a provider key**, add it in Settings → Models, send one message,
+and the tablist appears. Everything in section B is then testable.
+
+**If you do not**, sections A, C, D, I, J and K are all reachable without one,
+and they are where most of the product lives.
+
+---
 ## What to report
 
 For anything you find, the useful report is: **which check**, **what you did**,
 **what you saw**, **what you expected**. Attach the relevant file from
-`G:/watch-manual/logs` if the app was involved in the failure.
+`G:/watch-rc-appdata/desktop-logs` if the app was involved in the failure.
 
 Three findings should be reported immediately rather than batched, because each
 one is a release blocker on its own:

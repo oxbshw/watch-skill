@@ -15,3 +15,4 @@ evidence would force a revisit — not a summary of the discussion.
 | [ADR-006](ADR-006-memory-authority.md) | Memory authority is the MemoryEvent ledger | Accepted |
 | [ADR-007](ADR-007-taste-and-identity.md) | `taste.md` is a projection, not a prompt | Accepted |
 | [ADR-008](ADR-008-governed-self-learning.md) | Self-learning is governed by evaluation and promotion | Accepted |
+| [ADR-009](ADR-009-local-library-index.md) | The Library index is local, derived, and rebuildable | Accepted |
