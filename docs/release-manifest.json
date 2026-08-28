@@ -56,7 +56,7 @@
       {
         "name": "@watchskill/dsh-client-brand",
         "version": "0.1.0-preview.0",
-        "integrity": "sha256:3baf7ba638fecc42226c059e53a7e4034d5621b741ea33ed2783267b3d1dfa64",
+        "integrity": "sha256:9870792c02f97747213718bc8a9448bdfe905315d2f2d3b9f9e3739bc359f5c7",
         "sourceFiles": 8
       },
       {
@@ -68,20 +68,20 @@
       {
         "name": "@watchskill/dsh-client-evidence",
         "version": "0.1.0-preview.0",
-        "integrity": "sha256:51fa5022c9fe55787c105755604508381f69b833e0ea5d85bfc307c057c13344",
+        "integrity": "sha256:ad1ab1b119dd5f2ddfe9729eae50561cea9093b47d84cf25d1109cf4d723256b",
         "sourceFiles": 13
       },
       {
         "name": "@watchskill/dsh-client-memory",
         "version": "0.1.0-preview.0",
-        "integrity": "sha256:5519d05d024e7181f70031edc7eac51979d89a47285d3d521d070a10464ea4ea",
+        "integrity": "sha256:5eec88a8ec519778e88018fb1ac7b4f81cce29005a3493420bea32e803b45a5c",
         "sourceFiles": 8
       },
       {
         "name": "@watchskill/dsh-client-settings",
         "version": "0.1.0-preview.0",
-        "integrity": "sha256:b50eb6379d3632c38dc113dbe5978af9d9fce5003087ae623fa25d180fd84787",
-        "sourceFiles": 7
+        "integrity": "sha256:59f4c6247b98ea22384973e856e12fc6a123eaa9b7c923171a252dc44e7db983",
+        "sourceFiles": 8
       },
       {
         "name": "@watchskill/dsh-contracts",
@@ -152,7 +152,7 @@
       {
         "name": "@watchskill/dsh-workspace",
         "version": "0.1.0-preview.0",
-        "integrity": "sha256:817dfb5f6d9df91c1a95f044567a6eb504f374b57184dbc8a71fac8115335aef",
+        "integrity": "sha256:d0c79ef49ac6162a9503064e41c75b487518061d69e19c0d3fa1983fb27c75ed",
         "sourceFiles": 11
       },
       {
@@ -168,12 +168,12 @@
     "dataLicense": "CC0-1.0",
     "SPDXID": "SPDXRef-DOCUMENT",
     "name": "@watchskill/watch-workspace-0.1.0-preview.0",
-    "documentNamespace": "https://github.com/oxbshw/watch-workspace/spdx/0.1.0-preview.0/mtcfj2kz",
+    "documentNamespace": "https://github.com/oxbshw/watch-workspace/spdx/0.1.0-preview.0/mtcgjnux",
     "creationInfo": {
       "creators": [
         "Tool: watch-gen-release-manifest"
       ],
-      "created": "2026-08-28T04:06:16Z"
+      "created": "2026-08-28T04:34:43Z"
     },
     "packages": [
       {
@@ -204,7 +204,7 @@
         "checksums": [
           {
             "algorithm": "SHA256",
-            "checksumValue": "3baf7ba638fecc42226c059e53a7e4034d5621b741ea33ed2783267b3d1dfa64"
+            "checksumValue": "9870792c02f97747213718bc8a9448bdfe905315d2f2d3b9f9e3739bc359f5c7"
           }
         ]
       },
@@ -236,7 +236,7 @@
         "checksums": [
           {
             "algorithm": "SHA256",
-            "checksumValue": "51fa5022c9fe55787c105755604508381f69b833e0ea5d85bfc307c057c13344"
+            "checksumValue": "ad1ab1b119dd5f2ddfe9729eae50561cea9093b47d84cf25d1109cf4d723256b"
           }
         ]
       },
@@ -252,7 +252,7 @@
         "checksums": [
           {
             "algorithm": "SHA256",
-            "checksumValue": "5519d05d024e7181f70031edc7eac51979d89a47285d3d521d070a10464ea4ea"
+            "checksumValue": "5eec88a8ec519778e88018fb1ac7b4f81cce29005a3493420bea32e803b45a5c"
           }
         ]
       },
@@ -268,7 +268,7 @@
         "checksums": [
           {
             "algorithm": "SHA256",
-            "checksumValue": "b50eb6379d3632c38dc113dbe5978af9d9fce5003087ae623fa25d180fd84787"
+            "checksumValue": "59f4c6247b98ea22384973e856e12fc6a123eaa9b7c923171a252dc44e7db983"
           }
         ]
       },
@@ -460,7 +460,7 @@
         "checksums": [
           {
             "algorithm": "SHA256",
-            "checksumValue": "817dfb5f6d9df91c1a95f044567a6eb504f374b57184dbc8a71fac8115335aef"
+            "checksumValue": "d0c79ef49ac6162a9503064e41c75b487518061d69e19c0d3fa1983fb27c75ed"
           }
         ]
       },
