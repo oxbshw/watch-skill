@@ -22,8 +22,9 @@
  */
 
 import { app, BrowserWindow } from 'electron'
-import { writeFileSync, mkdirSync, appendFileSync } from 'node:fs'
+import { writeFileSync, mkdirSync, appendFileSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
+import { tmpdir } from 'node:os'
 
 // Configuration comes through the environment, not argv.
 //
@@ -48,6 +49,35 @@ const VIEWPORTS = [
   { name: 'wide', width: 1440, height: 900 },
   { name: 'narrow', width: 1024, height: 720 },
 ]
+
+/**
+ * A private Electron profile, claimed before anything else runs.
+ *
+ * This is the whole fix for a real defect: running the capture used to take the
+ * normal Desktop application down with it. Electron implements its
+ * single-instance lock as a socket and lock file inside `userData`, and two
+ * processes of the same app share that path by default — so a second Electron
+ * starting up disturbs the first one's singleton, and quitting the second
+ * released state the first still needed.
+ *
+ * Isolating `userData`, `sessionData` and `cache` gives the capture its own
+ * singleton, its own cache and its own storage. It cannot see, signal or
+ * disturb the running Desktop, and the running Desktop cannot see it.
+ *
+ * These must be set before `whenReady`; afterwards Electron has already
+ * resolved the paths and the call is silently too late.
+ */
+const QA_PROFILE = process.env.WATCH_QA_PROFILE
+  ?? join(tmpdir(), 'watch-qa-capture-profile')
+
+mkdirSync(QA_PROFILE, { recursive: true })
+app.setPath('userData', QA_PROFILE)
+app.setPath('sessionData', join(QA_PROFILE, 'session'))
+app.setPath('cache', join(QA_PROFILE, 'cache'))
+
+// Deliberately no `requestSingleInstanceLock()`. The capture is not the
+// application; it must neither claim the lock nor hand a `second-instance`
+// signal to whoever holds it.
 
 const shots = []
 

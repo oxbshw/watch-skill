@@ -6,6 +6,7 @@
 
 export * from './sources.js'
 export * from './search.js'
+export * from './index-store.js'
 
 /**
  * The host-side loader entry.
