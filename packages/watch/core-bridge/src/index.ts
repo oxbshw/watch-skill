@@ -65,6 +65,18 @@ export interface Config {
   readonly requestTimeoutMs: number
   /** Connect during plugin activation rather than on first use. */
   readonly autoConnect: boolean
+  /**
+   * Consecutive connection failures before the Bridge stops trying.
+   *
+   * Reaching this opens the circuit: further requests fail immediately with
+   * `bridge.unavailable` and a `retryAfterMs`, and no Watch Core process is
+   * started until the cooldown elapses.
+   */
+  readonly failuresBeforeOpen: number
+  /** First cooldown after the circuit opens. Doubles on each further failure. */
+  readonly initialCooldownMs: number
+  /** Ceiling for the cooldown, so backoff cannot grow without bound. */
+  readonly maxCooldownMs: number
 }
 
 declare module '@deepseek-ai/cordis' {
@@ -113,6 +125,9 @@ export class WatchCoreService extends Service {
     startupTimeoutMs: s.number().step(1).min(100).default(10_000),
     requestTimeoutMs: s.number().step(1).min(100).default(30_000),
     autoConnect: s.boolean().default(true),
+    failuresBeforeOpen: s.number().step(1).min(1).default(3),
+    initialCooldownMs: s.number().step(1).min(1).default(1_000),
+    maxCooldownMs: s.number().step(1).min(1).default(30_000),
   })
 
   private transport: Transport | null = null
@@ -129,8 +144,32 @@ export class WatchCoreService extends Service {
    */
   private driftAffected = new Set<string>()
 
+  /**
+   * The reconnect breaker.
+   *
+   * Every request made while the Bridge is not ready reconnects, so an engine
+   * that fails on contact used to mean a fresh Watch Core process per request.
+   * Disposing the abandoned transport stopped them accumulating; it did not
+   * stop the churn. Counting consecutive failures and refusing to spawn during
+   * the cooldown does.
+   */
+  private consecutiveFailures = 0
+  /** When the cooldown ends, on the injected clock. Null while closed. */
+  private openUntilMs: number | null = null
+  /** The cooldown the next failure will apply, doubling to the ceiling. */
+  private cooldownMs = 0
+  /** True while the one probe a cooldown expiry allows is in flight. */
+  private probing = false
+  /** Injected so tests do not sleep. */
+  private readonly now: () => number
+
   constructor(ctx: Context, private readonly config: Config) {
     super(ctx, 'watchCore')
+
+    // A clock the tests can drive. `WATCH_BRIDGE_CLOCK` is read only when a
+    // test installs one; production always gets `Date.now`.
+    const injected = (globalThis as { __watchBridgeClock__?: () => number }).__watchBridgeClock__
+    this.now = typeof injected === 'function' ? injected : () => Date.now()
 
     // Teardown is registered up front so an activation that fails partway
     // still releases the child process it may have spawned.
@@ -198,7 +237,28 @@ export class WatchCoreService extends Service {
     if (this.state.phase === 'ready' && this.state.handshake !== null) {
       return Promise.resolve({ ok: true, value: this.state.handshake })
     }
-    this.connecting ??= this.runConnect().finally(() => { this.connecting = null })
+    // Refuse during the cooldown rather than starting another engine. The
+    // caller gets the reason and when to try again, not a timeout.
+    if (this.openUntilMs !== null && this.connecting === null) {
+      const remaining = this.openUntilMs - this.now()
+      if (remaining > 0) {
+        return Promise.resolve(this.unavailable(remaining))
+      }
+      // Cooldown elapsed: exactly one probe is allowed through, and the
+      // single-flight below is what keeps it to one.
+      this.probing = true
+    }
+
+    this.connecting ??= this.runConnect()
+      .then((result) => {
+        if (result.ok) this.onConnected()
+        else this.onConnectFailed()
+        return result
+      }, (error: unknown) => {
+        this.onConnectFailed()
+        throw error
+      })
+      .finally(() => { this.connecting = null; this.probing = false })
     return this.connecting
   }
 
@@ -225,13 +285,17 @@ export class WatchCoreService extends Service {
         { retryable: true },
       )
     }
-    return transport.send<T>({
+    const result = await transport.send<T>({
       method,
       params,
       deadlineMs: options.deadlineMs ?? this.config.requestTimeoutMs,
       correlationId: options.correlationId ?? randomUUID(),
       signal: options.signal ?? new AbortController().signal,
     })
+    // A completed request is the only proof the engine works, so it is what
+    // clears the reconnect backoff.
+    if (result.ok) this.onHealthy()
+    return result
   }
 
   /**
@@ -270,7 +334,10 @@ export class WatchCoreService extends Service {
     this.transport = transport
     this.publish({ phase: 'connecting', transport: transport.kind, handshake: null, error: null })
 
-    transport.onFailure((error) => { this.publish({ phase: 'failed', error }) })
+    transport.onFailure((error) => {
+      this.publish({ phase: 'failed', error })
+      this.onTransportFailure(error)
+    })
 
     let connected = await transport.connect()
     let notInstalled: WatchError | null = null
@@ -390,6 +457,103 @@ export class WatchCoreService extends Service {
 
     this.publish({ phase: 'ready', handshake: handshake.value, error: null })
     return handshake
+  }
+
+  /**
+   * A refusal that names when the Bridge will try again.
+   *
+   * `retryAfterMs` is what makes this different from a timeout: the caller
+   * can wait the stated time instead of retrying into a closed door, and a UI
+   * can say when rather than only that.
+   */
+  private unavailable(retryAfterMs: number): WatchResult<never> {
+    return watchError(
+      'bridge.unavailable',
+      `Watch Core failed to start ${String(this.consecutiveFailures)} time(s) in a row, `
+      + 'so the Bridge has stopped trying for now.',
+      'Check the Watch Core installation with `watch-skill doctor`. '
+      + 'The Bridge will try again on its own.',
+      { retryable: true, details: { retryAfterMs: Math.ceil(retryAfterMs) } },
+    )
+  }
+
+  /**
+   * A handshake succeeded, so let this session proceed.
+   *
+   * The counters are deliberately not cleared here. A handshake proves the
+   * engine started, not that it works: an engine that handshakes cleanly and
+   * then fails every request would reset the backoff on each reconnect and
+   * spawn once per request forever, which is the churn this exists to stop.
+   * Clearing is left to `onHealthy`, which a completed request calls.
+   */
+  private onConnected(): void {
+    this.openUntilMs = null
+  }
+
+  /** A request completed, so the engine is working. Forget the outage. */
+  private onHealthy(): void {
+    this.consecutiveFailures = 0
+    this.openUntilMs = null
+    this.cooldownMs = 0
+  }
+
+  /**
+   * A connection attempt failed.
+   *
+   * A failure during the half-open probe re-opens the circuit immediately and
+   * doubles the wait, so an engine that is still broken is not probed at the
+   * same rate the caller happens to be asking.
+   */
+  /**
+   * The transport failed after a handshake had already succeeded.
+   *
+   * This is the case the breaker exists for. A protocol violation is marked
+   * non-retryable because it is: the engine and this Workspace cannot talk to
+   * each other, and starting the same engine again produces the same frame.
+   * Counting it toward a threshold would still spawn twice more first, so it
+   * opens the circuit on the spot. A crash is different -- the engine may
+   * come back -- so that one counts.
+   */
+  private onTransportFailure(error: WatchError): void {
+    if (error.retryable) {
+      this.onConnectFailed()
+      return
+    }
+    this.consecutiveFailures = Math.max(this.consecutiveFailures + 1, this.config.failuresBeforeOpen)
+    this.cooldownMs = this.cooldownMs === 0
+      ? this.config.initialCooldownMs
+      : Math.min(this.cooldownMs * 2, this.config.maxCooldownMs)
+    this.openUntilMs = this.now() + this.cooldownMs
+  }
+
+  private onConnectFailed(): void {
+    this.consecutiveFailures += 1
+    if (this.consecutiveFailures < this.config.failuresBeforeOpen && !this.probing) return
+    this.cooldownMs = this.cooldownMs === 0
+      ? this.config.initialCooldownMs
+      : Math.min(this.cooldownMs * 2, this.config.maxCooldownMs)
+    this.openUntilMs = this.now() + this.cooldownMs
+  }
+
+  /**
+   * What the breaker is doing, for Diagnostics.
+   *
+   * Counts and timings only. Nothing here carries a command line, a path or
+   * an environment value, so it is safe to render and safe to log.
+   */
+  get reconnectState(): {
+    readonly consecutiveFailures: number
+    readonly circuitOpen: boolean
+    readonly retryAfterMs: number
+    readonly cooldownMs: number
+  } {
+    const remaining = this.openUntilMs === null ? 0 : Math.max(0, this.openUntilMs - this.now())
+    return {
+      consecutiveFailures: this.consecutiveFailures,
+      circuitOpen: remaining > 0,
+      retryAfterMs: Math.ceil(remaining),
+      cooldownMs: this.cooldownMs,
+    }
   }
 
   /** Connect on demand for callers that did not wait for auto-connect. */

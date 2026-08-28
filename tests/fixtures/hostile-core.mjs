@@ -23,6 +23,18 @@ const send = (message) => {
 }
 
 function handle(message) {
+  if (message.method === 'watch.handshake' && MODE === 'silent-handshake') {
+    // Answer nothing. The startup deadline is what has to end this.
+    return
+  }
+  if (message.method === 'watch.handshake' && MODE === 'slow-handshake') {
+    setTimeout(() => {
+      send({ jsonrpc: '2.0', id: message.id, result: {
+        protocolVersion: 1, coreVersion: '0.0.0-hostile', capabilities: {}, contracts: {},
+      } })
+    }, 2500)
+    return
+  }
   if (message.method === 'watch.handshake') {
     send({ jsonrpc: '2.0', id: message.id, result: {
       protocolVersion: 1, coreVersion: '0.0.0-hostile', capabilities: {}, contracts: {},
@@ -30,6 +42,12 @@ function handle(message) {
     return
   }
   if (message.id === undefined) return
+
+  if (MODE === 'crash-after-ready') {
+    // Handshake fine, then die on the first real request. Every reconnect
+    // after this handshakes and dies again.
+    process.exit(7)
+  }
 
   if (MODE === 'huge-frame') {
     // Declares a gigabyte and sends nine bytes.

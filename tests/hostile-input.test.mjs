@@ -240,18 +240,25 @@ describe('an engine that does not speak the protocol', () => {
     // begins, so a later request must come back with the same reason rather
     // than spending a second deadline rediscovering it.
     //
-    // The bound is deliberately stated against the request timeout rather than
-    // as a small fixed number. A later request does still reconnect — that is
-    // the existing policy, and it spawns and handshakes — so what is being
-    // asserted is that it is answered rather than timed out.
+    // The bound is stated against the request timeout rather than as a small
+    // fixed number: what is asserted is that the caller is answered rather than
+    // left to time out.
+    //
+    // The answer now comes from the reconnect breaker. A protocol violation is
+    // non-retryable, so the circuit opens on the first one and the second
+    // request is refused with `bridge.unavailable` and a retry time instead of
+    // being sent to an engine that cannot read it.
     const REQUEST_TIMEOUT_MS = 1_500
     await againstHostileCore('garbage', async (ctx) => {
       await ctx.watchCore.connect()
-      await ctx.watchCore.request('fixture.echo', {})
+      const first = await ctx.watchCore.request('fixture.echo', {})
+      assert.equal(first.error.error, 'bridge.protocol_violation')
+
       const started = Date.now()
       const again = await ctx.watchCore.request('fixture.echo', {})
       const elapsed = Date.now() - started
-      assert.equal(again.error.error, 'bridge.protocol_violation')
+      assert.equal(again.error.error, 'bridge.unavailable')
+      assert.ok(again.error.details.retryAfterMs > 0)
       assert.ok(elapsed < REQUEST_TIMEOUT_MS,
         `the second request took ${String(elapsed)}ms, which is its full deadline`)
     })
