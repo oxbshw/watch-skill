@@ -204,6 +204,9 @@ importers:
       '@watchskill/dsh-trajectory':
         specifier: workspace:^
         version: link:../trajectory
+      '@watchskill/dsh-workspace':
+        specifier: workspace:^
+        version: link:../workspace
     devDependencies:
       '@deepseek-ai/cordis':
         specifier: 'catalog:'
@@ -294,6 +297,9 @@ importers:
       '@watchskill/dsh-technology':
         specifier: workspace:^
         version: link:../technology
+      '@watchskill/dsh-workspace':
+        specifier: workspace:^
+        version: link:../workspace
     devDependencies:
       '@deepseek-ai/cordis':
         specifier: 'catalog:'
@@ -316,6 +322,9 @@ importers:
       '@watchskill/dsh-contracts':
         specifier: workspace:^
         version: link:../contracts
+      '@watchskill/dsh-workspace':
+        specifier: workspace:^
+        version: link:../workspace
     devDependencies:
       '@deepseek-ai/cordis':
         specifier: 'catalog:'

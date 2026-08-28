@@ -26,6 +26,9 @@
     },
     {
       "path": "../brand"
+    },
+    {
+      "path": "../workspace"
     }
   ]
 }

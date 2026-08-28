@@ -19,7 +19,11 @@ import type { ReactNode } from 'react'
 import { parseVerdict, parseAnswer } from '@watchskill/dsh-contracts'
 import { VerdictRow } from './VerdictRow.js'
 import { SourceAnswerRow } from './SourceAnswerRow.js'
-import { CompareView } from './CompareView.js'
+import { CompareModeView } from '@watchskill/dsh-workspace/mode-views'
+// `/mode-views` rather than `/client`: the `/client` entry is a loader
+// registration wrapped in `window.__ModuleLoader__.load(...)`, and a bundler
+// cannot read named exports out of a function body. The subpath is ordinary
+// ESM, so it inlines cleanly.
 
 export { VerdictRow } from './VerdictRow.js'
 export { SourceAnswerRow } from './SourceAnswerRow.js'
@@ -119,7 +123,7 @@ export function apply(ctx: Context): void {
   slots.inject('conversation.view', () => {
     slots.register(
       { name: 'conversation.view', id: 'compare', label: 'Compare', order: 60 },
-      CompareView,
+      CompareModeView,
     )
   })
 }

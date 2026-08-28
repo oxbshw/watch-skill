@@ -50,8 +50,9 @@
     "react": "^18.2.0"
   },
   "dependencies": {
+    "@watchskill/dsh-client-brand": "workspace:^",
     "@watchskill/dsh-contracts": "workspace:^",
     "@watchskill/dsh-trajectory": "workspace:^",
-    "@watchskill/dsh-client-brand": "workspace:^"
+    "@watchskill/dsh-workspace": "workspace:^"
   }
 }

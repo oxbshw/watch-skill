@@ -15,6 +15,7 @@
  */
 
 import type { Context } from '@deepseek-ai/cordis'
+import { WatchModeView } from './mode-views.js'
 import {
   ComposerPanel,
   InspectorTabs,
@@ -27,6 +28,11 @@ import {
 } from './components.js'
 
 export * from './components.js'
+export * from './surface.js'
+// `./mode-views.js` is the rendered surfaces; `../modes.js` is the mode model
+// they are surfaces for. Two files called `modes` was a name collision waiting
+// to be misread.
+export * from './mode-views.js'
 export * from '../modes.js'
 export * from '../shell.js'
 export * from '../timeline.js'
@@ -80,7 +86,7 @@ export function apply(ctx: Context): void {
   // view; both are left exactly as they are. Watch contributes the rest, and
   // the seven together are the product's modes. Live, Library, Memory and
   // Compare are registered by the packages that own them.
-  mode('watch', 'Watch', WorkspaceShell, 20)
+  mode('watch', 'Watch', WatchModeView, 20)
 
   // Deliberately NOT registered into `sidebar.workspaces`.
   //

@@ -15,10 +15,18 @@
       "types": "./lib/client/index.d.ts",
       "default": "./lib/client.js"
     },
-    "./package.json": "./package.json",
     "./components": {
       "types": "./lib/client/components.d.ts",
       "default": "./lib/client/components.js"
+    },
+    "./mode-views": {
+      "types": "./lib/client/mode-views.d.ts",
+      "default": "./lib/client/mode-views.js"
+    },
+    "./package.json": "./package.json",
+    "./surface": {
+      "types": "./lib/client/surface.d.ts",
+      "default": "./lib/client/surface.js"
     }
   },
   "dsh": {

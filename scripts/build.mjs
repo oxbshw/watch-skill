@@ -46,18 +46,53 @@ function step(label, command, args, cwd = ROOT) {
   }
 }
 
-/** Packages that declare a browser half and therefore need a bundle. */
+/**
+ * Packages that declare a browser half, in dependency order.
+ *
+ * The order is not cosmetic. A client bundle that imports another package's
+ * client entry reads that package's *built* bundle, so building alphabetically
+ * had `client-evidence` resolve `@watchskill/dsh-workspace/client` before
+ * `workspace` had been bundled — MISSING_EXPORT for a symbol that was plainly
+ * in the source. It only stayed hidden while no client package imported
+ * another.
+ *
+ * A topological walk over the first-party dependencies fixes it for every
+ * future pairing rather than for this one.
+ */
 function clientPackages() {
   const root = join(ROOT, 'packages', 'watch')
-  const found = []
+  const byName = new Map()
   for (const entry of readdirSync(root)) {
     const manifestPath = join(root, entry, 'package.json')
     if (!existsSync(manifestPath)) continue
     const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'))
     if (manifest.dsh?.client === undefined) continue
-    found.push({ dir: join(root, entry), name: manifest.name })
+    byName.set(manifest.name, {
+      dir: join(root, entry),
+      name: manifest.name,
+      needs: Object.keys(manifest.dependencies ?? {}),
+    })
   }
-  return found
+
+  const ordered = []
+  const done = new Set()
+  const visiting = new Set()
+  const visit = name => {
+    const entry = byName.get(name)
+    if (entry === undefined || done.has(name)) return
+    if (visiting.has(name)) {
+      process.stderr.write(`watch: client bundle dependency cycle at ${name}
+`)
+      process.exit(1)
+    }
+    visiting.add(name)
+    for (const dependency of entry.needs) visit(dependency)
+    visiting.delete(name)
+    done.add(name)
+    ordered.push(entry)
+  }
+  for (const name of byName.keys()) visit(name)
+  return ordered
 }
 
 function main() {

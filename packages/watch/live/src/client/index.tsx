@@ -5,7 +5,11 @@
  */
 
 import type { Context } from '@deepseek-ai/cordis'
-import { LiveSurface } from './components.js'
+import { LiveModeView } from '@watchskill/dsh-workspace/mode-views'
+// `/mode-views` rather than `/client`: the `/client` entry is a loader
+// registration wrapped in `window.__ModuleLoader__.load(...)`, and a bundler
+// cannot read named exports out of a function body. The subpath is ordinary
+// ESM, so it inlines cleanly.
 
 export * from './components.js'
 export * from '../session.js'
@@ -26,6 +30,6 @@ export function apply(ctx: Context): void {
   // header turns the registered set into its own tab strip, which is why this
   // is a view rather than a panel Watch would have to place and style itself.
   slots.inject('conversation.view', () => {
-    slots.register({ name: 'conversation.view', id: 'live', label: 'Live', order: 30 }, LiveSurface)
+    slots.register({ name: 'conversation.view', id: 'live', label: 'Live', order: 30 }, LiveModeView)
   })
 }

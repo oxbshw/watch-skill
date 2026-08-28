@@ -5,7 +5,11 @@
  */
 
 import type { Context } from '@deepseek-ai/cordis'
-import { LibrarySurface } from './components.js'
+import { LibraryModeView } from '@watchskill/dsh-workspace/mode-views'
+// `/mode-views` rather than `/client`: the `/client` entry is a loader
+// registration wrapped in `window.__ModuleLoader__.load(...)`, and a bundler
+// cannot read named exports out of a function body. The subpath is ordinary
+// ESM, so it inlines cleanly.
 
 export * from './components.js'
 export * from '../sources.js'
@@ -28,7 +32,7 @@ export function apply(ctx: Context): void {
   slots.inject('conversation.view', () => {
     slots.register(
       { name: 'conversation.view', id: 'library', label: 'Library', order: 50 },
-      LibrarySurface,
+      LibraryModeView,
     )
   })
 }
