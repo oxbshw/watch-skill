@@ -30,7 +30,7 @@
 
 import type { ReactNode } from 'react'
 import { Button, Modal } from '@deepseek-ai/dsh-client-ui-primitives'
-import { PRODUCT_NAME, tokenFor } from '@watchskill/dsh-client-brand'
+import { PRODUCT_NAME, WATCH_MARK_PNG, tokenFor } from '@watchskill/dsh-client-brand'
 import { READINESS } from './readiness.js'
 
 /** What DSH hands an onboarding step. */
@@ -55,12 +55,17 @@ export function WatchOnboarding({ complete, openSection }: OnboardingProps): Rea
   return (
     <Modal open title={PRODUCT_NAME} onClose={finish} headless>
       <div style={{ maxWidth: '420px', padding: '4px 2px' }}>
-        <h2 style={{ fontSize: '17px', fontWeight: 600, margin: '0 0 4px' }}>
-          {PRODUCT_NAME}
-        </h2>
-        <p style={{ fontSize: '14px', margin: '0 0 12px', color: tokenFor('active') }}>
-          See. Remember. Act. Verify.
-        </p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
+          <img src={WATCH_MARK_PNG} width={40} height={40} alt="" aria-hidden="true"
+            style={{ width: '40px', height: '40px', objectFit: 'contain', flexShrink: 0 }}
+          />
+          <div>
+            <h2 style={{ fontSize: '17px', fontWeight: 600, margin: 0 }}>{PRODUCT_NAME}</h2>
+            <p style={{ fontSize: '14px', margin: '2px 0 0', color: tokenFor('active') }}>
+              See. Remember. Act. Verify.
+            </p>
+          </div>
+        </div>
         <p style={{
           fontSize: '13px', lineHeight: 1.6, margin: '0 0 12px',
           color: 'var(--dsw-alias-label-secondary)',

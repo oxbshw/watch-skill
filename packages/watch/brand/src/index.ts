@@ -9,6 +9,9 @@
  */
 
 export * from './identity.js'
+// The mark travels with the identity, so a surface that needs both — About,
+// the first-run notice — imports one package rather than reaching past it.
+export * from './mark.js'
 
 /** No host-side behavior: the brand occupies browser slots only. */
 export function apply(): void {}

@@ -24,5 +24,18 @@
   "devDependencies": {
     "electron": "^33.4.11"
   },
-  "productName": "Watch Workspace"
+  "productName": "Watch Workspace",
+  "build": {
+    "appId": "com.watchskill.workspace",
+    "productName": "Watch Workspace",
+    "win": {
+      "icon": "../../packages/watch/brand/assets/watch-orca.ico"
+    },
+    "mac": {
+      "icon": "../../packages/watch/brand/assets/watch-orca-512.png"
+    },
+    "linux": {
+      "icon": "../../packages/watch/brand/assets/watch-orca-512.png"
+    }
+  }
 }

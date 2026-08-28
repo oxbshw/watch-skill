@@ -16,7 +16,7 @@
  */
 
 import type { ReactNode } from 'react'
-import { ATTRIBUTION, INDEPENDENCE, PRODUCT_NAME, tokenFor } from '@watchskill/dsh-client-brand'
+import { ATTRIBUTION, INDEPENDENCE, PRODUCT_NAME, WATCH_MARK_PNG, tokenFor } from '@watchskill/dsh-client-brand'
 import type { BrandTone } from '@watchskill/dsh-client-brand'
 // The `/descriptors` subpath, not the package root: the root re-exports the
 // OCR worker, which imports `node:child_process` to supervise a real process.
@@ -542,10 +542,19 @@ export function DiagnosticsSection(
 export function AboutSection(): ReactNode {
   return (
     <div style={T.page}>
-      <h3 style={{ ...T.title, fontSize: '18px' }}>{PRODUCT_NAME}</h3>
-      <p style={{ ...T.lead, marginTop: '6px' }}>
-        An agent that sees, remembers, and can prove what actually happened.
-      </p>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '4px' }}>
+        {/* The mark carries the name here, because the heading beside it is the
+            same words — announcing them twice helps nobody. */}
+        <img src={WATCH_MARK_PNG} width={44} height={44} alt="" aria-hidden="true"
+          style={{ width: '44px', height: '44px', objectFit: 'contain', flexShrink: 0 }}
+        />
+        <div>
+          <h3 style={{ ...T.title, fontSize: '19px' }}>{PRODUCT_NAME}</h3>
+          <p style={{ ...T.lead, margin: '2px 0 0' }}>
+            An agent that sees, remembers, and can prove what actually happened.
+          </p>
+        </div>
+      </div>
       <div style={T.card}>
         <div style={T.meta}>
           <Row label="Watch Workspace">0.1.0-preview.0</Row>

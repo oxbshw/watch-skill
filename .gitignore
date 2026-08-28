@@ -12,3 +12,6 @@ upstream/deepseek-harness/
 
 # Local profile scratch used by install smoke tests.
 .dsh-home/
+
+# Local visual-QA evidence. Captured from a running app, not a build input.
+qa/

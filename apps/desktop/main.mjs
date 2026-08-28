@@ -38,6 +38,7 @@ import { app, BrowserWindow, ipcMain, dialog, shell } from 'electron'
  * copies from drifting.
  */
 const PRODUCT_NAME = 'Watch Workspace'
+
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { existsSync, mkdirSync, appendFileSync } from 'node:fs'
@@ -64,6 +65,21 @@ import {
 import { detectCapabilities, isDeepLink, parseDeepLink, permissionFor } from './lib/capabilities.js'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
+
+/**
+ * The window and taskbar icon.
+ *
+ * Resolved from the brand package's derived assets rather than copied into
+ * this app, so a change to the master reaches the Desktop window through the
+ * same generator as every other surface. Missing is survivable — Electron
+ * falls back to its default — so a broken path must not stop the app booting.
+ */
+const WINDOW_ICON = (() => {
+  const candidate = join(
+    HERE, '..', '..', 'packages', 'watch', 'brand', 'assets', 'watch-orca.ico',
+  )
+  return existsSync(candidate) ? candidate : undefined
+})()
 
 /** Where the manual-test profile lives, and where to log. */
 const DSH_HOME = process.env.WATCH_DSH_HOME ?? 'G:/watch-manual/dsh-home'
@@ -270,7 +286,12 @@ function createWindow() {
     width: 1440,
     height: 900,
     show: false,
-    title: 'Watch Workspace',
+    title: PRODUCT_NAME,
+    // The orca, from the brand master. `.ico` rather than a PNG because this is
+    // the Windows window and taskbar icon, and Windows wants the multi-size
+    // container so it can pick 16px for the taskbar and 256px for Alt-Tab
+    // instead of scaling one bitmap badly for both.
+    icon: WINDOW_ICON,
     webPreferences: {
       ...RENDERER_PREFERENCES,
       preload: join(HERE, 'preload.cjs'),

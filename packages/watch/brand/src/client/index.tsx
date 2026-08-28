@@ -16,6 +16,7 @@
 import type { Context } from '@deepseek-ai/cordis'
 import type { ReactNode } from 'react'
 import { ATTRIBUTION, INDEPENDENCE, PRODUCT_NAME, PRODUCT_SHORT_NAME } from '../identity.js'
+import { WATCH_MARK_PNG } from '../mark.js'
 import './theme.css'
 
 export * from '../identity.js'
@@ -24,28 +25,59 @@ export * from '../identity.js'
 export const inject = ['slots']
 
 /**
- * The Watch mark.
+ * The Watch mark: the orca, from the brand master.
  *
- * An inline SVG rather than an image: it inherits `currentColor`, so it
- * follows the theme and high-contrast mode without a second asset, and it
- * carries no network request.
+ * The artwork is the source of truth and is not redrawn, recoloured or
+ * reproportioned here. It is inlined as a data URI by `scripts/brand-assets.mjs`
+ * rather than fetched, because a mark that needs a second request is a mark
+ * that is sometimes missing — on first paint, on a cold offline profile, or
+ * behind a slow loopback.
+ *
+ * `size` drives both the box and the rendered dimensions. The inlined source is
+ * 64px, so a 32px slot still has a full 2x of detail; below that the mark is
+ * simply the same artwork smaller, never a different drawing.
+ *
+ * Two accessibility rules, and the difference between them matters:
+ *
+ *   - Where the mark stands alone, it carries the product name.
+ *   - Where the name is already beside it — the sidebar sets mark and name in
+ *     adjacent slots — the mark is decorative, and announcing "Watch Workspace"
+ *     twice is worse than announcing it once.
  */
-function WatchMark(): ReactNode {
+function WatchMark({ size = 18, decorative = false }: {
+  readonly size?: number
+  readonly decorative?: boolean
+}): ReactNode {
   return (
-    <svg
-      width="18"
-      height="18"
-      viewBox="0 0 18 18"
-      role="img"
-      aria-label={PRODUCT_NAME}
-      style={{ color: 'var(--watch-accent)' }}
-    >
-      {/* An aperture: the product watches, and the ring is what closes on a
-          moment. */}
-      <circle cx="9" cy="9" r="7.25" fill="none" stroke="currentColor" strokeWidth="1.5" />
-      <circle cx="9" cy="9" r="2.5" fill="currentColor" />
-    </svg>
+    <img
+      src={WATCH_MARK_PNG}
+      width={size}
+      height={size}
+      alt={decorative ? '' : PRODUCT_NAME}
+      {...(decorative ? { 'aria-hidden': true } : { role: 'img' })}
+      style={{
+        // Square box, and `contain` so a container that is not square cannot
+        // stretch the artwork. The master is 1:1 and stays 1:1.
+        width: `${String(size)}px`,
+        height: `${String(size)}px`,
+        objectFit: 'contain',
+        display: 'block',
+        flexShrink: 0,
+      }}
+    />
   )
+}
+
+/** The mark, standing alone beside the product name in the sidebar. */
+function WatchSidebarMark({ size }: { readonly size?: number }): ReactNode {
+  // The name occupies `sidebar.brand.name` right next to this, so the mark here
+  // is decoration and must not be announced a second time.
+  return <WatchMark size={size ?? 22} decorative />
+}
+
+/** The mark on the conversation hero, where it carries the identity alone. */
+function WatchHeroMark({ size }: { readonly size?: number }): ReactNode {
+  return <WatchMark size={size ?? 28} />
 }
 
 /** The sidebar and hero name. */
@@ -78,7 +110,7 @@ function WatchAttribution({ wide }: { readonly wide?: boolean }): ReactNode {
           width: '100%', padding: '6px 0', opacity: 0.55,
         }}
       >
-        <WatchMark />
+        <WatchMark size={18} decorative />
       </div>
     )
   }
@@ -101,20 +133,15 @@ function WatchAttribution({ wide }: { readonly wide?: boolean }): ReactNode {
 }
 
 /**
- * The Watch aperture, as a data URI, for the browser tab.
+ * The tab icon: the same orca, from the same master.
  *
- * Inline for the same reason the mark is inline: it must be correct on the
- * first paint of an offline profile, and a favicon that needs a network fetch
- * is a favicon that is sometimes the old one.
+ * One asset, not a second drawing — a favicon that diverges from the product
+ * mark is how a brand ends up with two slightly different logos. Inline for
+ * the same reason the mark is inline: it must be right on the first paint of
+ * an offline profile, and an icon that needs a fetch is an icon that is
+ * sometimes the previous one.
  */
-const FAVICON
-  = 'data:image/svg+xml,'
-  + encodeURIComponent(
-    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 18 18">'
-    + '<circle cx="9" cy="9" r="7.25" fill="none" stroke="%234C8DFF" stroke-width="1.6"/>'
-    + '<circle cx="9" cy="9" r="2.6" fill="%234C8DFF"/>'
-    + '</svg>',
-  ).replace(/%23/g, '#').replace(/#/g, '%23')
+const FAVICON = WATCH_MARK_PNG
 
 /**
  * Claim the document's identity: the tab title and the icon.
@@ -153,7 +180,9 @@ function claimDocumentIdentity(): () => void {
     icon.setAttribute('rel', 'icon')
     document.head.append(icon)
   }
-  icon.setAttribute('type', 'image/svg+xml')
+  // The master is a PNG. Declaring svg+xml here would have the browser
+  // refuse the icon it was just handed.
+  icon.setAttribute('type', 'image/png')
   icon.setAttribute('href', FAVICON)
 
   return () => {
@@ -178,12 +207,13 @@ export function apply(ctx: Context): void {
     slots.inject(name, () => { slots.register({ name, id, order: 10 }, component); })
   }
 
-  occupy('sidebar.brand.mark', 'watch-mark', WatchMark)
+  occupy('sidebar.brand.mark', 'watch-mark', WatchSidebarMark)
   occupy('sidebar.brand.name', 'watch-name', WatchName)
-  occupy('conversation.hero.brand.mark', 'watch-hero-mark', WatchMark)
+  occupy('conversation.hero.brand.mark', 'watch-hero-mark', WatchHeroMark)
   // The footer is where attribution belongs: present on every screen, and not
   // competing with the work.
   occupy('sidebar.footer.action', 'watch-attribution', WatchAttribution)
 }
 
+export { WATCH_MARK_PNG }
 export { PRODUCT_SHORT_NAME }

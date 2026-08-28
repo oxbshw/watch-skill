@@ -25,6 +25,9 @@
  *           at a different priority it *shadows* the first. Shadowing a seat
  *           DSH already fills does not add a Watch capability — it removes an
  *           official one, which this distribution is never allowed to do.
+ *   unknown the slot is real but DSH's contract catalogue does not describe it,
+ *           so its cardinality cannot be read. Treated as strictly as `single`,
+ *           because one of them provably is.
  *
  * Without this, a slot's kind can only be learned by booting the app and
  * reading the exception, one slot per restart.
@@ -133,9 +136,14 @@ function main() {
             if (!places) continue
 
             const kind = kindOf(name)
-            if (kind === 'single' && !SHADOWS.has(name)) {
+            // `unknown` is treated exactly as strictly as `single`. It means the
+            // slot appears at a call site but not in DSH's contract catalogue,
+            // so its cardinality cannot be read — and one of the two such slots,
+            // `conversation.composer.bar`, is provably single. Guessing "list"
+            // for an unprovable seat is how a capability gets shadowed quietly.
+            if ((kind === 'single' || kind === 'unknown') && !SHADOWS.has(name)) {
               findings.push(
-                `${where}  registers into the single slot "${name}". A second entry there `
+                `${where}  registers into the ${kind} slot "${name}". A second entry there `
                 + 'shadows whatever DSH put in it rather than sitting beside it — declare it '
                 + 'in SHADOWS with a reason, or use a list slot.',
               )

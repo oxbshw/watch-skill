@@ -1,32 +1,50 @@
 #!/usr/bin/env node
 /**
- * The DSH UI slot vocabulary, read out of the pinned packages.
+ * The DSH UI slot vocabulary, read from DSH's own slot contract.
  *
- * A slot exists because a DSH component calls `renderSlot("name", …)`. That
- * call is the *definition* — the host saying "anything registered here will be
- * drawn". Registering into a name that no component renders is not an error at
- * any level: `slots.register` accepts it, the plugin loads, the tests pass, and
- * nothing ever appears. It is the quietest possible failure, and it is why the
- * product could be fully built, fully tested and still look like stock DSH.
+ * Two sources, because neither is complete on its own.
  *
- * So the vocabulary is extracted rather than remembered, from the same pinned
- * version the profile installs, and written to `inventory/dsh-slots.json` where
- * `verify-slots.mjs` can check Watch's registrations against it offline.
+ * DSH ships a machine-readable catalogue — key, kind, scope, a summary and the
+ * declaring file — embedded in `dsh-cordis-client-runner`. That is the
+ * contract, and it is the only place `kind` and `scope` can be read rather than
+ * guessed. But it omits two slots DSH demonstrably renders
+ * (`conversation.composer.bar`, `conversation.input.attachments`), and the
+ * runtime proves they exist: registering into the first throws
+ * "single slot conversation.composer.bar already has a registration".
  *
- * Two details worth keeping straight:
+ * Scraping `renderSlot()` call sites finds those two and misses three others
+ * (`root`, `sidebar`, `details`) that are mounted as container seats rather
+ * than through a call this can see.
  *
- *   - `renderSlot` frequently carries a `fallback`. An unregistered brand slot
- *     therefore renders DeepSeek's own mark rather than nothing, which is why
- *     brand needs both a Watch registration *and* the official row disabled.
- *   - i18n keys look exactly like slot names (`session.new`, `toggle.open`).
- *     Only `renderSlot` call sites count; a bare dotted string does not.
+ * So the inventory is the union, and a slot the catalogue does not describe is
+ * recorded with `kind: "unknown"`. `verify-slots.mjs` then treats unknown as
+ * strictly as `single`: if we cannot prove a seat is safe to join, taking it
+ * needs the same written justification as shadowing one.
+ *
+ * Three fields matter downstream:
+ *
+ *   kind    `list` is additive. `keyed` requires `options.key`. `single` holds
+ *           one entry per priority, so a second registration *shadows* rather
+ *           than joins — and shadowing a seat DSH fills removes an official
+ *           capability instead of adding a Watch one.
+ *   scope   `root` slots are mounted for the whole application; `session` slots
+ *           live inside a session and are simply absent until one is open. A
+ *           session-scoped registration that draws nothing on a blank
+ *           workspace is correct behaviour, not a dead registration.
+ *   key     the name a registration has to match exactly.
+ *
+ * Registering into a name absent from this catalogue is not an error at any
+ * level: `slots.register` accepts it, the plugin loads, its tests pass, and
+ * nothing is ever drawn. That is why the vocabulary is extracted rather than
+ * remembered, and committed so `verify-slots.mjs` runs in a fresh clone with no
+ * DSH tree present.
  *
  * Usage:
  *   node scripts/gen-dsh-slots.mjs              write the inventory
  *   node scripts/gen-dsh-slots.mjs --check      fail if it is stale
  *
- * Set WATCH_DSH_TREE to point at a tree containing the installed
- * @deepseek-ai packages. The default is the install-smoke tree.
+ * Set WATCH_DSH_TREE to a tree containing the installed @deepseek-ai packages.
+ * The default is the install-smoke tree.
  */
 
 import { readFileSync, writeFileSync, existsSync, readdirSync, statSync } from 'node:fs'
@@ -44,23 +62,17 @@ const CANDIDATES = [
   join(ROOT, 'node_modules'),
 ].filter(path => path !== undefined)
 
-/** The definition side. Only these names are real slots. */
-const RENDER_SLOT = /renderSlot\(\s*["']([a-z][a-zA-Z0-9]*(?:\.[a-zA-Z0-9]+)+)["']/g
-
 /**
- * The cardinality side: a parent entry's children table declares each child
- * slot's kind, and the kind decides what a registration into it means.
+ * One catalogue entry, as DSH serialises it.
  *
- *   single  one entry per priority. A second at the same priority throws; at a
- *           different priority it *shadows* — and shadowing a slot DSH already
- *           fills replaces an official capability rather than adding to it.
- *   list    many entries, ordered. The only kind that is safely additive.
- *   keyed   requires `options.key`; a registration without one throws.
- *
- * Without this, the only way to learn a slot's kind is to boot the app and
- * read the exception — one slot per restart.
+ * The field order is fixed by the generator upstream uses, so a positional
+ * match is safe and much cheaper than parsing the surrounding object.
  */
-const SLOT_KIND = /["']([a-z][a-zA-Z0-9]*(?:\.[a-zA-Z0-9]+)*)["']\s*:\s*\{\s*kind:\s*["'](single|keyed|list)["']/g
+const CATALOGUE
+  = /\{\s*key:\s*["']([a-z][a-zA-Z0-9.]+)["'],\s*kind:\s*["'](single|list|keyed)["'],\s*scope:\s*["'](root|session)["']/g
+
+/** A call site, for the slots the catalogue leaves out. */
+const RENDER_SLOT = /renderSlot\(\s*["']([a-z][a-zA-Z0-9]*(?:\.[a-zA-Z0-9]+)+)["']/g
 
 function* clientBundles(dir, depth = 0) {
   if (depth > 8) return
@@ -80,8 +92,8 @@ function main() {
 
   const tree = CANDIDATES.find(path => existsSync(path))
   if (tree === undefined) {
-    // In check mode with no DSH tree, the committed inventory is all we have —
-    // and that is the normal fresh-clone case, so it is not a failure.
+    // In check mode with no DSH tree the committed inventory is all there is,
+    // and that is the normal fresh-clone case rather than a failure.
     if (check && existsSync(OUT)) {
       process.stdout.write('dsh-slots: no DSH tree here; keeping the committed inventory\n')
       return
@@ -91,44 +103,65 @@ function main() {
   }
 
   const slots = new Map()
-  const kinds = new Map()
   let bundles = 0
   for (const path of clientBundles(tree)) {
     bundles += 1
     const source = readFileSync(path, 'utf8')
     const owner = /@deepseek-ai[\\/]([^\\/]+)/.exec(path)?.[1] ?? 'unknown'
+    for (const match of source.matchAll(CATALOGUE)) {
+      const [, name, kind, scope] = match
+      const existing = slots.get(name)
+      if (existing === undefined) {
+        slots.set(name, { kind, scope, declaredBy: new Set([owner]), source: 'contract' })
+      } else {
+        existing.kind = kind
+        existing.scope = scope
+        existing.source = 'contract'
+        existing.declaredBy.add(owner)
+      }
+    }
     for (const match of source.matchAll(RENDER_SLOT)) {
       const name = match[1]
-      if (!slots.has(name)) slots.set(name, new Set())
-      slots.get(name).add(owner)
+      if (slots.has(name)) continue
+      slots.set(name, {
+        kind: 'unknown', scope: 'unknown', declaredBy: new Set([owner]), source: 'call-site',
+      })
     }
-    for (const match of source.matchAll(SLOT_KIND)) kinds.set(match[1], match[2])
   }
 
   if (slots.size === 0) {
-    process.stderr.write(`watch: found ${String(bundles)} bundle(s) under ${tree} but no renderSlot call\n`)
+    process.stderr.write(
+      `watch: found ${String(bundles)} bundle(s) under ${tree} but no slot catalogue\n`,
+    )
     process.exit(1)
   }
 
   // The DSH version these came from, so a bump that moves a slot is visible.
   let version = 'unknown'
-  for (const candidate of [join(tree, '@deepseek-ai', 'dsh', 'package.json')]) {
-    if (existsSync(candidate)) version = JSON.parse(readFileSync(candidate, 'utf8')).version
-  }
+  const manifest = join(tree, '@deepseek-ai', 'dsh', 'package.json')
+  if (existsSync(manifest)) version = JSON.parse(readFileSync(manifest, 'utf8')).version
 
   const document = {
     generatedBy: 'scripts/gen-dsh-slots.mjs',
     dshVersion: version,
     note:
-      'Slot names DSH actually renders. Extracted from renderSlot() call sites in '
-      + 'the pinned packages — the definition side. Registering into a name absent '
-      + 'from this list is a silent no-op: it loads, it tests green, it never draws.',
+      "DSH's own slot contract, read from the catalogue it embeds in "
+      + 'dsh-cordis-client-runner. Registering into a name absent from this list '
+      + 'is a silent no-op: it loads, it tests green, it never draws. `kind` '
+      + 'decides what a registration means — list is additive, single shadows '
+      + '(and shadowing a seat DSH fills removes an official capability), keyed '
+      + 'requires options.key. `scope` says where it renders: a root slot is '
+      + 'always mounted, a session slot is absent until a session is open. '
+      + 'A slot found only at a call site carries kind "unknown", and the gate '
+      + 'treats unknown exactly as strictly as single.',
     bundlesScanned: bundles,
     slots: Object.fromEntries(
       [...slots.entries()].sort(([a], [b]) => a.localeCompare(b))
-        .map(([name, owners]) => [name, {
-          kind: kinds.get(name) ?? 'unknown',
-          renderedBy: [...owners].sort(),
+        .map(([name, entry]) => [name, {
+          kind: entry.kind,
+          scope: entry.scope,
+          source: entry.source,
+          declaredBy: [...entry.declaredBy].sort(),
         }]),
     ),
   }
@@ -146,17 +179,15 @@ function main() {
 
   writeFileSync(OUT, json, 'utf8')
 
-  const byKind = {}
-  for (const name of slots.keys()) {
-    const kind = kinds.get(name) ?? 'unknown'
-    byKind[kind] = (byKind[kind] ?? 0) + 1
+  const tally = {}
+  for (const entry of slots.values()) {
+    tally[entry.kind] = (tally[entry.kind] ?? 0) + 1
+    tally[entry.scope] = (tally[entry.scope] ?? 0) + 1
   }
   process.stdout.write(
-    `dsh-slots: ${String(slots.size)} slot(s) from ${String(bundles)} bundle(s), DSH ${version}
-`
-    + Object.entries(byKind).sort()
-      .map(([kind, count]) => `  ${kind.padEnd(8)} ${String(count)}
-`).join(''),
+    `dsh-slots: ${String(slots.size)} slot(s) from ${String(bundles)} bundle(s), DSH ${version}\n`
+    + Object.entries(tally).sort()
+      .map(([label, count]) => `  ${label.padEnd(8)} ${String(count)}\n`).join(''),
   )
 }
 
