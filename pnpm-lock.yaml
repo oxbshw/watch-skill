@@ -165,6 +165,9 @@ importers:
       '@watchskill/dsh-client-memory':
         specifier: workspace:^
         version: link:../client-memory
+      '@watchskill/dsh-client-settings':
+        specifier: workspace:^
+        version: link:../client-settings
       '@watchskill/dsh-core-bridge':
         specifier: workspace:^
         version: link:../core-bridge
@@ -226,6 +229,28 @@ importers:
       '@watchskill/dsh-memory':
         specifier: workspace:^
         version: link:../memory
+    devDependencies:
+      '@deepseek-ai/cordis':
+        specifier: 'catalog:'
+        version: 4.0.1
+      '@deepseek-ai/dsh-client-ui-slots':
+        specifier: 'catalog:'
+        version: 0.1.1-rc.2(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.1-rc.2(@deepseek-ai/cordis@4.0.1))
+      '@types/react':
+        specifier: ~18.3.1
+        version: 18.3.31
+      react:
+        specifier: ^18.2.0
+        version: 18.3.1
+
+  packages/watch/client-settings:
+    dependencies:
+      '@watchskill/dsh-client-brand':
+        specifier: workspace:^
+        version: link:../brand
+      '@watchskill/dsh-technology':
+        specifier: workspace:^
+        version: link:../technology
     devDependencies:
       '@deepseek-ai/cordis':
         specifier: 'catalog:'

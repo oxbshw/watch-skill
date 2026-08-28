@@ -101,9 +101,16 @@
     - id: watch-library
       name: '@watchskill/dsh-library'
 
-    # The Memory mode, and the "why was this remembered?" chip on a chat node.
+    # The Memory mode, and the "why was this remembered?" chip.
     - id: watch-client-memory
       name: '@watchskill/dsh-client-memory'
+
+    # The Technology & Capability Center: role bindings, engines, sources,
+    # memory, verification, diagnostics and about, added to DSH's own settings
+    # panel. `settings.section` is a list, so upstream's General, Models and
+    # Plugins sections are untouched and keep the top of the list.
+    - id: watch-client-settings
+      name: '@watchskill/dsh-client-settings'
 
     # Durable, correctable memory. `off` by default and deliberately so:
     # durable memory about a person is not something a deployment should

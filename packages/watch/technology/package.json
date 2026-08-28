@@ -7,10 +7,20 @@
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
   "exports": {
-    ".": { "types": "./lib/index.d.ts", "default": "./lib/index.js" },
+    ".": {
+      "types": "./lib/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./descriptors": {
+      "types": "./lib/descriptors.d.ts",
+      "default": "./lib/descriptors.js"
+    },
     "./package.json": "./package.json"
   },
-  "files": ["lib/**/*.js", "lib/**/*.d.ts"],
+  "files": [
+    "lib/**/*.js",
+    "lib/**/*.d.ts"
+  ],
   "peerDependencies": {
     "@deepseek-ai/cordis": "catalog:",
     "@deepseek-ai/schemastery": "^3.18.1"
