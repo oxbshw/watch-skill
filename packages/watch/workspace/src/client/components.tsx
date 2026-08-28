@@ -170,7 +170,7 @@ export function ModeSwitcher({ active, states, onSelect }: ModeSwitcherProps): R
               background: 'none',
               border: 'none',
               borderBottom: active === mode
-                ? '2px solid var(--watch-amber)'
+                ? '2px solid var(--watch-accent)'
                 : '2px solid transparent',
               color: blocked ? 'var(--watch-tone-neutral)' : 'inherit',
               cursor: blocked ? 'not-allowed' : 'pointer',
@@ -358,7 +358,7 @@ export function InspectorTabs({ active, onSelect, children }: InspectorTabsProps
               cursor: 'pointer',
               padding: '4px 8px',
               borderBottom: active === panel
-                ? '2px solid var(--watch-amber)'
+                ? '2px solid var(--watch-accent)'
                 : '2px solid transparent',
             }}
           >

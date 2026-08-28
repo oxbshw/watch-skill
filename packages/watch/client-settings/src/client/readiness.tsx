@@ -5,8 +5,12 @@
  * shows a count and Diagnostics shows the list, and if they were two tables the
  * count would eventually disagree with the rows behind it.
  *
- * `tone` is not decoration. `active` means this works right now; `caution`
- * means it needs a decision from you; `neutral` means nobody has looked yet.
+ * `tone` is not decoration, and the distinction it draws is deliberate.
+ * `active` means this works right now. `neutral` means nobody has configured
+ * or checked it — which is a fact, not a problem, and colouring it amber made
+ * an unconfigured installation look like a broken one. `caution` is reserved
+ * for something genuinely half-done or unproven.
+ *
  * Nothing is `success` — green belongs to a VERIFIED verdict, and a configured
  * capability is not a verdict.
  *
@@ -67,14 +71,14 @@ export const READINESS: readonly Readiness[] = [
     name: 'Agent Model',
     detail: 'Plans, reasons and writes. Any provider DSH supports — DeepSeek is one of them.',
     status: 'Not configured',
-    tone: 'caution',
+    tone: 'neutral',
     section: 'watch-roles',
   },
   {
     name: 'Visual Perception',
     detail: 'Reads what is on screen or in a frame. A local model works.',
     status: 'Not configured',
-    tone: 'caution',
+    tone: 'neutral',
     section: 'watch-roles',
   },
   {
@@ -88,28 +92,28 @@ export const READINESS: readonly Readiness[] = [
     name: 'ASR',
     detail: 'Speech to text, with timings a citation can point at.',
     status: 'Not configured',
-    tone: 'caution',
+    tone: 'neutral',
     section: 'watch-roles',
   },
   {
     name: 'Audio Understanding',
     detail: 'Non-speech audio: events, tone, music.',
     status: 'Not configured',
-    tone: 'caution',
+    tone: 'neutral',
     section: 'watch-roles',
   },
   {
     name: 'Speaker / Diarization',
     detail: 'Who spoke, and when.',
     status: 'Not configured',
-    tone: 'caution',
+    tone: 'neutral',
     section: 'watch-roles',
   },
   {
     name: 'Embeddings / Retrieval',
     detail: 'Search over the library and over memory. Falls back to lexical matching.',
     status: 'Not configured',
-    tone: 'caution',
+    tone: 'neutral',
     section: 'watch-roles',
   },
   {

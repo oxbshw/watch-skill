@@ -193,7 +193,7 @@ export function MemoryWorkbench(props: MemoryWorkbenchProps): ReactNode {
               color: 'inherit',
               cursor: 'pointer',
               borderBottom: props.view === view
-                ? '2px solid var(--watch-amber)'
+                ? '2px solid var(--watch-accent)'
                 : '2px solid transparent',
             }}
           >

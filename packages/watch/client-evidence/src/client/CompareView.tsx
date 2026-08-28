@@ -54,7 +54,7 @@ export function DivergenceRow({ divergence, leading, onOpen }: DivergenceRowProp
       data-watch-leading={leading ? 'true' : undefined}
       style={{
         borderInlineStart: leading
-          ? '3px solid var(--watch-amber)'
+          ? '3px solid var(--watch-accent)'
           : '3px solid transparent',
         paddingInlineStart: '8px',
       }}

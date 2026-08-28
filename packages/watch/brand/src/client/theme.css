@@ -5,6 +5,18 @@
  * switching, contrast and the surfaces every inherited panel already uses, and
  * Watch adds only what the product's own vocabulary needs.
  *
+ * The split between the two blocks below is not stylistic, and getting it
+ * wrong cost the product its verdict colours without any visible error.
+ *
+ * DSH declares `--dsw-alias-*` on `body`, not on `:root`. A custom property is
+ * substituted where it is *declared*, so `--watch-tone-success: var(--dsw-…)`
+ * written on `:root` resolves against a `:root` that has no such variable, and
+ * computes to nothing. It then inherits that nothing all the way down. Every
+ * VERIFIED chip was uncoloured and no rule anywhere reported a problem.
+ *
+ * So: literal values on `:root`, and anything derived from a DSH token on
+ * `body`, where its inputs actually exist.
+ *
  * Two rules are enforced here rather than in review.
  *
  * `--watch-tone-success` is defined once and referenced only by VERIFIED. No
@@ -17,22 +29,44 @@
  */
 
 :root {
-  /* Watch Amber: brand, focus, active observation. The product's own colour,
-     used where something is being watched right now — never for success. */
+  /* Literals only — see the note above. These resolve anywhere. */
+
+  /* Watch Blue: brand, focus, active observation. The product's own colour,
+     used where something is working or being watched right now — never for
+     success, which stays green and stays reserved for VERIFIED. */
+  --watch-accent: #4c8dff;
+  --watch-accent-dim: #2b5dad;
+  --watch-accent-wash: rgba(76, 141, 255, 0.13);
+
+  /* Amber is no longer the brand. It is kept for one job — a state that is
+     genuinely unproven: UNVERIFIED, INCONCLUSIVE, STALE. Not for "nobody has
+     configured this yet", which is a neutral fact and now reads as one. */
   --watch-amber: #d99026;
-  --watch-amber-dim: #8a5d17;
   --watch-amber-wash: rgba(217, 144, 38, 0.12);
 
   /* Graphite and ink surfaces, sitting under DSH's own layers. */
   --watch-graphite: #16181c;
   --watch-ink: #0d0e11;
 
+  /* The observation accent: a left rule on anything currently being watched. */
+  --watch-observing-rule: 3px solid var(--watch-accent);
+}
+
+/*
+ * Everything derived from a DSH token, declared where those tokens exist.
+ *
+ * `body` rather than `:root`. This is the whole reason the verdict colours
+ * were blank.
+ */
+body {
   /* Status tones. Each maps to exactly one meaning. */
   --watch-tone-success: var(--dsw-alias-state-success-primary);
   --watch-tone-error: var(--dsw-alias-state-error-primary);
   --watch-tone-caution: var(--watch-amber);
-  --watch-tone-info: var(--dsw-alias-label-primary-bluish);
-  --watch-tone-active: var(--watch-amber);
+  /* Info is a slate rather than a second blue: with the brand now blue, two
+     blues side by side (Local next to Remote) would read as one state. */
+  --watch-tone-info: var(--dsw-alias-label-secondary);
+  --watch-tone-active: var(--watch-accent);
   --watch-tone-neutral: var(--dsw-alias-label-tertiary);
 
   /* Matching washes, for a badge background that keeps its label readable. */
@@ -40,16 +74,20 @@
   --watch-wash-error: var(--dsw-alias-state-error-secondary);
   --watch-wash-caution: var(--watch-amber-wash);
   --watch-wash-info: var(--dsw-alias-bg-layer-2);
-  --watch-wash-active: var(--watch-amber-wash);
+  --watch-wash-active: var(--watch-accent-wash);
   --watch-wash-neutral: var(--dsw-alias-bg-layer-2);
-
-  /* The observation accent: a left rule on anything currently being watched. */
-  --watch-observing-rule: 3px solid var(--watch-amber);
 }
 
-/* Light themes need a darker amber to stay legible on pale surfaces. DSH
-   stamps its own theme attribute; Watch follows it rather than sniffing. */
-:root[data-dsw-theme='light'] {
+/*
+ * Light themes need darker values to stay legible on pale surfaces.
+ *
+ * DSH marks dark by putting `data-ds-dark-theme` on `body`, so light is its
+ * absence. The previous selector here was `:root[data-dsw-theme='light']`,
+ * which matches nothing in this application and silently never applied.
+ */
+body:not([data-ds-dark-theme]) {
+  --watch-accent: #1d5fd6;
+  --watch-accent-wash: rgba(29, 95, 214, 0.1);
   --watch-amber: #a8690f;
   --watch-amber-wash: rgba(168, 105, 15, 0.1);
 }
@@ -74,6 +112,8 @@
 /* High contrast: let the platform take over rather than fighting it. */
 @media (prefers-contrast: more) {
   :root {
+    --watch-accent: CanvasText;
+    --watch-accent-wash: Canvas;
     --watch-amber: CanvasText;
     --watch-amber-wash: Canvas;
   }
@@ -103,9 +143,9 @@
  * hidden`, and the timeline and the inspector both scroll.
  */
 :where(button, a, [tabindex], input, select, textarea):focus-visible {
-  outline: 2px solid var(--watch-amber);
+  outline: 2px solid var(--watch-accent);
   outline-offset: 2px;
-  /* In forced-colours mode the amber is replaced by the system colour, and
+  /* In forced-colours mode the accent is replaced by the system colour, and
      the ring has to keep existing rather than becoming invisible. */
   border-radius: 2px;
 }

@@ -38,7 +38,7 @@ function WatchMark(): ReactNode {
       viewBox="0 0 18 18"
       role="img"
       aria-label={PRODUCT_NAME}
-      style={{ color: 'var(--watch-amber)' }}
+      style={{ color: 'var(--watch-accent)' }}
     >
       {/* An aperture: the product watches, and the ring is what closes on a
           moment. */}
@@ -111,8 +111,8 @@ const FAVICON
   = 'data:image/svg+xml,'
   + encodeURIComponent(
     '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 18 18">'
-    + '<circle cx="9" cy="9" r="7.25" fill="none" stroke="%23E8A33D" stroke-width="1.6"/>'
-    + '<circle cx="9" cy="9" r="2.6" fill="%23E8A33D"/>'
+    + '<circle cx="9" cy="9" r="7.25" fill="none" stroke="%234C8DFF" stroke-width="1.6"/>'
+    + '<circle cx="9" cy="9" r="2.6" fill="%234C8DFF"/>'
     + '</svg>',
   ).replace(/%23/g, '#').replace(/#/g, '%23')
 

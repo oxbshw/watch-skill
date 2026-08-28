@@ -61,7 +61,7 @@ const T = {
   note: {
     fontSize: '12px', lineHeight: 1.55,
     color: 'var(--dsw-alias-label-tertiary)',
-    borderLeft: '2px solid var(--watch-amber)',
+    borderLeft: '2px solid var(--watch-accent)',
     paddingLeft: '10px', margin: '14px 0 0',
   },
   h2: { fontSize: '12px', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' as const, color: 'var(--dsw-alias-label-tertiary)', margin: '22px 0 8px' },
@@ -133,7 +133,7 @@ export function NotConfigured(
     <div style={{ ...T.card, borderStyle: 'dashed' }}>
       <div style={T.cardHead}>
         <h3 style={T.title}>{what}</h3>
-        <StatusChip tone="caution">Not configured</StatusChip>
+        <StatusChip tone="neutral">Not configured</StatusChip>
       </div>
       <p style={{ ...T.lead, margin: '8px 0 0' }}>{why}</p>
       <p style={{ ...T.note, marginTop: '10px' }}>{fix}</p>
@@ -179,7 +179,7 @@ export function RoleBindingsSection(): ReactNode {
           <div key={role} style={T.card}>
             <div style={T.cardHead}>
               <h3 style={T.title}>{copy.name}</h3>
-              <StatusChip tone="caution">Not bound</StatusChip>
+              <StatusChip tone="neutral">Not bound</StatusChip>
             </div>
             <p style={{ ...T.lead, margin: '6px 0 0' }}>{copy.purpose}</p>
             <div style={T.meta}>
@@ -420,7 +420,7 @@ export function MemorySection(): ReactNode {
 export function VerificationSection(): ReactNode {
   return (
     <div style={T.page}>
-      <div style={{ ...T.card, borderColor: 'var(--watch-amber)' }}>
+      <div style={{ ...T.card, borderColor: 'var(--watch-accent)' }}>
         <h3 style={T.title}>Agent completed ≠ Verified</h3>
         <p style={{ ...T.lead, margin: '8px 0 0' }}>
           A tool returning without an error means the call finished. It does not
@@ -447,7 +447,7 @@ export function VerificationSection(): ReactNode {
       <div style={T.card}>
         <div style={T.cardHead}>
           <h3 style={T.title}>Model-assisted checks</h3>
-          <StatusChip tone="caution">Verifier role not bound</StatusChip>
+          <StatusChip tone="neutral">Verifier role not bound</StatusChip>
         </div>
         <p style={{ ...T.lead, margin: '6px 0 0' }}>
           For expectations a deterministic check cannot express. Bind the
@@ -554,7 +554,7 @@ export function AboutSection(): ReactNode {
           <Row label="DSH commit">b150a551b8d465e31e418e1b2eaf5e79bbb7d28e</Row>
         </div>
       </div>
-      <div style={{ ...T.card, borderColor: 'var(--watch-amber)' }}>
+      <div style={{ ...T.card, borderColor: 'var(--watch-accent)' }}>
         <p style={{ margin: 0, fontSize: '13px', lineHeight: 1.6 }}>{ATTRIBUTION}</p>
         <p style={{ margin: '8px 0 0', fontSize: '13px', lineHeight: 1.6, color: 'var(--dsw-alias-label-secondary)' }}>
           {INDEPENDENCE}
