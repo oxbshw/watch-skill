@@ -253,8 +253,18 @@ describe('no state is signalled by colour alone', () => {
 describe('focus, contrast and zoom', () => {
   test('focus is drawn on :focus-visible, with an offset', () => {
     assert.match(THEME, /:focus-visible/)
-    assert.match(THEME, /outline:\s*2px solid var\(--watch-amber\)/)
+    // The ring takes the brand accent, whatever the brand accent currently is.
+    // Pinning the hex or the old `--watch-amber` name tested the palette rather
+    // than the property, and broke when the brand moved from amber to blue
+    // while the ring itself was never at risk.
+    assert.match(THEME, /outline:\s*2px solid var\(--watch-accent\)/)
     assert.match(THEME, /outline-offset:/)
+  })
+
+  test('the ring colour is a token, so a rebrand cannot silently remove it', () => {
+    const focusBlock = /:focus-visible\s*\{[^}]*\}/.exec(THEME)?.[0] ?? ''
+    assert.doesNotMatch(focusBlock, /#[0-9A-Fa-f]{3,8}/)
+    assert.match(THEME, /--watch-accent:\s*#/)
   })
 
   test('an outline is used rather than a shadow, so scrolling does not clip it', () => {
