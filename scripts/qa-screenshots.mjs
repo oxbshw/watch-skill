@@ -22,8 +22,9 @@
  */
 
 import { app, BrowserWindow } from 'electron'
-import { writeFileSync, mkdirSync, appendFileSync, rmSync } from 'node:fs'
-import { join } from 'node:path'
+import { writeFileSync, mkdirSync, appendFileSync, rmSync, readFileSync } from 'node:fs'
+import { join, dirname } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { tmpdir } from 'node:os'
 
 // Configuration comes through the environment, not argv.
@@ -32,6 +33,9 @@ import { tmpdir } from 'node:os'
 // all — the module never parses, nothing is written, and the run is
 // indistinguishable from a silent success. Proven with a one-line probe: the
 // same script loads with no arguments and does not load with two.
+/** The repository this script lives in, so it can read what it photographs. */
+const REPO = join(dirname(fileURLToPath(import.meta.url)), '..')
+
 const URL = process.env.WATCH_QA_URL ?? 'http://127.0.0.1:8931'
 const OUT = process.env.WATCH_QA_OUT ?? 'G:/watch-manual/qa/screenshots'
 
@@ -88,6 +92,28 @@ function say(line) {
     mkdirSync(OUT, { recursive: true })
     appendFileSync(join(OUT, 'capture.log'), line + '\n', 'utf8')
   } catch { /* nothing useful to do */ }
+}
+
+/**
+ * Every Watch settings section, read from the module that registers them.
+ *
+ * Returns [label, slug] pairs, where the slug is the section id without its
+ * `watch-` prefix — the name the shot files already use.
+ */
+function settingsSections() {
+  const source = readFileSync(
+    join(REPO, 'packages', 'watch', 'client-settings', 'src', 'client', 'index.tsx'),
+    'utf8',
+  )
+  const found = []
+  const pattern = /section\('watch-([a-z-]+)', '([^']+)'/g
+  let match = pattern.exec(source)
+  while (match !== null) {
+    found.push([match[2], match[1] === 'memory' ? 'memory-settings' : match[1]])
+    match = pattern.exec(source)
+  }
+  if (found.length === 0) throw new Error('watch: no settings sections found to photograph')
+  return found
 }
 
 const wait = ms => new Promise(resolve => { setTimeout(resolve, ms) })
@@ -307,21 +333,25 @@ async function run(win, viewport) {
   await wait(1600)
   await capture(win, p('06-settings-general'), 'DSH General kept above the Watch sections')
 
-  const sections = [
-    ['Role Bindings', 'roles'],
-    ['Perception Engi', 'engines'],
-    ['Sources & Devic', 'sources'],
-    ['Memory & Retrie', 'memory-settings'],
-    ['Verification', 'verification'],
-    ['Diagnostics', 'diagnostics'],
-    ['About', 'about'],
-  ]
+  // Read the sections out of the module that registers them.
+  //
+  // This was a hand-written list and it drifted the moment the labels
+  // changed. Deriving it means a renamed or added section is photographed
+  // without anyone remembering to edit this file.
+  const sections = settingsSections()
   for (const [label, slug] of sections) {
     const ok = await win.webContents.executeJavaScript(
       CLICK_BY_TEXT + "('button', " + JSON.stringify(label) + ')',
     )
     await wait(1000)
-    await capture(win, p('07-settings-' + slug), ok ? label.trim() + ' section' : label + ' NOT FOUND')
+    // `ok` is the precondition here too: a section that was never opened must
+    // not be photographed under its name. This is the same defect as the
+    // modes, in a second place — the list below held the *truncated* labels
+    // ("Perception Engi"), a workaround for a nav that ellipsised. Fixing the
+    // labels broke the clicks, and without this the tool would have saved the
+    // previously open section three times over.
+    await capture(win, p('07-settings-' + slug),
+      ok ? label + ' section' : label + ' was not reachable, so nothing was photographed', ok)
   }
 
   // Close settings, then collapse the sidebar to photograph the rail.
