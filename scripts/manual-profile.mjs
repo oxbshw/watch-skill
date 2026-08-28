@@ -112,6 +112,30 @@ function bundlePackages() {
   return order
 }
 
+/**
+ * Drop the profile's copies of the Watch packages before reinstalling.
+ *
+ * pnpm keys a `file:` dependency on its path and version, and neither changes
+ * between runs — the tarball is rewritten in place at the same version every
+ * time. So a second run happily reuses the cached copy and installs the
+ * *previous* bundle, which composes the previous rows, while every timestamp
+ * on disk says the build is current. That is a full run of the product built
+ * from source nobody is looking at.
+ *
+ * Removing the installed copies and the `file:` store entries first costs
+ * under a second and makes the profile actually reflect the working tree.
+ */
+function clearStaleInstalls() {
+  const profileModules = join(HOME, 'profiles', PROFILE, 'node_modules')
+  if (!existsSync(profileModules)) return
+  removeTree(join(profileModules, '@watchskill'))
+  const store = join(profileModules, '.pnpm')
+  if (!existsSync(store)) return
+  for (const entry of readdirSync(store)) {
+    if (entry.startsWith('file+')) removeTree(join(store, entry))
+  }
+}
+
 function packAll() {
   mkdirSync(PACKED, { recursive: true })
   const tarballs = []
@@ -213,6 +237,19 @@ function main() {
   const tarballs = packAll()
 
   process.stdout.write(`initializing profile "${PROFILE}"\n`)
+  // The overrides have to exist before pnpm resolves anything.
+  //
+  // `plugin install` runs pnpm over the profile manifest. On a re-run that
+  // manifest already carries the previous Watch bundle, and a bundle that has
+  // gained a dependency since then names a package with no `file:` override
+  // yet — so pnpm goes to the registry and returns 404 for a package sitting
+  // in the packed directory a few lines above. Writing the overrides first is
+  // the whole fix; the original order only looked right while the dependency
+  // set never grew.
+  const profileManifest = join(HOME, 'profiles', PROFILE, 'package.json')
+  if (existsSync(profileManifest)) linkTarballs(tarballs)
+  clearStaleInstalls()
+
   const init = run(process.execPath, [cli.entry, 'plugin', '--profile', PROFILE, 'install'], { env, cwd: ROOT })
   if (init.status !== 0) fail('`dsh plugin install` failed', init.stderr || init.stdout)
 

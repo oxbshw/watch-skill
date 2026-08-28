@@ -47,6 +47,21 @@ const CANDIDATES = [
 /** The definition side. Only these names are real slots. */
 const RENDER_SLOT = /renderSlot\(\s*["']([a-z][a-zA-Z0-9]*(?:\.[a-zA-Z0-9]+)+)["']/g
 
+/**
+ * The cardinality side: a parent entry's children table declares each child
+ * slot's kind, and the kind decides what a registration into it means.
+ *
+ *   single  one entry per priority. A second at the same priority throws; at a
+ *           different priority it *shadows* — and shadowing a slot DSH already
+ *           fills replaces an official capability rather than adding to it.
+ *   list    many entries, ordered. The only kind that is safely additive.
+ *   keyed   requires `options.key`; a registration without one throws.
+ *
+ * Without this, the only way to learn a slot's kind is to boot the app and
+ * read the exception — one slot per restart.
+ */
+const SLOT_KIND = /["']([a-z][a-zA-Z0-9]*(?:\.[a-zA-Z0-9]+)*)["']\s*:\s*\{\s*kind:\s*["'](single|keyed|list)["']/g
+
 function* clientBundles(dir, depth = 0) {
   if (depth > 8) return
   let entries
@@ -76,6 +91,7 @@ function main() {
   }
 
   const slots = new Map()
+  const kinds = new Map()
   let bundles = 0
   for (const path of clientBundles(tree)) {
     bundles += 1
@@ -86,6 +102,7 @@ function main() {
       if (!slots.has(name)) slots.set(name, new Set())
       slots.get(name).add(owner)
     }
+    for (const match of source.matchAll(SLOT_KIND)) kinds.set(match[1], match[2])
   }
 
   if (slots.size === 0) {
@@ -109,7 +126,10 @@ function main() {
     bundlesScanned: bundles,
     slots: Object.fromEntries(
       [...slots.entries()].sort(([a], [b]) => a.localeCompare(b))
-        .map(([name, owners]) => [name, [...owners].sort()]),
+        .map(([name, owners]) => [name, {
+          kind: kinds.get(name) ?? 'unknown',
+          renderedBy: [...owners].sort(),
+        }]),
     ),
   }
 
@@ -125,8 +145,18 @@ function main() {
   }
 
   writeFileSync(OUT, json, 'utf8')
+
+  const byKind = {}
+  for (const name of slots.keys()) {
+    const kind = kinds.get(name) ?? 'unknown'
+    byKind[kind] = (byKind[kind] ?? 0) + 1
+  }
   process.stdout.write(
-    `dsh-slots: ${String(slots.size)} slot(s) from ${String(bundles)} bundle(s), DSH ${version}\n`,
+    `dsh-slots: ${String(slots.size)} slot(s) from ${String(bundles)} bundle(s), DSH ${version}
+`
+    + Object.entries(byKind).sort()
+      .map(([kind, count]) => `  ${kind.padEnd(8)} ${String(count)}
+`).join(''),
   )
 }
 

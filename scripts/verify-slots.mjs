@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 /**
- * Every slot Watch registers into must be a slot DSH actually renders.
+ * Every slot Watch registers into must be a slot DSH actually renders, and the
+ * registration must match that slot's declared kind.
  *
  * This gate exists because of the failure it was written to catch. Four Watch
  * client packages were complete, unit-tested and green while targeting nine
@@ -15,6 +16,19 @@
  * here against `inventory/dsh-slots.json` — generated from the pinned packages
  * by `gen-dsh-slots.mjs`, and committed so this runs in a fresh clone.
  *
+ * The inventory also records each slot's declared kind, and the kind decides
+ * what a registration means:
+ *
+ *   list    many entries, ordered. Purely additive, and the safe default.
+ *   keyed   requires `options.key`; without one the registration throws at boot.
+ *   single  one entry per priority. A second at the same priority throws, and
+ *           at a different priority it *shadows* the first. Shadowing a seat
+ *           DSH already fills does not add a Watch capability — it removes an
+ *           official one, which this distribution is never allowed to do.
+ *
+ * Without this, a slot's kind can only be learned by booting the app and
+ * reading the exception, one slot per restart.
+ *
  * Usage: node scripts/verify-slots.mjs
  */
 
@@ -27,15 +41,44 @@ const INVENTORY = join(ROOT, 'inventory', 'dsh-slots.json')
 const CLIENT_ROOT = join(ROOT, 'packages', 'watch')
 
 /**
- * A registration: `slots.register({ name: 'x' })`, or the `occupy(name, …)`
- * helper the Watch packages share. Both forms carry the slot as the first
- * string, so both are matched the same way.
+ * The single slots Watch is allowed to occupy, and why.
+ *
+ * All three are the brand identity, and they are legitimate for one reason:
+ * the bundle disables `ui-brand-official`, so nothing of DSH's is displaced —
+ * the seat is empty when Watch takes it. This is the single entry the parity
+ * register marks `intentionally_replaced`.
+ *
+ * Attribution does not rely on a shadow at all: `sidebar.footer.action` is a
+ * list, so it sits alongside whatever else is there.
+ *
+ * Anything added here needs the same two things: an empty seat, and a reason.
  */
-const PATTERNS = [
+const SHADOWS = new Map([
+  ['sidebar.brand.mark', 'ui-brand-official is disabled by the bundle, so the seat is empty'],
+  ['sidebar.brand.name', 'ui-brand-official is disabled by the bundle, so the seat is empty'],
+  ['conversation.hero.brand.mark', 'ui-brand-official is disabled by the bundle, so the seat is empty'],
+])
+
+/**
+ * Actual registrations — these place a component, so cardinality applies.
+ * `occupy(name, …)` is the helper the Watch packages share for the same thing.
+ */
+const REGISTRATIONS = [
   /\bregister\(\s*\{[^}]*\bname:\s*['"]([a-z][a-zA-Z0-9]*(?:\.[a-zA-Z0-9]+)+)['"]/g,
   /\boccupy\(\s*['"]([a-z][a-zA-Z0-9]*(?:\.[a-zA-Z0-9]+)+)['"]/g,
+]
+
+/**
+ * `slots.inject(name, …)` declares a dependency on a slot existing before
+ * registering into it. It places nothing, so it carries no key and displaces
+ * nothing. The name still has to be real; nothing else applies.
+ */
+const DECLARATIONS = [
   /\bslots\.inject\(\s*['"]([a-z][a-zA-Z0-9]*(?:\.[a-zA-Z0-9]+)+)['"]/g,
 ]
+
+/** `key` as ES shorthand (`{ name, key }`) counts as much as `key: value`. */
+const CARRIES_KEY = /(^|[^A-Za-z0-9_])key\s*[:,}]/
 
 function* clientSources(dir) {
   for (const entry of readdirSync(dir)) {
@@ -54,6 +97,7 @@ function main() {
 
   const inventory = JSON.parse(readFileSync(INVENTORY, 'utf8'))
   const known = new Set(Object.keys(inventory.slots))
+  const kindOf = name => inventory.slots[name]?.kind ?? 'unknown'
 
   /** Slots Watch defines for itself, by rendering them in its own components. */
   const ownSlots = new Set()
@@ -70,18 +114,38 @@ function main() {
   const used = new Map()
 
   for (const [rel, source] of sources) {
-    const lines = source.split('\n')
-    lines.forEach((line, index) => {
-      for (const pattern of PATTERNS) {
-        pattern.lastIndex = 0
-        for (const match of line.matchAll(pattern)) {
-          const name = match[1]
-          if (!used.has(name)) used.set(name, [])
-          used.get(name).push(`${rel}:${String(index + 1)}`)
-          if (!known.has(name) && !ownSlots.has(name)) {
-            findings.push(
-              `${rel}:${String(index + 1)}  registers into "${name}", which DSH never renders`,
-            )
+    source.split('\n').forEach((line, index) => {
+      const where = `${rel}:${String(index + 1)}`
+      for (const [patterns, places] of [[REGISTRATIONS, true], [DECLARATIONS, false]]) {
+        for (const pattern of patterns) {
+          pattern.lastIndex = 0
+          for (const match of line.matchAll(pattern)) {
+            const name = match[1]
+            if (!used.has(name)) used.set(name, [])
+            used.get(name).push(where)
+
+            if (!known.has(name)) {
+              if (!ownSlots.has(name)) {
+                findings.push(`${where}  registers into "${name}", which DSH never renders`)
+              }
+              continue
+            }
+            if (!places) continue
+
+            const kind = kindOf(name)
+            if (kind === 'single' && !SHADOWS.has(name)) {
+              findings.push(
+                `${where}  registers into the single slot "${name}". A second entry there `
+                + 'shadows whatever DSH put in it rather than sitting beside it — declare it '
+                + 'in SHADOWS with a reason, or use a list slot.',
+              )
+            }
+            if (kind === 'keyed' && !CARRIES_KEY.test(line)) {
+              findings.push(
+                `${where}  registers into the keyed slot "${name}" without options.key, `
+                + 'which throws at boot.',
+              )
+            }
           }
         }
       }
@@ -89,12 +153,10 @@ function main() {
   }
 
   if (findings.length > 0) {
-    process.stderr.write(
-      'watch: slot registrations that will silently never render\n\n',
-    )
+    process.stderr.write('watch: slot registrations that would not do what they say\n\n')
     for (const finding of findings) process.stderr.write(`  ${finding}\n`)
     process.stderr.write(
-      `\nwatch: ${String(findings.length)} dead registration(s). `
+      `\nwatch: ${String(findings.length)} bad registration(s). `
       + `DSH ${inventory.dshVersion} renders ${String(known.size)} slot(s); `
       + 'see inventory/dsh-slots.json.\n',
     )
@@ -102,7 +164,8 @@ function main() {
   }
 
   process.stdout.write(
-    `slots: ${String(used.size)} registration target(s), all rendered by DSH ${inventory.dshVersion}\n`,
+    `slots: ${String(used.size)} target(s), all rendered by DSH ${inventory.dshVersion}\n`
+    + [...used.keys()].sort().map(name => `  ${kindOf(name).padEnd(7)} ${name}\n`).join(''),
   )
 }
 

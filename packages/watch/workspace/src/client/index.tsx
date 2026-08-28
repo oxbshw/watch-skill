@@ -82,15 +82,38 @@ export function apply(ctx: Context): void {
   // Compare are registered by the packages that own them.
   mode('watch', 'Watch', WorkspaceShell, 20)
 
-  occupy('sidebar.workspaces', 'watch-sidebar', Sidebar, 10)
+  // Deliberately NOT registered into `sidebar.workspaces`.
+  //
+  // That is a single seat, already held by DSH's own workspace switcher at
+  // priority 0. A second registration there does not sit beside it — it
+  // shadows it, and shadowing would remove an official DSH capability from
+  // the product. This distribution is only ever allowed to add.
+  //
+  // The modes do not need it. They are registered as DSH views below, and the
+  // session header renders them as a real tab strip; the sidebar carries the
+  // Watch identity through the brand slots instead. `Sidebar` stays exported
+  // for embedding and for its tests.
   // The status strip goes in the header's utility region rather than beside
   // the title: it is ambient state and must not crowd the session name.
   occupy('conversation.session.header.utilities', 'watch-session-header', SessionHeaderBar, 10)
   occupy('conversation.composer.dock', 'watch-sensory-timeline', SensoryTimelineStrip, 30)
-  occupy('conversation.composer.bar', 'watch-composer', ComposerPanel, 10)
-  // The inspector is an overlay rather than a permanent third column: DSH's
-  // layout owns the columns it has, and taking another would be a layout fork.
-  occupy('shell.overlay', 'watch-inspector', InspectorTabs, 10)
+  // `conversation.composer.bar` is a single seat DSH already fills with the
+  // composer itself; taking it would replace the input, not extend it. The
+  // input dock is a list, which is what "add a control beside the composer"
+  // actually means.
+  occupy('conversation.input.dock', 'watch-composer', ComposerPanel, 10)
+  // Deliberately NOT registered into `shell.overlay`.
+  //
+  // It was, and the result was a raw tab bar stretched across the top of the
+  // application, above the sidebar and the conversation both. `shell.overlay`
+  // is a list, so the registration was legal — but legal is not the same as
+  // right: an overlay seat expects something that positions itself, and
+  // `InspectorTabs` is a panel that expects a column.
+  //
+  // DSH already renders the evidence detail through `tool.call.toolview`,
+  // which is keyed and lands inside the details panel where it belongs. The
+  // inspector stays exported for embedding and for its tests until it has a
+  // seat that actually fits it.
 }
 
-export { ModeSwitcher, StatusBadge, WorkspaceShell }
+export { InspectorTabs, ModeSwitcher, Sidebar, StatusBadge, WorkspaceShell }

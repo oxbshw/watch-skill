@@ -156,12 +156,24 @@ importers:
 
   packages/watch/bundle:
     dependencies:
+      '@watchskill/dsh-client-brand':
+        specifier: workspace:^
+        version: link:../brand
       '@watchskill/dsh-client-evidence':
         specifier: workspace:^
         version: link:../client-evidence
+      '@watchskill/dsh-client-memory':
+        specifier: workspace:^
+        version: link:../client-memory
       '@watchskill/dsh-core-bridge':
         specifier: workspace:^
         version: link:../core-bridge
+      '@watchskill/dsh-library':
+        specifier: workspace:^
+        version: link:../library
+      '@watchskill/dsh-live':
+        specifier: workspace:^
+        version: link:../live
       '@watchskill/dsh-memory':
         specifier: workspace:^
         version: link:../memory
@@ -174,6 +186,9 @@ importers:
       '@watchskill/dsh-trajectory':
         specifier: workspace:^
         version: link:../trajectory
+      '@watchskill/dsh-workspace':
+        specifier: workspace:^
+        version: link:../workspace
 
   packages/watch/client-evidence:
     dependencies:

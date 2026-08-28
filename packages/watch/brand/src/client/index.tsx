@@ -56,14 +56,46 @@ function WatchName(): ReactNode {
 /**
  * The footer attribution.
  *
- * Both lines, always. The second is what keeps the first from reading as an
+ * DSH renders `sidebar.footer.action` with a `wide` flag, because the sidebar
+ * collapses to a narrow rail. Ignoring it is not a cosmetic mistake: sixty
+ * words of legal text reflowed into a 40px column is unreadable, and
+ * unreadable attribution is not attribution.
+ *
+ * So the collapsed rail carries the mark with the full text as its accessible
+ * name and tooltip, and the expanded sidebar carries both lines in full. The
+ * second line is never dropped — it is what keeps the first from reading as an
  * endorsement that was never given.
  */
-function WatchAttribution(): ReactNode {
+function WatchAttribution({ wide }: { readonly wide?: boolean }): ReactNode {
+  const full = `${ATTRIBUTION}. ${INDEPENDENCE}`
+  if (wide !== true) {
+    return (
+      <div
+        title={full}
+        aria-label={full}
+        style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          width: '100%', padding: '6px 0', opacity: 0.55,
+        }}
+      >
+        <WatchMark />
+      </div>
+    )
+  }
   return (
-    <div style={{ fontSize: '11px', lineHeight: 1.5, color: 'var(--dsw-alias-label-tertiary)' }}>
+    <div style={{
+      fontSize: '11px',
+      lineHeight: 1.45,
+      color: 'var(--dsw-alias-label-tertiary)',
+      padding: '8px 10px',
+      // The sidebar is a flex column; without this the text can force the
+      // whole rail wider than the layout intends.
+      maxWidth: '100%',
+      overflowWrap: 'break-word',
+    }}
+    >
       <div>{ATTRIBUTION}</div>
-      <div>{INDEPENDENCE}</div>
+      <div style={{ marginTop: '2px', opacity: 0.85 }}>{INDEPENDENCE}</div>
     </div>
   )
 }

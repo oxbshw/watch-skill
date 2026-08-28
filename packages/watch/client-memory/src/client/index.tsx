@@ -40,8 +40,12 @@ export function apply(ctx: Context): void {
       MemoryWorkbench,
     )
   })
-  // The chip rides the chat node rather than the Memory surface, because the
-  // question it answers — "why does it think that?" — is asked while reading a
-  // reply, not while browsing a list.
-  occupy('conversation.chat.node', 'watch-why-remembered', WhyRememberedChip, 40)
+  // The chip goes to the input dock rather than to a chat node.
+  //
+  // `conversation.chat.node` is a *keyed* slot: it renders a registration for a
+  // node kind the conversation actually carries, and a chip is not a node kind.
+  // The dock is a list, and it is arguably the better home anyway — the
+  // question "why does it think that?" is most useful about the memory being
+  // injected into the turn you are composing, where you can still correct it.
+  occupy('conversation.input.dock', 'watch-why-remembered', WhyRememberedChip, 40)
 }
