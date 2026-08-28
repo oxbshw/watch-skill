@@ -43,8 +43,9 @@ Docker image — this distribution has no container path, so none was fabricated
 
 ## 2. Test
 
-938 tests in the workspace suite, plus the Watch Core Python suite. Both green;
-exact counts and exit codes in §4.
+938 tests in the workspace suite (938 pass, 0 fail, 0 skipped) and 1966 in the
+Watch Core Python suite (1936 pass, 30 skipped, 0 fail). Both exit 0; the full
+table is in §4.
 
 Gates in `npm run check`, each of which can fail and has been made to:
 
@@ -164,7 +165,7 @@ says in the record that it is not a provider result and not a measurement.
 | `upgrade-smoke` (A→B→A) | exit 0 |
 | `boot-smoke` | exit 0 — real HTTP 200 |
 | `desktop-smoke` | exit 0 |
-| Watch Core `pytest` | see the run record below |
+| Watch Core `pytest` | **exit 0** — 1936 passed, 30 skipped, 0 failed, 0 errors |
 
 The `verify:verdict` gate was confirmed able to fail before being trusted: a
 forged `verdict: 'VERIFIED'` planted in `workspace/shell.ts` was caught, and its
