@@ -109,7 +109,14 @@ export function detectSchemaDrift(
  * @returns true when the engine published nothing to compare.
  */
 export function isContractUnverified(
-  reported: Readonly<Record<string, string>>,
+  reported: Readonly<Record<string, string>> | null | undefined,
 ): boolean {
+  // Absent and empty are the same answer: nothing was published to compare.
+  // The type says this map is always present, and the type does not survive
+  // the wire — this value came out of `JSON.parse` of whatever the engine
+  // actually sent. An engine that omits the field used to take `Object.keys`
+  // straight into a TypeError, which escaped `connect()` as an unhandled
+  // throw and lost the degraded state this function exists to produce.
+  if (reported === null || reported === undefined || typeof reported !== 'object') return true
   return Object.keys(reported).length === 0
 }

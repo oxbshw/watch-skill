@@ -254,6 +254,18 @@ export class WatchCoreService extends Service {
 
   /** Bring the Bridge up, negotiate the protocol, and record the outcome. */
   private async runConnect(): Promise<WatchResult<HandshakeResult>> {
+    // Release the previous backend before replacing it.
+    //
+    // Reconnecting is reached from `ensureReady`, so any request issued
+    // while the Bridge is not ready comes through here. Overwriting
+    // `this.transport` without disposing the old one orphaned a live Watch
+    // Core process — and against an engine that fails on contact, that is
+    // one orphaned process per request, growing without bound. The teardown
+    // effect only ever sees the newest one.
+    const previous = this.transport
+    this.transport = null
+    if (previous !== null) await previous.dispose()
+
     let transport = this.createTransport()
     this.transport = transport
     this.publish({ phase: 'connecting', transport: transport.kind, handshake: null, error: null })

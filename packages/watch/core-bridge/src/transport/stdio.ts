@@ -41,6 +41,20 @@ interface Pending {
 
 const HEADER_TERMINATOR = '\r\n\r\n'
 
+/**
+ * The largest frame this transport will wait for.
+ *
+ * Without a bound, a Content-Length of a gigabyte parks the stream forever:
+ * the reader correctly waits for a body that never arrives, every request
+ * behind it runs out its deadline, and nothing ever reports why. A frame
+ * larger than this is not a big message, it is a broken or hostile one, and
+ * the difference matters because only one of them can be waited out.
+ *
+ * 64 MiB is far past any legitimate frame — evidence records carry digests
+ * and paths, not the bytes themselves — and is still finite.
+ */
+const MAX_FRAME_BYTES = 64 * 1024 * 1024
+
 /** Turn an unexpected value into a reportable error without losing its text. */
 function describe(cause: unknown): string {
   return cause instanceof Error ? cause.message : String(cause)
@@ -71,6 +85,9 @@ export class StdioTransport implements Transport {
   private readonly eventListeners = new Set<(event: TransportEvent) => void>()
   private readonly failureListeners = new Set<(error: WatchError) => void>()
   private disposed = false
+  /** Set once the stream became unreadable; a broken frame stream cannot be resynchronized. */
+  private protocolFailure: WatchError | null = null
+
   /** Retained so a late exit can explain itself instead of reporting "null". */
   private lastStderr = ''
 
@@ -123,6 +140,14 @@ export class StdioTransport implements Transport {
   }
 
   send<T>(request: TransportRequest): Promise<WatchResult<T>> {
+    if (this.protocolFailure !== null) {
+      // Fail fast with the reason, rather than making the caller wait out a
+      // second deadline to learn something that is already known.
+      return Promise.resolve({
+        ok: false,
+        error: { ...this.protocolFailure, correlationId: request.correlationId },
+      })
+    }
     const child = this.child
     if (child === null || this.disposed) {
       return Promise.resolve(watchError(
@@ -276,6 +301,18 @@ export class StdioTransport implements Transport {
       }
       const bodyStart = headerEnd + HEADER_TERMINATOR.length
       const bodyEnd = bodyStart + Number(length[1])
+      if (bodyEnd - bodyStart > MAX_FRAME_BYTES) {
+        // Refusing here rather than waiting: no further bytes can make a
+        // frame this size legitimate, and waiting hides the reason.
+        this.fail(watchError(
+          'bridge.protocol_violation',
+          `Watch Core declared a ${String(bodyEnd - bodyStart)}-byte frame, over the `
+          + `${String(MAX_FRAME_BYTES)}-byte limit this Workspace will read.`,
+          'Update Watch Core to a version matching this Workspace, then reconnect.',
+          {},
+        ).error)
+        return
+      }
       if (this.buffer.byteLength < bodyEnd) return
       const body = this.buffer.subarray(bodyStart, bodyEnd).toString('utf8')
       this.buffer = this.buffer.subarray(bodyEnd)
@@ -335,8 +372,25 @@ export class StdioTransport implements Transport {
     entry.resolve(result)
   }
 
-  /** Report a transport-level failure to the service that owns this backend. */
+  /**
+   * A transport-level failure: settle everything waiting, and stay failed.
+   *
+   * This used to only notify the failure listeners, which read as correct and
+   * was not. The requests already in flight were left to run out their own
+   * deadlines, so a protocol violation — a frame with no Content-Length, a body
+   * that is not JSON — reached the caller as `bridge.deadline_exceeded`. That
+   * is the wrong diagnosis in the way that costs the most time: it says the
+   * engine is slow, and sends someone to look at load and networking, when the
+   * truth is that this build and that engine cannot talk to each other and no
+   * amount of waiting will change it.
+   *
+   * A broken stream also cannot be resynchronized by guessing where the next
+   * frame begins, so the transport stays failed rather than pretending the next
+   * request might land.
+   */
   private fail(error: WatchError): void {
+    this.protocolFailure = error
+    for (const id of [...this.pending.keys()]) this.settle(id, { ok: false, error })
     for (const listener of this.failureListeners) listener(error)
   }
 

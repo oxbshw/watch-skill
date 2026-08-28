@@ -124,6 +124,15 @@ export function mayOpenExternally(url: string, policy: NavigationPolicy): boolea
   }
   if (!policy.externalSchemes.includes(parsed.protocol)) return false
   const host = parsed.hostname
+  // A URL carrying credentials is refused, whatever its host.
+  //
+  // `https://example.com@evil.com` parses to the host `evil.com`, and
+  // `https://user:pass@example.com` sends the credentials to whoever is
+  // really on the other end. Both read to a person as the host before the
+  // "@", and both open somewhere else — which is the exact gap between what
+  // was displayed and what happened that this product exists to close.
+  if (parsed.username !== '' || parsed.password !== '') return false
+
   if (host === 'localhost' || host === '127.0.0.1' || host === '::1') return false
   return true
 }

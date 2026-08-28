@@ -189,21 +189,58 @@ function digestOf(documents: readonly IndexableRecord[], postings: Map<string, S
 }
 
 /**
- * A record path that stays inside the roots it was given.
+ * Decode one round of percent-escapes, without ever throwing.
  *
- * Indexing walks whatever a caller hands it, so the caller's roots are the
- * boundary. `..` segments, absolute paths and Windows drive letters are all
- * refused rather than normalised — normalising an attempt to escape produces a
- * path that works, which is the wrong outcome for input that was trying to get
- * out.
+ * `decodeURIComponent` is the obvious tool and the wrong one: it throws on a
+ * malformed escape, so a file legitimately named `100%.json` would be refused
+ * as hostile. This decodes only well-formed `%XX` pairs and leaves everything
+ * else exactly as it arrived.
+ */
+function decodeOnce(value: string): string {
+  return value.replace(/%([0-9a-fA-F]{2})/g, (_, hex: string) =>
+    String.fromCharCode(Number.parseInt(hex, 16)))
+}
+
+/**
+ * Every form a path can decode to, including the one that arrived.
+ *
+ * A traversal survives encoding, and it survives being encoded twice. Checking
+ * only the string as received missed `..%2f` — literal dots joined by an
+ * encoded separator — which reads as harmless until something downstream
+ * decodes it and it becomes `../`. Bounded at four rounds, which is three more
+ * than anything legitimate needs.
+ */
+function decodings(candidate: string): readonly string[] {
+  const forms = [candidate]
+  let current = candidate
+  for (let round = 0; round < 4; round += 1) {
+    const next = decodeOnce(current)
+    if (next === current) break
+    forms.push(next)
+    current = next
+  }
+  return forms
+}
+
+/**
+ * Is this path inside one of the roots the caller allows?
+ *
+ * Refusal is the safe direction, so anything ambiguous is refused. The root
+ * comparison is case-sensitive: on a case-insensitive filesystem that can
+ * refuse a legitimate path, which is a nuisance, but it can never admit an
+ * illegitimate one.
  */
 export function isWithinRoots(candidate: string, roots: readonly string[]): boolean {
   if (candidate === '') return false
+
+  // The traversal check runs against every form, not only the one that arrived.
+  for (const form of decodings(candidate)) {
+    const normalized = form.replace(/\\/g, '/')
+    if (normalized.split('/').includes('..')) return false
+    if (normalized.includes('\0')) return false
+  }
+
   const normalized = candidate.replace(/\\/g, '/')
-  if (normalized.split('/').includes('..')) return false
-  // A URL-encoded traversal is still a traversal.
-  if (/%2e%2e|%252e/i.test(normalized)) return false
-  if (normalized.includes('\0')) return false
   return roots.some(root => {
     const base = root.replace(/\\/g, '/').replace(/\/+$/, '')
     return normalized === base || normalized.startsWith(`${base}/`)
@@ -245,7 +282,15 @@ export class LibraryIndex {
    * content twice is a no-op, which is what makes an interrupted run safe to
    * simply repeat.
    */
-  add(record: IndexableRecord): void {
+  add(input: IndexableRecord): void {
+    // Normalized at the door, exactly as `load` already does. The type says
+    // every field is present, and the type is not enforced at runtime: these
+    // records are built by walking tool output, which crosses a JSON boundary
+    // and arrives as whatever the tool actually returned. A record missing
+    // `tags` used to throw "not iterable" from inside the indexer, turning one
+    // malformed record into a failed index.
+    const record = normalizeRecord(input)
+    if (record.recordId === '') return
     this.#pending.add(record.recordId)
     this.#removePostings(record.recordId)
     this.#documents.set(record.recordId, record)
