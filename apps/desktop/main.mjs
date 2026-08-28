@@ -28,6 +28,16 @@
  */
 
 import { app, BrowserWindow, ipcMain, dialog, shell } from 'electron'
+
+/**
+ * The product name, restated here rather than imported.
+ *
+ * `main.mjs` runs in the Electron main process before any workspace package is
+ * resolvable, so it cannot import the brand module the renderer uses. The
+ * value is asserted identical by a test, which is the part that keeps two
+ * copies from drifting.
+ */
+const PRODUCT_NAME = 'Watch Workspace'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { existsSync, mkdirSync, appendFileSync } from 'node:fs'
@@ -268,6 +278,22 @@ function createWindow() {
   })
   runtime.window = window
   runtime.ownedWindowIds.push(window.webContents.id)
+
+  // Hold the product name against the page.
+  //
+  // `loadURL` hands the window title to the document, and DSH's built HTML
+  // shell carries `<title>DeepSeek Harness</title>` until the Watch brand
+  // plugin claims it. Without this the window is briefly, and on a slow start
+  // not so briefly, titled after the foundation rather than the product.
+  //
+  // `setTitle` in the handler would recurse, so the event is simply prevented
+  // and the title reasserted only when the page proposes something that is not
+  // already a Watch title.
+  window.webContents.on('page-title-updated', (event, title) => {
+    if (title === PRODUCT_NAME || title.endsWith(` · ${PRODUCT_NAME}`)) return
+    event.preventDefault()
+    window.setTitle(PRODUCT_NAME)
+  })
 
   const policy = navigationPolicy(runtime.hostOrigin)
 

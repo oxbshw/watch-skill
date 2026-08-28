@@ -1,7 +1,7 @@
 {
   "name": "@watchskill/watch-desktop",
   "version": "0.1.0-preview.0",
-  "description": "Watch Desktop \u2014 an Electron shell around the same Workspace packages",
+  "description": "Watch Workspace \u2014 an Electron shell around the same Workspace packages",
   "type": "module",
   "private": true,
   "license": "MIT",
@@ -23,5 +23,6 @@
   },
   "devDependencies": {
     "electron": "^33.4.11"
-  }
+  },
+  "productName": "Watch Workspace"
 }
