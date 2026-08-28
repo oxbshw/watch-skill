@@ -23,6 +23,9 @@ import type { BrandTone } from '@watchskill/dsh-client-brand'
 // Correct on the host, fatal in a browser bundle.
 import { OCR_ENGINES, ROLES } from '@watchskill/dsh-technology/descriptors'
 import { ReadinessList } from './readiness.js'
+import {
+  DEEPSEEK_IS_OPTIONAL, HOSTED_COUNT, PROVIDER_COUNT, SAMPLE_PROVIDERS, SELF_HOSTED_COUNT,
+} from '../providers.js'
 import type { RoleId, TechnologyDescriptor } from '@watchskill/dsh-technology/descriptors'
 
 /** What a settings section is handed by DSH. */
@@ -191,6 +194,35 @@ export function RoleBindingsSection(): ReactNode {
           </div>
         )
       })}
+      <h2 style={T.h2}>Providers</h2>
+      <div style={T.card}>
+        <div style={T.cardHead}>
+          <h3 style={T.title}>{`${String(PROVIDER_COUNT)} routes are available`}</h3>
+          <StatusChip tone="neutral">None configured</StatusChip>
+        </div>
+        <p style={{ ...T.lead, margin: '8px 0 0' }}>
+          {`${String(HOSTED_COUNT)} hosted and ${String(SELF_HOSTED_COUNT)} where you supply the endpoint — `}
+          {SAMPLE_PROVIDERS.join(', ')}
+          {' and others. Watch adds none of these and removes none of them: the '}
+          {'catalogue is DSH’s, reached through its own Models & Providers screen.'}
+        </p>
+        <div style={T.meta}>
+          <Row label="A local model">
+            An OpenAI-compatible server you run — Ollama, vLLM, LM Studio,
+            llama.cpp — is a base URL you supply, not a separate feature.
+          </Row>
+          <Row label="DeepSeek">
+            {DEEPSEEK_IS_OPTIONAL
+              ? 'One route among many. Nothing here requires it.'
+              : 'The only route in this catalogue.'}
+          </Row>
+          <Row label="Checked">
+            Never. A route being in the catalogue is not a working connection,
+            and no provider has been contacted from this installation.
+          </Row>
+        </div>
+      </div>
+
       <p style={T.note}>
         Bindings are stored by DSH alongside its own model and provider
         settings. Watch keeps no second credential store and never sees a key —
