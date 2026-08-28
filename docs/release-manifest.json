@@ -56,8 +56,8 @@
       {
         "name": "@watchskill/dsh-client-brand",
         "version": "0.1.0-preview.0",
-        "integrity": "sha256:9870792c02f97747213718bc8a9448bdfe905315d2f2d3b9f9e3739bc359f5c7",
-        "sourceFiles": 8
+        "integrity": "sha256:199dcfda39b5f4d8fcd69fdd1347a1a6e028c5d874676444d31ab78968973336",
+        "sourceFiles": 9
       },
       {
         "name": "@watchskill/dsh-bundle",
@@ -68,7 +68,7 @@
       {
         "name": "@watchskill/dsh-client-evidence",
         "version": "0.1.0-preview.0",
-        "integrity": "sha256:ad1ab1b119dd5f2ddfe9729eae50561cea9093b47d84cf25d1109cf4d723256b",
+        "integrity": "sha256:5f85e68c3272ed1af660aa40f4e19eb3cb8ff9256cc9045203483890bb6ec3f9",
         "sourceFiles": 13
       },
       {
@@ -80,8 +80,8 @@
       {
         "name": "@watchskill/dsh-client-settings",
         "version": "0.1.0-preview.0",
-        "integrity": "sha256:59f4c6247b98ea22384973e856e12fc6a123eaa9b7c923171a252dc44e7db983",
-        "sourceFiles": 8
+        "integrity": "sha256:e56c6ace8dd68d8f08ea7d5f1087c50a5d74ae5d342202d88dd96c0c260c76c8",
+        "sourceFiles": 9
       },
       {
         "name": "@watchskill/dsh-contracts",
@@ -98,13 +98,13 @@
       {
         "name": "@watchskill/dsh-library",
         "version": "0.1.0-preview.0",
-        "integrity": "sha256:ab1abf9a338009b81a60cba8e1c42f64ed5bdb3e238bc6ac3e9373403cca25f4",
+        "integrity": "sha256:a07add0a4d93f822da892e295af01df0030c4f96e45ef60c3adac187d2fc75a5",
         "sourceFiles": 9
       },
       {
         "name": "@watchskill/dsh-live",
         "version": "0.1.0-preview.0",
-        "integrity": "sha256:6ce25b2b3666a426aee624791d4e9cd617a89b9de1148ff65485100973b29480",
+        "integrity": "sha256:a3adbbbe70e1d28fd9ffe259cf52a88ce0a6c485dbe52331431f7fd300bf42eb",
         "sourceFiles": 9
       },
       {
@@ -152,13 +152,13 @@
       {
         "name": "@watchskill/dsh-workspace",
         "version": "0.1.0-preview.0",
-        "integrity": "sha256:d0c79ef49ac6162a9503064e41c75b487518061d69e19c0d3fa1983fb27c75ed",
-        "sourceFiles": 11
+        "integrity": "sha256:af3c0489d9d281343ac0fe67761d9feaa44d981705c403323d6253eac9936b0f",
+        "sourceFiles": 13
       },
       {
         "name": "@watchskill/watch-desktop",
         "version": "0.1.0-preview.0",
-        "integrity": "sha256:24deea1066f40c1cb3b0c1fcba4483befb31f4bc73c2a01fae1abdd543facfa5",
+        "integrity": "sha256:91c086da36224149ebf95190d6fd04c6cbaac269e960a4f808b3eb85df9cd99c",
         "sourceFiles": 11
       }
     ]
@@ -168,12 +168,12 @@
     "dataLicense": "CC0-1.0",
     "SPDXID": "SPDXRef-DOCUMENT",
     "name": "@watchskill/watch-workspace-0.1.0-preview.0",
-    "documentNamespace": "https://github.com/oxbshw/watch-workspace/spdx/0.1.0-preview.0/mtcgjnux",
+    "documentNamespace": "https://github.com/oxbshw/watch-workspace/spdx/0.1.0-preview.0/mtcre2h1",
     "creationInfo": {
       "creators": [
         "Tool: watch-gen-release-manifest"
       ],
-      "created": "2026-08-28T04:34:43Z"
+      "created": "2026-08-28T09:38:17Z"
     },
     "packages": [
       {
@@ -204,7 +204,7 @@
         "checksums": [
           {
             "algorithm": "SHA256",
-            "checksumValue": "9870792c02f97747213718bc8a9448bdfe905315d2f2d3b9f9e3739bc359f5c7"
+            "checksumValue": "199dcfda39b5f4d8fcd69fdd1347a1a6e028c5d874676444d31ab78968973336"
           }
         ]
       },
@@ -236,7 +236,7 @@
         "checksums": [
           {
             "algorithm": "SHA256",
-            "checksumValue": "ad1ab1b119dd5f2ddfe9729eae50561cea9093b47d84cf25d1109cf4d723256b"
+            "checksumValue": "5f85e68c3272ed1af660aa40f4e19eb3cb8ff9256cc9045203483890bb6ec3f9"
           }
         ]
       },
@@ -268,7 +268,7 @@
         "checksums": [
           {
             "algorithm": "SHA256",
-            "checksumValue": "59f4c6247b98ea22384973e856e12fc6a123eaa9b7c923171a252dc44e7db983"
+            "checksumValue": "e56c6ace8dd68d8f08ea7d5f1087c50a5d74ae5d342202d88dd96c0c260c76c8"
           }
         ]
       },
@@ -316,7 +316,7 @@
         "checksums": [
           {
             "algorithm": "SHA256",
-            "checksumValue": "ab1abf9a338009b81a60cba8e1c42f64ed5bdb3e238bc6ac3e9373403cca25f4"
+            "checksumValue": "a07add0a4d93f822da892e295af01df0030c4f96e45ef60c3adac187d2fc75a5"
           }
         ]
       },
@@ -332,7 +332,7 @@
         "checksums": [
           {
             "algorithm": "SHA256",
-            "checksumValue": "6ce25b2b3666a426aee624791d4e9cd617a89b9de1148ff65485100973b29480"
+            "checksumValue": "a3adbbbe70e1d28fd9ffe259cf52a88ce0a6c485dbe52331431f7fd300bf42eb"
           }
         ]
       },
@@ -460,7 +460,7 @@
         "checksums": [
           {
             "algorithm": "SHA256",
-            "checksumValue": "d0c79ef49ac6162a9503064e41c75b487518061d69e19c0d3fa1983fb27c75ed"
+            "checksumValue": "af3c0489d9d281343ac0fe67761d9feaa44d981705c403323d6253eac9936b0f"
           }
         ]
       },
@@ -476,7 +476,7 @@
         "checksums": [
           {
             "algorithm": "SHA256",
-            "checksumValue": "24deea1066f40c1cb3b0c1fcba4483befb31f4bc73c2a01fae1abdd543facfa5"
+            "checksumValue": "91c086da36224149ebf95190d6fd04c6cbaac269e960a4f808b3eb85df9cd99c"
           }
         ]
       }

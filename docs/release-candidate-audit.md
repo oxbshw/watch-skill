@@ -187,6 +187,105 @@ user's file byte for byte, re-hash, and require the two hashes to be identical.
 
 ---
 
+## 4b. The productization pass
+
+The release candidate above proved the product *worked*. It did not look like
+one. This section records what that turned out to mean, because the gap was
+larger and more specific than "needs styling".
+
+### The product was built and never composed
+
+Five of six Watch client packages — brand, workspace, live, library,
+client-memory — were complete, unit-tested and green, and **were not in the
+bundle at all**. None of them loaded.
+
+Four of those five also registered into slot names DSH does not have:
+`sidebar.nav`, `inspector.panel`, `workspace.memory`, `workspace.live`,
+`workspace.library`, `message.footer`, `conversation.header`,
+`conversation.footer`, `composer.extra`. Composing them would not have helped.
+`slots.register` accepts any string, so the plugin loads, the components pass
+their tests, and nothing is ever drawn.
+
+Everything green, nothing visible. No component test can reach that, because the
+components were never the problem.
+
+### What the gates learned
+
+`inventory/dsh-slots.json` now records DSH's slot vocabulary — 44 entries, taken
+as the union of DSH's own contract catalogue (authoritative for `kind` and
+`scope`) and its `renderSlot` call sites. Neither source is complete: the
+catalogue omits `conversation.composer.bar` and `conversation.input.attachments`,
+which DSH demonstrably renders; the call sites omit `root`, `sidebar` and
+`details`. A slot the catalogue does not describe is recorded `kind: "unknown"`
+and treated exactly as strictly as `single`, because one of them provably is.
+
+`verify-slots.mjs` enforces the three rules that follow: a name must exist, a
+`keyed` slot needs a key, and taking a `single` seat needs a written
+justification in `SHADOWS`. Three entries are justified, all brand, all
+legitimate for the same reason — the bundle disables `ui-brand-official`, so the
+seat is empty when Watch takes it.
+
+### Defects that only running it could find
+
+| What | Why no test saw it |
+|---|---|
+| `--watch-tone-success` and three others resolved to **nothing** | DSH declares `--dsw-alias-*` on `body`; Watch declared its tokens on `:root`, where the inputs do not exist. Green for VERIFIED had no colour at all. A missing custom property is not an error — it is absence, and absence looks like a design choice. |
+| The onboarding destroyed the sidebar | `settings.onboarding` is a 256px seat in the sidebar foot, not a modal seat. A 2419px readiness dashboard was rendered into a rail clipped at 644px. |
+| The brand tarball could not be imported | Its `files` allowlist named `lib/index.js` but not the `lib/identity.js` that entry imports. |
+| Four packages were not valid plugins | Their host entries exported no `apply`, so the whole plugin tree refused to load. |
+| The profile installed stale code | pnpm keys a `file:` dependency on path and version, and neither changed between builds. |
+| Client bundles built in the wrong order | `readdirSync` order had `client-evidence` bundle before `workspace` and resolve a bundle that did not exist yet. |
+| A client bundle cannot be imported across packages | `/client` is a `window.__ModuleLoader__.load(...)` registration; a bundler cannot read named exports out of a function body. Shared code moved to plain-ESM subpaths. |
+
+### The brand asset
+
+The supplied orca master is **RGB with no alpha channel** — what reads as
+transparency is a chequerboard painted into the pixels. Using it unchanged would
+have put a grey chequer behind the mark everywhere.
+
+The alpha is recovered by reachability rather than by colour, because colour
+cannot separate the two light regions: the belly is negative space showing the
+chequer through, and the eye patch is painted white and fully enclosed. A flood
+fill from the border finds the background, belly included, eye patch excluded.
+Edge coverage is read from the red channel, which spans 49→247, because blue is
+252 against a 247 ground and carries no signal.
+
+Measured on the 256px derivation: 85.6% fully transparent, 11.9% fully opaque,
+2.5% soft edge, 253 white pixels surviving as the eye patch, `(0,0,0,0)` corner.
+
+### The provider catalogue
+
+Audited from `@earendil-works/pi-ai` as pinned: **37 routes**, 30 hosted and 7
+where the endpoint is user-supplied. Watch adds none and removes none. DeepSeek
+is one of the thirty-seven and is not required to enter the workspace. A local
+model is reached through the user-supplied endpoint route rather than as a
+separate feature, and every row is recorded `checked: "never"` — a descriptor
+existing is not a working connection.
+
+### What the four Watch modes can and cannot do
+
+A `conversation.view` entry is handed `{ inspect, onInspectDone }`, and
+`ctx.remote` is an event bus rather than a query client. Watch contributes
+tools, so its records reach the browser as conversation results; there is no
+client-reachable Watch query route.
+
+Each surface therefore renders the supported subset — the selected record, read
+through the real `parseVerdict` contract — and names what it cannot reach:
+
+- **Watch** renders the verdict, its reason, assurance, contract digest and each
+  check, with "did not run" distinct from "did not hold".
+- **Live** lists six sources with real permission behaviour, asks for nothing on
+  load, keeps Browser Observer and Browser Operator separate, and offers no
+  Start control for a backend that is absent.
+- **Library** offers no search box it cannot answer.
+- **Compare** fabricates no second column.
+
+This is the supported subset plus an honest unavailable state, which is what the
+architecture actually permits today. It is not a placeholder, and it is not a
+mockup.
+
+---
+
 ## 5. External limitations — NOT MACHINE TESTED
 
 Each of these is stated as a limitation rather than quietly folded into a pass.
@@ -211,8 +310,18 @@ endpoint and no second session system, so there is nothing Watch-specific left
 untested; but the boundary itself is unexercised on this machine.
 
 **Screen readers.** Roles, accessible names, focus-visible, forced-colours and
-the one-selected-tab invariant are all tested. No assistive technology was
-driven, so *announcement* is untested.
+the one-selected-tab invariant are all tested, and the mode tabs are DSH's own
+`role="tablist"` rather than a Watch reimplementation. No assistive technology
+was driven, so *announcement* is untested.
+
+**A Watch query route.** Library search, revision history and a two-sided
+Compare all need an index or a stored history the client can read. This build
+exposes neither, so those surfaces state the limitation rather than approximate
+it. Closing this is a product decision about exposing Watch records through the
+Host, not a defect to fix.
+
+**Live capture.** No capture backend is composed, so no live session can be
+started. The surface says so and lists what it would take.
 
 **Platforms other than win32.** Desktop was launched and machine-tested on
 Windows only. macOS and Linux are unexercised.

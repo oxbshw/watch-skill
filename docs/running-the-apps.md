@@ -66,6 +66,29 @@ Watch bundle installed and the overlay written. The second seeds the demo data:
 memory records through the real service at real origins, and the fixture files
 the checklist refers to. Both are idempotent.
 
+## Visual QA evidence
+
+Screenshots come from the real running application, captured with Electron —
+already a dependency, so nothing new is installed and nothing leaves the
+machine:
+
+```bash
+WATCH_QA_URL=http://127.0.0.1:8931 WATCH_QA_OUT=G:/watch-manual/qa/screenshots WATCH_QA_SESSION=<session-id> electron scripts/qa-screenshots.mjs
+```
+
+Two details that cost a while to find, both worth knowing before you run it:
+
+- **Configuration goes through the environment, not argv.** Passing extra
+  arguments to `electron.exe` stops it resolving the entry at all — the module
+  never parses and the run is indistinguishable from a silent success.
+- **Output goes to `capture.log`, not stdout.** `electron.exe` on Windows is a
+  GUI-subsystem binary; it detaches from the console and stdout is lost.
+
+`WATCH_QA_SESSION` should name a session that has history. The mode tabs live in
+the session header, and DSH hides that chrome while a session is blank — a fresh
+empty session shows no tabs, which looks exactly like the registrations having
+failed.
+
 ## When something is wrong
 
 Logs are in `G:/watch-manual/logs`. `web.log`, `desktop-main.log` (the Electron

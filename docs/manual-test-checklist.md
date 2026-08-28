@@ -27,16 +27,25 @@ reply is not expected; a *refusal to reach the network* is.
 
 ---
 
-## A. It opens, and it is the real DSH
+## A. It opens, and it is Watch Workspace
 
-**A1 — Web loads.** Open http://127.0.0.1:8931.
-*Expect:* the DeepSeek Harness workspace, with a Watch section in the sidebar.
-*Bug if:* a blank page, a stack trace, or a UI that is clearly not DSH. The
-whole design is that Watch is a layer on the official app — a second, Watch-only
-UI would be a serious architectural bug, not a cosmetic one.
+**A1 — Web loads, branded.** Open http://127.0.0.1:8931.
+*Expect:* the browser tab reads **Watch Workspace** with the orca as its icon.
+The sidebar header shows the orca beside the words "Watch Workspace", and the
+sidebar footer carries "Built on DeepSeek Harness · Extended by Watch Skill"
+above the independence disclosure.
+*Bug if:* the tab or the sidebar says "DeepSeek Harness"; the orca is stretched,
+clipped, pixelated, or sitting on a grey chequerboard; the attribution or the
+disclosure is missing.
+
+**A1b — The mark is the supplied artwork.** Look closely at the orca.
+*Expect:* white eye patch, white belly as negative space, clean transparent
+edges at any size.
+*Bug if:* the belly is filled, the eye patch is missing at sidebar size, or a
+grey chequer shows behind it — that would mean the alpha recovery regressed.
 
 **A2 — Upstream still works.** Find the stock DSH surfaces: Sessions, Settings,
-Models/Providers, Plugins, Trajectory.
+General, Models, Plugins, Agent presets, Trajectory.
 *Expect:* present and navigable, unchanged.
 *Bug if:* any official surface is missing, disabled, or replaced by a Watch
 version. Watch is only ever allowed to *add*.
@@ -55,27 +64,52 @@ paste an external URL if any address affordance exists.
 
 ## B. The seven modes
 
-The modes are Agent, Watch, Live, Memory, Library, Compare, Trajectory.
+The tabs are **Chat · Trajectory · Watch · Live · Memory · Library · Compare**,
+rendered in the session header. Chat is DSH's own conversation and Trajectory is
+DSH's own trajectory; Watch adds the other five.
 
-**B1 — Every mode opens.** Visit each in turn.
-*Expect:* each opens without error, and the session context carries across —
-switching modes does not start a new session or lose your place.
-*Bug if:* a mode throws, or switching modes resets the session.
+They appear only inside a session that has content — DSH hides header chrome
+while a session is blank, which is correct behaviour and not a missing tab.
 
-**B2 — A mode that cannot work says so.** Live and parts of Library depend on
-capabilities that are not present on this machine (no GPU, no provider).
-*Expect:* a **degraded** state that names the missing capability and what it
-would take to enable it.
-*Bug if:* a mode is silently empty, or presents itself as fully working when its
-capability is absent. An empty panel with no explanation is a bug here, not a
-blank slate.
+**B0 — The tabs are real tabs.** Focus one and use the arrow keys.
+*Expect:* `role="tablist"`, arrow keys move between tabs, the selected one is
+marked, and the selection survives a reload.
+*Bug if:* they are plain buttons, keyboard navigation does nothing, or the
+selection resets on reload.
 
-**B3 — The inspector follows selection.** Select anything with a record behind
-it and open the right-hand inspector.
-*Expect:* panels for the selected thing — evidence, provenance, verification,
-timing.
-*Bug if:* the inspector shows a different record than the one selected, or keeps
-showing a stale one after selection changes.
+**B1 — Every mode opens onto something.** Visit each in turn.
+*Expect:* each renders a titled surface with a sentence saying what it shows.
+Where it has nothing to show it says what would populate it and what to do next.
+*Bug if:* a tab opens onto blank space. **An empty body is the specific defect
+this checklist exists to catch** — a tab onto nothing reads as a broken feature
+rather than an absent one.
+
+**B2 — Empty and unavailable are different words.** Compare Watch (nothing
+selected) with Live (no capture backend).
+*Expect:* Watch says nothing is *selected* and how to select something. Live
+says starting a session is *not available in this build*, and lists what it
+would take. These are deliberately different states.
+*Bug if:* the two read the same, or either offers a control that fails when
+pressed.
+
+**B3 — Live asks for nothing.** Open Live and watch for prompts.
+*Expect:* no permission dialog. Six sources listed — Screen, Window, Camera,
+Microphone, Browser Observer, Browser Operator — each saying when it *would*
+ask.
+*Bug if:* any OS permission is requested by opening the tab. Report immediately.
+
+**B4 — Observer and Operator are separate.** Read those two rows.
+*Expect:* two distinct capabilities. Observing records what a page showed;
+operating acts on it and returns a receipt.
+*Bug if:* they are merged into one "browser" control — that would grant the
+power to act while a person believed they were enabling the power to watch.
+
+**B5 — Watch reflects the selection.** In Chat, click a Watch tool row, then
+open Watch.
+*Expect:* the verdict as a word and a colour, its reason, the assurance level,
+the contract digest, and each check as held / did not hold / did not run.
+*Bug if:* it still shows the empty state, shows a different record, or renders a
+check that did not run as a failure.
 
 ---
 
@@ -240,6 +274,35 @@ been no run on this hardware, so any number is fabricated. Report it.
 *Expect:* the lightweight CPU route. An unqualified engine is never a default.
 *Bug if:* a DeepSeek engine is selected by default here.
 
+**I3 — Every Watch section is present.** Open Settings.
+*Expect:* DSH's own General, Models, Plugins and Agent presets at the top, then
+Role Bindings, Perception Engines, Sources & Devices, Memory & Retrieval,
+Verification, Diagnostics and About.
+*Bug if:* a DSH section is missing or has moved below the Watch ones — Watch is
+only allowed to add, and only below.
+
+**I4 — The provider catalogue is not narrowed.** Open Role Bindings and read the
+Providers card.
+*Expect:* 37 routes — 30 hosted and 7 where you supply the endpoint — naming
+OpenAI, Anthropic, Google, Amazon Bedrock, Mistral, Groq, OpenRouter and
+DeepSeek among them, and stating that a local model (Ollama, vLLM, LM Studio,
+llama.cpp) is a base URL you supply rather than a separate feature.
+*Bug if:* the count is small, DeepSeek is presented as required, or no
+user-supplied endpoint route is offered. **A narrowed catalogue is a serious
+regression** — the whole point is that Watch adds to DSH without taking away.
+
+**I5 — Nothing claims to work.** Read the states in Role Bindings.
+*Expect:* every role "Not bound", every provider "Never" checked, every engine
+"Not tested", no accuracy or speed figure anywhere.
+*Bug if:* anything reads as ready, tested or measured. No check has run on this
+machine, so any such claim is fabricated. Report immediately.
+
+**I6 — Opening Settings runs nothing.** Watch the network and any prompts while
+you click through all seven sections.
+*Expect:* no provider is contacted, no capability is probed, no permission is
+requested. Checks happen when you press a Test button, not when a page opens.
+*Bug if:* opening a section triggers a probe or a request.
+
 ---
 
 ## J. Offline and consent
@@ -285,6 +348,19 @@ camera, microphone, screen capture or the filesystem.
 treated as observed content — never as an instruction.
 *Bug if:* the app acts on instructions found inside a file you opened.
 
+**K6 — Desktop identity.** Look at the window title bar, the taskbar and
+Alt-Tab.
+*Expect:* "Watch Workspace" in all three, with the orca as the window icon.
+*Bug if:* any of them says "DeepSeek Harness" or shows Electron's default icon.
+A brief flash of the wrong title during startup is also a bug — the title is
+held against the page deliberately.
+
+**K7 — Desktop is the same build as Web.** Compare a Watch surface in both.
+*Expect:* identical. Desktop loads the same web application from a Host it
+supervises.
+*Bug if:* they differ in any way. That means one of them is serving a stale
+build, which is the failure that made an earlier round of testing meaningless.
+
 **K5 — Clean shutdown.** Close the window.
 *Expect:* the Host child exits with it. Check Task Manager: no orphan `node` or
 `watch-skill` process left behind.
@@ -303,4 +379,8 @@ one is a release blocker on its own:
 
 1. **C3** — the UI leading with a page's false success claim.
 2. **C5** — any way to mint VERIFIED from outside Watch Core.
-3. **I1** — any quality number attached to an engine that has not run here.
+3. **I1 / I5** — any quality number, or any capability claiming to be ready,
+   tested or measured when nothing has run on this machine.
+4. **B3** — any OS permission requested by opening a tab rather than by a
+   deliberate action.
+5. **I4** — a provider catalogue narrowed below what DSH ships.
