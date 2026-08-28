@@ -2,27 +2,20 @@
 /**
  * The screenshot manifest: what was photographed, and what it shows.
  *
- * A directory of PNGs is not evidence. Every file in it looks like a success,
- * including the sixteen byte-identical copies of an empty workspace that an
- * earlier capture saved under seven different mode names. This manifest exists
- * so a reviewer can tell those apart without opening every file — and so that
- * when a shot is missing, the reason is written down rather than inferred.
+ * A directory of PNGs is not evidence on its own. Every file in one looks like
+ * a success, including the sixteen byte-identical copies of an empty workspace
+ * that an earlier capture saved under seven different mode names. This manifest
+ * records, per shot, what it was supposed to show, what a reviewer saw on
+ * opening it, and whether those agree. A shot with no file carries the reason
+ * instead.
  *
- * Three things it records that a filename cannot:
- *
- *   - **expected vs observed.** What the shot was supposed to show, and what a
- *     person actually saw in it. Where those differ, the row says so.
- *   - **not captured.** A shot whose precondition failed has no file at all.
- *     Its row carries the reason, which is more useful than a duplicate image.
- *   - **duplicates.** Identical digests across differently-named shots are
- *     reported as a failure, because that is exactly how the earlier set looked
- *     healthy while showing nothing.
+ * It also reports byte-identical images as a failure, since that is how the
+ * earlier set looked healthy while showing nothing.
  *
  * Usage:
  *   node scripts/gen-screenshot-manifest.mjs <capture-dir>
  *   node scripts/gen-screenshot-manifest.mjs <capture-dir> --check
  */
-
 import { readFileSync, writeFileSync, existsSync, statSync } from 'node:fs'
 import { join, dirname, basename } from 'node:path'
 import { fileURLToPath } from 'node:url'

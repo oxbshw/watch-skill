@@ -1,8 +1,7 @@
 # Validation matrix
 
-Every check that was run, the command that ran it, and what it returned. Where
-something was not run, the row says so and why — an empty cell would read as a
-pass.
+Every check that was run, the command that ran it, and what it returned. Rows
+for things that were not run say so and why; an empty cell would read as a pass.
 
 Measured on Windows 10 Pro 19045, Node v22.18.0, pnpm 10.29.1, Electron
 33.4.11, against DSH 0.1.1-rc.2 @ `b150a551b8d4`.
@@ -113,8 +112,8 @@ against thresholds committed before the run
 | Other scripts (2 samples) | 0.7500 | 0.2500 | no |
 
 Reported per workload rather than as one number, so a workload the engine
-cannot do at all cannot hide behind one it can. The test asserts that at least
-one workload fails, because a corpus everything passes is not evidence.
+cannot do at all does not hide behind one it can. The test asserts at least one
+workload fails; a corpus everything passes is not evidence.
 
 ## Screenshots
 
@@ -133,7 +132,7 @@ Full detail in [screenshot-manifest.md](screenshot-manifest.md). The 16 blocked
 shots are the mode tabs and the tablist: DSH hides the session header while a
 session is blank, so they need a turn, and a turn needs a provider key.
 
-Before this pass the same capture reported 38 successes, of which 16 were
+An earlier run of the same capture reported 38 successes, of which 16 were
 byte-identical copies of an empty workspace filed under mode names.
 
 ## Adversarial input

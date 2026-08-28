@@ -1,12 +1,12 @@
 # Reconnect policy
 
 Every request made while the Bridge is not ready triggers a reconnect. Against
-an engine that fails on contact, that used to mean a fresh Watch Core process
-per request. Disposing the abandoned transport stopped them accumulating, but
-the churn remained: twenty requests started twenty engines, each one handshaking
-and dying.
+an engine that fails on contact that meant a fresh Watch Core process per
+request. Disposing the abandoned transport stopped them accumulating, but the
+churn remained: twenty requests started twenty engines, each handshaking and
+dying.
 
-The Bridge now stops trying after a bounded number of consecutive failures and
+The Bridge now stops trying after a bounded number of consecutive failures, and
 tells callers when it will try again.
 
 ## Configuration
@@ -22,50 +22,47 @@ so a deployment can widen or tighten them without a code change.
 
 ## Behaviour
 
-A single attempt runs at a time. Callers arriving while one is in flight share
-it rather than starting their own, which is what keeps four concurrent
-`connect()` calls to one spawned process.
+One attempt runs at a time. Callers arriving while one is in flight share it
+rather than starting their own, which keeps four concurrent `connect()` calls to
+one spawned process.
 
-When the circuit is open, `connect()` returns immediately with:
+While the circuit is open, `connect()` returns immediately:
 
     bridge.unavailable   retryable: true   details.retryAfterMs: <ms>
 
-No process is started. `retryAfterMs` is what makes this different from a
-timeout: a caller can wait the stated time, and a UI can say when rather than
-only that something is wrong.
+No process is started. `retryAfterMs` is what separates this from a timeout: a
+caller can wait the stated time, and a UI can say when rather than only that
+something is wrong.
 
-When the cooldown expires, exactly one probe is admitted. If it fails the
-circuit re-opens and the wait doubles, capped at `maxCooldownMs`. If it
-succeeds, the session proceeds.
+When the cooldown expires exactly one probe is admitted. If it fails the circuit
+re-opens and the wait doubles, capped at `maxCooldownMs`. If it succeeds the
+session proceeds.
 
 A non-retryable transport failure opens the circuit at once rather than counting
 to the threshold. `bridge.protocol_violation` is the case: the engine and this
-Workspace cannot read each other's frames, and starting the same engine again
-produces the same frame. Counting it to three would spawn two more processes to
-learn something already known. A crash (`bridge.core_exited`) is retryable and
-counts normally, because a crashed engine may come back.
+Workspace cannot read each other's frames, so starting the same engine twice
+more only confirms it. `bridge.core_exited` is retryable and counts normally,
+since a crashed engine may come back.
 
 ## What clears the breaker
 
 A completed request, not a handshake.
 
-This is the one place the implementation departs from the obvious reading of
-"reset after a successful handshake", and it is deliberate. An engine that
-handshakes cleanly and then fails every request -- which is exactly the
-`protocol_violation` case -- would reset the backoff on every reconnect and
-spawn once per request forever. A handshake proves the engine started. Only a
-completed request proves it works.
+This departs from the obvious reading and is deliberate. An engine that
+handshakes cleanly and then fails every request -- the `protocol_violation` case
+exactly -- would otherwise reset the backoff on every reconnect and spawn once
+per request forever. A handshake proves the engine started; only a completed
+request proves it works.
 
 ## Disposal
 
-Disposing the Bridge stops admitting connections, cancels the attempt in
-flight, and disposes the transport, which terminates the child. A request after
-disposal returns `bridge.disposed` and starts nothing.
+Disposing the Bridge stops admitting connections, cancels the attempt in flight,
+and disposes the transport, which terminates the child. A request after disposal
+returns `bridge.disposed` and starts nothing.
 
-Note that cordis unregisters the service when its fiber disposes, so
-`ctx.watchCore` is `undefined` afterwards. The guard inside the service is
-reachable only through a reference taken beforehand, which is what the test
-does.
+Cordis unregisters the service when its fiber disposes, so `ctx.watchCore` is
+`undefined` afterwards. The guard inside the service is reachable only through a
+reference taken beforehand, which is what the test does.
 
 ## Observable state
 

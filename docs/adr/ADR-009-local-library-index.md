@@ -41,27 +41,27 @@ in the **client** as a store the view owns (`LibraryIndex`). It is:
 
 ## Consequences
 
-**Watch Core is unchanged.** No Core contract was added for this, which was the
+Watch Core is unchanged. No Core contract was added for this, which was the
 point: the smallest change that works is the one that does not touch the engine
 that mints verdicts.
 
-**The index asserts nothing about truth.** It returns records and where the
-match was. Verdicts on those records came from Watch Core and are carried
+The index asserts nothing about truth. It returns records and where the match
+was. Verdicts on those records came from Watch Core and are carried
 through untouched — ADR-002 is not weakened, because nothing here mints
 anything.
 
-**Two implementations, one contract.** The host tool and the client store both
+The host tool and the client store both
 build on `index-store.ts`, reached through a plain-ESM subpath. They cannot
 drift apart in their tokenizing or their ranking, which is the part a user
 would notice.
 
-**The tokenizer is deliberately multilingual.** Latin-script words keep their
+The tokenizer is deliberately multilingual. Latin-script words keep their
 combining marks — Arabic harakat are `\p{M}`, not `\p{L}`, and treating them as
 separators split every vowelled word into fragments. CJK runs are indexed as
 characters and bigrams rather than as one unmatchable run, because no user types
 the whole run.
 
-**It is not a semantic index.** Without an embedding model it matches lexically,
+It is not a semantic index. Without an embedding model it matches lexically,
 and the Diagnostics page says so rather than implying otherwise.
 
 ## Alternatives rejected

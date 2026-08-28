@@ -1,13 +1,13 @@
 # Release candidate audit
 
-What was built, what was tested, what was tested *on this machine*, what could
-not be, and what stops a release. The four are separated because collapsing them
-is the specific dishonesty this product exists to prevent — and an audit that
-did it would be arguing against itself.
+What was built, what was tested, what was tested on this machine, what could
+not be, and what stops a release. The four are kept apart because collapsing
+them is the failure this product is built to catch, and an audit that collapsed
+them would be arguing against itself.
 
 Read against `Watch_Skill_DSH_Final_Vision_2026-08-26.md`,
 `sha256:dfa8cead245d6af7c66ea58e4dfca844b5865bf6397154fae7482007bb92d656`,
-3107 lines, read in full. The document is **not** vendored into this repository:
+3107 lines, read in full. The document is not vendored into this repository:
 it is the user's governing artifact, it was supplied for this work rather than
 authored here, and copying it in would create a second copy that could drift
 from the one that actually governs. The digest is recorded instead, so a future
@@ -79,7 +79,7 @@ The part that makes it evidence rather than decoration: a self-test arm attempts
 a real connection to `example.com` and **must be caught**. A sentinel that
 silently did nothing would pass an offline test perfectly.
 
-**§22.4 migration and rollback.** Closed with two genuinely different bundle
+**§22.4 migration and rollback.** Closed with two different bundle
 versions, packed and installed in sequence against a real stock profile.
 Upstream rows intact, no duplicate composition, session id stable, evidence ids
 stable, memory readable, settings preserved, schema unchanged — then rolled back
@@ -103,7 +103,7 @@ serving.
   process started and supervises, on `http://127.0.0.1:63102`. Same 200, same
   bytes, same client bundle.
 - **Two `watch-skill` processes** are live: one Watch Core per Host. The engine
-  is genuinely running under both surfaces, not stubbed under either.
+  is running under both surfaces rather than stubbed under either.
 - An `/api` request from an untrusted origin is refused by both.
 
 **A fresh-clone rehearsal** ran outside both repositories: a clean clone,
@@ -298,7 +298,7 @@ public Desktop distribution.
 
 **GPU and the DeepSeek OCR engines.** There is no GPU here. Both DeepSeek OCR
 engines are `NOT_TESTED` in every matrix cell, and **no quality or speed number
-exists for either**. This is enforced, not merely observed: a test asserts that
+exists for either**. This is enforced rather than observed: a test asserts that
 no code path can produce a metric without a run, and routing excludes an
 unqualified engine from being a default. The lightweight CPU route is selected.
 

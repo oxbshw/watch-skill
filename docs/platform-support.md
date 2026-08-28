@@ -1,10 +1,9 @@
 # Platform support
 
-What has been run, on what, and what has not been run at all. The distinction
-this document keeps is between *supported* — exercised, with a result — and
-*expected to work* — portable by construction, never executed. The second is a
-reasonable engineering belief. It is not evidence, and it is not labelled as
-though it were.
+What has been run, on what, and what has not been run at all. Supported means
+exercised with a recorded result. Expected to work means portable by
+construction and never executed; that is a reasonable engineering position, but
+it is not evidence and is not labelled as such here.
 
 ## Validated on this machine
 
@@ -16,66 +15,65 @@ though it were.
 | Electron | 33.4.11 |
 | DSH | 0.1.1-rc.2 @ `b150a551b8d465e31e418e1b2eaf5e79bbb7d28e` |
 
-One discrepancy, stated rather than smoothed over: `engines` in `package.json`
-declares `^22.19.0 || >=24.0.0`, and the machine this release candidate was
-validated on runs 22.18.0 — a patch below the declared floor. Everything passes
-there, but the declared contract is what CI holds to, so CI pins 22.19.0. If the
-floor is wrong it should be lowered deliberately; it has not been lowered to make
-a local run look compliant.
+One discrepancy worth stating rather than smoothing over: `engines` declares
+`^22.19.0 || >=24.0.0`, and this machine runs 22.18.0, a patch below the
+declared floor. Everything passes there, but CI pins 22.19.0 because the
+declared contract is what CI should hold to. If the floor is wrong it should be
+lowered deliberately; it has not been lowered to make a local run compliant.
 
 ## Status by platform
 
 | Platform | Web | Desktop | Gates | Basis |
 | --- | --- | --- | --- | --- |
-| Windows x64 | run | run | pass | executed here, repeatedly, this pass |
-| Linux x64 | not run | not run | not run | CI job defined, never yet executed |
-| macOS arm64 | not run | not run | not run | CI job defined, never yet executed |
-| macOS x64 | not run | not run | not run | CI job defined, never yet executed |
+| Windows x64 | run | run | pass | executed here, repeatedly |
+| Linux x64 | not run | not run | not run | CI job defined, never executed |
+| macOS arm64 | not run | not run | not run | CI job defined, never executed |
+| macOS x64 | not run | not run | not run | CI job defined, never executed |
 
-"Not run" is the honest word. The CI matrix in `.github/workflows/ci.yml`
-defines all three, and running it requires pushing to a remote — which this
-work is not permitted to do — so no Linux or macOS result exists to report.
+The CI matrix in `.github/workflows/ci.yml` defines all three. Running it needs
+a push to a remote, which this work does not do, so no Linux or macOS result
+exists to report.
 
 ## What makes the other platforms plausible
 
-Not proof. Reasons.
+Reasons, not proof.
 
-- `verify:portability` scans all shipped source under `packages/` and `apps/`
-  for drive letters, absolute POSIX paths, hardcoded `.exe`, kill-by-name,
-  hardcoded shells, backslash separators, and unguarded `HOME`/`USERPROFILE`.
-  It runs clean over 147 files. It found a real Windows-only defect in the
-  Desktop main process — hardcoded `G:/watch-manual` paths — which is now
-  derived from `app.getPath()`.
-- Every runtime path is built with `join()` from `node:path`, and every
-  application directory comes from Electron's own `app.getPath()`, which is
-  defined per platform by Electron rather than by us.
-- Nothing in the shipped tree spawns a shell or a platform binary.
-- The gate suite is pure Node with no native dependency outside Electron.
+`verify:portability` scans all shipped source under `packages/` and `apps/` for
+drive letters, absolute POSIX paths, hardcoded `.exe`, kill-by-name, hardcoded
+shells, backslash separators, and unguarded `HOME`/`USERPROFILE`. It runs clean
+over 149 files. It found a real Windows-only defect in the Desktop main process,
+where application data, DSH home and the log directory were hardcoded to
+`G:/watch-manual`; those now come from `app.getPath()`.
+
+Every runtime path is built with `join()` from `node:path`, every application
+directory comes from Electron's `app.getPath()`, nothing in the shipped tree
+spawns a shell or a platform binary, and the gate suite is pure Node with no
+native dependency outside Electron.
 
 ## Known platform-specific behaviour
 
-- **Windows.** Electron is a GUI-subsystem binary, so a launched Desktop
-  process writes nothing to stdout; the QA capture tool logs to a file instead.
-  Extra `argv` breaks Electron's entry resolution entirely, so the capture tool
-  is configured by environment variable.
-- **Linux.** Electron needs a display server. CI wraps the Desktop smoke in
-  `xvfb-run`. There is no platform gatekeeper, so a signature is for the person
-  verifying a download rather than for the operating system.
-- **macOS.** Signing alone has not been sufficient since Catalina: an
-  un-notarized build is refused by Gatekeeper. Notarization needs network
-  access and Apple's service, so it cannot be done offline, and hardened
-  runtime must be enabled or notarization is rejected.
+Windows: Electron is a GUI-subsystem binary, so a launched Desktop process
+writes nothing to stdout and the QA capture tool logs to a file instead. Extra
+`argv` breaks Electron's entry resolution, so the capture tool is configured by
+environment variable.
+
+Linux: Electron needs a display server, and CI wraps the Desktop smoke in
+`xvfb-run`. There is no platform gatekeeper, so a signature is for the person
+verifying a download rather than for the operating system.
+
+macOS: signing alone has not been sufficient since Catalina. An un-notarized
+build is refused by Gatekeeper, notarization needs network access to Apple's
+service, and hardened runtime must be enabled or notarization is rejected.
 
 ## External requirements, unmet
 
-These cannot be closed in this repository, and no amount of further work here
-will change that.
+These cannot be closed from inside this repository.
 
-| Requirement | Blocks | Why it cannot be met here |
+| Requirement | Blocks | Why |
 | --- | --- | --- |
-| macOS machine or runner | macOS Web/Desktop validation | no macOS available |
-| Linux machine or runner | Linux Web/Desktop validation | no Linux available; a container would not exercise native Desktop behaviour |
-| Push access to a remote | any CI result at all | pushing is explicitly out of scope for this work |
-| Windows Authenticode certificate | signed Windows release | a real certificate must be purchased; a generated one is worthless and is never created |
-| Apple Developer ID + notarization account | signed, notarized macOS release | requires a paid Apple Developer account and Apple's online service |
-| GPG signing key | signed Linux artifacts | requires a key the release owner controls |
+| macOS machine or runner | macOS Web/Desktop validation | none available |
+| Linux machine or runner | Linux Web/Desktop validation | none available; a container would not exercise native Desktop behaviour |
+| Push access to a remote | any CI result | pushing is out of scope for this work |
+| Windows Authenticode certificate | signed Windows release | must be purchased; a generated one proves nothing and is never created |
+| Apple Developer ID + notarization | signed, notarized macOS release | needs a paid Apple Developer account and Apple's online service |
+| GPG signing key | signed Linux artifacts | needs a key the release owner controls |

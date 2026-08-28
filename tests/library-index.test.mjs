@@ -410,7 +410,7 @@ test('indexing stays inside its roots', async t => {
   })
 
   await t.test('a path outside every root is refused', () => {
-    assert.equal(isWithinRoots('C:/Users/hp/.ssh/id_rsa', roots), false)
+    assert.equal(isWithinRoots('C:/Users/someone/.ssh/id_rsa', roots), false)
     assert.equal(isWithinRoots('/etc/passwd', roots), false)
   })
 
