@@ -65,6 +65,14 @@ jobs:
       - name: Install
         run: pnpm install --frozen-lockfile
 
+      # Required before the gates, and easy to forget: inventory generation
+      # and parity diffing read the pinned DSH source rather than a
+      # description of it, and a fresh clone has no checkout. Proven by a
+      # cold clone, where `npm run check` stopped here with "upstream
+      # checkout missing".
+      - name: Pinned upstream baseline
+        run: node scripts/upstream-sync.mjs
+
       # The whole gate suite, defined once in package.json.
       - name: Gates
         run: npm run check
