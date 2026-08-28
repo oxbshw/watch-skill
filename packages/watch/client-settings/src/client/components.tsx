@@ -22,6 +22,7 @@ import type { BrandTone } from '@watchskill/dsh-client-brand'
 // OCR worker, which imports `node:child_process` to supervise a real process.
 // Correct on the host, fatal in a browser bundle.
 import { OCR_ENGINES, ROLES } from '@watchskill/dsh-technology/descriptors'
+import { ReadinessList } from './readiness.js'
 import type { RoleId, TechnologyDescriptor } from '@watchskill/dsh-technology/descriptors'
 
 /** What a settings section is handed by DSH. */
@@ -473,8 +474,17 @@ export function VerificationSection(): ReactNode {
 
 /* ── 6. Diagnostics ─────────────────────────────────────────────────────── */
 
-/** Diagnostics. What is actually running, and what is not. */
-export function DiagnosticsSection(): ReactNode {
+/**
+ * Diagnostics. What is actually running, and what is not.
+ *
+ * The capability readiness list lives here rather than in the first-run notice.
+ * It needs the settings panel's width; the onboarding seat is 256 pixels wide,
+ * and putting this there once already spilled two thousand pixels out of a
+ * clipped sidebar column.
+ */
+export function DiagnosticsSection(
+  { openSection }: { readonly openSection?: ((id: string) => void) | undefined } = {},
+): ReactNode {
   return (
     <div style={T.page}>
       <p style={T.lead}>
@@ -482,6 +492,9 @@ export function DiagnosticsSection(): ReactNode {
         read from the running system it says so, rather than showing a plausible
         default.
       </p>
+      <h2 style={T.h2}>Capability readiness</h2>
+      <ReadinessList openSection={openSection} />
+
       <h2 style={T.h2}>Versions</h2>
       <div style={T.card}>
         <div style={T.meta}>

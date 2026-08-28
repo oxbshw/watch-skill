@@ -1,31 +1,51 @@
 {
   "name": "@watchskill/dsh-client-settings",
   "version": "0.1.0-preview.0",
-  "description": "Browser half: the Watch Technology & Capability Center — role bindings, engines, sources, memory, verification, diagnostics, about",
+  "description": "Browser half: the Watch Technology & Capability Center \u2014 role bindings, engines, sources, memory, verification, diagnostics, about",
   "type": "module",
   "license": "MIT",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
   "exports": {
-    ".": { "types": "./lib/index.d.ts", "default": "./lib/index.js" },
-    "./client": { "types": "./lib/client/index.d.ts", "default": "./lib/client.js" },
-    "./components": { "types": "./lib/client/components.d.ts", "default": "./lib/client/components.js" },
+    ".": {
+      "types": "./lib/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./client": {
+      "types": "./lib/client/index.d.ts",
+      "default": "./lib/client.js"
+    },
+    "./components": {
+      "types": "./lib/client/components.d.ts",
+      "default": "./lib/client/components.js"
+    },
     "./package.json": "./package.json"
   },
   "dsh": {
     "client": {
-      "inject": ["@deepseek-ai/dsh-client-ui-slots"],
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-slots",
+        "@deepseek-ai/dsh-client-ui-primitives"
+      ],
       "platform": "web"
     }
   },
-  "files": ["lib/**/*.js", "lib/**/*.js.map", "lib/**/*.d.ts"],
-  "scripts": { "bundle": "tsdown" },
+  "files": [
+    "lib/**/*.js",
+    "lib/**/*.js.map",
+    "lib/**/*.d.ts"
+  ],
+  "scripts": {
+    "bundle": "tsdown"
+  },
   "peerDependencies": {
     "@deepseek-ai/cordis": "catalog:",
+    "@deepseek-ai/dsh-client-ui-primitives": "catalog:",
     "react": "^18.2.0"
   },
   "devDependencies": {
     "@deepseek-ai/cordis": "catalog:",
+    "@deepseek-ai/dsh-client-ui-primitives": "catalog:",
     "@deepseek-ai/dsh-client-ui-slots": "catalog:",
     "@types/react": "~18.3.1",
     "react": "^18.2.0"

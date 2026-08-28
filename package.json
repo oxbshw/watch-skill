@@ -18,7 +18,7 @@
     "build": "node scripts/build.mjs",
     "test": "node --test --test-reporter spec \"tests/**/*.test.mjs\"",
     "smoke:install": "node scripts/install-smoke.mjs",
-    "check": "npm run inventory:check && npm run verify:parity && npm run verify:bundle && npm run verify:desktop && npm run verify:verdict && npm run status:check && npm run closure:check && npm run lint && npm run build && npm run verify:client && npm run sbom && npm run release:check && npm run test",
+    "check": "npm run inventory:check && npm run verify:parity && npm run verify:bundle && npm run verify:desktop && npm run verify:verdict && npm run verify:slots && npm run slots:check && npm run status:check && npm run closure:check && npm run lint && npm run build && npm run verify:client && npm run sbom && npm run release:check && npm run test",
     "verify:bundle": "node scripts/verify-bundle.mjs",
     "verify:client": "node scripts/verify-client-bundles.mjs",
     "sbom": "node scripts/gen-sbom.mjs",
@@ -37,7 +37,10 @@
     "release:check": "node scripts/gen-release-manifest.mjs --check",
     "smoke:upgrade": "node scripts/upgrade-smoke.mjs",
     "profile:manual": "node scripts/manual-profile.mjs",
-    "smoke:boot": "node scripts/boot-smoke.mjs"
+    "smoke:boot": "node scripts/boot-smoke.mjs",
+    "verify:slots": "node scripts/verify-slots.mjs",
+    "slots": "node scripts/gen-dsh-slots.mjs",
+    "slots:check": "node scripts/gen-dsh-slots.mjs --check"
   },
   "devDependencies": {
     "@deepseek-ai/cordis": "catalog:",

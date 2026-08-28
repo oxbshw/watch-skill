@@ -2,32 +2,36 @@
  * The first thing a person sees.
  *
  * What they saw before was "Add an API key to get started — configure the
- * official DeepSeek provider to start building". That screen is upstream's and
- * it is reasonable for upstream, but it misdescribes this product twice over:
- * it implies the workspace does nothing until a cloud provider is connected,
- * and it implies the only thing worth configuring is a chat model.
+ * official DeepSeek provider to start building". Reasonable for upstream, and
+ * wrong twice over for this product: it implies the workspace does nothing
+ * until a cloud provider is connected, and that the only thing worth
+ * configuring is a chat model. Perception, memory, evidence and verification
+ * run on this machine, and the agent model is one role among nine.
  *
- * Neither is true here. Watch's perception, memory, evidence and verification
- * layers are local. A useful installation can be assembled without any provider
- * at all, and the agent model is one role among nine.
+ * The first version of this replacement was a serious mistake, and the shape of
+ * it is worth recording so it is not repeated. `settings.onboarding` is not a
+ * modal seat. It renders inside the sidebar's foot area — 256 pixels wide — and
+ * the content is expected to wrap *itself* in a modal, which is exactly what
+ * upstream's own `WelcomeNotice` does. Rendering a twelve-row, 2400-pixel
+ * readiness dashboard straight into it did not merely look wrong: it spilled
+ * two thousand pixels out of a clipped 280px column and destroyed the sidebar.
  *
- * So this step goes first — `order: -50`, ahead of upstream's `deepseek-official`
- * at `order: 0` — and it leads with what the product is and what is actually
- * ready. It does not remove the DeepSeek step: that provider stays a perfectly
- * good choice, and skipping this screen lands on it as before.
+ * So there are two rules here now, and both are load-bearing:
  *
- * The readiness list is the honest part. Nothing on it is marked ready unless
- * it is, and on a machine where no capability check has run almost nothing is.
- * A first-run screen that greeted everyone with a column of green ticks would
- * be teaching people to ignore it by the second launch.
+ *   1. Wrap in DSH's own `Modal`, the way upstream does. Not a hand-rolled
+ *      overlay — that would duplicate the dimming, the focus handling and the
+ *      inert root that already exist.
+ *   2. Keep it short. A first-run notice is a paragraph and two buttons. The
+ *      full capability readiness list lives in Diagnostics, where there is
+ *      width for it and where somebody goes to look things up.
  *
  * @module @watchskill/dsh-client-settings/onboarding
  */
 
 import type { ReactNode } from 'react'
-import { PRODUCT_NAME, TAGLINE, tokenFor } from '@watchskill/dsh-client-brand'
-import { StatusChip } from './components.js'
-import type { ChipTone } from './components.js'
+import { Button, Modal } from '@deepseek-ai/dsh-client-ui-primitives'
+import { PRODUCT_NAME, tokenFor } from '@watchskill/dsh-client-brand'
+import { READINESS } from './readiness.js'
 
 /** What DSH hands an onboarding step. */
 export interface OnboardingProps {
@@ -37,235 +41,68 @@ export interface OnboardingProps {
 }
 
 /**
- * One capability, and how far it has actually got.
+ * The Watch first-run notice.
  *
- * `tone` is not decoration. `active` means this works right now; `caution`
- * means it needs a decision from you; `neutral` means nobody has looked yet.
- * Nothing is `success` — see the note on `ChipTone`.
+ * The count is computed from the same readiness table Diagnostics renders, so
+ * the number on this screen and the list behind it cannot disagree. It reads
+ * "4 of 12" rather than a row of ticks, because a first-run screen that
+ * congratulated everyone would be ignored by the second launch.
  */
-interface Readiness {
-  readonly name: string
-  readonly detail: string
-  readonly status: string
-  readonly tone: ChipTone
-  readonly section?: string
-}
-
-const READINESS: readonly Readiness[] = [
-  {
-    name: 'Watch Core',
-    detail: 'The engine that mints evidence and issues verdicts. Runs as a child of this workspace.',
-    status: 'Ready',
-    tone: 'active',
-    section: 'watch-diagnostics',
-  },
-  {
-    name: 'Memory',
-    detail: 'Durable, correctable memory with provenance on every record.',
-    status: 'Local',
-    tone: 'active',
-    section: 'watch-memory',
-  },
-  {
-    name: 'Verification',
-    detail: 'Deterministic checks against the world. Needs no model.',
-    status: 'Local',
-    tone: 'active',
-    section: 'watch-verification',
-  },
-  {
-    name: 'Browser',
-    detail: 'A supervised browser that acts and returns a receipt.',
-    status: 'Local',
-    tone: 'active',
-    section: 'watch-sources',
-  },
-  {
-    name: 'Agent Model',
-    detail: 'Plans, reasons and writes. Any provider DSH supports — DeepSeek is one of them.',
-    status: 'Not configured',
-    tone: 'caution',
-    section: 'watch-roles',
-  },
-  {
-    name: 'Visual Perception',
-    detail: 'Reads what is on screen or in a frame. A local model works.',
-    status: 'Not configured',
-    tone: 'caution',
-    section: 'watch-roles',
-  },
-  {
-    name: 'OCR',
-    detail: 'Text out of images and pages. A CPU engine is available.',
-    status: 'Not tested',
-    tone: 'neutral',
-    section: 'watch-engines',
-  },
-  {
-    name: 'ASR',
-    detail: 'Speech to text, with timings a citation can point at.',
-    status: 'Not configured',
-    tone: 'caution',
-    section: 'watch-roles',
-  },
-  {
-    name: 'Audio Understanding',
-    detail: 'Non-speech audio: events, tone, music.',
-    status: 'Not configured',
-    tone: 'caution',
-    section: 'watch-roles',
-  },
-  {
-    name: 'Speaker / Diarization',
-    detail: 'Who spoke, and when.',
-    status: 'Not configured',
-    tone: 'caution',
-    section: 'watch-roles',
-  },
-  {
-    name: 'Embeddings / Retrieval',
-    detail: 'Search over the library and over memory. Falls back to lexical matching.',
-    status: 'Not configured',
-    tone: 'caution',
-    section: 'watch-roles',
-  },
-  {
-    name: 'Capture',
-    detail: 'Screen, window, camera and microphone. Permission is asked at first use.',
-    status: 'Not requested',
-    tone: 'neutral',
-    section: 'watch-sources',
-  },
-]
-
-/** The Watch first-run screen. */
 export function WatchOnboarding({ complete, openSection }: OnboardingProps): ReactNode {
   const ready = READINESS.filter(item => item.tone === 'active').length
+  const finish = (): void => { complete?.() }
 
   return (
-    <div style={{ padding: '4px 2px 8px', maxWidth: '720px' }}>
-      <h2 style={{ fontSize: '20px', fontWeight: 600, margin: 0 }}>{PRODUCT_NAME}</h2>
-      <p style={{
-        fontSize: '15px',
-        margin: '6px 0 2px',
-        color: tokenFor('active'),
-        letterSpacing: '0.01em',
-      }}
-      >
-        See. Remember. Act. Verify.
-      </p>
-      <p style={{
-        fontSize: '13px', lineHeight: 1.6, margin: '10px 0 18px',
-        color: 'var(--dsw-alias-label-secondary)',
-      }}
-      >
-        {TAGLINE}
-        {' '}
-        Perception, memory, evidence and verification run on this machine. You can
-        start now and configure a provider whenever you want one — a chat model is
-        one role among nine, not the price of entry.
-      </p>
-
-      <div style={{
-        display: 'flex', alignItems: 'baseline', justifyContent: 'space-between',
-        margin: '0 0 8px',
-      }}
-      >
-        <h3 style={{
-          fontSize: '12px', fontWeight: 600, letterSpacing: '0.04em',
-          textTransform: 'uppercase', color: 'var(--dsw-alias-label-tertiary)', margin: 0,
+    <Modal open title={PRODUCT_NAME} onClose={finish} headless>
+      <div style={{ maxWidth: '420px', padding: '4px 2px' }}>
+        <h2 style={{ fontSize: '17px', fontWeight: 600, margin: '0 0 4px' }}>
+          {PRODUCT_NAME}
+        </h2>
+        <p style={{ fontSize: '14px', margin: '0 0 12px', color: tokenFor('active') }}>
+          See. Remember. Act. Verify.
+        </p>
+        <p style={{
+          fontSize: '13px', lineHeight: 1.6, margin: '0 0 12px',
+          color: 'var(--dsw-alias-label-secondary)',
         }}
         >
-          System readiness
-        </h3>
-        <span style={{ fontSize: '11px', color: 'var(--dsw-alias-label-tertiary)' }}>
-          {`${String(ready)} of ${String(READINESS.length)} ready`}
-        </span>
-      </div>
-
-      <div style={{
-        border: '1px solid var(--dsw-alias-border-l2)',
-        borderRadius: '10px', overflow: 'hidden',
-      }}
-      >
-        {READINESS.map((item, index) => (
-          <div
-            key={item.name}
-            style={{
-              display: 'flex', alignItems: 'flex-start', gap: '12px',
-              padding: '10px 14px',
-              borderTop: index === 0 ? 'none' : '1px solid var(--dsw-alias-border-l2)',
+          Perception, memory, evidence and verification run on this machine.
+          You can start now and connect a provider whenever you want one — a
+          chat model is one role among nine, not the price of entry.
+        </p>
+        <p style={{
+          fontSize: '13px', lineHeight: 1.6, margin: '0 0 16px',
+          color: 'var(--dsw-alias-label-secondary)',
+        }}
+        >
+          <strong style={{ color: tokenFor('active') }}>
+            {`${String(ready)} of ${String(READINESS.length)} capabilities are ready.`}
+          </strong>
+          {' '}
+          Watch Core, memory, verification and the browser work now. The rest are
+          unconfigured or untested, and Diagnostics lists exactly which.
+        </p>
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+          <Button
+            onClick={() => {
+              openSection?.('watch-roles')
+              finish()
             }}
           >
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: '13px', fontWeight: 500 }}>{item.name}</div>
-              <div style={{
-                fontSize: '12px', lineHeight: 1.5, marginTop: '2px',
-                color: 'var(--dsw-alias-label-tertiary)',
-              }}
-              >
-                {item.detail}
-              </div>
-            </div>
-            <span style={{ display: 'flex', gap: '8px', alignItems: 'center', flexShrink: 0 }}>
-              <StatusChip tone={item.tone}>{item.status}</StatusChip>
-              {item.section === undefined || openSection === undefined
-                ? null
-                : (
-                    <button
-                      type="button"
-                      onClick={() => { openSection(item.section as string) }}
-                      style={{
-                        background: 'none', border: 'none', cursor: 'pointer',
-                        fontSize: '11px', padding: '2px 4px',
-                        color: 'var(--dsw-alias-label-secondary)',
-                        textDecoration: 'underline',
-                      }}
-                    >
-                      Configure
-                    </button>
-                  )}
-            </span>
-          </div>
-        ))}
-      </div>
-
-      <div style={{ display: 'flex', gap: '10px', marginTop: '18px', flexWrap: 'wrap' }}>
-        <button
-          type="button"
-          onClick={() => { openSection?.('watch-roles') }}
-          style={{
-            padding: '8px 16px', borderRadius: '8px', cursor: 'pointer',
-            border: `1px solid ${tokenFor('active')}`,
-            background: 'transparent', color: tokenFor('active'), fontSize: '13px',
-          }}
+            Set up capabilities
+          </Button>
+          <Button variant="ghost" onClick={finish}>Continue</Button>
+        </div>
+        <p style={{
+          fontSize: '12px', lineHeight: 1.5, margin: '14px 0 0',
+          color: 'var(--dsw-alias-label-tertiary)',
+        }}
         >
-          Configure capabilities
-        </button>
-        <button
-          type="button"
-          onClick={() => { complete?.() }}
-          style={{
-            padding: '8px 16px', borderRadius: '8px', cursor: 'pointer',
-            border: '1px solid var(--dsw-alias-border-l2)',
-            background: 'transparent',
-            color: 'var(--dsw-alias-label-secondary)', fontSize: '13px',
-          }}
-        >
-          Continue to the workspace
-        </button>
+          Connecting a provider connects a model. It does not permit uploading
+          frames, audio, transcripts or evidence — that is a separate consent,
+          and it is off.
+        </p>
       </div>
-
-      <p style={{
-        fontSize: '12px', lineHeight: 1.55, margin: '16px 0 0',
-        color: 'var(--dsw-alias-label-tertiary)',
-        borderLeft: `2px solid ${tokenFor('active')}`, paddingLeft: '10px',
-      }}
-      >
-        Configuring a provider connects a model. It does not grant permission to
-        upload frames, audio, transcripts or evidence — cloud media egress is a
-        separate consent, and it is off.
-      </p>
-    </div>
+    </Modal>
   )
 }

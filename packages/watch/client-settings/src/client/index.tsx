@@ -28,6 +28,7 @@ import { WatchOnboarding } from './onboarding.js'
 
 export * from './components.js'
 export * from './onboarding.js'
+export * from './readiness.js'
 
 /** Services this half needs before it can register anything. */
 export const inject = ['slots']

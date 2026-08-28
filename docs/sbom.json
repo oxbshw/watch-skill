@@ -38,6 +38,13 @@
       "kind": "first_party"
     },
     {
+      "name": "@watchskill/dsh-client-settings",
+      "version": "0.1.0-preview.0",
+      "license": "MIT",
+      "path": "packages/watch/client-settings",
+      "kind": "first_party"
+    },
+    {
       "name": "@watchskill/dsh-contracts",
       "version": "0.1.0-preview.0",
       "license": "MIT",
@@ -2442,7 +2449,7 @@
     }
   ],
   "counts": {
-    "firstParty": 17,
+    "firstParty": 18,
     "thirdParty": 325,
     "modelWeights": 5,
     "distributableWeights": 3
