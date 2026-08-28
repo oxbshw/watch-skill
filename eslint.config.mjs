@@ -132,7 +132,15 @@ export default tseslint.config(
     languageOptions: {
       ecmaVersion: 2024,
       sourceType: 'module',
-      globals: { process: 'readonly', console: 'readonly', Buffer: 'readonly' },
+      // The Node globals these gates legitimately use. Enumerated rather than
+      // pulled from a globals package: the list is short, and a gate that
+      // reaches for something not on it should have to say so.
+      globals: {
+        process: 'readonly', console: 'readonly', Buffer: 'readonly',
+        setTimeout: 'readonly', clearTimeout: 'readonly', setInterval: 'readonly',
+        clearInterval: 'readonly', URL: 'readonly', TextEncoder: 'readonly',
+        fetch: 'readonly', AbortSignal: 'readonly',
+      },
     },
     rules: {
       // A gate that cannot print is a gate nobody can read the output of.

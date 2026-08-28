@@ -378,4 +378,18 @@ function abortOf(exec: { readonly signal?: AbortSignal }): { signal?: AbortSigna
   return exec.signal === undefined ? {} : { signal: exec.signal }
 }
 
-export default apply
+/**
+ * The plugin, as the Cordis loader resolves it.
+ *
+ * An object rather than the bare `apply` function, and that distinction is the
+ * whole reason this exists. The loader takes `module.default` and then reads
+ * `plugin.inject` off it — so a default export of the function alone leaves the
+ * named `inject` sitting on the module namespace where nothing looks, and the
+ * first `ctx.systemPrompt` access throws "cannot get property without inject"
+ * at boot.
+ *
+ * Nothing catches that before a real boot: the composed tree is correct, the
+ * install smoke passes, and the profile fails the moment it actually starts.
+ * `scripts/boot-smoke.mjs` is the gate that does catch it.
+ */
+export default { name: 'watch-tools', inject, apply }
