@@ -35,7 +35,7 @@ Baseline: DeepSeek Harness `0.1.1-rc.2 @ b150a551b8d465e31e418e1b2eaf5e79bbb7d28
 | Subsystem | Status | Owner | Tests |
 |---|---|---|---|
 | `bridge.transport` — JSON-RPC over stdio with deadlines, cancellation, correlation, idempotency | ✅ tested | watch-workspace | 3 |
-| `bundle.install` — Watch for DSH bundle installs into a stock profile | ✅ tested | watch-workspace | 2 |
+| `bundle.install` — Watch for DSH bundle installs into a stock profile | ✅ tested | watch-workspace | 3 |
 
 <details><summary>Known limitations</summary>
 
@@ -46,7 +46,8 @@ Baseline: DeepSeek Harness `0.1.1-rc.2 @ b150a551b8d465e31e418e1b2eaf5e79bbb7d28
 **`bundle.install`**
 
 - Watch ships as five shapes — Full, Media, Browser, Memory and Document — and every one is checked for baseline collisions, duplicate rows, missing modules and missing dependencies.
-- The install smoke runs the Full bundle against a stock profile. The four narrow variants are gated statically rather than installed one at a time.
+- The install smoke runs the Full bundle against a stock profile; the four narrow variants are gated statically rather than installed one at a time.
+- The upgrade smoke packs two genuinely different versions, installs A, writes representative state, upgrades to B, and reads the state back. Rollback B to A is supported here and leaves state intact.
 
 </details>
 
@@ -265,7 +266,7 @@ Baseline: DeepSeek Harness `0.1.1-rc.2 @ b150a551b8d465e31e418e1b2eaf5e79bbb7d28
 | Subsystem | Status | Owner | Tests |
 |---|---|---|---|
 | `ecosystem.sdk` — Third-party Watch capability developer path | ✅ tested | watch-workspace | 1 |
-| `security.offline-proof` — Socket-level proof that offline_only means zero non-loopback egress | ✅ tested | both | 1 |
+| `security.offline-proof` — Socket-level proof that offline_only means zero non-loopback egress | ✅ tested | both | 2 |
 | `supply-chain.metadata` — SBOM, licences, notices and model provenance gates | ✅ tested | watch-workspace | 3 |
 
 <details><summary>Known limitations</summary>
@@ -279,9 +280,11 @@ Baseline: DeepSeek Harness `0.1.1-rc.2 @ b150a551b8d465e31e418e1b2eaf5e79bbb7d28
 
 **`security.offline-proof`**
 
-- Implemented in watch-skill as tests/test_offline_egress.py: socket-level instrumentation asserting zero non-loopback egress for handshake, capability probes and verification, plus a guard proving the recorder itself works.
-- Paths here point at this repository only; the proof lives in the other repo.
-- Covers the Watch Core side. DSH provider routes and plugin update checks are not yet instrumented.
+- Full-stack on the Workspace side: provider and engine routing, memory retrieval and reranking, library search planning, update checks, capability detection, adapters, the Bridge transport, the SDK, tenancy and the release tooling all run under the sentinel.
+- The sentinel patches the floor — net.Socket.connect, net.connect, tls.connect and every dns resolver — rather than stubbing fetch, because a module reaching for undici or a raw socket goes around a fetch stub.
+- A violation kills the process rather than throwing, so it cannot be caught by the code that attempted it and reported as a handled network error.
+- The Watch Core side has its own socket-level proof in watch-skill tests/test_offline_egress.py; this covers the Node side.
+- DSH provider routes are exercised through the Workspace surfaces that would call them. Upstream Host code paths that no Watch surface reaches are not driven here.
 
 **`supply-chain.metadata`**
 

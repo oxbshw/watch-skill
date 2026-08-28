@@ -31,7 +31,8 @@
     "bench": "node --expose-gc scripts/bench.mjs",
     "bench:check": "node --expose-gc scripts/bench.mjs --check",
     "release:manifest": "node scripts/gen-release-manifest.mjs",
-    "release:check": "node scripts/gen-release-manifest.mjs --check"
+    "release:check": "node scripts/gen-release-manifest.mjs --check",
+    "smoke:upgrade": "node scripts/upgrade-smoke.mjs"
   },
   "devDependencies": {
     "@deepseek-ai/cordis": "catalog:",
