@@ -1,11 +1,11 @@
 {
   "name": "@watchskill/watch-desktop",
   "version": "0.1.0-preview.0",
-  "description": "Watch Desktop — an Electron shell around the same Workspace packages",
+  "description": "Watch Desktop \u2014 an Electron shell around the same Workspace packages",
   "type": "module",
   "private": true,
   "license": "MIT",
-  "main": "lib/main.js",
+  "main": "main.mjs",
   "exports": {
     ".": {
       "types": "./lib/index.d.ts",
@@ -14,7 +14,7 @@
     "./package.json": "./package.json"
   },
   "scripts": {
-    "start": "electron lib/main.js"
+    "start": "electron main.mjs"
   },
   "dependencies": {
     "@watchskill/dsh-contracts": "workspace:^",
