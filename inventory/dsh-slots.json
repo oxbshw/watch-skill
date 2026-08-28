@@ -1,0 +1,131 @@
+{
+  "generatedBy": "scripts/gen-dsh-slots.mjs",
+  "dshVersion": "0.1.1-rc.2",
+  "note": "Slot names DSH actually renders. Extracted from renderSlot() call sites in the pinned packages — the definition side. Registering into a name absent from this list is a silent no-op: it loads, it tests green, it never draws.",
+  "bundlesScanned": 362,
+  "slots": {
+    "conversation.chat.commandview": [
+      "dsh-client-ui-conversation"
+    ],
+    "conversation.chat.node": [
+      "dsh-client-ui-conversation"
+    ],
+    "conversation.composer.bar": [
+      "dsh-client-ui-conversation"
+    ],
+    "conversation.composer.dock": [
+      "dsh-client-ui-conversation"
+    ],
+    "conversation.details.tool": [
+      "dsh-client-ui-conversation"
+    ],
+    "conversation.hero.agentPreset": [
+      "dsh-client-ui-conversation"
+    ],
+    "conversation.hero.brand.mark": [
+      "dsh-client-ui-conversation"
+    ],
+    "conversation.hero.workspace": [
+      "dsh-client-ui-conversation"
+    ],
+    "conversation.hero.workspace.directoryFlow": [
+      "dsh-client-ui-workspace"
+    ],
+    "conversation.input.attachments": [
+      "dsh-client-ui-conversation"
+    ],
+    "conversation.input.dock": [
+      "dsh-client-ui-conversation"
+    ],
+    "conversation.input.left": [
+      "dsh-client-ui-conversation"
+    ],
+    "conversation.input.model": [
+      "dsh-client-ui-conversation"
+    ],
+    "conversation.input.overlay": [
+      "dsh-client-ui-conversation"
+    ],
+    "conversation.input.plan": [
+      "dsh-client-ui-conversation"
+    ],
+    "conversation.input.right": [
+      "dsh-client-ui-conversation"
+    ],
+    "conversation.message.images": [
+      "dsh-client-ui-conversation"
+    ],
+    "conversation.session": [
+      "dsh-client-ui-conversation"
+    ],
+    "conversation.session.header": [
+      "dsh-client-ui-conversation"
+    ],
+    "conversation.session.header.actions": [
+      "dsh-client-ui-conversation"
+    ],
+    "conversation.session.header.lineage": [
+      "dsh-client-ui-conversation"
+    ],
+    "conversation.session.header.utilities": [
+      "dsh-client-ui-conversation"
+    ],
+    "conversation.view": [
+      "dsh-client-ui-conversation"
+    ],
+    "settings.action": [
+      "dsh-client-ui-settings-general"
+    ],
+    "settings.close": [
+      "dsh-client-ui-settings-general"
+    ],
+    "settings.general.item": [
+      "dsh-client-ui-settings-general"
+    ],
+    "settings.header": [
+      "dsh-client-ui-settings-general"
+    ],
+    "settings.onboarding": [
+      "dsh-client-ui-settings-general"
+    ],
+    "settings.plugin.item": [
+      "dsh-client-ui-settings-plugins"
+    ],
+    "settings.plugins.tab": [
+      "dsh-client-ui-settings-plugins"
+    ],
+    "settings.section": [
+      "dsh-client-ui-settings-general"
+    ],
+    "settings.trigger": [
+      "dsh-client-ui-settings-general"
+    ],
+    "shell.overlay": [
+      "dsh-client-ui-layout"
+    ],
+    "sidebar.brand.mark": [
+      "dsh-client-ui-sidebar"
+    ],
+    "sidebar.brand.name": [
+      "dsh-client-ui-sidebar"
+    ],
+    "sidebar.footer.action": [
+      "dsh-client-ui-sidebar"
+    ],
+    "sidebar.settings": [
+      "dsh-client-ui-sidebar"
+    ],
+    "sidebar.workspaces": [
+      "dsh-client-ui-sidebar"
+    ],
+    "sidebar.workspaces.directoryFlow": [
+      "dsh-client-ui-workspace"
+    ],
+    "tool.call.toolview": [
+      "dsh-client-ui-tool"
+    ],
+    "tool.view.cordis": [
+      "dsh-client-ui-cordis"
+    ]
+  }
+}

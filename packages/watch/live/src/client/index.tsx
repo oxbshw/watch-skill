@@ -22,7 +22,10 @@ interface SlotService {
 /** Register the Live mode body. */
 export function apply(ctx: Context): void {
   const slots = (ctx as unknown as { slots: SlotService }).slots
-  slots.inject('workspace.live', () => {
-    slots.register({ name: 'workspace.live', id: 'watch-live-surface', order: 10 }, LiveSurface)
+  // Live is a product mode, so it registers as one of DSH's views. The session
+  // header turns the registered set into its own tab strip, which is why this
+  // is a view rather than a panel Watch would have to place and style itself.
+  slots.inject('conversation.view', () => {
+    slots.register({ name: 'conversation.view', id: 'live', label: 'Live', order: 30 }, LiveSurface)
   })
 }

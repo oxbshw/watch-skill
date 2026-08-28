@@ -68,8 +68,73 @@ function WatchAttribution(): ReactNode {
   )
 }
 
+/**
+ * The Watch aperture, as a data URI, for the browser tab.
+ *
+ * Inline for the same reason the mark is inline: it must be correct on the
+ * first paint of an offline profile, and a favicon that needs a network fetch
+ * is a favicon that is sometimes the old one.
+ */
+const FAVICON
+  = 'data:image/svg+xml,'
+  + encodeURIComponent(
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 18 18">'
+    + '<circle cx="9" cy="9" r="7.25" fill="none" stroke="%23E8A33D" stroke-width="1.6"/>'
+    + '<circle cx="9" cy="9" r="2.6" fill="%23E8A33D"/>'
+    + '</svg>',
+  ).replace(/%23/g, '#').replace(/#/g, '%23')
+
+/**
+ * Claim the document's identity: the tab title and the icon.
+ *
+ * These cannot be reached the way the visual slots are. The `<title>` and the
+ * icon link live in DSH's built HTML shell, which is a published artifact this
+ * distribution does not fork — so the product takes its name at runtime, the
+ * moment the brand plugin loads. The static title is only ever the value
+ * before hydration.
+ *
+ * The title is re-asserted on mutation because DSH's session layer writes the
+ * document title too. Without that, opening a session would quietly hand the
+ * tab back to the foundation's name.
+ */
+function claimDocumentIdentity(): () => void {
+  if (typeof document === 'undefined') return () => {}
+
+  const restoreTitle = document.title
+  const apply = (): void => {
+    if (document.title !== PRODUCT_NAME && !document.title.endsWith(` · ${PRODUCT_NAME}`)) {
+      document.title = document.title === '' || document.title === restoreTitle
+        ? PRODUCT_NAME
+        : `${document.title} · ${PRODUCT_NAME}`
+    }
+  }
+  apply()
+
+  const observer = new MutationObserver(apply)
+  const titleElement = document.querySelector('title')
+  if (titleElement !== null) observer.observe(titleElement, { childList: true })
+
+  let icon = document.querySelector<HTMLLinkElement>('link[rel~="icon"]')
+  const previousHref = icon?.getAttribute('href') ?? null
+  if (icon === null) {
+    icon = document.createElement('link')
+    icon.setAttribute('rel', 'icon')
+    document.head.append(icon)
+  }
+  icon.setAttribute('type', 'image/svg+xml')
+  icon.setAttribute('href', FAVICON)
+
+  return () => {
+    observer.disconnect()
+    document.title = restoreTitle
+    if (previousHref !== null) icon?.setAttribute('href', previousHref)
+  }
+}
+
 /** Occupy the generic brand slots with the Watch identity. */
 export function apply(ctx: Context): void {
+  ctx.effect(claimDocumentIdentity)
+
   const slots = (ctx as unknown as {
     slots: {
       inject(name: string, register: () => void): void

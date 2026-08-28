@@ -23,7 +23,12 @@ interface SlotService {
 /** Register the Library mode body. */
 export function apply(ctx: Context): void {
   const slots = (ctx as unknown as { slots: SlotService }).slots
-  slots.inject('workspace.library', () => {
-    slots.register({ name: 'workspace.library', id: 'watch-library-surface', order: 10 }, LibrarySurface)
+  // Library is a product mode. See the note in the Live surface: registering as
+  // a view means DSH renders the tab, not Watch.
+  slots.inject('conversation.view', () => {
+    slots.register(
+      { name: 'conversation.view', id: 'library', label: 'Library', order: 50 },
+      LibrarySurface,
+    )
   })
 }

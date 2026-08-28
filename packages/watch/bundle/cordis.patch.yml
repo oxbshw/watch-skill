@@ -62,8 +62,23 @@
         queryTimeoutMs: 120000
         verifyTimeoutMs: 60000
 
-    # The browser half. It is a `dsh.client` row, so the modules package scans
-    # it into the boot graph and serves its bundle under /plugins.
+    # The browser half. These are `dsh.client` rows, so the modules package
+    # scans them into the boot graph and serves their bundles under /plugins.
+    #
+    # Every one of them registers into a slot DSH itself renders. That is not a
+    # stylistic preference: `slots.register` accepts any name, so a registration
+    # into a slot nothing renders loads cleanly, passes its tests and draws
+    # nothing at all. `scripts/verify-slots.mjs` checks each name against
+    # `inventory/dsh-slots.json`, which is extracted from the pinned packages'
+    # own `renderSlot` call sites.
+
+    # The product identity. It fills the same generic brand slots the official
+    # row fills, and claims the document title and favicon at runtime — the
+    # HTML shell is a built DSH artifact and is not forked.
+    - id: watch-brand
+      name: '@watchskill/dsh-client-brand'
+
+    # Evidence: keyed tool views, plus the Compare mode.
     #
     # It reads what the conversation already carries and makes no Host call at
     # all, which is why it can render a verdict correctly even when the Bridge
@@ -72,6 +87,23 @@
     # simply render in DSH's generic tool card.
     - id: watch-client-evidence
       name: '@watchskill/dsh-client-evidence'
+
+    # The shell: the Watch mode, the sidebar section, the status strip in the
+    # session header, the sensory timeline and the composer panel.
+    - id: watch-workspace
+      name: '@watchskill/dsh-workspace'
+
+    # The Live mode.
+    - id: watch-live
+      name: '@watchskill/dsh-live'
+
+    # The Library mode.
+    - id: watch-library
+      name: '@watchskill/dsh-library'
+
+    # The Memory mode, and the "why was this remembered?" chip on a chat node.
+    - id: watch-client-memory
+      name: '@watchskill/dsh-client-memory'
 
     # Durable, correctable memory. `off` by default and deliberately so:
     # durable memory about a person is not something a deployment should
@@ -100,3 +132,24 @@
         inferredThreshold: 0.8
         tokenBudget: 600
         writeProjections: true
+
+# The official brand row, switched off.
+#
+# This is the single entry in the parity register marked
+# `intentionally_replaced`, and this is where the replacement takes effect.
+# Both halves are needed, and neither alone is enough:
+#
+#   - `renderSlot("sidebar.brand.mark", …, { fallback: <official mark> })` means
+#     an unfilled brand slot still draws DeepSeek's mark. Registering the Watch
+#     brand is what displaces the fallback.
+#   - `ui-brand-official` *also* registers into those slots. Left enabled, both
+#     marks would be drawn.
+#
+# `disabled: true` on a targeted id is upstream's own mechanism — the same one
+# `DSH_TELEMETRY_DISABLED` uses — so nothing here is patched or forked.
+#
+# Attribution is not what is being removed. It moves to `sidebar.footer.action`,
+# where the Watch brand plugin renders "Built on DeepSeek Harness · Extended by
+# Watch Skill" together with the independence disclosure, on every screen.
+- id: ui-brand-official
+  disabled: true

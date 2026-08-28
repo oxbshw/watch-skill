@@ -40,12 +40,16 @@ function readPatchRows(file) {
     const id = /^\s*-?\s*id:\s*(.+?)\s*$/.exec(line)
     if (id) {
       if (current) rows.push(current)
-      current = { id: id[1].replace(/^["']|["']$/g, ''), module: null }
+      current = { id: id[1].replace(/^["']|["']$/g, ''), module: null, disabled: false }
       continue
     }
     if (!current) continue
     const name = /^\s*name:\s*(.+?)\s*$/.exec(line)
     if (name) current.module = name[1].replace(/^["']|["']$/g, '')
+    // A row that only switches an existing one off. It names no module and
+    // targets a baseline id on purpose, so the two checks below skip it —
+    // and a third one, that it hits something real, applies instead.
+    if (/^\s*disabled:\s*true\s*$/.test(line)) current.disabled = true
   }
   if (current) rows.push(current)
   return rows
@@ -79,6 +83,19 @@ function checkPatch(label, patchFile, manifest, baseline, packages) {
   }
 
   for (const row of rows) {
+    if (row.disabled) {
+      // A disable row must land on something. `disabled: true` against an id no
+      // baseline carries is accepted by the Loader and does nothing at all —
+      // the same silent-no-op shape as registering into a slot that is never
+      // rendered, and just as invisible without a check for it.
+      if (!baseline.has(row.id)) {
+        problems.push(
+          `${label}: row "${row.id}" is disabled but matches no DSH baseline row, `
+          + 'so it switches nothing off',
+        )
+      }
+      continue
+    }
     if (baseline.has(row.id)) {
       problems.push(
         `${label}: row id "${row.id}" collides with a DSH baseline row — an overlay would replace `
@@ -95,6 +112,7 @@ function checkPatch(label, patchFile, manifest, baseline, packages) {
 
   const dependencies = new Set(Object.keys(manifest.dependencies ?? {}))
   for (const row of rows) {
+    if (row.disabled) continue
     if (row.module === null) {
       problems.push(`${label}: row "${row.id}" names no module, so the Loader has nothing to import`)
       continue
@@ -144,6 +162,15 @@ function main() {
       .map(row => row.id),
   )
   for (const row of rows) {
+    if (row.disabled) {
+      // See the note in checkPatch: a disable row targets a baseline id by
+      // design, and the failure worth catching is the opposite one — a disable
+      // that matches nothing and therefore switches nothing off.
+      if (!baseline.has(row.id)) {
+        problems.push(`row "${row.id}" is disabled but matches no DSH baseline row, so it switches nothing off`)
+      }
+      continue
+    }
     if (baseline.has(row.id)) {
       problems.push(
         `row id "${row.id}" collides with a DSH baseline row — an overlay would replace that row's `
@@ -160,6 +187,7 @@ function main() {
 
   const packages = workspacePackages()
   for (const row of rows) {
+    if (row.disabled) continue
     if (row.module === null) {
       problems.push(`row "${row.id}" names no module, so the Loader has nothing to import`)
       continue

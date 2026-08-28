@@ -22,11 +22,16 @@
     "README.md"
   ],
   "dependencies": {
-    "@watchskill/dsh-core-bridge": "workspace:^",
-    "@watchskill/dsh-tools": "workspace:^",
+    "@watchskill/dsh-client-brand": "workspace:^",
     "@watchskill/dsh-client-evidence": "workspace:^",
+    "@watchskill/dsh-client-memory": "workspace:^",
+    "@watchskill/dsh-core-bridge": "workspace:^",
+    "@watchskill/dsh-library": "workspace:^",
+    "@watchskill/dsh-live": "workspace:^",
     "@watchskill/dsh-memory": "workspace:^",
+    "@watchskill/dsh-technology": "workspace:^",
+    "@watchskill/dsh-tools": "workspace:^",
     "@watchskill/dsh-trajectory": "workspace:^",
-    "@watchskill/dsh-technology": "workspace:^"
+    "@watchskill/dsh-workspace": "workspace:^"
   }
 }

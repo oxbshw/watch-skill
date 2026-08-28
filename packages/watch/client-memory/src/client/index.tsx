@@ -32,6 +32,16 @@ export function apply(ctx: Context): void {
     slots.inject(name, () => { slots.register({ name, id, order }, component) })
   }
 
-  occupy('workspace.memory', 'watch-memory-workbench', MemoryWorkbench, 10)
-  occupy('message.footer', 'watch-why-remembered', WhyRememberedChip, 40)
+  // Memory is a product mode, registered as one of DSH's views so the session
+  // header renders its tab alongside the rest.
+  slots.inject('conversation.view', () => {
+    slots.register(
+      { name: 'conversation.view', id: 'memory', label: 'Memory', order: 40 },
+      MemoryWorkbench,
+    )
+  })
+  // The chip rides the chat node rather than the Memory surface, because the
+  // question it answers — "why does it think that?" — is asked while reading a
+  // reply, not while browsing a list.
+  occupy('conversation.chat.node', 'watch-why-remembered', WhyRememberedChip, 40)
 }

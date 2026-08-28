@@ -19,6 +19,7 @@ import type { ReactNode } from 'react'
 import { parseVerdict, parseAnswer } from '@watchskill/dsh-contracts'
 import { VerdictRow } from './VerdictRow.js'
 import { SourceAnswerRow } from './SourceAnswerRow.js'
+import { CompareView } from './CompareView.js'
 
 export { VerdictRow } from './VerdictRow.js'
 export { SourceAnswerRow } from './SourceAnswerRow.js'
@@ -110,4 +111,15 @@ export function apply(ctx: Context): void {
   }
   view('watch_verify', WatchVerifyView)
   view('watch_ask_source', WatchAskView)
+
+  // Compare is a product mode. It lives in this package rather than in the
+  // workspace shell because the thing it compares is evidence, and the rules
+  // about what a difference may and may not assert are already here: a
+  // comparison describes a divergence, it never mints a verdict of its own.
+  slots.inject('conversation.view', () => {
+    slots.register(
+      { name: 'conversation.view', id: 'compare', label: 'Compare', order: 60 },
+      CompareView,
+    )
+  })
 }

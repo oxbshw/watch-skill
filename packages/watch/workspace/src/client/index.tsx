@@ -5,6 +5,12 @@
  * upstream already declares — which is what keeps the Agent mode *being* DSH's
  * conversation rather than a reimplementation of it that drifts.
  *
+ * The slot names here are not free-form. A registration into a name that no
+ * DSH component renders is accepted silently: the plugin loads, its tests
+ * pass, and nothing is ever drawn. `scripts/verify-slots.mjs` checks every
+ * name in this file against `inventory/dsh-slots.json`, extracted from the
+ * pinned packages' own `renderSlot` call sites.
+ *
  * @module @watchskill/dsh-workspace/client
  */
 
@@ -50,12 +56,41 @@ export function apply(ctx: Context): void {
     slots.inject(name, () => { slots.register({ name, id, order }, component) })
   }
 
-  occupy('sidebar.nav', 'watch-sidebar', Sidebar, 10)
-  occupy('conversation.header', 'watch-session-header', SessionHeaderBar, 10)
-  occupy('conversation.header', 'watch-mode-switcher', ModeSwitcher, 20)
-  occupy('conversation.footer', 'watch-sensory-timeline', SensoryTimelineStrip, 30)
-  occupy('composer.extra', 'watch-composer', ComposerPanel, 10)
-  occupy('inspector.panel', 'watch-inspector', InspectorTabs, 10)
+  /**
+   * A product mode.
+   *
+   * `conversation.view` is DSH's view ledger, not merely a region: it renders
+   * `{ only: activeId }`, and the session header builds a real `role="tablist"`
+   * from the registered set whenever more than one view exists. So a mode is
+   * declared by registering here, and it arrives with upstream's keyboard
+   * handling, `aria-selected` and persisted selection already correct.
+   *
+   * This is why Watch ships no mode switcher of its own. `ModeSwitcher` stays
+   * exported for embedding and for its tests, but registering it would put a
+   * second control beside DSH's — a duplicate navigation system, which is
+   * precisely what this distribution may not build.
+   */
+  const mode = (id: string, label: string, component: unknown, order: number): void => {
+    slots.inject('conversation.view', () => {
+      slots.register({ name: 'conversation.view', id, label, order }, component)
+    })
+  }
+
+  // Agent is upstream's `chat` view and Trajectory is upstream's `trajectory`
+  // view; both are left exactly as they are. Watch contributes the rest, and
+  // the seven together are the product's modes. Live, Library, Memory and
+  // Compare are registered by the packages that own them.
+  mode('watch', 'Watch', WorkspaceShell, 20)
+
+  occupy('sidebar.workspaces', 'watch-sidebar', Sidebar, 10)
+  // The status strip goes in the header's utility region rather than beside
+  // the title: it is ambient state and must not crowd the session name.
+  occupy('conversation.session.header.utilities', 'watch-session-header', SessionHeaderBar, 10)
+  occupy('conversation.composer.dock', 'watch-sensory-timeline', SensoryTimelineStrip, 30)
+  occupy('conversation.composer.bar', 'watch-composer', ComposerPanel, 10)
+  // The inspector is an overlay rather than a permanent third column: DSH's
+  // layout owns the columns it has, and taking another would be a layout fork.
+  occupy('shell.overlay', 'watch-inspector', InspectorTabs, 10)
 }
 
-export { StatusBadge, WorkspaceShell }
+export { ModeSwitcher, StatusBadge, WorkspaceShell }
