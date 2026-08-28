@@ -81,10 +81,22 @@ const WINDOW_ICON = (() => {
   return existsSync(candidate) ? candidate : undefined
 })()
 
-/** Where the manual-test profile lives, and where to log. */
-const DSH_HOME = process.env.WATCH_DSH_HOME ?? 'G:/watch-manual/dsh-home'
-const LOG_DIR = process.env.WATCH_LOG_DIR ?? 'G:/watch-manual/logs'
-const APP_DATA = process.env.WATCH_APP_DATA ?? 'G:/watch-manual/desktop-appdata'
+/**
+ * Where the profile lives, where to log, and where state is kept.
+ *
+ * Derived from Electron's own paths rather than written down. These used to
+ * default to a directory on the machine this was developed on, which worked
+ * perfectly here and would have sent the app looking for a drive that does not
+ * exist on anybody else's computer — the worst place for a defect to first
+ * appear.
+ *
+ * `app.getPath` gives the right location per platform: AppData on Windows,
+ * ~/Library on macOS, ~/.config on Linux. The environment still overrides all
+ * three, which is what the manual-test profile uses.
+ */
+const APP_DATA = process.env.WATCH_APP_DATA ?? join(app.getPath('userData'), 'workspace')
+const DSH_HOME = process.env.WATCH_DSH_HOME ?? join(APP_DATA, 'dsh-home')
+const LOG_DIR = process.env.WATCH_LOG_DIR ?? app.getPath('logs')
 
 /** How long a capability the person invoked keeps its permission open. */
 const INTENT_TTL_MS = 30_000

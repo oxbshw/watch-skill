@@ -71,6 +71,7 @@ describe('the Watch tool surface', () => {
         'watch_capabilities',
         'watch_capture_capabilities',
         'watch_get_evidence',
+        'watch_library_search',
         'watch_list_sources',
         'watch_live_status',
         'watch_moment',

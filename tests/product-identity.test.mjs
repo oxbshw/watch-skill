@@ -308,12 +308,44 @@ test('capability truth in the product surfaces', async t => {
   const COMPONENTS = read('packages/watch/client-settings/src/client/components.tsx')
   const ONBOARDING = read('packages/watch/client-settings/src/client/onboarding.tsx')
 
-  await t.test('no engine is shown with a quality or speed number', () => {
-    // Nothing has been measured on this machine, so any figure would be
-    // invented. The row says so, and names the check that would produce one.
+  await t.test('a quality number appears only when it was measured', () => {
+    // This assertion used to read "no number anywhere", which was true while
+    // nothing had been measured and became false the moment something was. The
+    // property that survives is narrower and more useful: every figure on the
+    // screen must come from a real run, and the screen must still say nothing
+    // was measured when that is the case.
     assert.match(COMPONENTS, /Not measured on this machine/)
+    assert.match(COMPONENTS, /OCR_MEASURED/)
+    // No figure is typed into the component. Every one is read from the
+    // generated module, so a number cannot outlive the run that produced it.
     assert.doesNotMatch(COMPONENTS, /\d+(\.\d+)?\s*%\s*accuracy/i)
-    assert.doesNotMatch(COMPONENTS, /\bWER\b|\bCER\b/)
+    assert.doesNotMatch(COMPONENTS, /\bCER\s+0\.\d/)
+  })
+
+  await t.test('the benchmark is judged against thresholds it did not choose', () => {
+    // A threshold picked after seeing a result is a description of the result,
+    // not a threshold. These live in the qualification module and predate the
+    // run, and the report records where they came from.
+    const measured = JSON.parse(read('docs/ocr-benchmark.json'))
+    assert.equal(measured.measured, true)
+    assert.match(read('packages/watch/technology/src/ocr-qualification.ts'), /DEFAULT_THRESHOLDS/)
+    assert.match(String(measured.thresholdsSetBefore), /ocr-qualification\.ts/)
+    assert.equal(measured.thresholds.maxCer, 0.05)
+    assert.equal(measured.thresholds.minWordAccuracy, 0.95)
+  })
+
+  await t.test('an unqualified workload is reported, not averaged away', () => {
+    // One overall number would let a workload the engine cannot do at all hide
+    // behind the ones it can. Both outcomes have to be present, or the corpus
+    // is too easy to be evidence of anything.
+    const measured = JSON.parse(read('docs/ocr-benchmark.json'))
+    const workloads = Object.values(measured.byWorkload)
+    assert.ok(workloads.length >= 3, 'the results were collapsed into a single number')
+    assert.ok(
+      workloads.some(workload => workload.passesThresholds === false),
+      'every workload passed, which means nothing hard was measured',
+    )
+    assert.ok(workloads.some(workload => workload.passesThresholds === true))
   })
 
   await t.test('the engines section names how a check would be run', () => {
