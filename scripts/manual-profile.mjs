@@ -63,6 +63,26 @@ function run(command, args, options = {}) {
   return { status: result.status, stdout: result.stdout ?? '', stderr: result.stderr ?? '' }
 }
 
+/**
+ * Every Watch row the bundle declares, read from the patch itself.
+ *
+ * `- insert:` adds a row and a bare `- id:` targets one, so the ids that
+ * matter are the ones nested under the bundle's own plugin list. Deriving
+ * them means a row added to the bundle is checked without anyone
+ * remembering to update a list here.
+ */
+function watchRowIds() {
+  const patch = readFileSync(join(ROOT, 'packages', 'watch', 'bundle', 'cordis.patch.yml'), 'utf8')
+  const ids = []
+  for (const line of patch.split(/\r?\n/)) {
+    if (line.trim().startsWith('#')) continue
+    const match = /^\s+-\s+id:\s*(watch-[a-z-]+)\s*$/.exec(line)
+    if (match !== null && !ids.includes(match[1])) ids.push(match[1])
+  }
+  if (ids.length === 0) throw new Error('watch: the bundle declares no Watch rows')
+  return ids
+}
+
 function removeTree(target) {
   for (let attempt = 0; attempt < 10; attempt += 1) {
     try {
@@ -299,7 +319,13 @@ function main() {
   )
   if (dump.status !== 0) fail('the composed profile did not resolve', dump.stderr || dump.stdout)
 
-  const rows = ['watch-core-bridge', 'watch-tools', 'watch-client-evidence', 'watch-memory']
+  // Read out of the bundle rather than typed here.
+  //
+  // This was a hand-written list of four, and the bundle has ten. It would
+  // therefore have passed while five client packages were absent from the
+  // composed tree — which is exactly what happened once already, and is why
+  // a running Workspace looked like stock DSH with every gate green.
+  const rows = watchRowIds()
   const missing = rows.filter(row => !dump.stdout.includes(row))
   if (missing.length > 0) fail(`the composed profile is missing ${missing.join(', ')}`)
 
