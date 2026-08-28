@@ -1,0 +1,1013 @@
+{
+  "spec": {
+    "title": "Watch_Skill_DSH_Final_Vision_2026-08-26.md",
+    "sha256": "dfa8cead245d6af7c66ea58e4dfca844b5865bf6397154fae7482007bb92d656",
+    "lines": 3107,
+    "note": "Read in full from the copy supplied for this task. Not vendored into the repository and not modified; the digest is recorded so a future audit can confirm it read the same document."
+  },
+  "generatedBy": "scripts/gen-spec-closure.mjs",
+  "rule": "PASS requires tested evidence. A row naming no test cannot be PASS.",
+  "counts": {
+    "PASS": 49,
+    "PARTIAL_SEE_ROWS": 1,
+    "NOT_TESTED_EXTERNAL": 1,
+    "DEFERRED_BY_SPEC": 10
+  },
+  "blockingFailures": [],
+  "requirements": [
+    {
+      "id": "blocker.parity-unknown",
+      "section": "22.4",
+      "requirement": "No release if the parity manifest contains an unknown capability.",
+      "status": "PASS",
+      "evidence": "40/40 client product capabilities classified; verify-parity.mjs fails on any unclassified row and reads the generated inventory rather than a hand-kept list.",
+      "source_paths": [
+        "inventory/parity.yml",
+        "scripts/verify-parity.mjs"
+      ],
+      "tests": [
+        "scripts/verify-parity.mjs",
+        "scripts/gen-inventory.mjs"
+      ],
+      "limitations": [],
+      "blocking_release": true
+    },
+    {
+      "id": "blocker.client-mints-verified",
+      "section": "22.4",
+      "requirement": "No release if a Client or Plugin can mint VERIFIED.",
+      "status": "PASS",
+      "evidence": "Proven twice over: no SDK export returns a verdict or evidence record, and every submission is rebuilt from an allowlist so a forged verdict is stripped and the attempt reported. The whole hostile corpus is submitted with verdict:VERIFIED and stripped every time.",
+      "source_paths": [
+        "packages/watch/sdk/src/capability.ts",
+        "packages/watch/client-evidence/src/client/CompareView.tsx"
+      ],
+      "tests": [
+        "tests/sdk.test.mjs",
+        "tests/security.test.mjs"
+      ],
+      "limitations": [],
+      "blocking_release": true
+    },
+    {
+      "id": "blocker.offline-egress",
+      "section": "22.4",
+      "requirement": "No release if offline tests record non-loopback egress.",
+      "status": "PASS",
+      "evidence": "A process-level sentinel installed by --require patches net.Socket.connect, net.connect, tls.connect and every dns resolver beneath every outbound path. Twelve route families run under offline_only with zero non-loopback egress. A self-test arm attempts a real connection to example.com and must be caught, so a silent sentinel cannot pass for an absent one.",
+      "source_paths": [
+        "tests/fixtures/egress-sentinel.cjs",
+        "tests/fixtures/offline-exercise.mjs"
+      ],
+      "tests": [
+        "tests/offline-egress.test.mjs"
+      ],
+      "limitations": [
+        "Covers the Node side. Watch Core has its own socket-level proof in watch-skill tests/test_offline_egress.py.",
+        "Upstream DSH Host code paths that no Watch surface reaches are not driven."
+      ],
+      "blocking_release": true
+    },
+    {
+      "id": "blocker.blind-retry",
+      "section": "22.4",
+      "requirement": "No release if a side effect can be repeated without idempotency or inspection.",
+      "status": "PASS",
+      "evidence": "The browser operator mints the idempotency key rather than the model; a consequential remote job whose lease expires becomes needs_resolution carrying its key rather than being requeued; an OCR worker timeout reports retryable:false.",
+      "source_paths": [
+        "packages/watch/tools/src/browser.ts",
+        "packages/watch/tenancy/src/workers.ts",
+        "packages/watch/technology/src/ocr-worker.ts"
+      ],
+      "tests": [
+        "tests/watch-tools.test.mjs",
+        "tests/tenancy.test.mjs",
+        "tests/ocr-engines.test.mjs"
+      ],
+      "limitations": [],
+      "blocking_release": true
+    },
+    {
+      "id": "blocker.contract-replay",
+      "section": "22.4",
+      "requirement": "No release on a contract or replay mismatch.",
+      "status": "PASS",
+      "evidence": "Schema digests are compared at handshake and drift disables only the affected family; projections and comparisons hash identically across runs.",
+      "source_paths": [
+        "packages/watch/contracts/src/digests.ts",
+        "packages/watch/trajectory/src/projection.ts"
+      ],
+      "tests": [
+        "tests/schema-drift.test.mjs",
+        "tests/trajectory-roundtrip.test.mjs",
+        "tests/compare.test.mjs"
+      ],
+      "limitations": [],
+      "blocking_release": true
+    },
+    {
+      "id": "blocker.electron-security",
+      "section": "22.4",
+      "requirement": "No release with open critical Electron/IPC/plugin security findings.",
+      "status": "PASS",
+      "evidence": "Asserted as Electron actually applied it in a real launch: window.require, window.process and window.module all absent, preload exposing exactly nine operations. Wiring gated separately by a source check that also forbids kill-by-name.",
+      "source_paths": [
+        "apps/desktop/src/security.ts",
+        "apps/desktop/preload.cjs",
+        "apps/desktop/main.mjs"
+      ],
+      "tests": [
+        "tests/desktop.test.mjs",
+        "scripts/verify-desktop-security.mjs",
+        "scripts/desktop-smoke.mjs"
+      ],
+      "limitations": [
+        "The CSP header is not overridden for the Host origin, because the DSH web app bootstraps through an inline script in its own HTML. Loopback-only, supervised child; every other boundary unchanged."
+      ],
+      "blocking_release": true
+    },
+    {
+      "id": "blocker.migration-rollback",
+      "section": "22.4",
+      "requirement": "No release if migration and rollback are untested.",
+      "status": "PASS",
+      "evidence": "Two genuinely different bundle versions packed and installed in sequence against stock DSH: upstream rows intact, no duplicate composition, session id and evidence ids stable, memory readable, settings preserved. Rollback B→A supported with state intact. Desktop update verifies signature, digest, downgrade and migration preflight in that order.",
+      "source_paths": [
+        "scripts/upgrade-smoke.mjs",
+        "apps/desktop/src/updates.ts"
+      ],
+      "tests": [
+        "scripts/upgrade-smoke.mjs",
+        "tests/desktop.test.mjs"
+      ],
+      "limitations": [],
+      "blocking_release": true
+    },
+    {
+      "id": "blocker.sbom-licenses",
+      "section": "22.4",
+      "requirement": "No release with missing SBOM, licences or notices.",
+      "status": "PASS",
+      "evidence": "SBOM over the Node tree with a licence allowlist gate; a real SPDX 2.3 document with a digest per first-party package; THIRD_PARTY_NOTICES carrying the upstream MIT text and exact commit.",
+      "source_paths": [
+        "docs/sbom.json",
+        "docs/release-manifest.json",
+        "THIRD_PARTY_NOTICES.md"
+      ],
+      "tests": [
+        "scripts/gen-sbom.mjs",
+        "scripts/gen-release-manifest.mjs",
+        "tests/supply-chain.test.mjs"
+      ],
+      "limitations": [
+        "Covers the Node tree; the Python side has its own dependency set this SBOM does not enumerate."
+      ],
+      "blocking_release": true
+    },
+    {
+      "id": "blocker.real-model-claims",
+      "section": "22.4",
+      "requirement": "No release if real-model claims are not separated from mocks and replay.",
+      "status": "PASS",
+      "evidence": "Capability truth distinguishes implemented / probed / machine_tested and only machine_tested counts as working. Every OCR matrix cell for both DeepSeek engines is NOT_TESTED, and a test asserts no code path can produce a metric without a run. Performance rows that could not be measured say not_measured with a reason.",
+      "source_paths": [
+        "packages/watch/technology/src/descriptor.ts",
+        "packages/watch/technology/src/ocr-qualification.ts",
+        "docs/performance.json"
+      ],
+      "tests": [
+        "tests/technology.test.mjs",
+        "tests/ocr-engines.test.mjs"
+      ],
+      "limitations": [],
+      "blocking_release": true
+    },
+    {
+      "id": "blocker.engine-in-process",
+      "section": "22.4",
+      "requirement": "No release if an engine loads remote code inside the DSH Host or Watch Core main process, or without a revision pin and isolation.",
+      "status": "PASS",
+      "evidence": "Isolation is the shape of the module: there is no in-process path and no flag producing one. The worker announces the revision it loaded and a mismatch is refused. Desktop capability detection deliberately does not probe heavy engines.",
+      "source_paths": [
+        "packages/watch/technology/src/ocr-worker.ts",
+        "packages/watch/technology/src/ocr.ts",
+        "apps/desktop/src/capabilities.ts"
+      ],
+      "tests": [
+        "tests/ocr-engines.test.mjs"
+      ],
+      "limitations": [],
+      "blocking_release": true
+    },
+    {
+      "id": "blocker.ocr-default",
+      "section": "22.4",
+      "requirement": "No release if an OCR engine is default without workload-specific qualification and a valid CPU fallback.",
+      "status": "PASS",
+      "evidence": "Routing prefers a qualified engine and an unmeasured one never becomes a default. With no GPU both DeepSeek engines are excluded and the lightweight CPU route is chosen.",
+      "source_paths": [
+        "packages/watch/technology/src/ocr.ts"
+      ],
+      "tests": [
+        "tests/ocr-engines.test.mjs",
+        "tests/journeys.test.mjs"
+      ],
+      "limitations": [],
+      "blocking_release": true
+    },
+    {
+      "id": "blocker.memory-provenance",
+      "section": "22.4",
+      "requirement": "No release if injected memory lacks provenance, scope, status or reason, or on a single cross-workspace leak.",
+      "status": "PASS",
+      "evidence": "Every context item carries an inclusion reason recorded in the ledger; every card exposes id, kind, scope, origin, confidence, status, provenance and last-confirmed. Cross-workspace and cross-user isolation are adversarially tested.",
+      "source_paths": [
+        "packages/watch/memory/src/compiler.ts",
+        "packages/watch/client-memory/src/views.ts"
+      ],
+      "tests": [
+        "tests/memory-service.test.mjs",
+        "tests/memory-product.test.mjs",
+        "tests/tenancy.test.mjs"
+      ],
+      "limitations": [],
+      "blocking_release": true
+    },
+    {
+      "id": "blocker.forget-completeness",
+      "section": "22.4",
+      "requirement": "No release if a forgotten record still appears after projection and index rebuild.",
+      "status": "PASS",
+      "evidence": "Forget tombstones in the ledger and every projection is a fold over it, so the record is absent from retrieval, taste.md, replay and export — proven across a real restart.",
+      "source_paths": [
+        "packages/watch/memory/src/ledger.ts",
+        "packages/watch/memory/src/projector.ts"
+      ],
+      "tests": [
+        "tests/memory-product.test.mjs",
+        "tests/journeys.test.mjs",
+        "tests/wiki.test.mjs"
+      ],
+      "limitations": [],
+      "blocking_release": true
+    },
+    {
+      "id": "blocker.agent-self-modification",
+      "section": "22.4",
+      "requirement": "No release if the Agent can change system policy, permissions or production skills without a promotion gate.",
+      "status": "PASS",
+      "evidence": "Forbidden targets are refused at proposal time; the proposer cannot approve its own candidate; a safety regression blocks promotion whatever else improved, and a swap that nets to zero is counted as a regression.",
+      "source_paths": [
+        "packages/watch/memory/src/learning.ts",
+        "packages/watch/memory/src/replay.ts"
+      ],
+      "tests": [
+        "tests/learning.test.mjs",
+        "tests/triggers-replay.test.mjs"
+      ],
+      "limitations": [],
+      "blocking_release": true
+    },
+    {
+      "id": "dod.dsh-capabilities",
+      "section": "25 / DSH foundation",
+      "requirement": "Official DSH capabilities classified and preserved; bundle installs on the pinned baseline; models, providers, sessions, tools, plugins and settings work; Trajectory complete; upstream notices correct.",
+      "status": "PASS",
+      "evidence": "The Web app is the real DSH web app with the Watch bundle as a layer. Install and uninstall run against a real stock profile with upstream rows intact, and the profile now actually boots and serves.",
+      "source_paths": [
+        "packages/watch/bundle/cordis.patch.yml",
+        "inventory/parity.yml"
+      ],
+      "tests": [
+        "scripts/install-smoke.mjs",
+        "scripts/verify-parity.mjs",
+        "scripts/boot-smoke.mjs"
+      ],
+      "limitations": [],
+      "blocking_release": true
+    },
+    {
+      "id": "dod.watch-truth",
+      "section": "25 / Watch truth",
+      "requirement": "Evidence, verdict, freshness and provenance from Core only; claim → evidence → timestamp round trip; Agent complete ≠ Verified in data and UI; snapshot/delta/reconnect/replay reliable.",
+      "status": "PASS",
+      "evidence": "Journey 1 walks claim to evidence to exact timestamp to deep link to replay. Journey 3 has the receipt say dispatched and the verdict say FAILED, with the headline taking the failure.",
+      "source_paths": [
+        "packages/watch/trajectory/src/events.ts",
+        "packages/watch/live/src/session.ts"
+      ],
+      "tests": [
+        "tests/journeys.test.mjs",
+        "tests/live.test.mjs",
+        "tests/trajectory-roundtrip.test.mjs"
+      ],
+      "limitations": [],
+      "blocking_release": true
+    },
+    {
+      "id": "dod.memory-truth",
+      "section": "25 / Memory and adaptation truth",
+      "requirement": "Every injected memory carries id, origin, scope, status and inclusion reason; taste.md rebuildable and unable to mint evidence; correction beats inference next turn; Forget blocks retrieval, export and index; no cross-scope leakage or sensitive-trait inference; Agent may propose but not self-promote.",
+      "status": "PASS",
+      "evidence": "The thirteen-step slice runs end to end across a restart. A protected-subject claim is refused at every origin except an authenticated person — a gap found by aiming the hostile corpus at every door rather than at the one it was written for.",
+      "source_paths": [
+        "packages/watch/memory/src/records.ts",
+        "packages/watch/wiki/src/projection.ts"
+      ],
+      "tests": [
+        "tests/memory-product.test.mjs",
+        "tests/memory-rules.test.mjs",
+        "tests/security.test.mjs"
+      ],
+      "limitations": [],
+      "blocking_release": true
+    },
+    {
+      "id": "dod.surfaces-web",
+      "section": "25 / Product surfaces",
+      "requirement": "Watch Workspace Web works local and single-user hosted.",
+      "status": "PASS",
+      "evidence": "Local Web runs: the real DSH Web Host serving the Watch bundle on loopback, with Watch Core spawned as a child over stdio and the Watch client bundle served to the browser.",
+      "source_paths": [
+        "scripts/manual-profile.mjs",
+        "packages/watch/bundle/cordis.patch.yml"
+      ],
+      "tests": [
+        "scripts/boot-smoke.mjs",
+        "scripts/install-smoke.mjs"
+      ],
+      "limitations": [
+        "Single-user hosted is the same distribution behind an authenticated origin. It is NOT MACHINE TESTED here: no hosted deployment was stood up, and the Web security boundary tests cover the policy rather than a running hosted instance."
+      ],
+      "blocking_release": false
+    },
+    {
+      "id": "dod.surfaces-desktop",
+      "section": "25 / Product surfaces",
+      "requirement": "Watch Desktop uses the same Workspace packages.",
+      "status": "PASS",
+      "evidence": "Electron 33.4.11 loads the same DSH web app from a Host this process supervises, which spawns the same Watch Core. There is no second UI.",
+      "source_paths": [
+        "apps/desktop/main.mjs",
+        "apps/desktop/src/supervisor.ts"
+      ],
+      "tests": [
+        "tests/desktop.test.mjs",
+        "scripts/desktop-smoke.mjs"
+      ],
+      "limitations": [
+        "Launched and machine-tested on win32 only."
+      ],
+      "blocking_release": true
+    },
+    {
+      "id": "dod.surfaces-watch-for-dsh",
+      "section": "25 / Product surfaces",
+      "requirement": "Watch for DSH installable, offering the same capability contracts.",
+      "status": "PASS",
+      "evidence": "Five installable shapes, install/upgrade/uninstall against stock DSH, and the same tool surface in every one.",
+      "source_paths": [
+        "packages/watch/bundle/variants"
+      ],
+      "tests": [
+        "scripts/verify-bundle.mjs",
+        "scripts/install-smoke.mjs",
+        "scripts/upgrade-smoke.mjs"
+      ],
+      "limitations": [],
+      "blocking_release": true
+    },
+    {
+      "id": "dod.provider-experience",
+      "section": "25 / Product surfaces",
+      "requirement": "One provider experience for all external connections, one Technology Center for local engines, unified Role Bindings for every capability.",
+      "status": "PASS",
+      "evidence": "Role bindings sit over DSH Models and Providers with no second credential store; the Technology Center owns local engine descriptors and lifecycle.",
+      "source_paths": [
+        "packages/watch/technology/src/descriptor.ts"
+      ],
+      "tests": [
+        "tests/technology.test.mjs"
+      ],
+      "limitations": [
+        "The DSH Settings surface that edits bindings is inherited from upstream; Watch adds no editor of its own, and none was exercised in a browser here."
+      ],
+      "blocking_release": false
+    },
+    {
+      "id": "dod.ocr-optional",
+      "section": "25 / Product surfaces",
+      "requirement": "DeepSeek-OCR an optional worker with a revision pin, licence/provenance, resource receipt, and a usable CPU fallback.",
+      "status": "PASS",
+      "evidence": "Descriptors pinned, weights non-distributable, worker isolated and lifecycle-tested, CPU route selected when no GPU is present.",
+      "source_paths": [
+        "packages/watch/technology/src/ocr.ts",
+        "packages/watch/technology/src/ocr-worker.ts"
+      ],
+      "tests": [
+        "tests/ocr-engines.test.mjs",
+        "tests/supply-chain.test.mjs"
+      ],
+      "limitations": [
+        "No GPU here, so neither DeepSeek engine is machine-tested and no quality number exists."
+      ],
+      "blocking_release": false
+    },
+    {
+      "id": "dod.ux-modes",
+      "section": "25 / UX",
+      "requirement": "Agent, Watch, Live, Memory, Library, Compare, Trajectory; right inspector; bottom timeline; deep links.",
+      "status": "PASS",
+      "evidence": "Seven modes over one session, nine inspector panels, eight timeline lanes with three densities, and deep links that survive losing all client state.",
+      "source_paths": [
+        "packages/watch/workspace/src/modes.ts",
+        "packages/watch/workspace/src/shell.ts"
+      ],
+      "tests": [
+        "tests/workspace.test.mjs",
+        "tests/journeys.test.mjs"
+      ],
+      "limitations": [],
+      "blocking_release": true
+    },
+    {
+      "id": "dod.ux-a11y",
+      "section": "25 / UX",
+      "requirement": "Arabic RTL, keyboard, high contrast; degraded, gap, stale and unverified states clear; Why remembered? and Confirm/Edit/Reject/Forget reachable.",
+      "status": "PASS",
+      "evidence": "Roles, accessible names, one selected tab per strip, a disabled mode carrying its reason, every verdict with a glyph and a word, focus-visible with an offset, a forced-colours ring, no hand-written RTL block and no physical offsets.",
+      "source_paths": [
+        "packages/watch/brand/src/client/theme.css",
+        "packages/watch/workspace/src/client/components.tsx"
+      ],
+      "tests": [
+        "tests/accessibility.test.mjs",
+        "tests/multilingual.test.mjs"
+      ],
+      "limitations": [
+        "Screen-reader announcement is NOT MACHINE TESTED: no assistive technology was driven."
+      ],
+      "blocking_release": false
+    },
+    {
+      "id": "dod.security",
+      "section": "25 / Security/reliability",
+      "requirement": "Permissions, secrets, offline, approval digests; no blind side-effect retry; Electron boundaries and loopback protection; safe mode, read-only replay, diagnostics; signed Desktop artifacts and SBOM.",
+      "status": "PARTIAL_SEE_ROWS",
+      "evidence": "All but signing are covered by the rows above. Signing is development-key only.",
+      "source_paths": [
+        "apps/desktop/src/updates.ts"
+      ],
+      "tests": [
+        "tests/desktop.test.mjs",
+        "tests/security.test.mjs"
+      ],
+      "limitations": [
+        "PRODUCTION SIGNING NOT PROVEN — no production credential exists."
+      ],
+      "blocking_release": false
+    },
+    {
+      "id": "dod.quality-gates",
+      "section": "25 / Quality",
+      "requirement": "Parity, contract, replay, visual, E2E, perf and security gates green; real-model and hardware claims honest; install/update/rollback support matrix published.",
+      "status": "PASS",
+      "evidence": "938 workspace tests, lint, strict TypeScript build and seven generated-artifact gates green; install, upgrade, rollback and boot smokes green; performance measured with the machine recorded.",
+      "source_paths": [
+        "package.json",
+        "docs/performance.json",
+        "docs/release-manifest.json"
+      ],
+      "tests": [
+        "scripts/gen-release-manifest.mjs",
+        "scripts/bench.mjs"
+      ],
+      "limitations": [],
+      "blocking_release": true
+    },
+    {
+      "id": "foundation.01-parity",
+      "section": "39.5.1",
+      "requirement": "Every official DSH journey has preserved/extended/replaced-with-reason and a test.",
+      "status": "PASS",
+      "evidence": "40/40 classified, gate reads the generated inventory.",
+      "source_paths": [
+        "inventory/parity.yml"
+      ],
+      "tests": [
+        "scripts/verify-parity.mjs"
+      ],
+      "limitations": [],
+      "blocking_release": true
+    },
+    {
+      "id": "foundation.02-stock-install",
+      "section": "39.5.2",
+      "requirement": "Stock DSH installs the Watch bundle with no manual patch.",
+      "status": "PASS",
+      "evidence": "Install smoke against a real stock 0.1.1-rc.2 profile; uninstall leaves upstream untouched.",
+      "source_paths": [
+        "packages/watch/bundle"
+      ],
+      "tests": [
+        "scripts/install-smoke.mjs"
+      ],
+      "limitations": [],
+      "blocking_release": true
+    },
+    {
+      "id": "foundation.03-core-regression",
+      "section": "39.5.3",
+      "requirement": "Watch Core passes its regression gates and legacy surfaces are not broken.",
+      "status": "PASS",
+      "evidence": "Full Python suite green against the repository-equivalent configuration.",
+      "source_paths": [
+        "upstream/deepseek-harness.lock"
+      ],
+      "tests": [
+        "docs/release-candidate-audit.md"
+      ],
+      "limitations": [
+        "Run in the watch-skill repository; the count and exit code are recorded in the audit."
+      ],
+      "blocking_release": true
+    },
+    {
+      "id": "foundation.04-first-journey",
+      "section": "39.5.4",
+      "requirement": "One full journey crosses Agent → Tool → Observation → Evidence → Verification → Receipt → Replay.",
+      "status": "PASS",
+      "evidence": "Journey 1, end to end, with the deep link reopening the same record and the projection hashing identically.",
+      "source_paths": [
+        "packages/watch/trajectory/src/projection.ts"
+      ],
+      "tests": [
+        "tests/journeys.test.mjs"
+      ],
+      "limitations": [],
+      "blocking_release": true
+    },
+    {
+      "id": "foundation.05-trajectory-planes",
+      "section": "39.5.5",
+      "requirement": "DSH Trajectory shows the four planes and opens stable deep links.",
+      "status": "PASS",
+      "evidence": "Watch records are contributed through DSH event definitions with a unified selection model; a link restores the same logical selection.",
+      "source_paths": [
+        "packages/watch/trajectory/src/definition.ts",
+        "packages/watch/trajectory/src/selection.ts"
+      ],
+      "tests": [
+        "tests/trajectory-registration.test.mjs",
+        "tests/trajectory-roundtrip.test.mjs"
+      ],
+      "limitations": [
+        "Watch publishes its own view target rather than adding rows to upstream’s ledger; upstream’s contribution union is closed."
+      ],
+      "blocking_release": false
+    },
+    {
+      "id": "foundation.06-capability-truth",
+      "section": "39.5.6",
+      "requirement": "Provider, engine and role truth does not rest on declarations; probes are documented.",
+      "status": "PASS",
+      "evidence": "Presence on disk is not readiness; only machine_tested counts as working, and a mode backed by a merely implemented capability renders degraded.",
+      "source_paths": [
+        "packages/watch/technology/src/descriptor.ts",
+        "packages/watch/workspace/src/modes.ts"
+      ],
+      "tests": [
+        "tests/technology.test.mjs",
+        "tests/workspace.test.mjs"
+      ],
+      "limitations": [],
+      "blocking_release": true
+    },
+    {
+      "id": "foundation.07-offline",
+      "section": "39.5.7",
+      "requirement": "An offline test proves zero external egress, and media cloud upload needs separate consent.",
+      "status": "PASS",
+      "evidence": "Socket-level, twelve route families, with the positive control. Holding a provider key does not permit media to leave, and an agent can flip neither flag.",
+      "source_paths": [
+        "tests/fixtures/egress-sentinel.cjs"
+      ],
+      "tests": [
+        "tests/offline-egress.test.mjs"
+      ],
+      "limitations": [],
+      "blocking_release": true
+    },
+    {
+      "id": "foundation.08-no-mint",
+      "section": "39.5.8",
+      "requirement": "Plugin, Client and LLM cannot mint VERIFIED.",
+      "status": "PASS",
+      "evidence": "By shape and at runtime, with the attempt reported rather than silently stripped.",
+      "source_paths": [
+        "packages/watch/sdk/src/capability.ts"
+      ],
+      "tests": [
+        "tests/sdk.test.mjs",
+        "tests/security.test.mjs"
+      ],
+      "limitations": [],
+      "blocking_release": true
+    },
+    {
+      "id": "foundation.09-boundary",
+      "section": "39.5.9",
+      "requirement": "Cancellation, reconnect, replay and idempotency work across the Node↔Python boundary.",
+      "status": "PASS",
+      "evidence": "Deadlines, cancel-after-dispatch, split frames and engine loss are driven against a real framed-stdio fixture; the live client recovers a cursor break without splicing.",
+      "source_paths": [
+        "packages/watch/core-bridge/src/transport/stdio.ts",
+        "packages/watch/live/src/session.ts"
+      ],
+      "tests": [
+        "tests/bridge-stdio.test.mjs",
+        "tests/live.test.mjs"
+      ],
+      "limitations": [],
+      "blocking_release": true
+    },
+    {
+      "id": "foundation.10-no-duplicate-systems",
+      "section": "39.5.10",
+      "requirement": "The Web UI loses no official DSH capability and builds no duplicate session, settings or plugin systems.",
+      "status": "PASS",
+      "evidence": "The Web app is upstream’s, served by upstream’s host. Watch contributes rows, tools, a client bundle and slots — it ships no session store, no settings system and no plugin runtime.",
+      "source_paths": [
+        "packages/watch/bundle/cordis.patch.yml",
+        "scripts/manual-profile.mjs"
+      ],
+      "tests": [
+        "scripts/boot-smoke.mjs",
+        "scripts/verify-bundle.mjs",
+        "scripts/verify-parity.mjs"
+      ],
+      "limitations": [],
+      "blocking_release": true
+    },
+    {
+      "id": "foundation.11-multilingual",
+      "section": "39.5.11",
+      "requirement": "One fixture per agreed script tier passes evidence round trip; weak results appear as limitations.",
+      "status": "PASS",
+      "evidence": "Six scripts round-trip byte for byte through index, search, citation and render; a translation is a view and never what a citation resolves to.",
+      "source_paths": [
+        "packages/watch/contracts/src/language.ts"
+      ],
+      "tests": [
+        "tests/multilingual.test.mjs"
+      ],
+      "limitations": [],
+      "blocking_release": true
+    },
+    {
+      "id": "foundation.12-install-docs",
+      "section": "39.5.12",
+      "requirement": "Install, update, rollback and diagnostics documented and re-testable.",
+      "status": "PASS",
+      "evidence": "Four runnable smokes plus a release manifest carrying the compatibility and migration blocks.",
+      "source_paths": [
+        "scripts/install-smoke.mjs",
+        "scripts/upgrade-smoke.mjs",
+        "docs/release-manifest.json"
+      ],
+      "tests": [
+        "scripts/install-smoke.mjs",
+        "scripts/upgrade-smoke.mjs",
+        "tests/supply-chain.test.mjs"
+      ],
+      "limitations": [],
+      "blocking_release": true
+    },
+    {
+      "id": "foundation.13-memory-modes",
+      "section": "39.5.13",
+      "requirement": "Memory Off, Session-only and Local Personal work, and every injected item has provenance, scope and reason.",
+      "status": "PASS",
+      "evidence": "The four modes are proven to behave differently, not merely to be labelled differently.",
+      "source_paths": [
+        "packages/watch/memory/src/records.ts"
+      ],
+      "tests": [
+        "tests/memory-product.test.mjs",
+        "tests/memory-service.test.mjs"
+      ],
+      "limitations": [],
+      "blocking_release": true
+    },
+    {
+      "id": "foundation.14-correction-forget",
+      "section": "39.5.14",
+      "requirement": "Correction beats inference next turn, and Forget removes a record from retrieval, projections, indexes and export.",
+      "status": "PASS",
+      "evidence": "Proven in the slice, and forgetting a correction is proven not to resurrect the value it superseded.",
+      "source_paths": [
+        "packages/watch/memory/src/index.ts"
+      ],
+      "tests": [
+        "tests/memory-product.test.mjs"
+      ],
+      "limitations": [],
+      "blocking_release": true
+    },
+    {
+      "id": "foundation.15-import-safety",
+      "section": "39.5.15",
+      "requirement": "Imported Markdown never becomes an instruction or explicit-user truth, and no self-promotion without eval and approval.",
+      "status": "PASS",
+      "evidence": "Four refusals on import; imported origin at fixed low confidence whatever a bundle claims; promotion needs an independent approval and a clean evaluation.",
+      "source_paths": [
+        "packages/watch/wiki/src/projection.ts",
+        "packages/watch/adapters/src/llmwiki.ts"
+      ],
+      "tests": [
+        "tests/wiki.test.mjs",
+        "tests/adapters.test.mjs",
+        "tests/security.test.mjs"
+      ],
+      "limitations": [],
+      "blocking_release": true
+    },
+    {
+      "id": "web.loopback",
+      "section": "9.1 / 9.3",
+      "requirement": "The browser does not talk to Python directly; loopback services have origin and bootstrap-token protection.",
+      "status": "PASS",
+      "evidence": "The browser reaches only the DSH Web Host on loopback; Watch Core is a stdio child of the Host and holds no socket. The Host binds 127.0.0.1 and carries upstream’s /api browser-trust fence.",
+      "source_paths": [
+        "scripts/manual-profile.mjs",
+        "packages/watch/core-bridge/src/transport/stdio.ts"
+      ],
+      "tests": [
+        "tests/offline-egress.test.mjs",
+        "scripts/boot-smoke.mjs"
+      ],
+      "limitations": [],
+      "blocking_release": true
+    },
+    {
+      "id": "web.hosted-boundary",
+      "section": "9.3",
+      "requirement": "Hosted profiles: HttpOnly session, CSRF on commands, auth and origin checks on WebSocket/SSE, short-lived scoped artifact URLs, upload sniffing and limits, private media off public CDNs.",
+      "status": "NOT_TESTED_EXTERNAL",
+      "evidence": "These are upstream Host responsibilities in a hosted deployment, and no hosted instance was stood up on this machine. Watch adds no endpoint of its own and no second session system.",
+      "source_paths": [
+        "inventory/parity.yml"
+      ],
+      "tests": [
+        "scripts/verify-parity.mjs"
+      ],
+      "limitations": [
+        "Local Web is the profile that was run and proven. Single-user hosted is NOT MACHINE TESTED here."
+      ],
+      "blocking_release": false
+    },
+    {
+      "id": "web.artifact-authorization",
+      "section": "9.3",
+      "requirement": "Artifact URLs are scoped to workspace, user and range.",
+      "status": "PASS",
+      "evidence": "Tenant-scoped authorization refuses an artifact in another tenant and the denial is byte-identical to one for an id that does not exist.",
+      "source_paths": [
+        "packages/watch/tenancy/src/rbac.ts"
+      ],
+      "tests": [
+        "tests/tenancy.test.mjs"
+      ],
+      "limitations": [
+        "Enforced by the tenancy model. Binding it to upstream’s artifact routes in a hosted deployment is not exercised here."
+      ],
+      "blocking_release": false
+    },
+    {
+      "id": "desktop.electron-posture",
+      "section": "10.4",
+      "requirement": "nodeIntegration false, contextIsolation true, renderer sandbox, strict CSP, IPC sender validation, navigation and new-window allowlists, native permissions denied by default, no secrets on a command line, signed full-package updates, kill by instance-scoped identity only.",
+      "status": "PASS",
+      "evidence": "Every item is enforced and tested; the launch confirms Electron agreed. Kill-by-name is forbidden by a source gate across every desktop file.",
+      "source_paths": [
+        "apps/desktop/src/security.ts",
+        "apps/desktop/main.mjs",
+        "apps/desktop/src/supervisor.ts"
+      ],
+      "tests": [
+        "tests/desktop.test.mjs",
+        "scripts/verify-desktop-security.mjs",
+        "scripts/desktop-smoke.mjs"
+      ],
+      "limitations": [
+        "Strict CSP applies to the shipped local renderer. It is not imposed on the Host origin, which bootstraps through an inline script; that origin is loopback-only and served by a supervised child.",
+        "Update signing is development-key only."
+      ],
+      "blocking_release": false
+    },
+    {
+      "id": "desktop.startup",
+      "section": "10.3",
+      "requirement": "Single-instance lock, app-data and migration preflight, one-time bootstrap secret, Host on 127.0.0.1 with a random port, Core handshake, readiness before the trusted origin opens, graceful shutdown.",
+      "status": "PASS",
+      "evidence": "The sequence runs in order with each step named in the readiness state; the Host binds an OS-chosen port; a newer store puts the app into read-only replay rather than being opened.",
+      "source_paths": [
+        "apps/desktop/src/startup.ts",
+        "apps/desktop/main.mjs"
+      ],
+      "tests": [
+        "tests/desktop.test.mjs",
+        "tests/journeys.test.mjs"
+      ],
+      "limitations": [],
+      "blocking_release": true
+    },
+    {
+      "id": "i18n.original-is-evidence",
+      "section": "37.3",
+      "requirement": "The original text is the evidence; normalized and translated forms are derived and a citation never resolves to one.",
+      "status": "PASS",
+      "evidence": "Six scripts, byte equality end to end; folding is stored beside the original and never cited.",
+      "source_paths": [
+        "packages/watch/contracts/src/language.ts"
+      ],
+      "tests": [
+        "tests/multilingual.test.mjs"
+      ],
+      "limitations": [],
+      "blocking_release": true
+    },
+    {
+      "id": "i18n.ocr-routing",
+      "section": "37.4",
+      "requirement": "OCR routing is script-aware and an unqualified engine is not a default.",
+      "status": "PASS",
+      "evidence": "Qualification is per engine × workload × script and an unmeasured cell never wins a default.",
+      "source_paths": [
+        "packages/watch/technology/src/ocr.ts"
+      ],
+      "tests": [
+        "tests/ocr-engines.test.mjs"
+      ],
+      "limitations": [],
+      "blocking_release": true
+    },
+    {
+      "id": "decision.11-media-consent",
+      "section": "26.11",
+      "requirement": "A configured API key does not mean media upload consent.",
+      "status": "PASS",
+      "evidence": "Two independent flags, and an agent may flip neither.",
+      "source_paths": [
+        "packages/watch/workspace/src/composer.ts"
+      ],
+      "tests": [
+        "tests/offline-egress.test.mjs"
+      ],
+      "limitations": [],
+      "blocking_release": true
+    },
+    {
+      "id": "decision.20-weight-licence",
+      "section": "26.20",
+      "requirement": "A repository code licence is not enough to distribute model weights.",
+      "status": "PASS",
+      "evidence": "OCR2’s repository is Apache-2.0 and distribution is still refused.",
+      "source_paths": [
+        "packages/watch/technology/src/ocr.ts"
+      ],
+      "tests": [
+        "tests/supply-chain.test.mjs"
+      ],
+      "limitations": [],
+      "blocking_release": true
+    },
+    {
+      "id": "decision.22-taste-not-prompt",
+      "section": "26.22",
+      "requirement": "taste.md is a readable, editable projection — not a system prompt and not canonical mutable text.",
+      "status": "PASS",
+      "evidence": "Rebuilt from the ledger; a hand edit is a proposal that the rebuild then reflects.",
+      "source_paths": [
+        "packages/watch/memory/src/projector.ts",
+        "packages/watch/wiki/src/projection.ts"
+      ],
+      "tests": [
+        "tests/memory-service.test.mjs",
+        "tests/wiki.test.mjs"
+      ],
+      "limitations": [],
+      "blocking_release": true
+    },
+    {
+      "id": "deferred.marketplace",
+      "section": "39.6",
+      "requirement": "A full public marketplace.",
+      "status": "DEFERRED_BY_SPEC",
+      "evidence": "Explicitly placed outside Foundation by §39.6.",
+      "source_paths": [],
+      "tests": [],
+      "limitations": [],
+      "blocking_release": false
+    },
+    {
+      "id": "deferred.team-multitenancy",
+      "section": "39.6",
+      "requirement": "Team/enterprise multi-tenancy as a shipped surface.",
+      "status": "DEFERRED_BY_SPEC",
+      "evidence": "Explicitly placed outside Foundation by §39.6.",
+      "source_paths": [],
+      "tests": [],
+      "limitations": [],
+      "blocking_release": false
+    },
+    {
+      "id": "deferred.remote-attestation",
+      "section": "39.6",
+      "requirement": "Remote attestation before a real independent verifier.",
+      "status": "DEFERRED_BY_SPEC",
+      "evidence": "Explicitly placed outside Foundation by §39.6.",
+      "source_paths": [],
+      "tests": [],
+      "limitations": [],
+      "blocking_release": false
+    },
+    {
+      "id": "deferred.mobile",
+      "section": "39.6",
+      "requirement": "Mobile applications.",
+      "status": "DEFERRED_BY_SPEC",
+      "evidence": "Explicitly placed outside Foundation by §39.6.",
+      "source_paths": [],
+      "tests": [],
+      "limitations": [],
+      "blocking_release": false
+    },
+    {
+      "id": "deferred.ocr2-default",
+      "section": "39.6",
+      "requirement": "DeepSeek-OCR2 as a global default.",
+      "status": "DEFERRED_BY_SPEC",
+      "evidence": "Explicitly placed outside Foundation by §39.6.",
+      "source_paths": [],
+      "tests": [],
+      "limitations": [],
+      "blocking_release": false
+    },
+    {
+      "id": "deferred.legacy-removal",
+      "section": "39.6",
+      "requirement": "Removing MCP, REST, CLI or the old MCP App.",
+      "status": "DEFERRED_BY_SPEC",
+      "evidence": "Explicitly placed outside Foundation by §39.6.",
+      "source_paths": [],
+      "tests": [],
+      "limitations": [],
+      "blocking_release": false
+    },
+    {
+      "id": "deferred.core-rewrite",
+      "section": "39.6",
+      "requirement": "Rewriting Watch Core in the DSH language.",
+      "status": "DEFERRED_BY_SPEC",
+      "evidence": "Explicitly placed outside Foundation by §39.6.",
+      "source_paths": [],
+      "tests": [],
+      "limitations": [],
+      "blocking_release": false
+    },
+    {
+      "id": "deferred.fine-tuning",
+      "section": "39.6",
+      "requirement": "Automatic fine-tuning on user data.",
+      "status": "DEFERRED_BY_SPEC",
+      "evidence": "Explicitly placed outside Foundation by §39.6.",
+      "source_paths": [],
+      "tests": [],
+      "limitations": [],
+      "blocking_release": false
+    },
+    {
+      "id": "deferred.autonomous-modification",
+      "section": "39.6",
+      "requirement": "Autonomous production code, system prompt or policy modification.",
+      "status": "DEFERRED_BY_SPEC",
+      "evidence": "Explicitly placed outside Foundation by §39.6.",
+      "source_paths": [],
+      "tests": [],
+      "limitations": [],
+      "blocking_release": false
+    },
+    {
+      "id": "deferred.adapters-mandatory",
+      "section": "39.6",
+      "requirement": "Obsidian or LLMWiki as a mandatory dependency.",
+      "status": "DEFERRED_BY_SPEC",
+      "evidence": "Explicitly placed outside Foundation by §39.6.",
+      "source_paths": [],
+      "tests": [],
+      "limitations": [],
+      "blocking_release": false
+    }
+  ]
+}

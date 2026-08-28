@@ -23,12 +23,10 @@
  */
 
 import { mkdirSync, writeFileSync } from 'node:fs'
-import { join, dirname } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { join } from 'node:path'
 import { Context } from '@deepseek-ai/cordis'
 import WatchMemoryService from '@watchskill/dsh-memory'
 
-const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const HOME = process.env.WATCH_MANUAL_HOME ?? 'G:/watch-manual/dsh-home'
 const MEMORY_DIR = join(HOME, 'watch-memory')
 const FIXTURE_DIR = join(HOME, 'watch-fixtures')
