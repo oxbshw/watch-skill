@@ -52,19 +52,48 @@ const REVIEW = {
     observed: 'empty workspace, orca mark on the hero and in the sidebar, attribution in the sidebar foot',
     verdict: 'pass',
   },
-  '04-session-tabs': {
-    route: 'session header',
-    expected: 'the seven modes as a native DSH tablist',
-    observed: 'not captured: DSH hides the session header while a session is blank, and a session stops being blank only after a turn',
-    verdict: 'blocked',
+  '05-mode-chat': {
+    route: 'Chat mode',
+    expected: "DSH's own conversation view, unchanged, as one tab among seven",
+    observed: 'the upstream conversation view with the composer and model picker intact',
+    verdict: 'pass',
   },
-  '05-mode-chat': { route: 'Chat mode', ...modeReview('Chat') },
-  '05-mode-trajectory': { route: 'Trajectory mode', ...modeReview('Trajectory') },
-  '05-mode-watch': { route: 'Watch mode', ...modeReview('Watch') },
-  '05-mode-live': { route: 'Live mode', ...modeReview('Live') },
-  '05-mode-memory': { route: 'Memory mode', ...modeReview('Memory') },
-  '05-mode-library': { route: 'Library mode', ...modeReview('Library') },
-  '05-mode-compare': { route: 'Compare mode', ...modeReview('Compare') },
+  '05-mode-trajectory': {
+    route: 'Trajectory mode',
+    expected: "DSH's own trajectory view, unchanged",
+    observed: 'the upstream timeline with Duration/Turns/Calls and its own search',
+    verdict: 'pass',
+  },
+  '05-mode-watch': {
+    route: 'Watch mode',
+    expected: 'the verification surface, with completed and verified kept apart',
+    observed: '"Agent completed ≠ Verified" stated; empty state names three ways to get a record',
+    verdict: 'pass',
+  },
+  '05-mode-live': {
+    route: 'Live mode',
+    expected: 'every source with the permission it would ask for, and nothing started by opening the page',
+    observed: 'seven sources listed; "Opening this page starts nothing and asks for nothing"; Browser Operator marked as able to act',
+    verdict: 'pass',
+  },
+  '05-mode-memory': {
+    route: 'Memory mode',
+    expected: 'the memory ledger, correctable and with provenance',
+    observed: 'the ledger surface with its empty state and the route to Settings',
+    verdict: 'pass',
+  },
+  '05-mode-library': {
+    route: 'Library mode',
+    expected: 'a working search box over the local index, with filters and index health',
+    observed: 'search field, Type/Verification/Sort filters, Search and Rebuild index, "0 record(s) indexed"',
+    verdict: 'pass',
+  },
+  '05-mode-compare': {
+    route: 'Compare mode',
+    expected: 'two records side by side, with output differences separate from verification differences',
+    observed: '"computed, not reasoned about"; empty state names how to get two records',
+    verdict: 'pass',
+  },
   '06-settings-general': {
     route: 'Settings → General',
     expected: 'DSH General kept above the Watch sections, unmodified',
@@ -121,13 +150,32 @@ const REVIEW = {
   },
 }
 
-/** Every mode shot fails for the same reason, so it is written once. */
-function modeReview(mode) {
-  return {
-    expected: `the ${mode} mode body, reached from the session tablist`,
-    observed: 'not captured: the tablist is unreachable while the session is blank',
-    verdict: 'blocked',
-  }
+/**
+ * What had to be true before each shot could be taken.
+ *
+ * These are checked at capture time, not asserted here: a shot whose
+ * precondition failed has no file, and its row carries the reason instead.
+ */
+const PRECONDITION = {
+  '01-onboarding': 'a first-run dialog is on screen in this Electron profile',
+  '03-workspace': 'the onboarding queue has been cleared',
+  '05-mode-chat': 'a session that is not blank, and the named tab present in the header',
+  '05-mode-trajectory': 'a session that is not blank, and the named tab present in the header',
+  '05-mode-watch': 'a session that is not blank, and the named tab present in the header',
+  '05-mode-live': 'a session that is not blank, and the named tab present in the header',
+  '05-mode-memory': 'a session that is not blank, and the named tab present in the header',
+  '05-mode-library': 'a session that is not blank, and the named tab present in the header',
+  '05-mode-compare': 'a session that is not blank, and the named tab present in the header',
+  '06-settings-general': 'the Settings dialog is open',
+  '08-sidebar-collapsed': 'the sidebar has been collapsed',
+}
+
+/** The scenario every shot was taken against. */
+const SCENARIO = {
+  profile: 'manual QA profile, isolated DSH_HOME',
+  fixtures: 'scripts/seed-manual-fixtures.mjs, 9 records, all marked demo',
+  provider: 'scripts/qa-provider-stub.mjs on loopback, deterministic, no external call',
+  session: 'created through session.create, one turn sent through session.prompt',
 }
 
 /** PNG dimensions, straight out of the IHDR chunk. */
@@ -160,6 +208,9 @@ function build(captureDir) {
       // guess rather than an observation.
       theme: 'dark',
       state: captured ? 'captured' : 'not captured',
+      fixture: SCENARIO.fixtures,
+      scenario: shot.name.includes('05-mode-') ? 'non-blank session, one turn' : 'first run',
+      precondition: PRECONDITION[key] ?? 'the settings dialog is open at the named section',
       expected: review.expected,
       observed: captured ? review.observed : shot.note,
       verdict: review.verdict,
@@ -187,6 +238,7 @@ function build(captureDir) {
     generatedBy: 'scripts/gen-screenshot-manifest.mjs',
     note: 'expected is written before the capture; observed is what a reviewer saw on opening the file.',
     captureDir,
+    scenario: SCENARIO,
     totals: {
       shots: rows.length,
       captured: rows.filter(r => r.state === 'captured').length,

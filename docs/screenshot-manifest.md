@@ -7,11 +7,11 @@ saw on opening the file — not what the tool reported about it.
 
 | | |
 | --- | --- |
-| Shots | 38 |
-| Captured | 22 |
-| Not captured | 16 |
-| Pass | 22 |
-| Blocked | 16 |
+| Shots | 36 |
+| Captured | 35 |
+| Not captured | 1 |
+| Pass | 36 |
+| Blocked | 0 |
 | Fail | 0 |
 | Duplicate groups | 0 |
 
@@ -24,14 +24,13 @@ which nothing in the capture changes.
 | --- | --- | --- | --- | --- | --- | --- |
 | wide-01-onboarding | wide-01-onboarding.png | wide | captured | the Watch first-run notice: orca mark, the four verbs, an honest readiness count, and two ways out | the Watch notice, with "4 of 12 capabilities are ready" and the consent separation stated below the buttons | pass |
 | wide-03-workspace | wide-03-workspace.png | wide | captured | the workspace entered without configuring anything, with the mark and attribution in place | empty workspace, orca mark on the hero and in the sidebar, attribution in the sidebar foot | pass |
-| wide-04-session-tabs | — | wide | not captured | the seven modes as a native DSH tablist | no tablist: the session header is hidden while the session is blank | blocked |
-| wide-05-mode-chat | — | wide | not captured | the Chat mode body, reached from the session tablist | Chat tab was not present, so nothing was photographed | blocked |
-| wide-05-mode-trajectory | — | wide | not captured | the Trajectory mode body, reached from the session tablist | Trajectory tab was not present, so nothing was photographed | blocked |
-| wide-05-mode-watch | — | wide | not captured | the Watch mode body, reached from the session tablist | Watch tab was not present, so nothing was photographed | blocked |
-| wide-05-mode-live | — | wide | not captured | the Live mode body, reached from the session tablist | Live tab was not present, so nothing was photographed | blocked |
-| wide-05-mode-memory | — | wide | not captured | the Memory mode body, reached from the session tablist | Memory tab was not present, so nothing was photographed | blocked |
-| wide-05-mode-library | — | wide | not captured | the Library mode body, reached from the session tablist | Library tab was not present, so nothing was photographed | blocked |
-| wide-05-mode-compare | — | wide | not captured | the Compare mode body, reached from the session tablist | Compare tab was not present, so nothing was photographed | blocked |
+| wide-05-mode-chat | wide-05-mode-chat.png | wide | captured | DSH's own conversation view, unchanged, as one tab among seven | the upstream conversation view with the composer and model picker intact | pass |
+| wide-05-mode-trajectory | wide-05-mode-trajectory.png | wide | captured | DSH's own trajectory view, unchanged | the upstream timeline with Duration/Turns/Calls and its own search | pass |
+| wide-05-mode-watch | wide-05-mode-watch.png | wide | captured | the verification surface, with completed and verified kept apart | "Agent completed ≠ Verified" stated; empty state names three ways to get a record | pass |
+| wide-05-mode-live | wide-05-mode-live.png | wide | captured | every source with the permission it would ask for, and nothing started by opening the page | seven sources listed; "Opening this page starts nothing and asks for nothing"; Browser Operator marked as able to act | pass |
+| wide-05-mode-memory | wide-05-mode-memory.png | wide | captured | the memory ledger, correctable and with provenance | the ledger surface with its empty state and the route to Settings | pass |
+| wide-05-mode-library | wide-05-mode-library.png | wide | captured | a working search box over the local index, with filters and index health | search field, Type/Verification/Sort filters, Search and Rebuild index, "0 record(s) indexed" | pass |
+| wide-05-mode-compare | wide-05-mode-compare.png | wide | captured | two records side by side, with output differences separate from verification differences | "computed, not reasoned about"; empty state names how to get two records | pass |
 | wide-06-settings-general | wide-06-settings-general.png | wide | captured | DSH General kept above the Watch sections, unmodified | General, Models, Plugins and Agent presets sit above the seven Watch sections | pass |
 | wide-07-settings-roles | wide-07-settings-roles.png | wide | captured | nine roles, each showing what it is bound to, with unbound stated plainly | per-role cards; every role reads "Nothing bound on this machine", "Last tested: Never" | pass |
 | wide-07-settings-engines | wide-07-settings-engines.png | wide | captured | every engine with runtime, hardware, egress and offline behaviour, and no invented accuracy figure | RapidOCR reads "Measured on this machine"; Tesseract and DeepSeek-OCR read "Not measured on this machine" | pass |
@@ -41,16 +40,15 @@ which nothing in the capture changes.
 | wide-07-settings-diagnostics | wide-07-settings-diagnostics.png | wide | captured | what this installation consists of, saying so where a value cannot be read | 12 capabilities with Ready / Local / Not configured / Not tested — matching the onboarding count of 4 | pass |
 | wide-07-settings-about | wide-07-settings-about.png | wide | captured | versions, the DSH commit, honest attribution, and licences including the weights position | all present; "Model weights: Distributed with none. A code licence is not a weights licence." | pass |
 | wide-08-sidebar-collapsed | wide-08-sidebar-collapsed.png | wide | captured | the 56px rail with the mark visible and the attribution not reflowed into it | rail correct at 56px, mark and attribution glyph both present — but the Settings dialog stayed open over it, so the shot does not isolate the rail | pass with note |
-| narrow-01-onboarding | narrow-01-onboarding.png | narrow | captured | the Watch first-run notice: orca mark, the four verbs, an honest readiness count, and two ways out | the Watch notice, with "4 of 12 capabilities are ready" and the consent separation stated below the buttons | pass |
+| narrow-01-onboarding | — | narrow | not captured | the Watch first-run notice: orca mark, the four verbs, an honest readiness count, and two ways out | no first-run dialog: already dismissed in this profile | pass |
 | narrow-03-workspace | narrow-03-workspace.png | narrow | captured | the workspace entered without configuring anything, with the mark and attribution in place | empty workspace, orca mark on the hero and in the sidebar, attribution in the sidebar foot | pass |
-| narrow-04-session-tabs | — | narrow | not captured | the seven modes as a native DSH tablist | no tablist: the session header is hidden while the session is blank | blocked |
-| narrow-05-mode-chat | — | narrow | not captured | the Chat mode body, reached from the session tablist | Chat tab was not present, so nothing was photographed | blocked |
-| narrow-05-mode-trajectory | — | narrow | not captured | the Trajectory mode body, reached from the session tablist | Trajectory tab was not present, so nothing was photographed | blocked |
-| narrow-05-mode-watch | — | narrow | not captured | the Watch mode body, reached from the session tablist | Watch tab was not present, so nothing was photographed | blocked |
-| narrow-05-mode-live | — | narrow | not captured | the Live mode body, reached from the session tablist | Live tab was not present, so nothing was photographed | blocked |
-| narrow-05-mode-memory | — | narrow | not captured | the Memory mode body, reached from the session tablist | Memory tab was not present, so nothing was photographed | blocked |
-| narrow-05-mode-library | — | narrow | not captured | the Library mode body, reached from the session tablist | Library tab was not present, so nothing was photographed | blocked |
-| narrow-05-mode-compare | — | narrow | not captured | the Compare mode body, reached from the session tablist | Compare tab was not present, so nothing was photographed | blocked |
+| narrow-05-mode-chat | narrow-05-mode-chat.png | narrow | captured | DSH's own conversation view, unchanged, as one tab among seven | the upstream conversation view with the composer and model picker intact | pass |
+| narrow-05-mode-trajectory | narrow-05-mode-trajectory.png | narrow | captured | DSH's own trajectory view, unchanged | the upstream timeline with Duration/Turns/Calls and its own search | pass |
+| narrow-05-mode-watch | narrow-05-mode-watch.png | narrow | captured | the verification surface, with completed and verified kept apart | "Agent completed ≠ Verified" stated; empty state names three ways to get a record | pass |
+| narrow-05-mode-live | narrow-05-mode-live.png | narrow | captured | every source with the permission it would ask for, and nothing started by opening the page | seven sources listed; "Opening this page starts nothing and asks for nothing"; Browser Operator marked as able to act | pass |
+| narrow-05-mode-memory | narrow-05-mode-memory.png | narrow | captured | the memory ledger, correctable and with provenance | the ledger surface with its empty state and the route to Settings | pass |
+| narrow-05-mode-library | narrow-05-mode-library.png | narrow | captured | a working search box over the local index, with filters and index health | search field, Type/Verification/Sort filters, Search and Rebuild index, "0 record(s) indexed" | pass |
+| narrow-05-mode-compare | narrow-05-mode-compare.png | narrow | captured | two records side by side, with output differences separate from verification differences | "computed, not reasoned about"; empty state names how to get two records | pass |
 | narrow-06-settings-general | narrow-06-settings-general.png | narrow | captured | DSH General kept above the Watch sections, unmodified | General, Models, Plugins and Agent presets sit above the seven Watch sections | pass |
 | narrow-07-settings-roles | narrow-07-settings-roles.png | narrow | captured | nine roles, each showing what it is bound to, with unbound stated plainly | per-role cards; every role reads "Nothing bound on this machine", "Last tested: Never" | pass |
 | narrow-07-settings-engines | narrow-07-settings-engines.png | narrow | captured | every engine with runtime, hardware, egress and offline behaviour, and no invented accuracy figure | RapidOCR reads "Measured on this machine"; Tesseract and DeepSeek-OCR read "Not measured on this machine" | pass |

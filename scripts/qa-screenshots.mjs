@@ -248,12 +248,19 @@ async function run(win, viewport) {
   // first-run notice unconditionally and photographed whichever dialog the
   // queue happened to be showing — usually DSH's own testing notice, since
   // Watch's comes after it.
+  // Only a shot of the notice if the notice is there. The second viewport
+  // runs in the same Electron profile, so the first pass has already
+  // dismissed it -- writing the file anyway produced a second copy of the
+  // plain workspace under the name of the first-run notice.
   const firstDialog = await win.webContents.executeJavaScript(
-    "(function(){var d=document.querySelector('[role=\"dialog\"]'); return d ? d.innerText.split('\\n')[0].slice(0,60) : ''})()",
+    "(function(){var d=document.querySelector('[role=\"dialog\"]');"
+    + " return d ? d.innerText.split('\\n')[0].slice(0,60) : ''})()",
   )
   await capture(win, p('01-onboarding'),
-    firstDialog === '' ? 'no dialog was on screen' : 'first-run dialog: ' + firstDialog)
-  await measure(win, 'onboarding')
+    firstDialog === ''
+      ? 'no first-run dialog: already dismissed in this profile'
+      : 'first-run dialog: ' + firstDialog,
+    firstDialog !== '')
 
   const cleared = await clearOnboarding(win)
   say('  cleared ' + String(cleared) + ' onboarding step(s)')
@@ -279,25 +286,49 @@ async function run(win, viewport) {
   // matters because adding a workspace goes through a native directory picker,
   // which no automated capture can drive.
   const opened = await win.webContents.executeJavaScript(`(async function () {
+    function rpc (method, payload) {
+      return fetch('/api/' + method, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          type: 'client-request',
+          rpcId: 'qa-' + String(Date.now()) + '-' + String(Math.random()).slice(2, 8),
+          method: method,
+          payload: payload
+        })
+      }).then(function (r) { return r.json() })
+    }
+
     var seeded = ${JSON.stringify(SESSION_ID)}
     if (seeded) {
       localStorage['dsh.sessions.current'] = JSON.stringify({ sessionId: seeded })
       return seeded
     }
     try {
-      var response = await fetch('/api/session.create', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({
-          type: 'client-request',
-          rpcId: 'qa-' + String(Date.now()),
-          method: 'session.create',
-          payload: { cwd: ${JSON.stringify(SESSION_CWD)} }
-        })
-      })
-      var body = await response.json()
-      var id = body && body.result && body.result.ok && body.result.value.sessionId
+      var created = await rpc('session.create', { cwd: ${JSON.stringify(SESSION_CWD)} })
+      var id = created && created.result && created.result.ok && created.result.value.sessionId
       if (!id) return null
+
+      // Send one turn. DSH hides the session header while a session is blank,
+      // so without this the mode tabs never mount and there is nothing to
+      // photograph. The turn goes through the real agent loop; whether the
+      // model behind it is a paid provider or the QA stub is decided by the
+      // profile, not here.
+      await rpc('session.prompt', {
+        sessionId: id,
+        mode: 'queue',
+        content: [{ type: 'text', text: 'Say hello so this session is no longer blank.' }]
+      })
+
+      // Wait for it to land, up to a minute.
+      var deadline = Date.now() + 60000
+      while (Date.now() < deadline) {
+        var listed = await rpc('session.list', {})
+        var mine = (listed.result.value.items || []).filter(function (s) { return s.sessionId === id })[0]
+        if (mine && mine.blank === false && mine.running === false) break
+        await new Promise(function (r) { setTimeout(r, 500) })
+      }
+
       localStorage['dsh.sessions.current'] = JSON.stringify({ sessionId: id })
       return id
     } catch (error) {
@@ -311,13 +342,15 @@ async function run(win, viewport) {
   await wait(2400)
   const session = await measure(win, 'session')
   say('  tabs: ' + JSON.stringify(session.tabs))
-  // Report the tabs that are there. This asserted seven modes unconditionally
-  // while photographing a workspace with no tablist in it at all.
-  await capture(win, p('04-session-tabs'),
-    session.tabs.length === 0
-      ? 'no tablist: the session header is hidden while the session is blank'
-      : 'the mode tablist: ' + session.tabs.join(', '),
-    session.tabs.length > 0)
+  // No separate tablist shot.
+  //
+  // Chat is the tab DSH opens on, so photographing "the tablist" and then
+  // photographing Chat produced two identical files. The tablist is visible
+  // in all seven mode shots, and `session.tabs` below is the assertion that
+  // it mounted, so a shot of its own adds a duplicate and nothing else.
+  if (session.tabs.length === 0) {
+    say('  tablist absent -- the mode shots will record why')
+  }
 
   for (const mode of ['Chat', 'Trajectory', 'Watch', 'Live', 'Memory', 'Library', 'Compare']) {
     const ok = await win.webContents.executeJavaScript(
