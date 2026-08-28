@@ -84,7 +84,16 @@ function packageDigest(dir) {
   for (const path of sourceFiles(dir)) {
     hash.update(relative(dir, path).replace(/\\/g, '/'))
     hash.update('\0')
-    hash.update(readFileSync(path))
+    // Normalized to LF before hashing.
+    //
+    // Every file digested here is text, and `.gitattributes` declares LF
+    // canonical. Hashing raw bytes made the digest a property of the
+    // *checkout* rather than of the content: a working tree holding CRLF
+    // produced one set of digests and a clean clone of the same commit
+    // produced another, so the committed manifest could never match a fresh
+    // checkout. For a manifest whose whole purpose is checking an installed
+    // build, that made it unable to verify anything.
+    hash.update(readFileSync(path, 'utf8').replace(/\r\n/g, '\n'))
     hash.update('\0')
     files += 1
   }
@@ -296,4 +305,13 @@ function main() {
   )
 }
 
-main()
+/**
+ * Exported so the line-ending property can be tested against the real
+ * function rather than a reimplementation of it in a test, which would only
+ * ever prove that the test agrees with itself.
+ */
+export { packageDigest }
+
+// Run only when invoked directly, so importing for a test does not regenerate
+// the manifest as a side effect.
+if (process.argv[1] === fileURLToPath(import.meta.url)) main()

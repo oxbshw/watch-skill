@@ -50,7 +50,7 @@
       {
         "name": "@watchskill/dsh-adapters",
         "version": "0.1.0-preview.0",
-        "integrity": "sha256:cfb6c4822ab09b202178a8eee2517c20ae4a0cd8b0c45568a4e58d93c71dbb9f",
+        "integrity": "sha256:68cdbec397cf984410a49573bc710fa010cade58510ed4133b72042f9846fb68",
         "sourceFiles": 5
       },
       {
@@ -86,49 +86,49 @@
       {
         "name": "@watchskill/dsh-contracts",
         "version": "0.1.0-preview.0",
-        "integrity": "sha256:2e3b6e359d59547680e9e14bc7bbc29eb5da1a5facc4ed75b0d0d294a239499b",
+        "integrity": "sha256:27a539ef765111094370d058779fd8bd1e17b6327a94aff0fde14be8e82df63c",
         "sourceFiles": 7
       },
       {
         "name": "@watchskill/dsh-core-bridge",
         "version": "0.1.0-preview.0",
-        "integrity": "sha256:e853479f21069d4fb7655cc02fc69694ec3752877e89f4c7b70f7587df2d408d",
+        "integrity": "sha256:5290154101373e5e847ff5ff45f822cf35a837970d8ebe4830e8dc7175b23781",
         "sourceFiles": 6
       },
       {
         "name": "@watchskill/dsh-library",
         "version": "0.1.0-preview.0",
-        "integrity": "sha256:1aeff7ef5e42339d4a2933ca20077fcfd9152e133f66e5d1fcf9386923a43f6a",
+        "integrity": "sha256:43ebcaeef442ec2c24459c95de968c23a4dacd46f313a2a07a11ca8658c668c6",
         "sourceFiles": 12
       },
       {
         "name": "@watchskill/dsh-live",
         "version": "0.1.0-preview.0",
-        "integrity": "sha256:977d0c340ea631354a77390757904651a6c63c0b833f73751425610dd9166754",
+        "integrity": "sha256:efcf780a698a534a7e416f296330867d3c98e83026fdc2c264b8dc04b36cbfc3",
         "sourceFiles": 13
       },
       {
         "name": "@watchskill/dsh-memory",
         "version": "0.1.0-preview.0",
-        "integrity": "sha256:23374fd51f275700c3bda76a862706363346185a0aba48654ebb6a7376205fcc",
+        "integrity": "sha256:475d19e7a352d01fca54d4b3ade474012f1b29b863deea2aef1b9d19dd34eb6c",
         "sourceFiles": 10
       },
       {
         "name": "@watchskill/dsh-sdk",
         "version": "0.1.0-preview.0",
-        "integrity": "sha256:633c7f2166121876ab803619d7abab7c260e5c1fb14460fd3b6b9bb00113ddb1",
+        "integrity": "sha256:37a1a383079e43e538c32910701b37cd75f7c459a9ef0b2d1b393370e22577ab",
         "sourceFiles": 6
       },
       {
         "name": "@watchskill/dsh-technology",
         "version": "0.1.0-preview.0",
-        "integrity": "sha256:0bf5038644c7c7a1dd8769f9fb3f9d861912b737dbae400acc02fb616e6ada99",
+        "integrity": "sha256:e871c409f5ad352ad7e3c13738e9a217f0f3029050f263736ed5f32cd389df75",
         "sourceFiles": 8
       },
       {
         "name": "@watchskill/dsh-tenancy",
         "version": "0.1.0-preview.0",
-        "integrity": "sha256:193e9525400d432afe90c98fef4330aaa2b133df3e1e060293028e61dd6c5a38",
+        "integrity": "sha256:95a419387f355bc2d0582699ff694ad91e35ecf05b8964204fd47143e9b010e4",
         "sourceFiles": 8
       },
       {
@@ -140,25 +140,25 @@
       {
         "name": "@watchskill/dsh-trajectory",
         "version": "0.1.0-preview.0",
-        "integrity": "sha256:9b3a30ad79c0bd84d42b75479613dcbd7e35015e47f3a088facc40fe320ff508",
+        "integrity": "sha256:dd3b8cf695a597be01edc0f00d3012dff86a2a82e18889ae663c768ea2c42082",
         "sourceFiles": 9
       },
       {
         "name": "@watchskill/dsh-wiki",
         "version": "0.1.0-preview.0",
-        "integrity": "sha256:4249777e344ad87de6feb8947d82f64341701a8b7bc2fcc3e9e2d606fa52c853",
+        "integrity": "sha256:5d22c62d47f6ccd74be885680dfee64642d1c7e76a56f34b284426ff63755cff",
         "sourceFiles": 4
       },
       {
         "name": "@watchskill/dsh-workspace",
         "version": "0.1.0-preview.0",
-        "integrity": "sha256:dd5790a64c15e455a9c0aab39f5ae35d05eb062cd57ee3294d8e788a71c42554",
+        "integrity": "sha256:40ea3de786965fdaabab3f484a42749e627a6a1d552518392f11ebf8752bbd62",
         "sourceFiles": 13
       },
       {
         "name": "@watchskill/watch-desktop",
         "version": "0.1.0-preview.0",
-        "integrity": "sha256:844ef198a5ecf3345e9667148940cca04bfda2729fab8b34c2300878ffc4a5c9",
+        "integrity": "sha256:b6184b2e75310b67395428a61b047f3ce6f790761972c4b6ebc302aa63731356",
         "sourceFiles": 11
       }
     ]
@@ -168,12 +168,12 @@
     "dataLicense": "CC0-1.0",
     "SPDXID": "SPDXRef-DOCUMENT",
     "name": "@watchskill/watch-workspace-0.1.0-preview.0",
-    "documentNamespace": "https://github.com/oxbshw/watch-workspace/spdx/0.1.0-preview.0/mtd2tjhy",
+    "documentNamespace": "https://github.com/oxbshw/watch-workspace/spdx/0.1.0-preview.0/mtd3b4mq",
     "creationInfo": {
       "creators": [
         "Tool: watch-gen-release-manifest"
       ],
-      "created": "2026-08-28T14:58:15Z"
+      "created": "2026-08-28T15:11:56Z"
     },
     "packages": [
       {
@@ -188,7 +188,7 @@
         "checksums": [
           {
             "algorithm": "SHA256",
-            "checksumValue": "cfb6c4822ab09b202178a8eee2517c20ae4a0cd8b0c45568a4e58d93c71dbb9f"
+            "checksumValue": "68cdbec397cf984410a49573bc710fa010cade58510ed4133b72042f9846fb68"
           }
         ]
       },
@@ -284,7 +284,7 @@
         "checksums": [
           {
             "algorithm": "SHA256",
-            "checksumValue": "2e3b6e359d59547680e9e14bc7bbc29eb5da1a5facc4ed75b0d0d294a239499b"
+            "checksumValue": "27a539ef765111094370d058779fd8bd1e17b6327a94aff0fde14be8e82df63c"
           }
         ]
       },
@@ -300,7 +300,7 @@
         "checksums": [
           {
             "algorithm": "SHA256",
-            "checksumValue": "e853479f21069d4fb7655cc02fc69694ec3752877e89f4c7b70f7587df2d408d"
+            "checksumValue": "5290154101373e5e847ff5ff45f822cf35a837970d8ebe4830e8dc7175b23781"
           }
         ]
       },
@@ -316,7 +316,7 @@
         "checksums": [
           {
             "algorithm": "SHA256",
-            "checksumValue": "1aeff7ef5e42339d4a2933ca20077fcfd9152e133f66e5d1fcf9386923a43f6a"
+            "checksumValue": "43ebcaeef442ec2c24459c95de968c23a4dacd46f313a2a07a11ca8658c668c6"
           }
         ]
       },
@@ -332,7 +332,7 @@
         "checksums": [
           {
             "algorithm": "SHA256",
-            "checksumValue": "977d0c340ea631354a77390757904651a6c63c0b833f73751425610dd9166754"
+            "checksumValue": "efcf780a698a534a7e416f296330867d3c98e83026fdc2c264b8dc04b36cbfc3"
           }
         ]
       },
@@ -348,7 +348,7 @@
         "checksums": [
           {
             "algorithm": "SHA256",
-            "checksumValue": "23374fd51f275700c3bda76a862706363346185a0aba48654ebb6a7376205fcc"
+            "checksumValue": "475d19e7a352d01fca54d4b3ade474012f1b29b863deea2aef1b9d19dd34eb6c"
           }
         ]
       },
@@ -364,7 +364,7 @@
         "checksums": [
           {
             "algorithm": "SHA256",
-            "checksumValue": "633c7f2166121876ab803619d7abab7c260e5c1fb14460fd3b6b9bb00113ddb1"
+            "checksumValue": "37a1a383079e43e538c32910701b37cd75f7c459a9ef0b2d1b393370e22577ab"
           }
         ]
       },
@@ -380,7 +380,7 @@
         "checksums": [
           {
             "algorithm": "SHA256",
-            "checksumValue": "0bf5038644c7c7a1dd8769f9fb3f9d861912b737dbae400acc02fb616e6ada99"
+            "checksumValue": "e871c409f5ad352ad7e3c13738e9a217f0f3029050f263736ed5f32cd389df75"
           }
         ]
       },
@@ -396,7 +396,7 @@
         "checksums": [
           {
             "algorithm": "SHA256",
-            "checksumValue": "193e9525400d432afe90c98fef4330aaa2b133df3e1e060293028e61dd6c5a38"
+            "checksumValue": "95a419387f355bc2d0582699ff694ad91e35ecf05b8964204fd47143e9b010e4"
           }
         ]
       },
@@ -428,7 +428,7 @@
         "checksums": [
           {
             "algorithm": "SHA256",
-            "checksumValue": "9b3a30ad79c0bd84d42b75479613dcbd7e35015e47f3a088facc40fe320ff508"
+            "checksumValue": "dd3b8cf695a597be01edc0f00d3012dff86a2a82e18889ae663c768ea2c42082"
           }
         ]
       },
@@ -444,7 +444,7 @@
         "checksums": [
           {
             "algorithm": "SHA256",
-            "checksumValue": "4249777e344ad87de6feb8947d82f64341701a8b7bc2fcc3e9e2d606fa52c853"
+            "checksumValue": "5d22c62d47f6ccd74be885680dfee64642d1c7e76a56f34b284426ff63755cff"
           }
         ]
       },
@@ -460,7 +460,7 @@
         "checksums": [
           {
             "algorithm": "SHA256",
-            "checksumValue": "dd5790a64c15e455a9c0aab39f5ae35d05eb062cd57ee3294d8e788a71c42554"
+            "checksumValue": "40ea3de786965fdaabab3f484a42749e627a6a1d552518392f11ebf8752bbd62"
           }
         ]
       },
@@ -476,7 +476,7 @@
         "checksums": [
           {
             "algorithm": "SHA256",
-            "checksumValue": "844ef198a5ecf3345e9667148940cca04bfda2729fab8b34c2300878ffc4a5c9"
+            "checksumValue": "b6184b2e75310b67395428a61b047f3ce6f790761972c4b6ebc302aa63731356"
           }
         ]
       }

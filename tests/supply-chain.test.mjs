@@ -18,9 +18,10 @@
 
 import { test, describe } from 'node:test'
 import assert from 'node:assert/strict'
-import { readFileSync, existsSync } from 'node:fs'
+import { readFileSync, existsSync, mkdtempSync, mkdirSync, writeFileSync } from 'node:fs'
 import { join, dirname } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { tmpdir } from 'node:os'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 
 import {
   DEEPSEEK_OCR,
@@ -148,6 +149,48 @@ describe('a build can be checked rather than trusted', () => {
     const digests = MANIFEST.integrity.packages.map(pkg => pkg.integrity)
     assert.equal(new Set(digests).size, digests.length,
       'two packages share a digest, which means the digest is not over their content')
+  })
+
+  test('a digest survives a checkout that uses different line endings', async () => {
+    // The defect a cold clone found, and the only place it could be found.
+    //
+    // The digest hashed raw bytes, making it a property of the *checkout*
+    // rather than of the content: a working tree holding CRLF produced one set
+    // of digests and a clean clone of the same commit produced another. So the
+    // committed manifest could never match a fresh checkout — the one
+    // situation it exists for.
+    //
+    // Driven against the real function rather than a copy of its logic, since
+    // a reimplementation here would only prove the test agrees with itself.
+    const { packageDigest } = await import(
+      pathToFileURL(join(ROOT, 'scripts', 'gen-release-manifest.mjs')).href
+    )
+
+    const treeWith = (eol) => {
+      const dir = mkdtempSync(join(tmpdir(), 'watch-eol-'))
+      mkdirSync(join(dir, 'src'), { recursive: true })
+      const write = (name, body) => { writeFileSync(join(dir, name), body.split('\n').join(eol)) }
+      write('package.json', '{\n  "name": "@watchskill/sample",\n  "version": "0.0.0"\n}\n')
+      write('tsconfig.json', '{\n  "compilerOptions": {}\n}\n')
+      write(join('src', 'index.ts'), 'export const answer = 42\n')
+      return dir
+    }
+
+    const crlf = treeWith('\r\n')
+    const lf = treeWith('\n')
+    assert.notEqual(
+      readFileSync(join(crlf, 'package.json')).length,
+      readFileSync(join(lf, 'package.json')).length,
+      'both trees were written with the same line endings, so this would prove nothing',
+    )
+
+    const fromCrlf = packageDigest(crlf)
+    const fromLf = packageDigest(lf)
+    assert.equal(fromCrlf.files, 3)
+    assert.equal(
+      fromCrlf.digest, fromLf.digest,
+      'the same source digests differently depending on how it was checked out',
+    )
   })
 
   test('the SPDX document is a real SPDX document', () => {
