@@ -20,24 +20,24 @@
 
 name: workspace
 
+# Triggers on everything, and decides inside itself what to run.
+#
+# This used to filter on `paths: workspace/**`. A workflow that does not
+# trigger produces no status at all -- not a failing one, an absent one -- so a
+# Core-only pull request protected on a check inside this workflow would wait
+# forever with nothing to explain the wait. The filtering moved into `changes`
+# below, which always runs.
 on:
   push:
     branches: ['**']
-    paths:
-      - 'workspace/**'
-      - '.github/workflows/workspace-ci.yml'
   pull_request:
-    paths:
-      - 'workspace/**'
-      - '.github/workflows/workspace-ci.yml'
   workflow_dispatch:
 
 # Pinned, not floating. A toolchain that drifts turns a red build into a
 # question about the runner instead of a question about the change.
 #
-# NODE_VERSION is the floor declared in package.json `engines`. Local
-# validation for this release candidate ran on 22.18.0, which is *below* that
-# floor; CI holds the declared contract rather than the machine's accident.
+# NODE_VERSION is the floor declared in package.json `engines`, which CI holds
+# rather than whatever a contributor's machine happens to run.
 env:
   NODE_VERSION: '22.19.0'
   PNPM_VERSION: '10.29.1'
@@ -47,10 +47,50 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Which half changed. Always runs, so `workspace-required` always has
+  # something to gather. The classification lives in .github/changed-half.mjs,
+  # where it is tested against the cases a monorepo actually sees.
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      core: ${{ steps.classify.outputs.core }}
+      workspace: ${{ steps.classify.outputs.workspace }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Classify the change
+        id: classify
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+          HEAD: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          # A first push to a branch reports an all-zero "before", and a manual
+          # dispatch has no diff at all. Neither can be classified, so both run
+          # everything: an unnecessary matrix costs minutes, a wrongly skipped
+          # one costs a defect reaching main.
+          if [ "$EVENT" = "workflow_dispatch" ] || [ -z "${BASE:-}" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ]; then
+            echo "no comparable base; running everything"
+            {
+              echo "core=true"
+              echo "workspace=true"
+            } | tee -a "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git diff --name-only "$BASE" "$HEAD" > changed.txt
+          echo "changed files:"
+          cat changed.txt
+          node .github/changed-half.mjs --stdin < changed.txt
+
   # Everything whose answer is the same on every platform: types, lint, unit
   # tests, composition, and the generated-artifact freshness gates. Run once,
   # because running it three times costs three times as much to learn one fact.
   check:
+    needs: changes
+    if: needs.changes.outputs.workspace == 'true'
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -97,6 +137,8 @@ jobs:
 
   # The parts only the operating system itself can answer.
   platform:
+    needs: changes
+    if: needs.changes.outputs.workspace == 'true'
     strategy:
       # Never cancel the siblings on one failure. "It broke on macOS" and "it
       # broke everywhere" are different findings, and fail-fast hides which.
@@ -175,29 +217,46 @@ jobs:
             workspace/qa/**
           retention-days: 7
 
-  # One status that is always here.
+  # The always-present Workspace status, and the context branch protection
+  # requires.
   #
   # A required check that is skipped never reports at all, and a branch
   # protected on a check that never reports can never merge. So the required
   # context is this job rather than the matrix beneath it: it runs on every
-  # push and every pull request, whatever paths changed, and it passes only if
-  # nothing it gathered failed or was cancelled. A skipped dependency is a
-  # legitimate pass -- that is the case where a change touched nothing here.
+  # push and every pull request whatever changed, and passes only if nothing it
+  # gathered failed. A skipped matrix passes only when the detector said the
+  # Workspace was unaffected -- a job skipped for any other reason is a defect
+  # in this workflow, not a change that needed no testing.
   workspace-required:
     if: always()
-    needs: [check, platform]
+    needs: [changes, check, platform]
     runs-on: ubuntu-latest
     steps:
       - name: Gather the results
         env:
+          DETECTOR: ${{ needs.changes.result }}
+          EXPECTED: ${{ needs.changes.outputs.workspace }}
           RESULTS: ${{ toJSON(needs) }}
         run: |
+          set -euo pipefail
           echo "$RESULTS"
-          # `grep -q ... && { exit 1; }` would fail the step on a green run:
-          # when grep matches nothing it exits 1, and that becomes the step's
-          # status under `bash -e`. The condition has to be a real `if`.
-          if echo "$RESULTS" | grep -qE '"result": *"(failure|cancelled)"'; then
+
+          if [ "$DETECTOR" != "success" ]; then
+            echo "::error::the change detector did not succeed ($DETECTOR)"
+            exit 1
+          fi
+
+          # `grep -q ... && exit 1` would fail the step on a green run: when
+          # grep matches nothing it exits 1, and that becomes the step's status
+          # under `bash -e`. The condition has to be a real `if`.
+          if printf '%s' "$RESULTS" | grep -qE '"result": *"(failure|cancelled)"'; then
             echo "::error::a required workspace job failed or was cancelled"
             exit 1
           fi
-          echo "every workspace job succeeded or was skipped"
+
+          if [ "$EXPECTED" = "true" ] && printf '%s' "$RESULTS" | grep -qE '"result": *"skipped"'; then
+            echo "::error::the Workspace changed, so no Workspace job may be skipped"
+            exit 1
+          fi
+
+          echo "every workspace job succeeded, or was skipped because the Workspace did not change"

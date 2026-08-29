@@ -1,9 +1,17 @@
 name: CI
 
+# Triggers on everything, and decides inside itself what to run.
+#
+# A workflow-level `paths:` filter cannot be used here. A workflow that does
+# not trigger produces no status at all -- not a failing one, an absent one --
+# so a pull request protected on a check inside it waits forever with nothing
+# to explain the wait. Both halves of this repository therefore trigger on
+# every event, and `changes` decides which expensive matrix actually runs.
 on:
   push:
     branches: [main]
   pull_request:
+  workflow_dispatch:
 
 # Least privilege, stated rather than inherited. The repository default is
 # read today, so this changes nothing now -- it is what keeps a future
@@ -12,7 +20,47 @@ permissions:
   contents: read
 
 jobs:
+  # Which half changed. Always runs, so the aggregator below always has
+  # something to gather. The classification itself lives in
+  # .github/changed-half.mjs, where it is tested.
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      core: ${{ steps.classify.outputs.core }}
+      workspace: ${{ steps.classify.outputs.workspace }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Classify the change
+        id: classify
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+          HEAD: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          # A first push to a branch reports an all-zero "before", and a manual
+          # dispatch has no diff at all. Neither can be classified, so both run
+          # everything: an unnecessary matrix costs minutes, a wrongly skipped
+          # one costs a defect reaching main.
+          if [ "$EVENT" = "workflow_dispatch" ] || [ -z "${BASE:-}" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ]; then
+            echo "no comparable base; running everything"
+            {
+              echo "core=true"
+              echo "workspace=true"
+            } | tee -a "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git diff --name-only "$BASE" "$HEAD" > changed.txt
+          echo "changed files:"
+          cat changed.txt
+          node .github/changed-half.mjs --stdin < changed.txt
+
   lint:
+    needs: changes
+    if: needs.changes.outputs.core == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -22,6 +70,8 @@ jobs:
       - run: uv run --only-group dev ruff check .
 
   test:
+    needs: changes
+    if: needs.changes.outputs.core == 'true'
     strategy:
       fail-fast: false
       matrix:
@@ -72,23 +122,41 @@ jobs:
           WATCHSKILL_VISION_STRONG_PROVIDER: anthropic
           FASTEMBED_CACHE_PATH: ci-model-cache
 
-  # The always-present Core status. See workspace-ci.yml for why the required
-  # context is an aggregator rather than the matrix itself.
+  # The always-present Core status, and the context branch protection requires.
+  #
+  # It passes only if nothing it gathered failed. A skipped matrix passes only
+  # when the detector said Core was unaffected: a job skipped for any other
+  # reason is a defect in this workflow, not a change that needed no testing.
   core-required:
     if: always()
-    needs: [lint, test]
+    needs: [changes, lint, test]
     runs-on: ubuntu-latest
     steps:
       - name: Gather the results
         env:
+          DETECTOR: ${{ needs.changes.result }}
+          EXPECTED: ${{ needs.changes.outputs.core }}
           RESULTS: ${{ toJSON(needs) }}
         run: |
+          set -euo pipefail
           echo "$RESULTS"
-          # `grep -q ... && { exit 1; }` would fail the step on a green run:
-          # when grep matches nothing it exits 1, and that becomes the step's
-          # status under `bash -e`. The condition has to be a real `if`.
-          if echo "$RESULTS" | grep -qE '"result": *"(failure|cancelled)"'; then
+
+          if [ "$DETECTOR" != "success" ]; then
+            echo "::error::the change detector did not succeed ($DETECTOR)"
+            exit 1
+          fi
+
+          # `grep -q ... && exit 1` would fail the step on a green run: when
+          # grep matches nothing it exits 1, and that becomes the step's status
+          # under `bash -e`. The condition has to be a real `if`.
+          if printf '%s' "$RESULTS" | grep -qE '"result": *"(failure|cancelled)"'; then
             echo "::error::a required core job failed or was cancelled"
             exit 1
           fi
-          echo "every core job succeeded or was skipped"
+
+          if [ "$EXPECTED" = "true" ] && printf '%s' "$RESULTS" | grep -qE '"result": *"skipped"'; then
+            echo "::error::Core changed, so no Core job may be skipped"
+            exit 1
+          fi
+
+          echo "every core job succeeded, or was skipped because Core did not change"
