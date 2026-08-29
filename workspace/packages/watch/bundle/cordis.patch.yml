@@ -78,6 +78,23 @@
     - id: watch-brand
       name: '@watchskill/dsh-client-brand'
 
+    # The browser end of the read plane: Watch's generated Typert Remote,
+    # mounted into `ctx.remote`.
+    #
+    # Its own row rather than a line inside the Library, and the reason is a
+    # dependency cycle rather than taste. `@watchskill/dsh-tools` is the Host
+    # that answers these reads, and it reads the Library's index — so tools
+    # depends on the Library. When the Library's browser half also mounted the
+    # generated contribution, the Library depended on tools in return, and no
+    # build order can satisfy a package that cannot compile until a file
+    # generated from its own dependent exists.
+    #
+    # This row must come before `watch-library`: the Library's browser half
+    # injects `remote.watchQuery`, so without the mount it parks rather than
+    # drawing a tab whose search answers from nothing.
+    - id: watch-client-remotes
+      name: '@watchskill/dsh-client-remotes'
+
     # Evidence: keyed tool views, plus the Compare mode.
     #
     # It reads what the conversation already carries and makes no Host call at

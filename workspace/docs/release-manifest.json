@@ -62,7 +62,7 @@
       {
         "name": "@watchskill/dsh-bundle",
         "version": "0.1.0-preview.0",
-        "integrity": "sha256:8dac3e5e04d9aa13e0e294a025ffcf9f0d9aaf1fa8fa8c716ce2a647907c0883",
+        "integrity": "sha256:7d99b9fd5d3ffe178015e01a55113479df2c491bd571f989f841d7ff3361303e",
         "sourceFiles": 7
       },
       {
@@ -76,6 +76,12 @@
         "version": "0.1.0-preview.0",
         "integrity": "sha256:a682354ba3e067db27f97bc53268393949d6295d017cb2066558202082aabd5e",
         "sourceFiles": 9
+      },
+      {
+        "name": "@watchskill/dsh-client-remotes",
+        "version": "0.1.0-preview.0",
+        "integrity": "sha256:0007b3daccdfc9eff2ea639f05ca3d5da1f81515ab7d892834adc03ddfceb1c2",
+        "sourceFiles": 5
       },
       {
         "name": "@watchskill/dsh-client-settings",
@@ -98,8 +104,8 @@
       {
         "name": "@watchskill/dsh-library",
         "version": "0.1.0-preview.0",
-        "integrity": "sha256:cdb10fd1e1fec53f125c91eb35cb11d4959a45cfdbd1a167925b59824c93cd95",
-        "sourceFiles": 13
+        "integrity": "sha256:e9273d97a20613f6c2701896a3ee0ffafe16aa7f7d321c9a0e6b789d5244be26",
+        "sourceFiles": 14
       },
       {
         "name": "@watchskill/dsh-live",
@@ -173,7 +179,7 @@
       "creators": [
         "Tool: watch-gen-release-manifest"
       ],
-      "created": "2026-08-29T21:47:21Z"
+      "created": "2026-08-29T22:37:06Z"
     },
     "packages": [
       {
@@ -220,7 +226,7 @@
         "checksums": [
           {
             "algorithm": "SHA256",
-            "checksumValue": "8dac3e5e04d9aa13e0e294a025ffcf9f0d9aaf1fa8fa8c716ce2a647907c0883"
+            "checksumValue": "7d99b9fd5d3ffe178015e01a55113479df2c491bd571f989f841d7ff3361303e"
           }
         ]
       },
@@ -253,6 +259,22 @@
           {
             "algorithm": "SHA256",
             "checksumValue": "a682354ba3e067db27f97bc53268393949d6295d017cb2066558202082aabd5e"
+          }
+        ]
+      },
+      {
+        "SPDXID": "SPDXRef-Package--watchskill-dsh-client-remotes",
+        "name": "@watchskill/dsh-client-remotes",
+        "versionInfo": "0.1.0-preview.0",
+        "licenseDeclared": "MIT",
+        "licenseConcluded": "NOASSERTION",
+        "downloadLocation": "NOASSERTION",
+        "filesAnalyzed": false,
+        "copyrightText": "NOASSERTION",
+        "checksums": [
+          {
+            "algorithm": "SHA256",
+            "checksumValue": "0007b3daccdfc9eff2ea639f05ca3d5da1f81515ab7d892834adc03ddfceb1c2"
           }
         ]
       },
@@ -316,7 +338,7 @@
         "checksums": [
           {
             "algorithm": "SHA256",
-            "checksumValue": "cdb10fd1e1fec53f125c91eb35cb11d4959a45cfdbd1a167925b59824c93cd95"
+            "checksumValue": "e9273d97a20613f6c2701896a3ee0ffafe16aa7f7d321c9a0e6b789d5244be26"
           }
         ]
       },
@@ -506,6 +528,11 @@
         "spdxElementId": "SPDXRef-DOCUMENT",
         "relationshipType": "DESCRIBES",
         "relatedSpdxElement": "SPDXRef-Package--watchskill-dsh-client-memory"
+      },
+      {
+        "spdxElementId": "SPDXRef-DOCUMENT",
+        "relationshipType": "DESCRIBES",
+        "relatedSpdxElement": "SPDXRef-Package--watchskill-dsh-client-remotes"
       },
       {
         "spdxElementId": "SPDXRef-DOCUMENT",

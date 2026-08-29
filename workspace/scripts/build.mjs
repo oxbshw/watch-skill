@@ -95,21 +95,50 @@ function clientPackages() {
   return ordered
 }
 
+/**
+ * Five stages, in the only order an empty tree admits.
+ *
+ * The staging is not a preference. Typert derives the wire protocol from the
+ * Host program by reading the *emitted* declarations of the packages the Host
+ * imports, and it emits a Remote declaration that the client half of the
+ * composition then imports. Those two facts describe a cycle that only an
+ * ordering can break, and the ordering has to put the Host graph first.
+ *
+ * Compiling the whole solution up front does not work, and the way it fails is
+ * worth recording, because for a while it did not fail at all: on a machine
+ * that had built once, `packages/watch/tools/lib/typert.remote-client.d.ts` was
+ * already on disk, ignored by git and invisible to `git status`, and the full
+ * `tsc -b` resolved it happily. A cold clone had no such file, so the first
+ * compilation stopped at `TS2307: Cannot find module
+ * '@watchskill/dsh-tools/remote'` — a build that passed for everyone who had
+ * built before and failed for everyone who had not.
+ *
+ * So stage 1 builds the Host-face aggregate, which is the graph Typert reads
+ * and nothing more, stage 2 generates, and only then does stage 3 compile the
+ * complete solution including the client that imports what stage 2 wrote.
+ */
 function main() {
-  // The Node halves first: a browser bundle imports the contracts package's
-  // emitted types, so building them in the other order fails on a cold tree.
-  step('building node halves', tool('tsc'), ['-b'])
+  // 1. The Host graph, through the aggregate that defines the Host face.
+  //    `tsconfig.json` would pull in the client that cannot compile yet.
+  step('building the host face', tool('tsc'), ['-b', 'tsconfig.host.json'])
 
-  // Between the two compilations, and not beside either. Typert derives the
-  // wire protocol from the Host program, so it needs the Host types to exist;
-  // the client bundles import the generated Remote declaration, so they need
-  // its output to exist. Generating after the bundles would ship a client
-  // built against the previous protocol.
+  // 2. The protocol, from the Host types stage 1 emitted.
   step('generating typert artifacts', process.execPath, [join(ROOT, 'scripts', 'gen-typert.mjs')])
 
+  // 3. Everything, now that the generated Remote declaration exists.
+  step('building node halves', tool('tsc'), ['-b'])
+
+  // 4. The browser bundles, in dependency order.
   for (const { dir, name } of clientPackages()) {
     step(`bundling ${name}`, tool('tsdown'), [], dir)
   }
+
+  // 5. The freshness gate, against the tree the build just produced. Stage 2
+  //    generated from pre-solution declarations; if the completed solution
+  //    would generate anything different, that difference is a defect and this
+  //    is where it surfaces rather than in a reviewer's `git status`.
+  step('checking generated artifacts', process.execPath,
+    [join(ROOT, 'scripts', 'gen-typert.mjs'), '--check'])
 
   process.stdout.write('\nbuild complete\n')
 }

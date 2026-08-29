@@ -25,6 +25,7 @@
     "@watchskill/dsh-client-brand": "workspace:^",
     "@watchskill/dsh-client-evidence": "workspace:^",
     "@watchskill/dsh-client-memory": "workspace:^",
+    "@watchskill/dsh-client-remotes": "workspace:^",
     "@watchskill/dsh-client-settings": "workspace:^",
     "@watchskill/dsh-core-bridge": "workspace:^",
     "@watchskill/dsh-library": "workspace:^",

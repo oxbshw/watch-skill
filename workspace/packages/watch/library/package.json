@@ -27,6 +27,10 @@
       "types": "./lib/client/library-mode.d.ts",
       "default": "./lib/client/library-mode.js"
     },
+    "./read-plane": {
+      "types": "./lib/client/read-plane.d.ts",
+      "default": "./lib/client/read-plane.js"
+    },
     "./package.json": "./package.json",
     "./search-view": {
       "types": "./lib/client/search-view.d.ts",
@@ -36,7 +40,7 @@
   "dsh": {
     "client": {
       "inject": [
-        "@deepseek-ai/dsh-api-remotes",
+        "@watchskill/dsh-client-remotes",
         "@deepseek-ai/dsh-client-ui-slots"
       ],
       "platform": "web"
@@ -54,11 +58,13 @@
   },
   "peerDependencies": {
     "@deepseek-ai/cordis": "catalog:",
+    "@deepseek-ai/dsh-typert-protocol": "catalog:",
     "react": "^18.2.0"
   },
   "devDependencies": {
     "@deepseek-ai/cordis": "catalog:",
     "@deepseek-ai/dsh-client-ui-slots": "catalog:",
+    "@deepseek-ai/dsh-typert-protocol": "catalog:",
     "@types/react": "~18.3.1",
     "react": "^18.2.0"
   },
@@ -66,7 +72,6 @@
     "@watchskill/dsh-client-brand": "workspace:^",
     "@watchskill/dsh-contracts": "workspace:^",
     "@watchskill/dsh-technology": "workspace:^",
-    "@watchskill/dsh-tools": "workspace:^",
     "@watchskill/dsh-workspace": "workspace:^"
   }
 }

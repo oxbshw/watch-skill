@@ -191,6 +191,9 @@ importers:
       '@watchskill/dsh-client-memory':
         specifier: workspace:^
         version: link:../client-memory
+      '@watchskill/dsh-client-remotes':
+        specifier: workspace:^
+        version: link:../client-remotes
       '@watchskill/dsh-client-settings':
         specifier: workspace:^
         version: link:../client-settings
@@ -272,6 +275,31 @@ importers:
         specifier: ^18.2.0
         version: 18.3.1
 
+  packages/watch/client-remotes:
+    dependencies:
+      '@watchskill/dsh-library':
+        specifier: workspace:^
+        version: link:../library
+      '@watchskill/dsh-tools':
+        specifier: workspace:^
+        version: link:../tools
+    devDependencies:
+      '@deepseek-ai/cordis':
+        specifier: 'catalog:'
+        version: 4.0.1(@deepseek-ai/cordis-plugin-include@1.0.6)(@deepseek-ai/cordis-plugin-loader@1.0.2)
+      '@deepseek-ai/dsh-api-gateway':
+        specifier: 'catalog:'
+        version: 0.1.1-rc.2(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-client-connection@0.1.1-rc.2)(@deepseek-ai/dsh-invariants@0.1.1-rc.2(@deepseek-ai/cordis@4.0.1))(@deepseek-ai/dsh-typert-registry@0.1.1-rc.2(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.1-rc.2(@deepseek-ai/cordis@4.0.1)))
+      '@deepseek-ai/dsh-typert-protocol':
+        specifier: 'catalog:'
+        version: 0.1.1-rc.2(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.1-rc.2(@deepseek-ai/cordis@4.0.1))
+      '@types/react':
+        specifier: ~18.3.1
+        version: 18.3.31
+      react:
+        specifier: ^18.2.0
+        version: 18.3.1
+
   packages/watch/client-settings:
     dependencies:
       '@watchskill/dsh-client-brand':
@@ -323,9 +351,6 @@ importers:
       '@watchskill/dsh-technology':
         specifier: workspace:^
         version: link:../technology
-      '@watchskill/dsh-tools':
-        specifier: workspace:^
-        version: link:../tools
       '@watchskill/dsh-workspace':
         specifier: workspace:^
         version: link:../workspace
@@ -334,6 +359,9 @@ importers:
         specifier: 'catalog:'
         version: 4.0.1(@deepseek-ai/cordis-plugin-include@1.0.6)(@deepseek-ai/cordis-plugin-loader@1.0.2)
       '@deepseek-ai/dsh-client-ui-slots':
+        specifier: 'catalog:'
+        version: 0.1.1-rc.2(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.1-rc.2(@deepseek-ai/cordis@4.0.1))
+      '@deepseek-ai/dsh-typert-protocol':
         specifier: 'catalog:'
         version: 0.1.1-rc.2(@deepseek-ai/cordis@4.0.1)(@deepseek-ai/dsh-invariants@0.1.1-rc.2(@deepseek-ai/cordis@4.0.1))
       '@types/react':

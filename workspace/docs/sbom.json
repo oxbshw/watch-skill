@@ -38,6 +38,13 @@
       "kind": "first_party"
     },
     {
+      "name": "@watchskill/dsh-client-remotes",
+      "version": "0.1.0-preview.0",
+      "license": "MIT",
+      "path": "packages/watch/client-remotes",
+      "kind": "first_party"
+    },
+    {
       "name": "@watchskill/dsh-client-settings",
       "version": "0.1.0-preview.0",
       "license": "MIT",
@@ -3114,7 +3121,7 @@
     }
   ],
   "counts": {
-    "firstParty": 18,
+    "firstParty": 19,
     "thirdParty": 417,
     "modelWeights": 5,
     "distributableWeights": 3

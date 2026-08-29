@@ -23,10 +23,23 @@
 import type { ReactNode } from 'react'
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { LibraryIndex, MAX_LIMIT, tokenize } from '../index-store.js'
-import type { IndexQuery, IndexQueryResult, IndexableRecord } from '../index-store.js'
+import type { IndexQuery, IndexableRecord } from '../index-store.js'
 import type { SourceKind } from '../sources.js'
+import { fromIndex, readLibraryPage } from './read-plane.js'
+import type { SearchState, WatchQueryRemote } from './read-plane.js'
 
 const PAGE = 10
+
+/**
+ * How long the surface will wait for the host before it must show something.
+ *
+ * Shorter than the host's own ceiling on purpose: the host clamps to 30s, and a
+ * search box that can appear frozen for half a minute is a search box people
+ * stop trusting. The host is told this number, so an answer it cannot produce
+ * in time comes back as `deadline_exceeded` — a sentence on the screen — rather
+ * than as a request nobody ever cancelled.
+ */
+const DEADLINE_MS = 10_000
 
 const S = {
   root: {
@@ -112,10 +125,21 @@ export interface LibrarySearchProps {
   readonly records?: readonly IndexableRecord[]
   /** Injected for tests; production builds its own. */
   readonly index?: LibraryIndex
+  /**
+   * The mounted `ctx.remote.watchQuery` namespace, when there is one.
+   *
+   * Present in a profile: the workspace's own host holds the library, and
+   * answering from a browser-side copy of it would be a second index with its
+   * own drift. Absent everywhere else — a test, a story, a build without the
+   * Host row — and the local index answers instead.
+   */
+  readonly reads?: WatchQueryRemote | undefined
 }
 
 /** The Library search workflow: query, filter, sort, page, rebuild. */
-export function LibrarySearch({ records = [], index: injected }: LibrarySearchProps): ReactNode {
+export function LibrarySearch(
+  { records = [], index: injected, reads }: LibrarySearchProps,
+): ReactNode {
   const queryId = useId()
   const kindId = useId()
   const verdictId = useId()
@@ -127,7 +151,7 @@ export function LibrarySearch({ records = [], index: injected }: LibrarySearchPr
   const [sort, setSort] = useState<NonNullable<IndexQuery['sort']>>('relevance')
   const [offset, setOffset] = useState(0)
   const [generation, setGeneration] = useState(0)
-  const [result, setResult] = useState<IndexQueryResult | null>(null)
+  const [state, setState] = useState<SearchState | null>(null)
 
   const index = useMemo(() => {
     if (injected !== undefined) return injected
@@ -138,24 +162,40 @@ export function LibrarySearch({ records = [], index: injected }: LibrarySearchPr
 
   // Every query supersedes the one before it. Without this, a slow search over
   // a large corpus can land after a newer one and overwrite it with stale
-  // results — the classic race that makes a search box feel haunted.
+  // results — the classic race that makes a search box feel haunted. It is what
+  // carries cancellation to the host too: the Remote takes the same signal, so
+  // an abandoned query is abandoned on both sides rather than only on this one.
   const inFlight = useRef<AbortController | null>(null)
 
   const run = useCallback((nextOffset: number) => {
     inFlight.current?.abort()
     const controller = new AbortController()
     inFlight.current = controller
-    setResult(index.search({
-      text,
-      ...(kind === '' ? {} : { kinds: [kind] }),
-      ...(verdict === '' ? {} : { verdicts: [verdict] }),
-      sort,
-      offset: nextOffset,
-      limit: PAGE,
-      signal: controller.signal,
-    }))
     setOffset(nextOffset)
-  }, [index, text, kind, verdict, sort])
+
+    if (reads === undefined) {
+      setState(fromIndex(index.search({
+        text,
+        ...(kind === '' ? {} : { kinds: [kind] }),
+        ...(verdict === '' ? {} : { verdicts: [verdict] }),
+        sort,
+        offset: nextOffset,
+        limit: PAGE,
+        signal: controller.signal,
+      })))
+      return
+    }
+
+    void readLibraryPage(
+      reads,
+      { text, modality: kind, limit: PAGE, deadlineMs: DEADLINE_MS },
+      controller.signal,
+    ).then(next => {
+      // A superseded answer is dropped rather than rendered: the newer query
+      // already owns the screen.
+      if (!controller.signal.aborted) setState(next)
+    })
+  }, [reads, index, text, kind, verdict, sort])
 
   useEffect(() => { run(0) }, [run])
   useEffect(() => () => { inFlight.current?.abort() }, [])
@@ -164,11 +204,15 @@ export function LibrarySearch({ records = [], index: injected }: LibrarySearchPr
   // `noUncheckedIndexedAccess` is on, so an index lookup is optional even
   // with a total record type. Falling back keeps the surface renderable
   // for a health value a future build adds before this one knows it.
-  const health = HEALTH[result?.health ?? index.health] ?? { says: 'Index state unknown.', tone: 'var(--watch-tone-neutral)' }
-  const total = result?.total ?? 0
-  const shown = result?.results.length ?? 0
+  const health = HEALTH[state?.health ?? (reads === undefined ? index.health : 'empty')]
+    ?? { says: 'Index state unknown.', tone: 'var(--watch-tone-neutral)' }
+  const rows = state?.rows ?? []
+  const total = state?.total ?? 0
+  const shown = rows.length
   const page = Math.floor(offset / PAGE) + 1
-  const pages = Math.max(1, Math.ceil(total / PAGE))
+  // The host answers one page and offers no cursor, so it never claims more
+  // pages than it can produce. Only the local index pages.
+  const pages = state?.pageable === true ? Math.max(1, Math.ceil(total / PAGE)) : 1
 
   return (
     <div style={S.root}>
@@ -199,7 +243,17 @@ export function LibrarySearch({ records = [], index: injected }: LibrarySearchPr
 
         <div style={S.field}>
           <label htmlFor={verdictId} style={S.label}>Verification</label>
-          <select id={verdictId} style={S.select} value={verdict} onChange={event => { setVerdict(event.target.value) }}>
+          {/* The host answers by query and modality and has no verdict or sort
+              parameter, so both controls are disabled rather than silently
+              ignored while it is answering. A filter that changes nothing is
+              worse than one that is plainly unavailable. */}
+          <select
+            id={verdictId}
+            style={S.select}
+            value={verdict}
+            disabled={reads !== undefined}
+            onChange={event => { setVerdict(event.target.value) }}
+          >
             <option value="">Any state</option>
             {['VERIFIED', 'FAILED', 'UNVERIFIED', 'INCONCLUSIVE'].map(value => (
               <option key={value} value={value}>{value}</option>
@@ -209,7 +263,13 @@ export function LibrarySearch({ records = [], index: injected }: LibrarySearchPr
 
         <div style={S.field}>
           <label htmlFor={sortId} style={S.label}>Sort</label>
-          <select id={sortId} style={S.select} value={sort} onChange={event => { setSort(event.target.value as NonNullable<IndexQuery['sort']>) }}>
+          <select
+            id={sortId}
+            style={S.select}
+            value={sort}
+            disabled={reads !== undefined}
+            onChange={event => { setSort(event.target.value as NonNullable<IndexQuery['sort']>) }}
+          >
             <option value="relevance">Relevance</option>
             <option value="newest">Newest first</option>
             <option value="oldest">Oldest first</option>
@@ -222,7 +282,8 @@ export function LibrarySearch({ records = [], index: injected }: LibrarySearchPr
           type="button"
           style={S.button}
           // Rebuilding is safe precisely because the index is derived: it can
-          // be thrown away and reconstructed from the records at any time.
+          // be thrown away and reconstructed from the records at any time. It
+          // rebuilds the local one; the host owns its own and re-reads it.
           onClick={() => { setGeneration(value => value + 1) }}
         >
           Rebuild index
@@ -233,7 +294,9 @@ export function LibrarySearch({ records = [], index: injected }: LibrarySearchPr
         {health.says}
         {' '}
         <span style={{ color: 'var(--dsw-alias-label-tertiary)' }}>
-          {`${String(index.size)} record(s) indexed.`}
+          {reads === undefined
+            ? `${String(index.size)} record(s) indexed on this machine.`
+            : 'Answered by this workspace’s own host.'}
         </span>
       </p>
 
@@ -244,7 +307,7 @@ export function LibrarySearch({ records = [], index: injected }: LibrarySearchPr
           : `${String(total)} match${total === 1 ? '' : 'es'}, showing ${String(shown)} (page ${String(page)} of ${String(pages)}).`}
       </p>
 
-      {(result?.notes ?? []).map(note => (
+      {(state?.notes ?? []).map(note => (
         <p key={note} style={S.status}>{note}</p>
       ))}
 
@@ -252,7 +315,7 @@ export function LibrarySearch({ records = [], index: injected }: LibrarySearchPr
         ? (
             <div style={{ ...S.hit, borderStyle: 'dashed' }}>
               <p style={{ ...S.snippet, margin: 0 }}>
-                {index.size === 0
+                {reads === undefined && index.size === 0
                   ? 'Nothing has been indexed yet. Evidence appears here once the workspace has recorded some — then this searches it locally, with no service and no model.'
                   : 'Nothing matched. Every word has to appear in a record; try fewer words, or clear the filters.'}
               </p>
@@ -260,21 +323,21 @@ export function LibrarySearch({ records = [], index: injected }: LibrarySearchPr
           )
         : (
             <ul style={S.list}>
-              {(result?.results ?? []).map(entry => (
-                <li key={entry.sourceId} style={S.hit}>
+              {rows.map(entry => (
+                <li key={entry.key} style={S.hit}>
                   <h4 style={S.title}><Highlighted text={entry.title} terms={terms} /></h4>
-                  {entry.hits.map(hit => (
-                    <p key={`${hit.sourceRevisionId}-${String(hit.score)}`} style={S.snippet}>
-                      <Highlighted text={hit.text} terms={terms} />
+                  {entry.snippets.map((snippet, at) => (
+                    <p key={`${entry.key}-${String(at)}`} style={S.snippet}>
+                      <Highlighted text={snippet} terms={terms} />
                     </p>
                   ))}
                   <div style={S.meta}>
                     <span>{entry.kind}</span>
-                    <span data-watch-ltr>{entry.sourceId}</span>
-                    {(entry.hits[0]?.evidenceIds.length ?? 0) > 0
+                    <span data-watch-ltr>{entry.recordId}</span>
+                    {entry.evidenceCount > 0
                       ? (
                           <span data-watch-ltr>
-                            {`${String(entry.hits[0]?.evidenceIds.length ?? 0)} evidence ref(s)`}
+                            {`${String(entry.evidenceCount)} evidence ref(s)`}
                           </span>
                         )
                       : null}

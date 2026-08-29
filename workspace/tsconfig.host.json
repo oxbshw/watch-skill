@@ -36,6 +36,9 @@
       "@watchskill/dsh-library/library-mode": [
         "./packages/watch/library/src/client/library-mode.tsx"
       ],
+      "@watchskill/dsh-library/read-plane": [
+        "./packages/watch/library/src/client/read-plane.ts"
+      ],
       "@watchskill/dsh-library/search-view": [
         "./packages/watch/library/src/client/search-view.tsx"
       ],
