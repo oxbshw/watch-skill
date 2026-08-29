@@ -48,10 +48,29 @@ const PROFILE = 'web'
 const FIXTURES = join(ROOT, 'fixtures', 'manual')
 
 /** Where Watch Core lives on this machine. */
-const CORE_CANDIDATES = [
-  'F:/New folder (5)/local project/.venv/Scripts/watch-skill.exe',
-  'F:/New folder (5)/local project/.venv/bin/watch-skill',
-]
+/**
+ * Where Watch Core's executable might be, in preference order.
+ *
+ * This was two absolute paths into one maintainer's checkout, on a drive and
+ * under a directory name nobody else has. Everyone else got the mock backend
+ * and a line of output saying so, which reads like a decision rather than a
+ * machine that could not find something sitting in its own virtualenv.
+ *
+ * Core lives in this repository now, so the repository's own venv is the
+ * first place to look. WATCH_CORE_BIN overrides for a Core installed
+ * elsewhere.
+ */
+function coreCandidates(env = process.env) {
+  const explicit = env.WATCH_CORE_BIN
+  const repoRoot = join(ROOT, '..')
+  return [
+    ...(typeof explicit === 'string' && explicit !== '' ? [explicit] : []),
+    join(repoRoot, '.venv', 'Scripts', 'watch-skill.exe'),
+    join(repoRoot, '.venv', 'bin', 'watch-skill'),
+    join(ROOT, '.venv', 'Scripts', 'watch-skill.exe'),
+    join(ROOT, '.venv', 'bin', 'watch-skill'),
+  ]
+}
 
 function fail(message, detail) {
   process.stderr.write(`\nwatch: ${message}\n`)
@@ -151,13 +170,19 @@ function bundlePackages() {
  * in, so the same version installs the bundle as built it.
  */
 function pinProfilePackageManager() {
-  const manifestPath = join(HOME, 'profiles', PROFILE, 'package.json')
-  if (!existsSync(manifestPath)) return
+  const profileDir = join(HOME, 'profiles', PROFILE)
+  const manifestPath = join(profileDir, 'package.json')
   const workspace = JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8'))
   const spec = workspace.packageManager
   if (typeof spec !== 'string' || !/^pnpm@\d+\.\d+\.\d+$/.test(spec)) {
     fail('the workspace pins no exact pnpm', `package.json packageManager is ${String(spec)}`)
   }
+  // DSH owns this file's shape -- it carries the `dsh.profile.bundles` block
+  // that says which layers compose -- so this only ever edits one field of an
+  // existing manifest. Writing a minimal one here instead produced a profile
+  // that installed all fourteen Watch packages and composed none of them,
+  // because the bundle list was not in the file DSH then declined to replace.
+  if (!existsSync(manifestPath)) return
   const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'))
   if (manifest.packageManager === spec) return
   manifest.packageManager = spec
@@ -182,7 +207,7 @@ function pinProfilePackageManager() {
  */
 function clearStaleInstalls() {
   const profileModules = join(HOME, 'profiles', PROFILE, 'node_modules')
-  if (!existsSync(profileModules)) return
+  if (!existsSync(profileModules)) return false
 
   // A tree linked by a different pnpm major cannot be reused by this one.
   // pnpm refuses with ERR_PNPM_UNEXPECTED_STORE -- the store is versioned, and
@@ -201,16 +226,17 @@ function clearStaleInstalls() {
         + `this pnpm uses v${wanted}. Rebuilding it.\n`,
       )
       removeTree(profileModules)
-      return
+      return true
     }
   }
 
   removeTree(join(profileModules, '@watchskill'))
   const store = join(profileModules, '.pnpm')
-  if (!existsSync(store)) return
+  if (!existsSync(store)) return false
   for (const entry of readdirSync(store)) {
     if (entry.startsWith('file+')) removeTree(join(store, entry))
   }
+  return false
 }
 
 function packAll() {
@@ -309,7 +335,7 @@ function main() {
   const cli = findCli()
   if (cli === null) fail('the DSH CLI is not installed')
 
-  const core = CORE_CANDIDATES.find(candidate => existsSync(candidate))
+  const core = coreCandidates().find(candidate => existsSync(candidate))
   if (core === undefined) {
     process.stderr.write(
       'watch: Watch Core was not found; the profile will fall back to the mock backend\n',
@@ -324,10 +350,16 @@ function main() {
     // `dsh plugin` forwards to pnpm, and pnpm asks before removing a
     // node_modules whose store layout it does not recognise -- then aborts with
     // ERR_PNPM_ABORTED_REMOVE_MODULES_DIR_NO_TTY when there is nobody to ask.
-    // This script is unattended by design and runs in CI, so it says so. The
-    // stale layout it has to purge is what a previously unpinned pnpm left
+    // The stale layout it has to purge is what a previously unpinned pnpm left
     // behind; see pinProfilePackageManager above.
-    CI: 'true',
+    //
+    // This answers that one question and nothing else. Setting CI=true would
+    // also have answered it, and would have turned on frozen-lockfile with it:
+    // the profile manifest is rewritten by this script on every run, so a
+    // frozen lockfile is guaranteed to be out of date and the install fails
+    // with ERR_PNPM_OUTDATED_LOCKFILE. A generated profile is not a
+    // reproducible build, and must not be treated as one.
+    npm_config_confirm_modules_purge: 'false',
     COREPACK_ENABLE_DOWNLOAD_PROMPT: '0',
   }
 
@@ -354,8 +386,18 @@ function main() {
   const init = run(process.execPath, [cli.entry, 'plugin', '--profile', PROFILE, 'install'], { env, cwd: ROOT })
   if (init.status !== 0) fail('`dsh plugin install` failed', init.stderr || init.stdout)
 
-  // Again after install: `dsh plugin install` rewrites the manifest.
+  // `dsh plugin install` is what creates the manifest, so on a fresh profile
+  // the pin above had no file to write to and that first install ran with
+  // whatever pnpm Corepack chose. Pin it now that the file exists, drop a tree
+  // linked from another major's store, and install again -- the second run is
+  // the one whose linkage survives.
   pinProfilePackageManager()
+  const relinked = clearStaleInstalls()
+  if (relinked) {
+    const again = run(
+      process.execPath, [cli.entry, 'plugin', '--profile', PROFILE, 'install'], { env, cwd: ROOT })
+    if (again.status !== 0) fail('`dsh plugin install` failed after re-pinning', again.stderr || again.stdout)
+  }
 
   linkTarballs(tarballs)
 
