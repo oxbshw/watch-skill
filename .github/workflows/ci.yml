@@ -71,3 +71,24 @@ jobs:
           WATCHSKILL_VISION_CHEAP_PROVIDER: anthropic
           WATCHSKILL_VISION_STRONG_PROVIDER: anthropic
           FASTEMBED_CACHE_PATH: ci-model-cache
+
+  # The always-present Core status. See workspace-ci.yml for why the required
+  # context is an aggregator rather than the matrix itself.
+  core-required:
+    if: always()
+    needs: [lint, test]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Gather the results
+        env:
+          RESULTS: ${{ toJSON(needs) }}
+        run: |
+          echo "$RESULTS"
+          # `grep -q ... && { exit 1; }` would fail the step on a green run:
+          # when grep matches nothing it exits 1, and that becomes the step's
+          # status under `bash -e`. The condition has to be a real `if`.
+          if echo "$RESULTS" | grep -qE '"result": *"(failure|cancelled)"'; then
+            echo "::error::a required core job failed or was cancelled"
+            exit 1
+          fi
+          echo "every core job succeeded or was skipped"

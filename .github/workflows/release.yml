@@ -14,6 +14,24 @@ jobs:
       prerelease: ${{ steps.tag.outputs.prerelease }}
     steps:
       - uses: actions/checkout@v4
+
+      # This workflow triggers on `v*` and publishes Watch Core to PyPI. Both
+      # products live here now, so a Workspace release tagged `v0.1.0` would
+      # publish Core -- built from whatever the root happened to contain, under
+      # a version nobody chose. The `workspace-v*` namespace keeps that from
+      # matching, and this step is what makes the namespace a mechanism rather
+      # than a convention: the tag has to name the version pyproject declares.
+      - name: The tag must name the Core version
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          declared=$(grep -m1 "^version = " pyproject.toml | cut -d'"' -f2)
+          echo "tag=${tag} pyproject=${declared}"
+          if [ "$tag" != "$declared" ]; then
+            echo "::error::${GITHUB_REF_NAME} does not name Core version ${declared}."
+            echo "::error::A Workspace release must be tagged workspace-v<version>."
+            exit 1
+          fi
+
       # PEP 440 pre-release markers. Without this an rc tag produced a release
       # GitHub labels "Latest", so anyone landing on the repository was shown a
       # release candidate as the current version.

@@ -137,6 +137,12 @@ jobs:
       - name: Tests
         run: npm test
 
+      # A gate that verifies must not also write. The SBOM used to enumerate
+      # node_modules, so Linux and Windows each rewrote the other's entries and
+      # nobody noticed, because nothing ever looked at the tree afterwards.
+      - name: The gates changed nothing
+        run: git diff --exit-code
+
       # Electron ships chrome-sandbox without the root ownership and setuid bit
       # the SUID sandbox requires, and refuses to start rather than run
       # unsandboxed. Fixing the permissions keeps the smoke on the same sandbox
@@ -168,3 +174,30 @@ jobs:
             workspace/**/*.log
             workspace/qa/**
           retention-days: 7
+
+  # One status that is always here.
+  #
+  # A required check that is skipped never reports at all, and a branch
+  # protected on a check that never reports can never merge. So the required
+  # context is this job rather than the matrix beneath it: it runs on every
+  # push and every pull request, whatever paths changed, and it passes only if
+  # nothing it gathered failed or was cancelled. A skipped dependency is a
+  # legitimate pass -- that is the case where a change touched nothing here.
+  workspace-required:
+    if: always()
+    needs: [check, platform]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Gather the results
+        env:
+          RESULTS: ${{ toJSON(needs) }}
+        run: |
+          echo "$RESULTS"
+          # `grep -q ... && { exit 1; }` would fail the step on a green run:
+          # when grep matches nothing it exits 1, and that becomes the step's
+          # status under `bash -e`. The condition has to be a real `if`.
+          if echo "$RESULTS" | grep -qE '"result": *"(failure|cancelled)"'; then
+            echo "::error::a required workspace job failed or was cancelled"
+            exit 1
+          fi
+          echo "every workspace job succeeded or was skipped"
