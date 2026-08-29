@@ -3,6 +3,10 @@
 From a clean checkout to a passing gate suite. Nothing here downloads a model,
 requests a device permission, starts a browser or contacts a provider.
 
+The repository holds both halves of the product: Watch Core, the Python engine,
+at the root, and this workspace under `workspace/`. Everything below runs from
+`workspace/`, and none of it needs Python.
+
 ## What you need
 
 | | |
@@ -18,11 +22,11 @@ rather than to the build.
 ## Three commands
 
 ```bash
-git clone <repository-url> watch-workspace
+git clone https://github.com/oxbshw/watch-skill.git
 ```
 
 ```bash
-cd watch-workspace && node scripts/bootstrap.mjs
+cd watch-skill/workspace && node scripts/bootstrap.mjs
 ```
 
 ```bash

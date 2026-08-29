@@ -475,6 +475,24 @@ flowchart LR
 Read [Architecture](docs/architecture.md) for the data model, provider boundaries, and
 extension points.
 
+### The Workspace
+
+This repository holds both halves of the product. The Python engine above is
+the root; `workspace/` is the agent workspace built on
+[DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) — the Watch
+DSH plugins, the Memory service, and the Web and Desktop applications.
+
+The two are independent to install. `pip install watch-skill` reads
+`pyproject.toml` at the root and never descends into `workspace/`, and the
+workspace needs Node and pnpm but no Python.
+
+```bash
+cd workspace && node scripts/bootstrap.mjs
+```
+
+Start at [workspace/docs/setup.md](workspace/docs/setup.md); the workspace has
+its own [README](workspace/README.md), ADRs and gate suite.
+
 ## Documentation
 
 | Guide | Use it for |
