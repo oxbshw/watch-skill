@@ -47,6 +47,7 @@ npm run check
 diffing, which a fresh clone does not have. Run `node scripts/upstream-sync.mjs`
 once first.
 
+New machine? [docs/setup.md](docs/setup.md) is three commands and a doctor.
 Full walkthrough in [docs/getting-started.md](docs/getting-started.md); the
 design and the reasoning behind it in [docs/architecture.md](docs/architecture.md).
 
