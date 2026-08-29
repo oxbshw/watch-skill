@@ -12,6 +12,16 @@
  * scripts work on a clean checkout and the environment variables stay as the
  * override they always were.
  *
+ * One Windows caveat, and it is the reason WATCH_MANUAL_ROOT earns its keep.
+ * A process running inside an MSIX app container sees a `%LOCALAPPDATA%` that
+ * is redirected into `…\Packages\<id>\LocalCache\Local`. DSH heals
+ * `$DSH_HOME/profiles/node_modules` with one junction per installed package,
+ * and a junction is a filesystem reparse point resolved outside that
+ * redirection -- so every link points at a path that does not exist and the
+ * profile boots into ERR_MODULE_NOT_FOUND for packages that are plainly
+ * installed. Set WATCH_MANUAL_ROOT to a real path when running under such a
+ * container.
+ *
  * @module scripts/lib/manual-paths
  */
 

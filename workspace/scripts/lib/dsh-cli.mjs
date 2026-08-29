@@ -122,8 +122,24 @@ export function ensureCli(root, env = process.env) {
     // preference: npm spent thirty minutes resolving this tree and wrote
     // nothing, where pnpm's content-addressed store finished in under two.
     `corepack ${pinnedPackageManager(root)} add @deepseek-ai/dsh@${wanted}`,
-    { cwd: dir, stdio: 'inherit', shell: true,
-      env: { ...env, COREPACK_ENABLE_DOWNLOAD_PROMPT: '0' } },
+    { cwd: dir,
+      stdio: 'inherit',
+      shell: true,
+      env: {
+        ...env,
+        COREPACK_ENABLE_DOWNLOAD_PROMPT: '0',
+        // A flat node_modules, which is not a preference here but a
+        // requirement of DSH's own profile design. A profile resolves bare
+        // plugin names through `$DSH_HOME/profiles/node_modules`, a directory
+        // DSH heals on every launch with one junction per package in the
+        // installation's `node_modules/<scope>/<name>`. pnpm's default
+        // isolated layout puts one entry there and the other four hundred in
+        // `.pnpm`, so healing finds almost nothing to link and the profile
+        // boots into ERR_MODULE_NOT_FOUND. npm produces the same flat shape
+        // and is what getting-started documents; it took thirty minutes to
+        // resolve this graph where pnpm takes eleven seconds.
+        npm_config_node_linker: 'hoisted',
+      } },
   )
   if (result.status !== 0) return findCli(root, env)
   return findCli(root, env)

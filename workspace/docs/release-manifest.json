@@ -86,7 +86,7 @@
       {
         "name": "@watchskill/dsh-contracts",
         "version": "0.1.0-preview.0",
-        "integrity": "sha256:d6bcf3101a3c5bc4e9cfe00a456c76ac48d8006c653c012391b166dbbfbb0b6e",
+        "integrity": "sha256:6ab508ddba90b33cf3c68f8366a9b8ea80fb43767744298910702012007023e4",
         "sourceFiles": 8
       },
       {
@@ -173,7 +173,7 @@
       "creators": [
         "Tool: watch-gen-release-manifest"
       ],
-      "created": "2026-08-29T09:33:16Z"
+      "created": "2026-08-29T15:52:32Z"
     },
     "packages": [
       {
@@ -284,7 +284,7 @@
         "checksums": [
           {
             "algorithm": "SHA256",
-            "checksumValue": "d6bcf3101a3c5bc4e9cfe00a456c76ac48d8006c653c012391b166dbbfbb0b6e"
+            "checksumValue": "6ab508ddba90b33cf3c68f8366a9b8ea80fb43767744298910702012007023e4"
           }
         ]
       },
