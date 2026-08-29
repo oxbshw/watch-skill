@@ -87,21 +87,13 @@ function* clientBundles(dir, depth = 0) {
   }
 }
 
-function main() {
-  const check = process.argv.includes('--check')
-
-  const tree = CANDIDATES.find(path => existsSync(path))
-  if (tree === undefined) {
-    // In check mode with no DSH tree the committed inventory is all there is,
-    // and that is the normal fresh-clone case rather than a failure.
-    if (check && existsSync(OUT)) {
-      process.stdout.write('dsh-slots: no DSH tree here; keeping the committed inventory\n')
-      return
-    }
-    process.stderr.write('watch: no DSH install found. Set WATCH_DSH_TREE.\n')
-    process.exit(1)
-  }
-
+/**
+ * Read every slot a DSH tree declares or renders.
+ *
+ * @param tree - a directory that may contain DSH client bundles.
+ * @returns the slots found, and how many bundles were read.
+ */
+function scanTree(tree) {
   const slots = new Map()
   let bundles = 0
   for (const path of clientBundles(tree)) {
@@ -129,9 +121,38 @@ function main() {
     }
   }
 
-  if (slots.size === 0) {
+  return { slots, bundles }
+}
+
+function main() {
+  const check = process.argv.includes('--check')
+
+  // The first candidate that actually yields a catalogue wins, not the first
+  // that exists. A CI runner has a node_modules with an incidental client.js
+  // under a deepseek path and no catalogue in it, and choosing that tree
+  // reported "found 1 bundle but no slot catalogue" and failed the gate.
+  let tree
+  let slots = new Map()
+  let bundles = 0
+  for (const candidate of CANDIDATES) {
+    if (!existsSync(candidate)) continue
+    const found = scanTree(candidate)
+    if (found.slots.size === 0) continue
+    tree = candidate
+    slots = found.slots
+    bundles = found.bundles
+    break
+  }
+
+  if (tree === undefined) {
+    // No usable tree. In check mode the committed inventory is all there is,
+    // which is the fresh-clone and the CI case rather than a failure.
+    if (check && existsSync(OUT)) {
+      process.stdout.write('dsh-slots: no DSH tree here; keeping the committed inventory\n')
+      return
+    }
     process.stderr.write(
-      `watch: found ${String(bundles)} bundle(s) under ${tree} but no slot catalogue\n`,
+      'watch: no DSH install with a slot catalogue found. Set WATCH_DSH_TREE.\n',
     )
     process.exit(1)
   }

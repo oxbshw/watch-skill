@@ -125,6 +125,19 @@ jobs:
       - name: Tests
         run: npm test
 
+      # Electron ships chrome-sandbox without the root ownership and setuid bit
+      # the SUID sandbox requires, and refuses to start rather than run
+      # unsandboxed. Fixing the permissions keeps the smoke on the same sandbox
+      # configuration the product ships with; --no-sandbox would test a
+      # different program.
+      - name: Configure the Electron sandbox (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sandbox=$(find node_modules/.pnpm -path '*/electron/dist/chrome-sandbox' | head -1)
+          test -n "$sandbox"
+          sudo chown root:root "$sandbox"
+          sudo chmod 4755 "$sandbox"
+
       # Electron needs a display server on Linux. Without xvfb the smoke fails
       # for a reason that has nothing to do with the product.
       - name: Desktop smoke (Linux)
