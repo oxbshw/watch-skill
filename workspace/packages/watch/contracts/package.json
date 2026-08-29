@@ -19,6 +19,10 @@
       "types": "./lib/query/wire.d.ts",
       "default": "./lib/query/wire.js"
     },
+    "./query/validate": {
+      "types": "./lib/query/validate.d.ts",
+      "default": "./lib/query/validate.js"
+    },
     "./package.json": "./package.json"
   },
   "files": [

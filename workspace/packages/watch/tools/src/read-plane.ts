@@ -61,6 +61,9 @@ import type {
   LibraryGetRequest, LibraryGetResponse,
   LibraryRecord, LibrarySearchRequest, LibrarySearchResponse,
 } from '@watchskill/dsh-contracts/query/wire'
+import {
+  parseLibraryGetRequest, parseLibrarySearchRequest,
+} from '@watchskill/dsh-contracts/query/validate'
 
 /** The two reads this namespace serves, narrowed off the request union. */
 type LibraryRequest = Extract<QueryRequest, { namespace: 'library' }>
@@ -371,24 +374,32 @@ export function searchLibrary(
   config: ReadPlaneConfig,
   signal: AbortSignal,
 ): LibrarySearchResponse {
+  // Semantics before the index. The generated codec proved the shape; it has
+  // no opinion about whether the query is a length this host answers for, or
+  // whether a modality is one it indexes. Nothing expensive runs until this
+  // passes, so a malformed request costs a bounds check and never a search.
+  const accepted = parseLibrarySearchRequest(request)
+  if (!accepted.ok) return accepted.refusal
+  const checked = accepted.value
+
   if (signal.aborted) {
     return {
       outcome: 'deadline_exceeded',
       protocol: WATCH_QUERY_PROTOCOL_VERSION,
-      requestId: request.requestId,
-      deadlineMs: request.deadlineMs,
+      requestId: checked.requestId,
+      deadlineMs: checked.deadlineMs,
     }
   }
   const index = config.index()
   const found = index.search({
-    text: request.query,
-    limit: request.limit,
+    text: checked.query,
+    limit: checked.limit,
     offset: 0,
   })
   return {
     outcome: 'page',
     protocol: WATCH_QUERY_PROTOCOL_VERSION,
-    requestId: request.requestId,
+    requestId: checked.requestId,
     revision: revisionOf(index),
     records: found.results.map(toWireRecord),
     nextCursor: null,
@@ -428,15 +439,21 @@ export function getLibraryRecord(
   config: ReadPlaneConfig,
   signal: AbortSignal,
 ): LibraryGetResponse {
-  const base = { protocol: WATCH_QUERY_PROTOCOL_VERSION, requestId: request.requestId }
+  // The identifier grammar is enforced here, not by the codec: `recordId` is a
+  // string either way, and a string is where a path would hide.
+  const accepted = parseLibraryGetRequest(request)
+  if (!accepted.ok) return accepted.refusal
+  const request_ = accepted.value
+
+  const base = { protocol: WATCH_QUERY_PROTOCOL_VERSION, requestId: request_.requestId }
   if (signal.aborted) {
-    return { outcome: 'deadline_exceeded', ...base, deadlineMs: request.deadlineMs }
+    return { outcome: 'deadline_exceeded', ...base, deadlineMs: request_.deadlineMs }
   }
   const index = config.index()
-  const found = index.record(request.recordId)
+  const found = index.record(request_.recordId)
   const revision = revisionOf(index)
   return found === undefined
-    ? { outcome: 'absent', ...base, revision, recordId: request.recordId }
+    ? { outcome: 'absent', ...base, revision, recordId: request_.recordId }
     : { outcome: 'record', ...base, revision, record: fromIndexRecord(found) }
 }
 

@@ -2763,6 +2763,13 @@
       "kind": "third_party"
     },
     {
+      "name": "zod",
+      "version": "4.5.4",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
       "name": "zwitch",
       "version": "2.0.4",
       "license": "MIT",
@@ -2835,7 +2842,7 @@
   ],
   "counts": {
     "firstParty": 18,
-    "thirdParty": 377,
+    "thirdParty": 378,
     "modelWeights": 5,
     "distributableWeights": 3
   }

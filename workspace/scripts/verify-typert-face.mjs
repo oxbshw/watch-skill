@@ -24,12 +24,19 @@
  * TypeScript's `getSymbolLinks` rather than anything naming the cause. That is
  * the regression this gate exists to convert into a sentence.
  *
+ * `--write` regenerates the `paths` block from the referenced packages' own
+ * exports. The reference list stays hand-written, because face membership is a
+ * decision; the mappings are derived, because a hand-maintained inventory of
+ * seventeen subpaths drifts the first time somebody adds an export — which is
+ * exactly how `./query/validate` went missing.
+ *
  * Usage:
  *   node scripts/verify-typert-face.mjs
+ *   node scripts/verify-typert-face.mjs --write
  *   node scripts/verify-typert-face.mjs --json
  */
 
-import { existsSync, readFileSync } from 'node:fs'
+import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { dirname, join, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -37,6 +44,7 @@ import { fileURLToPath } from 'node:url'
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const AGGREGATE = 'tsconfig.host.json'
 const JSON_OUT = process.argv.includes('--json')
+const WRITE = process.argv.includes('--write')
 
 /** Packages that may never enter the Host face, by the edge they would bring. */
 const CLIENT_EDGES = ['react', 'react-dom', 'electron', '@deepseek-ai/dsh-client-']
@@ -160,6 +168,25 @@ function main() {
   for (const file of uiFiles) {
     fail(`the Host program contains ${file}`,
       'The Host protocol must not be derived from a program containing UI.')
+  }
+
+  if (WRITE) {
+    const derived = {}
+    for (const packageDir of packageDirs) {
+      if (!existsSync(join(packageDir, 'package.json'))) continue
+      for (const entry of declaredExports(packageDir).exports) {
+        if (entry.generated || entry.source === null) continue
+        derived[entry.key] = [entry.source]
+      }
+    }
+    const aggregate = JSON.parse(readFileSync(aggregatePath, 'utf8'))
+    aggregate.compilerOptions.paths = Object.fromEntries(
+      Object.keys(derived).sort().map(key => [key, derived[key]]))
+    writeFileSync(aggregatePath, `${JSON.stringify(aggregate, null, 2)}
+`, 'utf8')
+    process.stdout.write(`rewrote ${AGGREGATE} with `
+      + `${String(Object.keys(derived).length)} mappings; run without --write to validate.` + String.fromCharCode(10))
+    process.exit(0)
   }
 
   // ── mappings agree with declared exports ─────────────────────────────────

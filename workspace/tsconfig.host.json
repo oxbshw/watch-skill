@@ -12,26 +12,14 @@
       "@watchskill/dsh-contracts/query": [
         "./packages/watch/contracts/src/query.ts"
       ],
+      "@watchskill/dsh-contracts/query/validate": [
+        "./packages/watch/contracts/src/query/validate.ts"
+      ],
       "@watchskill/dsh-contracts/query/wire": [
         "./packages/watch/contracts/src/query/wire.ts"
       ],
-      "@watchskill/dsh-technology": [
-        "./packages/watch/technology/src/index.ts"
-      ],
-      "@watchskill/dsh-technology/descriptors": [
-        "./packages/watch/technology/src/descriptors.ts"
-      ],
       "@watchskill/dsh-core-bridge": [
         "./packages/watch/core-bridge/src/index.ts"
-      ],
-      "@watchskill/dsh-memory": [
-        "./packages/watch/memory/src/index.ts"
-      ],
-      "@watchskill/dsh-memory/records": [
-        "./packages/watch/memory/src/records.ts"
-      ],
-      "@watchskill/dsh-memory/tools": [
-        "./packages/watch/memory/src/tools.ts"
       ],
       "@watchskill/dsh-library": [
         "./packages/watch/library/src/index.ts"
@@ -50,6 +38,21 @@
       ],
       "@watchskill/dsh-library/search-view": [
         "./packages/watch/library/src/client/search-view.tsx"
+      ],
+      "@watchskill/dsh-memory": [
+        "./packages/watch/memory/src/index.ts"
+      ],
+      "@watchskill/dsh-memory/records": [
+        "./packages/watch/memory/src/records.ts"
+      ],
+      "@watchskill/dsh-memory/tools": [
+        "./packages/watch/memory/src/tools.ts"
+      ],
+      "@watchskill/dsh-technology": [
+        "./packages/watch/technology/src/index.ts"
+      ],
+      "@watchskill/dsh-technology/descriptors": [
+        "./packages/watch/technology/src/descriptors.ts"
       ],
       "@watchskill/dsh-tools": [
         "./packages/watch/tools/src/index.ts"
