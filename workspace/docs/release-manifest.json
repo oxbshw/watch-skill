@@ -86,8 +86,8 @@
       {
         "name": "@watchskill/dsh-contracts",
         "version": "0.1.0-preview.0",
-        "integrity": "sha256:27a539ef765111094370d058779fd8bd1e17b6327a94aff0fde14be8e82df63c",
-        "sourceFiles": 7
+        "integrity": "sha256:d6bcf3101a3c5bc4e9cfe00a456c76ac48d8006c653c012391b166dbbfbb0b6e",
+        "sourceFiles": 8
       },
       {
         "name": "@watchskill/dsh-core-bridge",
@@ -173,7 +173,7 @@
       "creators": [
         "Tool: watch-gen-release-manifest"
       ],
-      "created": "2026-08-29T08:09:08Z"
+      "created": "2026-08-29T09:33:16Z"
     },
     "packages": [
       {
@@ -284,7 +284,7 @@
         "checksums": [
           {
             "algorithm": "SHA256",
-            "checksumValue": "27a539ef765111094370d058779fd8bd1e17b6327a94aff0fde14be8e82df63c"
+            "checksumValue": "d6bcf3101a3c5bc4e9cfe00a456c76ac48d8006c653c012391b166dbbfbb0b6e"
           }
         ]
       },

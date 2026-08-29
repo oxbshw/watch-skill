@@ -11,6 +11,10 @@
       "types": "./lib/index.d.ts",
       "default": "./lib/index.js"
     },
+    "./query": {
+      "types": "./lib/query.d.ts",
+      "default": "./lib/query.js"
+    },
     "./package.json": "./package.json"
   },
   "files": ["lib/**/*.js", "lib/**/*.d.ts"]
