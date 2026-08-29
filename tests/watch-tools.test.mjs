@@ -114,6 +114,58 @@ describe('the Watch tool surface', () => {
   })
 })
 
+describe('a turn survives a profile with no identity service', () => {
+  test('the memory section compiles when identity, session and workspace are absent', async () => {
+    // The defect this covers took down every turn in the stock web profile.
+    //
+    // Cordis proxies context property access and throws
+    // `cannot get property "identity" without inject` when a plugin reads a
+    // name it did not declare. Optional chaining does not help, because the
+    // throw happens on the access before `?.` is evaluated. The memory section
+    // is compiled once per turn, so every turn failed and Chat rendered
+    // "This turn failed cannot get property "identity" without inject".
+    //
+    // Declaring the names in `inject` would be the wrong fix: `inject` is a
+    // required set in this Cordis, so the plugin would refuse to load instead
+    // of one scope field falling back to 'local'.
+    const { mkdtempSync, rmSync } = await import('node:fs')
+    const { tmpdir } = await import('node:os')
+    const { join } = await import('node:path')
+    const mounted = await mountTools()
+    const directory = mkdtempSync(join(tmpdir(), 'watch-no-identity-'))
+    try {
+      const WatchMemoryService = (await import('@watchskill/dsh-memory')).default
+      const memory = await mounted.ctx.plugin(WatchMemoryService, {
+        mode: 'local_personal',
+        directory,
+      })
+      try {
+        // Nothing provides identity, session or workspace here, which is the
+        // shape of the stock web profile. Whether the read throws or returns
+        // undefined depends on whether some other plugin registered the name,
+        // and `resolveScope` must survive either.
+        assert.ok(
+          mounted.registered.has('watch_remember'),
+          'the memory child plugin did not activate',
+        )
+        // `watch_remember` resolves the scope on every call, which is the path
+        // that threw. Executing it is what proves the turn would survive.
+        const stored = await mounted.registered.get('watch_remember').execute({
+          content: 'a note written with no identity service present',
+          kind: 'fact',
+          scope: 'session',
+        }, EXEC)
+        assert.ok(stored, 'remembering failed with no identity service')
+      } finally {
+        await memory.dispose()
+      }
+    } finally {
+      await mounted.dispose()
+      rmSync(directory, { recursive: true, force: true, maxRetries: 5 })
+    }
+  })
+})
+
 describe('memory is optional', () => {
   test('the Watch tools work with no Memory service mounted', async () => {
     // Reading ctx.watchMemory directly threw here once: Cordis refuses a

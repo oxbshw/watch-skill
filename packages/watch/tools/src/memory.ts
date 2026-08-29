@@ -19,6 +19,32 @@ import { applyMemoryTools } from '@watchskill/dsh-memory'
 import type { ScopeContext } from '@watchskill/dsh-memory'
 
 /**
+ * Read a service that may not be there, without asking Cordis for it.
+ *
+ * Cordis proxies every context property. Reading a name it knows as a
+ * service, from a plugin that did not declare it in `inject`, throws
+ * `cannot get property "x" without inject` -- and optional chaining cannot
+ * prevent that, because the throw happens on the access, before `?.` is
+ * evaluated. `host.identity?.userId` therefore threw on any profile without
+ * an identity provider, which is the stock web profile, and took down every
+ * turn that compiled the memory section.
+ *
+ * Declaring the names in `inject` is the wrong fix: `inject` is a required
+ * set in this Cordis, so the whole plugin would refuse to load rather than
+ * one scope field falling back.
+ *
+ * @param ctx - the Cordis context for this turn.
+ * @param name - the service to read.
+ * @returns the service, or undefined when it is absent or not injected.
+ */
+function optionalService<T>(ctx: Context, name: string): T | undefined {
+  try {
+    return (ctx as unknown as Record<string, T | undefined>)[name]
+  } catch {
+    return undefined
+  }
+}
+/**
  * Resolve the scope the current turn belongs to.
  *
  * Read from the Cordis context each time rather than captured once: a Host
@@ -27,19 +53,17 @@ import type { ScopeContext } from '@watchskill/dsh-memory'
  * cross-scope leak dressed up as a caching decision.
  */
 function resolveScope(ctx: Context): ScopeContext {
-  const host = ctx as unknown as {
-    readonly session?: { readonly id?: string; readonly workspaceId?: string }
-    readonly identity?: { readonly userId?: string }
-    readonly workspace?: { readonly id?: string; readonly root?: string }
-  }
+  const session = optionalService<{ id?: string, workspaceId?: string }>(ctx, 'session')
+  const identity = optionalService<{ userId?: string }>(ctx, 'identity')
+  const workspace = optionalService<{ id?: string, root?: string }>(ctx, 'workspace')
   return {
     // Falling back to 'local' rather than to an empty string keeps the scope
     // key non-empty, so a record can never be created under a scope id that
     // would match every other unset one.
-    userId: host.identity?.userId ?? 'local',
-    workspaceId: host.workspace?.id ?? host.session?.workspaceId ?? 'local',
-    projectId: host.workspace?.root ?? 'local',
-    sessionId: host.session?.id ?? 'local',
+    userId: identity?.userId ?? 'local',
+    workspaceId: workspace?.id ?? session?.workspaceId ?? 'local',
+    projectId: workspace?.root ?? 'local',
+    sessionId: session?.id ?? 'local',
   }
 }
 
