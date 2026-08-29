@@ -26,7 +26,7 @@
     "lint:fix": "eslint . --fix",
     "ocr:benchmark": "node scripts/ocr-benchmark.mjs",
     "ocr:check": "node scripts/ocr-benchmark.mjs --check",
-    "ocr:corpus": "python scripts/ocr-corpus.py --out G:/watch-manual/ocr",
+    "ocr:corpus": "python scripts/ocr-corpus.py",
     "profile:manual": "node scripts/manual-profile.mjs",
     "providers": "node scripts/gen-provider-inventory.mjs",
     "providers:check": "node scripts/gen-provider-inventory.mjs --check",

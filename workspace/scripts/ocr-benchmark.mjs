@@ -28,8 +28,10 @@ import {
   wordAccuracy, wordErrorRate,
 } from '@watchskill/dsh-technology/descriptors'
 
+import { manualPath } from './lib/manual-paths.mjs'
+
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
-const RAW = process.env.WATCH_OCR_DIR ?? 'G:/watch-manual/ocr'
+const RAW = manualPath('WATCH_OCR_DIR', ['ocr'])
 const OUT = join(ROOT, 'docs', 'ocr-benchmark.json')
 
 /**

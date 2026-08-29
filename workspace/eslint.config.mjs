@@ -39,7 +39,11 @@ export default tseslint.config(
   {
     // Build output, dependencies and the upstream checkout are not ours.
     ignores: [
-      '**/lib/**',
+      // Anchored to where the build actually writes, for the same reason
+      // .gitignore is: a bare `**/lib/**` also matched `scripts/lib/`, which
+      // is source, so every shared script helper went unlinted.
+      'packages/*/*/lib/**',
+      'apps/*/lib/**',
       '**/node_modules/**',
       'upstream/**',
       '**/*.d.ts',

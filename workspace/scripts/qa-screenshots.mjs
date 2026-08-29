@@ -26,6 +26,7 @@ import { writeFileSync, mkdirSync, appendFileSync, rmSync, readFileSync } from '
 import { join, dirname, relative, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { tmpdir } from 'node:os'
+import { manualPath } from './lib/manual-paths.mjs'
 
 // Configuration comes through the environment, not argv.
 //
@@ -49,7 +50,7 @@ const portablePath = (absolute) => {
 }
 
 const URL = process.env.WATCH_QA_URL ?? 'http://127.0.0.1:8931'
-const OUT = process.env.WATCH_QA_OUT ?? 'G:/watch-manual/qa/screenshots'
+const OUT = manualPath('WATCH_QA_OUT', ['qa', 'screenshots'])
 
 /**
  * A session with history, so the mode tabs are actually mounted.

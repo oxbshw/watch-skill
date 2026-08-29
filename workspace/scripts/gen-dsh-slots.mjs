@@ -50,6 +50,7 @@
 import { readFileSync, writeFileSync, existsSync, readdirSync, statSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { manualRoot } from './lib/manual-paths.mjs'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const OUT = join(ROOT, 'inventory', 'dsh-slots.json')
@@ -57,8 +58,7 @@ const OUT = join(ROOT, 'inventory', 'dsh-slots.json')
 /** Trees that may hold a real DSH install, in preference order. */
 const CANDIDATES = [
   process.env.WATCH_DSH_TREE,
-  'G:/watch-smoke/node_modules',
-  'G:/watch-manual/dsh-home/profiles/web/node_modules',
+  join(manualRoot(), 'dsh-home', 'profiles', 'web', 'node_modules'),
   join(ROOT, 'node_modules'),
 ].filter(path => path !== undefined)
 

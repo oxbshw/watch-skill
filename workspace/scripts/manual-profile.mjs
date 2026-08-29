@@ -35,9 +35,10 @@ import {
 } from 'node:fs'
 import { join, dirname, resolve, basename, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { manualPath } from './lib/manual-paths.mjs'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
-const HOME = process.env.WATCH_MANUAL_HOME ?? 'G:/watch-manual/dsh-home'
+const HOME = manualPath('WATCH_MANUAL_HOME', ['dsh-home'])
 /** Windows paths in a YAML overlay read better, and parse safer, as POSIX. */
 const posixPath = value => value.split(sep).join('/')
 

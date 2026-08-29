@@ -26,9 +26,10 @@ import { spawn } from 'node:child_process'
 import { existsSync, readFileSync } from 'node:fs'
 import { join, dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { manualPath } from './lib/manual-paths.mjs'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
-const HOME = process.env.WATCH_MANUAL_HOME ?? 'G:/watch-manual/dsh-home'
+const HOME = manualPath('WATCH_MANUAL_HOME', ['dsh-home'])
 const PROFILE = 'web'
 const READY_TIMEOUT_MS = 120_000
 
