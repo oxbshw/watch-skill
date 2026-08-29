@@ -1,5 +1,9 @@
 node_modules/
-lib/
+# Anchored to where the build actually writes. A bare `lib/` also caught
+# `scripts/lib/`, which is source, and silently dropped it from a commit --
+# leaving `doctor.mjs` importing a module that was not in the repository.
+packages/*/*/lib/
+apps/*/lib/
 dist/
 out/
 .turbo/
