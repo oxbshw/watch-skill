@@ -1,0 +1,208 @@
+/**
+ * The Compare mode body.
+ *
+ * The engine is elsewhere and deliberately so: `compare-engine.ts` is pure,
+ * typed and free of React, which is what lets the diff be tested without a DOM
+ * and quoted without a screenshot. This file only renders what the engine
+ * decided.
+ *
+ * The layout carries the engine's one structural opinion — verification
+ * differences and output differences are separate sections, never one merged
+ * list. An agent producing different text is ordinary. The same claim going
+ * from VERIFIED to FAILED is not.
+ *
+ * @module @watchskill/dsh-client-evidence/client/compare-mode
+ */
+
+import type { ReactNode } from 'react'
+import { useMemo, useState } from 'react'
+import { EmptyState, Facts, ModeSurface, Note, Panel } from '@watchskill/dsh-workspace/surface'
+import type { ModeViewProps } from '@watchskill/dsh-workspace/surface'
+import { compareRecords, describeIncompatibility } from '../compare-engine.js'
+import type { ClaimDifference, ComparableRecord } from '../compare-engine.js'
+
+export interface CompareModeProps extends ModeViewProps {
+  /** Records the person can choose between. */
+  readonly records?: readonly ComparableRecord[]
+}
+
+/** A word and a tone for each disposition. Never colour alone. */
+const DISPOSITION: Record<ClaimDifference['disposition'], { readonly says: string, readonly tone: string }> = {
+  matching: { says: 'Matching', tone: 'var(--watch-tone-neutral)' },
+  changed: { says: 'Claim changed', tone: 'var(--watch-tone-caution)' },
+  verdict_changed: { says: 'Verdict changed', tone: 'var(--watch-tone-caution)' },
+  missing_right: { says: 'Only on the left', tone: 'var(--watch-tone-info)' },
+  missing_left: { says: 'Only on the right', tone: 'var(--watch-tone-info)' },
+  contradictory: { says: 'Contradictory', tone: 'var(--watch-tone-error)' },
+  unverifiable: { says: 'Unverifiable', tone: 'var(--watch-tone-caution)' },
+}
+
+const S = {
+  picker: { display: 'flex', gap: '10px', flexWrap: 'wrap' as const, alignItems: 'flex-end' },
+  field: { display: 'flex', flexDirection: 'column' as const, gap: '4px', flex: '1 1 220px', minWidth: 0 },
+  label: {
+    fontSize: '11px', fontWeight: 600, letterSpacing: '.05em',
+    textTransform: 'uppercase' as const, color: 'var(--dsw-alias-label-tertiary)',
+  },
+  select: {
+    background: 'var(--dsw-alias-bg-layer-2)', border: '1px solid var(--dsw-alias-border-l2)',
+    borderRadius: '8px', padding: '7px 10px', fontSize: '13px', color: 'inherit', width: '100%',
+  },
+  button: {
+    background: 'transparent', border: '1px solid var(--dsw-alias-border-l2)',
+    borderRadius: '8px', padding: '7px 12px', fontSize: '13px', color: 'inherit', cursor: 'pointer',
+  },
+  row: {
+    borderTop: '1px solid var(--dsw-alias-border-l2)',
+    padding: '10px 0', display: 'flex', flexDirection: 'column' as const, gap: '4px',
+  },
+  side: { fontSize: '12.5px', lineHeight: 1.6, color: 'var(--dsw-alias-label-secondary)', wordBreak: 'break-word' as const },
+  why: { fontSize: '11.5px', color: 'var(--dsw-alias-label-tertiary)', margin: 0 },
+}
+
+/** The Compare mode: two records, and every way they differ. */
+export function CompareModeView({ records = [] }: CompareModeProps = {}): ReactNode {
+  const [leftId, setLeftId] = useState('')
+  const [rightId, setRightId] = useState('')
+
+  const left = useMemo(() => records.find(r => r.recordId === leftId) ?? null, [records, leftId])
+  const right = useMemo(() => records.find(r => r.recordId === rightId) ?? null, [records, rightId])
+  const comparison = useMemo(() => compareRecords(left, right), [left, right])
+
+  return (
+    <ModeSurface
+      title="Compare"
+      lead={
+        'Two records, side by side, with every way they differ. The comparison '
+        + 'is computed, not reasoned about — the same two records always produce '
+        + 'the same answer.'
+      }
+    >
+      {records.length === 0
+        ? (
+            <EmptyState
+              shows={
+                'Two comparable records with their claims aligned, output '
+                + 'differences kept separate from verification differences, and '
+                + 'every line linked back to where it came from.'
+              }
+              why="There are no records to compare yet."
+              next={[
+                'Run a task, then run it again — two runs of the same thing are what Compare is for.',
+                'Or select Watch tool rows in Chat to bring verification records into this session.',
+              ]}
+            />
+          )
+        : (
+            <>
+              <Panel heading="Choose two records">
+                <div style={S.picker}>
+                  {([['Left', leftId, setLeftId], ['Right', rightId, setRightId]] as const).map(([name, value, set]) => (
+                    <div key={name} style={S.field}>
+                      <label style={S.label} htmlFor={`compare-${name.toLowerCase()}`}>{name}</label>
+                      <select
+                        id={`compare-${name.toLowerCase()}`}
+                        style={S.select}
+                        value={value}
+                        onChange={event => { set(event.target.value) }}
+                      >
+                        <option value="">Nothing selected</option>
+                        {records.map(record => (
+                          <option key={record.recordId} value={record.recordId}>
+                            {`${record.label} (${record.kind})`}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    style={S.button}
+                    onClick={() => { setLeftId(''); setRightId('') }}
+                  >
+                    Clear both
+                  </button>
+                </div>
+              </Panel>
+
+              {comparison.comparable
+                ? (
+                    <>
+                      <Panel heading="Verification differences">
+                        <Facts
+                          rows={[
+                            ['Matching', String(comparison.summary.matching)],
+                            ['Claim changed', String(comparison.summary.changed)],
+                            ['Verdict changed', String(comparison.summary.verdictChanged)],
+                            ['Only on one side', String(comparison.summary.missing)],
+                            ['Contradictory', String(comparison.summary.contradictory)],
+                            ['Unverifiable', String(comparison.summary.unverifiable)],
+                          ]}
+                        />
+                        {comparison.claims.map(difference => {
+                          const meta = DISPOSITION[difference.disposition]
+                          return (
+                            <div key={difference.claimId} style={S.row}>
+                              <div style={{ display: 'flex', gap: '10px', alignItems: 'baseline', flexWrap: 'wrap' }}>
+                                <strong style={{ fontSize: '12px', color: meta.tone }}>{meta.says}</strong>
+                                <span data-watch-ltr style={{ fontSize: '11.5px', color: 'var(--dsw-alias-label-tertiary)' }}>
+                                  {difference.claimId}
+                                </span>
+                              </div>
+                              <div style={S.side}>
+                                {'Left: '}
+                                {difference.left === null
+                                  ? <em>absent</em>
+                                  : `${difference.left.text} — ${difference.left.verdict ?? 'unchecked'} (${difference.left.provenance})`}
+                              </div>
+                              <div style={S.side}>
+                                {'Right: '}
+                                {difference.right === null
+                                  ? <em>absent</em>
+                                  : `${difference.right.text} — ${difference.right.verdict ?? 'unchecked'} (${difference.right.provenance})`}
+                              </div>
+                              <p style={S.why}>{difference.because}</p>
+                            </div>
+                          )
+                        })}
+                      </Panel>
+
+                      <Panel heading="Output differences">
+                        {comparison.output === null || comparison.output.identical
+                          ? (
+                              <p style={{ fontSize: '13px', margin: 0, color: 'var(--dsw-alias-label-tertiary)' }}>
+                                The outputs are identical.
+                              </p>
+                            )
+                          : (
+                              <Facts
+                                rows={[
+                                  ['First divergence', `line ${String(comparison.output.firstDivergenceLine ?? 0)}`],
+                                  ['Left', `${String(comparison.output.leftLines)} line(s)`],
+                                  ['Right', `${String(comparison.output.rightLines)} line(s)`],
+                                ]}
+                              />
+                            )}
+                      </Panel>
+
+                      <Note>
+                        A comparison describes a difference. It never issues a
+                        verdict of its own — that is why the verification column
+                        and the output column are kept apart.
+                      </Note>
+                    </>
+                  )
+                : (
+                    <div style={{ ...S.row, borderTop: 'none' }}>
+                      <p style={{ ...S.side, margin: 0 }}>
+                        {comparison.reason === null
+                          ? 'Nothing to compare.'
+                          : describeIncompatibility(comparison.reason)}
+                      </p>
+                    </div>
+                  )}
+            </>
+          )}
+    </ModeSurface>
+  )
+}

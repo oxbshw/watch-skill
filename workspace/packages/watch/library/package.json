@@ -1,0 +1,70 @@
+{
+  "name": "@watchskill/dsh-library",
+  "version": "0.1.0-preview.0",
+  "description": "Library \u2014 sources, revisions, index state, search, facets and collections",
+  "type": "module",
+  "license": "MIT",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./client": {
+      "types": "./lib/client/index.d.ts",
+      "default": "./lib/client.js"
+    },
+    "./components": {
+      "types": "./lib/client/components.d.ts",
+      "default": "./lib/client/components.js"
+    },
+    "./index-store": {
+      "types": "./lib/index-store.d.ts",
+      "default": "./lib/index-store.js"
+    },
+    "./library-mode": {
+      "types": "./lib/client/library-mode.d.ts",
+      "default": "./lib/client/library-mode.js"
+    },
+    "./package.json": "./package.json",
+    "./search-view": {
+      "types": "./lib/client/search-view.d.ts",
+      "default": "./lib/client/search-view.js"
+    }
+  },
+  "dsh": {
+    "client": {
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-slots"
+      ],
+      "platform": "web"
+    }
+  },
+  "files": [
+    "lib/index.js",
+    "lib/client.js",
+    "lib/client.js.map",
+    "lib/**/*.js",
+    "lib/**/*.d.ts"
+  ],
+  "scripts": {
+    "bundle": "tsdown"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "catalog:",
+    "react": "^18.2.0"
+  },
+  "devDependencies": {
+    "@deepseek-ai/cordis": "catalog:",
+    "@deepseek-ai/dsh-client-ui-slots": "catalog:",
+    "@types/react": "~18.3.1",
+    "react": "^18.2.0"
+  },
+  "dependencies": {
+    "@watchskill/dsh-client-brand": "workspace:^",
+    "@watchskill/dsh-contracts": "workspace:^",
+    "@watchskill/dsh-technology": "workspace:^",
+    "@watchskill/dsh-workspace": "workspace:^"
+  }
+}

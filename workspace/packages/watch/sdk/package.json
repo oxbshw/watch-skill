@@ -1,0 +1,42 @@
+{
+  "name": "@watchskill/dsh-sdk",
+  "version": "0.1.0-preview.0",
+  "description": "The third-party Watch capability developer path \u2014 declare, probe, observe, request",
+  "type": "module",
+  "license": "MIT",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./package.json": "./package.json",
+    "./client-example": {
+      "types": "./lib/client/example.d.ts",
+      "default": "./lib/client/example.js"
+    }
+  },
+  "files": [
+    "lib/**/*.js",
+    "lib/**/*.d.ts"
+  ],
+  "dependencies": {
+    "@watchskill/dsh-contracts": "workspace:^",
+    "@watchskill/dsh-technology": "workspace:^",
+    "@watchskill/dsh-trajectory": "workspace:^"
+  },
+  "peerDependencies": {
+    "react": "^18.2.0"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@types/react": "~18.3.1",
+    "react": "^18.2.0",
+    "@watchskill/dsh-client-brand": "workspace:*"
+  }
+}

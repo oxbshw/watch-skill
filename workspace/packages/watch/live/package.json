@@ -1,0 +1,73 @@
+{
+  "name": "@watchskill/dsh-live",
+  "version": "0.1.0-preview.0",
+  "description": "Live mode \u2014 cursors, gaps, clocks, reconnect and a bounded buffer",
+  "type": "module",
+  "license": "MIT",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./capture": {
+      "types": "./lib/capture.d.ts",
+      "default": "./lib/capture.js"
+    },
+    "./client": {
+      "types": "./lib/client/index.d.ts",
+      "default": "./lib/client.js"
+    },
+    "./components": {
+      "types": "./lib/client/components.d.ts",
+      "default": "./lib/client/components.js"
+    },
+    "./live-mode": {
+      "types": "./lib/client/live-mode.d.ts",
+      "default": "./lib/client/live-mode.js"
+    },
+    "./package.json": "./package.json",
+    "./sources-catalogue": {
+      "types": "./lib/sources-catalogue.d.ts",
+      "default": "./lib/sources-catalogue.js"
+    },
+    "./synthetic-source": {
+      "types": "./lib/synthetic-source.d.ts",
+      "default": "./lib/synthetic-source.js"
+    }
+  },
+  "dsh": {
+    "client": {
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-slots"
+      ],
+      "platform": "web"
+    }
+  },
+  "files": [
+    "lib/index.js",
+    "lib/client.js",
+    "lib/client.js.map",
+    "lib/**/*.js",
+    "lib/**/*.d.ts"
+  ],
+  "scripts": {
+    "bundle": "tsdown"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "catalog:",
+    "react": "^18.2.0"
+  },
+  "devDependencies": {
+    "@deepseek-ai/cordis": "catalog:",
+    "@deepseek-ai/dsh-client-ui-slots": "catalog:",
+    "@types/react": "~18.3.1",
+    "react": "^18.2.0"
+  },
+  "dependencies": {
+    "@watchskill/dsh-client-brand": "workspace:^",
+    "@watchskill/dsh-contracts": "workspace:^",
+    "@watchskill/dsh-workspace": "workspace:^"
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "name": "@watchskill/dsh-memory",
+  "version": "0.1.0-preview.0",
+  "description": "Host plugin: durable, correctable, scoped memory over an append-only event ledger",
+  "type": "module",
+  "license": "MIT",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./records": {
+      "types": "./lib/records.d.ts",
+      "default": "./lib/records.js"
+    },
+    "./package.json": "./package.json",
+    "./tools": {
+      "types": "./lib/tools.d.ts",
+      "default": "./lib/tools.js"
+    }
+  },
+  "files": [
+    "lib/**/*.js",
+    "lib/**/*.d.ts"
+  ],
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "catalog:",
+    "@deepseek-ai/schemastery": "^3.18.1"
+  },
+  "devDependencies": {
+    "@deepseek-ai/cordis": "catalog:",
+    "@deepseek-ai/schemastery": "^3.18.1"
+  }
+}

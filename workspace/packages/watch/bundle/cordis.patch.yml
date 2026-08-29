@@ -1,0 +1,162 @@
+# Watch for DSH — the capability bundle applied over an existing profile.
+#
+# This file is the whole distribution mechanism. A package declaring
+# `dsh.bundle.patch` in its manifest becomes a profile layer when it is
+# installed with `dsh plugin --profile <name> add @watchskill/dsh-bundle`, and
+# the rows below are appended to whatever the profile already composes.
+#
+# It is a patch overlay, not a tree: it is applied after the dsh-base and
+# dsh-web-app layers, so it can add Watch without restating — or disturbing —
+# a single upstream row. That is why this distribution needs no fork and
+# carries no upstream patches.
+#
+# Rows are additive on purpose. Removing this bundle removes Watch and leaves
+# the host profile exactly as it was.
+
+- insert:
+    # The Bridge to Watch Core. Everything Watch can perceive, prove or
+    # remember reaches the Harness through this one service.
+    #
+    # `auto` connects the real engine when `watch-skill` is installed, and
+    # falls back to the mock backend only when the command is genuinely not
+    # there. Nothing is hidden by that fallback: the mock reports every
+    # capability as `not_tested` and carries the install step, and a Watch Core
+    # that *is* present and fails is reported as a fault rather than replaced
+    # by a mock that answers nothing.
+    #
+    # A deployment that requires the engine should pin `stdio`, which never
+    # falls back and so fails loudly when it is missing. A patch replaces the
+    # targeted row's whole `config`, so an overlay must restate every key it
+    # wants to keep:
+    #
+    #   - id: watch-core-bridge
+    #     config:
+    #       transport: stdio
+    #       command: watch-skill
+    #       args: [bridge]
+    #       cwd: ''
+    #       startupTimeoutMs: 10000
+    #       requestTimeoutMs: 30000
+    #       autoConnect: true
+    - id: watch-core-bridge
+      name: '@watchskill/dsh-core-bridge'
+      config:
+        transport: auto
+        command: watch-skill
+        args: [bridge]
+        cwd: ''
+        startupTimeoutMs: 10000
+        requestTimeoutMs: 30000
+        autoConnect: true
+
+    # The model-facing surface: Watch's senses and its proof step as ordinary
+    # Harness tools, plus the system-prompt section that tells the agent a
+    # tool returning without error is not a verified outcome.
+    #
+    # This row injects `watchCore`, so the Loader resolves it only after the
+    # Bridge exists. Removing the Bridge row leaves the agent with no Watch
+    # tools at all rather than with tools that fail when called.
+    - id: watch-tools
+      name: '@watchskill/dsh-tools'
+      config:
+        queryTimeoutMs: 120000
+        verifyTimeoutMs: 60000
+
+    # The browser half. These are `dsh.client` rows, so the modules package
+    # scans them into the boot graph and serves their bundles under /plugins.
+    #
+    # Every one of them registers into a slot DSH itself renders. That is not a
+    # stylistic preference: `slots.register` accepts any name, so a registration
+    # into a slot nothing renders loads cleanly, passes its tests and draws
+    # nothing at all. `scripts/verify-slots.mjs` checks each name against
+    # `inventory/dsh-slots.json`, which is extracted from the pinned packages'
+    # own `renderSlot` call sites.
+
+    # The product identity. It fills the same generic brand slots the official
+    # row fills, and claims the document title and favicon at runtime — the
+    # HTML shell is a built DSH artifact and is not forked.
+    - id: watch-brand
+      name: '@watchskill/dsh-client-brand'
+
+    # Evidence: keyed tool views, plus the Compare mode.
+    #
+    # It reads what the conversation already carries and makes no Host call at
+    # all, which is why it can render a verdict correctly even when the Bridge
+    # is on its mock backend: there is no second source of truth to fall out of
+    # sync. Remove this row and the Watch tools still work — their results
+    # simply render in DSH's generic tool card.
+    - id: watch-client-evidence
+      name: '@watchskill/dsh-client-evidence'
+
+    # The shell: the Watch mode, the sidebar section, the status strip in the
+    # session header, the sensory timeline and the composer panel.
+    - id: watch-workspace
+      name: '@watchskill/dsh-workspace'
+
+    # The Live mode.
+    - id: watch-live
+      name: '@watchskill/dsh-live'
+
+    # The Library mode.
+    - id: watch-library
+      name: '@watchskill/dsh-library'
+
+    # The Memory mode, and the "why was this remembered?" chip.
+    - id: watch-client-memory
+      name: '@watchskill/dsh-client-memory'
+
+    # The Technology & Capability Center: role bindings, engines, sources,
+    # memory, verification, diagnostics and about, added to DSH's own settings
+    # panel. `settings.section` is a list, so upstream's General, Models and
+    # Plugins sections are untouched and keep the top of the list.
+    - id: watch-client-settings
+      name: '@watchskill/dsh-client-settings'
+
+    # Durable, correctable memory. `off` by default and deliberately so:
+    # durable memory about a person is not something a deployment should
+    # acquire because nobody changed a setting.
+    #
+    # Turn it on by restating this row's whole config with a different mode:
+    #   'off'              nothing written, nothing recalled
+    #   'session_only'     kept in memory only; never reaches a later session
+    #   'local_personal'   a local ledger on disk for this profile
+    #   'workspace_shared' knowledge and decisions shared; personal taste is not
+    #
+    # The mode values are quoted deliberately. YAML reads a bare `off` as the
+    # boolean false, which would silently become an invalid mode rather than
+    # the one written here.
+    #
+    # The ledger is the authority and every projection — taste.md, index.md,
+    # log.md — is rebuilt from it, which is what makes Forget remove a memory
+    # rather than hide it. The ledger is not yet encrypted at rest; on Desktop
+    # it will move behind the OS keychain, and until then `local_personal`
+    # means a plain file with the profile's own permissions.
+    - id: watch-memory
+      name: '@watchskill/dsh-memory'
+      config:
+        mode: 'off'
+        directory: .watch/memory
+        inferredThreshold: 0.8
+        tokenBudget: 600
+        writeProjections: true
+
+# The official brand row, switched off.
+#
+# This is the single entry in the parity register marked
+# `intentionally_replaced`, and this is where the replacement takes effect.
+# Both halves are needed, and neither alone is enough:
+#
+#   - `renderSlot("sidebar.brand.mark", …, { fallback: <official mark> })` means
+#     an unfilled brand slot still draws DeepSeek's mark. Registering the Watch
+#     brand is what displaces the fallback.
+#   - `ui-brand-official` *also* registers into those slots. Left enabled, both
+#     marks would be drawn.
+#
+# `disabled: true` on a targeted id is upstream's own mechanism — the same one
+# `DSH_TELEMETRY_DISABLED` uses — so nothing here is patched or forked.
+#
+# Attribution is not what is being removed. It moves to `sidebar.footer.action`,
+# where the Watch brand plugin renders "Built on DeepSeek Harness · Extended by
+# Watch Skill" together with the independence disclosure, on every screen.
+- id: ui-brand-official
+  disabled: true

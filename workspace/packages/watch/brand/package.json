@@ -1,0 +1,47 @@
+{
+  "name": "@watchskill/dsh-client-brand",
+  "version": "0.1.0-preview.0",
+  "description": "Browser half: the Watch product identity and its semantic status tokens",
+  "type": "module",
+  "license": "MIT",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./client": {
+      "types": "./lib/client/index.d.ts",
+      "default": "./lib/client.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "dsh": {
+    "client": {
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-slots"
+      ],
+      "platform": "web"
+    }
+  },
+  "files": [
+    "assets/**",
+    "lib/**/*.js",
+    "lib/**/*.js.map",
+    "lib/**/*.d.ts"
+  ],
+  "scripts": {
+    "bundle": "tsdown"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "catalog:",
+    "react": "^18.2.0"
+  },
+  "devDependencies": {
+    "@deepseek-ai/cordis": "catalog:",
+    "@deepseek-ai/dsh-client-ui-slots": "catalog:",
+    "@types/react": "~18.3.1",
+    "react": "^18.2.0"
+  }
+}

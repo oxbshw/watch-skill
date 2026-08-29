@@ -1,0 +1,64 @@
+{
+  "generatedFrom": {
+    "repository": "https://github.com/deepseek-ai/deepseek-harness",
+    "commit": "b150a551b8d465e31e418e1b2eaf5e79bbb7d28e",
+    "version": "0.1.1-rc.2",
+    "tag": "dsh-v0.1.1-rc.2"
+  },
+  "generator": "scripts/gen-inventory.mjs",
+  "count": 13,
+  "namespaces": [
+    {
+      "namespace": "deliverables",
+      "source": "packages/client/ui-deliverables/src/client/index.ts"
+    },
+    {
+      "namespace": "job",
+      "source": "packages/client/ui-jobs/src/client/index.ts"
+    },
+    {
+      "namespace": "session-log-download",
+      "source": "packages/session-query/session-log-export/src/client/index.ts"
+    },
+    {
+      "namespace": "settings.agentPreset",
+      "source": "packages/client/ui-agent-preset/src/client/AgentPresetRow.tsx"
+    },
+    {
+      "namespace": "settings.locale",
+      "source": "packages/client/locale/src/client/index.ts"
+    },
+    {
+      "namespace": "settings.models",
+      "source": "packages/client/ui-settings-models/src/client/index.ts"
+    },
+    {
+      "namespace": "settings.permission",
+      "source": "packages/client/ui-permission-presets/src/client/PermissionRow.tsx"
+    },
+    {
+      "namespace": "settings.pluginInventory",
+      "source": "packages/client/ui-settings-plugin-inventory/src/client/index.ts"
+    },
+    {
+      "namespace": "settings.plugins",
+      "source": "packages/client/ui-settings-plugins/src/client/PluginsSettingsSection.tsx"
+    },
+    {
+      "namespace": "settings.theme",
+      "source": "packages/client/ui-theme/src/client/index.ts"
+    },
+    {
+      "namespace": "slash.menu",
+      "source": "packages/client/ui-input-trigger/src/client/index.ts"
+    },
+    {
+      "namespace": "subagent",
+      "source": "packages/client/ui-subagent/src/client/index.ts"
+    },
+    {
+      "namespace": "trajectory",
+      "source": "packages/client/ui-trajectory/src/client/locales.ts"
+    }
+  ]
+}

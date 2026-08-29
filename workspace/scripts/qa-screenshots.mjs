@@ -1,0 +1,470 @@
+/**
+ * Visual QA evidence, captured from the real running application.
+ *
+ * Run under Electron, which the Desktop app already depends on, so this adds no
+ * install and reaches nothing off this machine:
+ *
+ *   WATCH_QA_URL=… WATCH_QA_OUT=… electron.exe scripts/qa-screenshots.mjs
+ *
+ * It drives the same loopback Web application a person would open, at two
+ * viewport widths, and writes PNGs with `webContents.capturePage()`. Each shot
+ * is named for the claim it supports, because a screenshot nobody can tie to an
+ * assertion is decoration rather than evidence.
+ *
+ * Everything is logged to a file rather than stdout. `electron.exe` on Windows
+ * is a GUI-subsystem binary: it detaches from the console, so stdout is lost and
+ * a failing run looks exactly like a silent one. The log file is the record.
+ *
+ * Two things it deliberately does not do. It never types a credential, so no
+ * capture can leak one. And it never grants a permission — the surfaces that
+ * would prompt are photographed in their un-prompted state, which is the state
+ * being claimed.
+ */
+
+import { app, BrowserWindow } from 'electron'
+import { writeFileSync, mkdirSync, appendFileSync, rmSync, readFileSync } from 'node:fs'
+import { join, dirname, relative, sep } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { tmpdir } from 'node:os'
+
+// Configuration comes through the environment, not argv.
+//
+// Passing extra arguments to `electron.exe` stops it resolving the entry at
+// all — the module never parses, nothing is written, and the run is
+// indistinguishable from a silent success. Proven with a one-line probe: the
+// same script loads with no arguments and does not load with two.
+/** The repository this script lives in, so it can read what it photographs. */
+const REPO = join(dirname(fileURLToPath(import.meta.url)), '..')
+
+/**
+ * A path a reader on another machine can resolve.
+ *
+ * Shots written inside the repository are recorded relative to its root, so
+ * the index can be committed. Anything outside keeps its absolute path,
+ * because a relative one would be meaningless.
+ */
+const portablePath = (absolute) => {
+  const inside = relative(REPO, absolute)
+  return inside.startsWith('..') ? absolute : inside.split(sep).join('/')
+}
+
+const URL = process.env.WATCH_QA_URL ?? 'http://127.0.0.1:8931'
+const OUT = process.env.WATCH_QA_OUT ?? 'G:/watch-manual/qa/screenshots'
+
+/**
+ * A session with history, so the mode tabs are actually mounted.
+ *
+ * Overridable because the id belongs to the manual-test profile rather than to
+ * this script; without one the run still captures everything else and simply
+ * reports no tabs.
+ */
+const SESSION_ID = process.env.WATCH_QA_SESSION ?? ''
+/** The directory a created session adopts. Any real directory will do. */
+const SESSION_CWD = process.env.WATCH_QA_CWD ?? process.cwd()
+
+/** Desktop, and a narrower desktop window — both sizes the product supports. */
+const VIEWPORTS = [
+  { name: 'wide', width: 1440, height: 900 },
+  { name: 'narrow', width: 1024, height: 720 },
+]
+
+/**
+ * A private Electron profile, claimed before anything else runs.
+ *
+ * This is the whole fix for a real defect: running the capture used to take the
+ * normal Desktop application down with it. Electron implements its
+ * single-instance lock as a socket and lock file inside `userData`, and two
+ * processes of the same app share that path by default — so a second Electron
+ * starting up disturbs the first one's singleton, and quitting the second
+ * released state the first still needed.
+ *
+ * Isolating `userData`, `sessionData` and `cache` gives the capture its own
+ * singleton, its own cache and its own storage. It cannot see, signal or
+ * disturb the running Desktop, and the running Desktop cannot see it.
+ *
+ * These must be set before `whenReady`; afterwards Electron has already
+ * resolved the paths and the call is silently too late.
+ */
+const QA_PROFILE = process.env.WATCH_QA_PROFILE
+  ?? join(tmpdir(), 'watch-qa-capture-profile')
+
+mkdirSync(QA_PROFILE, { recursive: true })
+app.setPath('userData', QA_PROFILE)
+app.setPath('sessionData', join(QA_PROFILE, 'session'))
+app.setPath('cache', join(QA_PROFILE, 'cache'))
+
+// Deliberately no `requestSingleInstanceLock()`. The capture is not the
+// application; it must neither claim the lock nor hand a `second-instance`
+// signal to whoever holds it.
+
+const shots = []
+
+function say(line) {
+  try {
+    mkdirSync(OUT, { recursive: true })
+    appendFileSync(join(OUT, 'capture.log'), line + '\n', 'utf8')
+  } catch { /* nothing useful to do */ }
+}
+
+/**
+ * Every Watch settings section, read from the module that registers them.
+ *
+ * Returns [label, slug] pairs, where the slug is the section id without its
+ * `watch-` prefix — the name the shot files already use.
+ */
+function settingsSections() {
+  const source = readFileSync(
+    join(REPO, 'packages', 'watch', 'client-settings', 'src', 'client', 'index.tsx'),
+    'utf8',
+  )
+  const found = []
+  const pattern = /section\('watch-([a-z-]+)', '([^']+)'/g
+  let match = pattern.exec(source)
+  while (match !== null) {
+    found.push([match[2], match[1] === 'memory' ? 'memory-settings' : match[1]])
+    match = pattern.exec(source)
+  }
+  if (found.length === 0) throw new Error('watch: no settings sections found to photograph')
+  return found
+}
+
+const wait = ms => new Promise(resolve => { setTimeout(resolve, ms) })
+
+/** Click the first element whose trimmed text matches, and say whether it hit. */
+const CLICK_BY_TEXT = `(function (selector, want) {
+  var nodes = Array.prototype.slice.call(document.querySelectorAll(selector))
+  var hit = nodes.filter(function (n) { return n.textContent.trim() === want })[0]
+    || nodes.filter(function (n) { return n.textContent.trim().indexOf(want) === 0 })[0]
+  if (hit) { hit.click(); return true }
+  return false
+})`
+
+/** Geometry that the report can cite, measured rather than eyeballed. */
+const MEASURE = `(function () {
+  var side = document.querySelector('[class*=sidebarCol]')
+  var dialog = document.querySelector('[role="dialog"]')
+  var body = document.body
+  var cs = getComputedStyle(body)
+  var tone = function (n) { return cs.getPropertyValue(n).trim() || '(EMPTY)' }
+  return {
+    title: document.title,
+    docScrollX: document.documentElement.scrollWidth > document.documentElement.clientWidth,
+    sidebar: side ? {
+      w: Math.round(side.getBoundingClientRect().width),
+      h: Math.round(side.getBoundingClientRect().height),
+      scrollH: side.scrollHeight, clientH: side.clientHeight
+    } : null,
+    dialog: dialog ? {
+      w: Math.round(dialog.getBoundingClientRect().width),
+      h: Math.round(dialog.getBoundingClientRect().height)
+    } : null,
+    tabs: Array.prototype.slice.call(document.querySelectorAll('[role="tab"]'))
+      .map(function (t) { return t.textContent.trim() }),
+    tokens: {
+      accent: tone('--watch-accent'),
+      active: tone('--watch-tone-active'),
+      success: tone('--watch-tone-success'),
+      error: tone('--watch-tone-error'),
+      caution: tone('--watch-tone-caution'),
+      info: tone('--watch-tone-info'),
+      neutral: tone('--watch-tone-neutral')
+    },
+    marks: Array.prototype.slice.call(document.querySelectorAll('img'))
+      .filter(function (i) { return (i.src || '').indexOf('data:image/png') === 0 })
+      .map(function (i) {
+        var r = i.getBoundingClientRect()
+        return { w: Math.round(r.width), h: Math.round(r.height), natural: i.naturalWidth, alt: i.alt }
+      })
+  }
+})()`
+
+/**
+ * Photograph the screen, or record why there was nothing to photograph.
+ *
+ * `reached` is the precondition: whether the tool actually got to the thing
+ * the shot is named after. When it is false no PNG is written at all.
+ *
+ * That matters more than it sounds. An earlier run produced sixteen shots of
+ * an empty workspace — every mode, both viewports — each saved under the name
+ * of a mode nobody had reached. In a directory listing they were
+ * indistinguishable from real captures, and a reviewer scrolling past would
+ * have counted thirty-eight successes. A missing file cannot be mistaken for
+ * evidence; a duplicate one can.
+ */
+async function capture(win, name, note, reached = true) {
+  if (!reached) {
+    shots.push({ name, file: null, note, captured: false })
+    say('  ' + name.padEnd(38) + ' NOT CAPTURED — ' + note)
+    return false
+  }
+  const image = await win.webContents.capturePage()
+  const file = join(OUT, name + '.png')
+  writeFileSync(file, image.toPNG())
+  shots.push({ name, file: portablePath(file), note, captured: true })
+  say('  ' + name.padEnd(38) + ' ' + note)
+  return true
+}
+
+async function measure(win, label) {
+  const data = await win.webContents.executeJavaScript(MEASURE)
+  say('  [measure] ' + label + ' ' + JSON.stringify(data))
+  return data
+}
+
+/** What the shipped onboarding steps offer as a way past themselves. */
+const DISMISS = ['Continue', 'Configure later', 'Got it', 'Skip', 'Dismiss']
+
+/**
+ * Clear every onboarding step, whatever it is called.
+ *
+ * The steps are a queue — upstream's testing notice, the Watch notice, then
+ * DeepSeek's key dialog — and each has its own wording for "not now". Clicking
+ * one fixed label leaves the next one on screen, which is how an earlier run
+ * photographed the same dialog three times and reported the mode tabs missing
+ * when they were merely behind it.
+ */
+async function clearOnboarding(win, limit = 6) {
+  for (let step = 0; step < limit; step += 1) {
+    const present = await win.webContents.executeJavaScript(
+      "!!document.querySelector('[role=\"dialog\"]')",
+    )
+    if (!present) return step
+    let clicked = false
+    for (const label of DISMISS) {
+      clicked = await win.webContents.executeJavaScript(
+        CLICK_BY_TEXT + "('button', " + JSON.stringify(label) + ')',
+      )
+      if (clicked) break
+    }
+    if (!clicked) return step
+    await wait(1300)
+  }
+  return limit
+}
+
+async function run(win, viewport) {
+  const p = suffix => viewport.name + '-' + suffix
+
+  // One retry: the host is on loopback and a cold profile can be slow enough
+  // that the first navigation loses the race.
+  try {
+    await win.loadURL(URL)
+  } catch (error) {
+    say('  load retry after: ' + String(error))
+    await wait(2500)
+    await win.loadURL(URL)
+  }
+  await wait(4000)
+
+  // Name the notice that is actually on screen. This claimed the Watch
+  // first-run notice unconditionally and photographed whichever dialog the
+  // queue happened to be showing — usually DSH's own testing notice, since
+  // Watch's comes after it.
+  // Only a shot of the notice if the notice is there. The second viewport
+  // runs in the same Electron profile, so the first pass has already
+  // dismissed it -- writing the file anyway produced a second copy of the
+  // plain workspace under the name of the first-run notice.
+  const firstDialog = await win.webContents.executeJavaScript(
+    "(function(){var d=document.querySelector('[role=\"dialog\"]');"
+    + " return d ? d.innerText.split('\\n')[0].slice(0,60) : ''})()",
+  )
+  await capture(win, p('01-onboarding'),
+    firstDialog === ''
+      ? 'no first-run dialog: already dismissed in this profile'
+      : 'first-run dialog: ' + firstDialog,
+    firstDialog !== '')
+
+  const cleared = await clearOnboarding(win)
+  say('  cleared ' + String(cleared) + ' onboarding step(s)')
+  await wait(1200)
+  await capture(win, p('03-workspace'), 'the workspace, entered without configuring any provider')
+  await measure(win, 'workspace')
+
+  // Open a session that actually has content.
+  //
+  // The mode tabs live in the session header, and DSH hides that chrome while
+  // the session is blank — `blank && composerPhase === 'blank'`. Clicking a
+  // sidebar row that happens to be a fresh empty session therefore produces no
+  // tabs and looks exactly like the registrations having failed, which is what
+  // an earlier run reported. Selecting a seeded session with history and
+  // reloading is deterministic, and the reload is what makes DSH pick it up.
+  // Create a real session through DSH's own API.
+  //
+  // This used to read a session id out of an environment variable, and when
+  // nobody set one it silently opened nothing — which is how sixteen shots of
+  // an empty workspace came to be labelled as seven modes.
+  //
+  // `session.create` accepts a `cwd` directly, so no workspace is needed. That
+  // matters because adding a workspace goes through a native directory picker,
+  // which no automated capture can drive.
+  const opened = await win.webContents.executeJavaScript(`(async function () {
+    function rpc (method, payload) {
+      return fetch('/api/' + method, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          type: 'client-request',
+          rpcId: 'qa-' + String(Date.now()) + '-' + String(Math.random()).slice(2, 8),
+          method: method,
+          payload: payload
+        })
+      }).then(function (r) { return r.json() })
+    }
+
+    var seeded = ${JSON.stringify(SESSION_ID)}
+    if (seeded) {
+      localStorage['dsh.sessions.current'] = JSON.stringify({ sessionId: seeded })
+      return seeded
+    }
+    try {
+      var created = await rpc('session.create', { cwd: ${JSON.stringify(SESSION_CWD)} })
+      var id = created && created.result && created.result.ok && created.result.value.sessionId
+      if (!id) return null
+
+      // Send one turn. DSH hides the session header while a session is blank,
+      // so without this the mode tabs never mount and there is nothing to
+      // photograph. The turn goes through the real agent loop; whether the
+      // model behind it is a paid provider or the QA stub is decided by the
+      // profile, not here.
+      await rpc('session.prompt', {
+        sessionId: id,
+        mode: 'queue',
+        content: [{ type: 'text', text: 'Say hello so this session is no longer blank.' }]
+      })
+
+      // Wait for it to land, up to a minute.
+      var deadline = Date.now() + 60000
+      while (Date.now() < deadline) {
+        var listed = await rpc('session.list', {})
+        var mine = (listed.result.value.items || []).filter(function (s) { return s.sessionId === id })[0]
+        if (mine && mine.blank === false && mine.running === false) break
+        await new Promise(function (r) { setTimeout(r, 500) })
+      }
+
+      localStorage['dsh.sessions.current'] = JSON.stringify({ sessionId: id })
+      return id
+    } catch (error) {
+      return 'error: ' + String(error)
+    }
+  })()`)
+  say('  session: ' + String(opened))
+  await win.reload()
+  await wait(3200)
+  await clearOnboarding(win)
+  await wait(2400)
+  const session = await measure(win, 'session')
+  say('  tabs: ' + JSON.stringify(session.tabs))
+  // No separate tablist shot.
+  //
+  // Chat is the tab DSH opens on, so photographing "the tablist" and then
+  // photographing Chat produced two identical files. The tablist is visible
+  // in all seven mode shots, and `session.tabs` below is the assertion that
+  // it mounted, so a shot of its own adds a duplicate and nothing else.
+  if (session.tabs.length === 0) {
+    say('  tablist absent -- the mode shots will record why')
+  }
+
+  for (const mode of ['Chat', 'Trajectory', 'Watch', 'Live', 'Memory', 'Library', 'Compare']) {
+    const ok = await win.webContents.executeJavaScript(
+      CLICK_BY_TEXT + "('[role=\"tab\"]', " + JSON.stringify(mode) + ')',
+    )
+    await wait(1200)
+    await capture(win, p('05-mode-' + mode.toLowerCase()),
+      ok ? mode + ' mode' : mode + ' tab was not present, so nothing was photographed', ok)
+  }
+
+  // Settings, and every Watch section in it.
+  await win.webContents.executeJavaScript(CLICK_BY_TEXT + "('button', 'Settings')")
+  await wait(1600)
+  await capture(win, p('06-settings-general'), 'DSH General kept above the Watch sections')
+
+  // Read the sections out of the module that registers them.
+  //
+  // This was a hand-written list and it drifted the moment the labels
+  // changed. Deriving it means a renamed or added section is photographed
+  // without anyone remembering to edit this file.
+  const sections = settingsSections()
+  for (const [label, slug] of sections) {
+    const ok = await win.webContents.executeJavaScript(
+      CLICK_BY_TEXT + "('button', " + JSON.stringify(label) + ')',
+    )
+    await wait(1000)
+    // `ok` is the precondition here too: a section that was never opened must
+    // not be photographed under its name. This is the same defect as the
+    // modes, in a second place — the list below held the *truncated* labels
+    // ("Perception Engi"), a workaround for a nav that ellipsised. Fixing the
+    // labels broke the clicks, and without this the tool would have saved the
+    // previously open section three times over.
+    await capture(win, p('07-settings-' + slug),
+      ok ? label + ' section' : label + ' was not reachable, so nothing was photographed', ok)
+  }
+
+  // Close settings, then collapse the sidebar to photograph the rail.
+  await win.webContents.executeJavaScript(`(function () {
+    var b = Array.prototype.slice.call(document.querySelectorAll('button'))
+      .filter(function (x) { return /close/i.test(x.getAttribute('aria-label') || '') })[0]
+    if (b) b.click()
+    return !!b
+  })()`)
+  await wait(900)
+  await win.webContents.executeJavaScript(`(function () {
+    var b = Array.prototype.slice.call(document.querySelectorAll('button'))
+      .filter(function (x) { return /collapse sidebar/i.test(x.getAttribute('aria-label') || '') })[0]
+    if (b) b.click()
+    return !!b
+  })()`)
+  await wait(1000)
+  await capture(win, p('08-sidebar-collapsed'), 'the collapsed rail: mark visible, attribution not reflowed')
+  await measure(win, 'collapsed')
+}
+
+// Anything thrown before the window exists would otherwise vanish with stdout.
+process.on('uncaughtException', error => {
+  say('FATAL ' + String(error && error.stack ? error.stack : error))
+  app.exit(1)
+})
+
+app.whenReady().then(async () => {
+  mkdirSync(OUT, { recursive: true })
+  writeFileSync(join(OUT, 'capture.log'), '', 'utf8')
+  say('capturing ' + URL + ' -> ' + portablePath(OUT))
+
+  // One window, resized between passes.
+  //
+  // Creating a second BrowserWindow after destroying the first reliably failed
+  // the next navigation with ERR_FAILED (-2) while the host was demonstrably
+  // still serving 200. Resizing sidesteps it and is closer to what a person
+  // does anyway.
+  const win = new BrowserWindow({
+    width: VIEWPORTS[0].width,
+    height: VIEWPORTS[0].height,
+    show: false,
+    webPreferences: { nodeIntegration: false, contextIsolation: true, sandbox: true },
+  })
+
+  for (const viewport of VIEWPORTS) {
+    say('[' + viewport.name + '] ' + String(viewport.width) + 'x' + String(viewport.height))
+    win.setContentSize(viewport.width, viewport.height)
+    await wait(600)
+    try {
+      await run(win, viewport)
+    } catch (error) {
+      say('  capture FAILED: ' + String(error && error.stack ? error.stack : error))
+    }
+  }
+  win.destroy()
+
+  writeFileSync(join(OUT, 'index.json'), JSON.stringify(shots, null, 2) + '\n', 'utf8')
+  say(String(shots.length) + ' shot(s) written')
+  say('qa profile: isolated, outside the repository')
+
+  // Removed on exit unless asked otherwise. A profile that survives between
+  // runs is how a capture stops being reproducible — the second run inherits
+  // the first one's storage and quietly photographs a different state.
+  if (process.env.WATCH_QA_KEEP_PROFILE !== '1') {
+    app.once('will-quit', () => {
+      try { rmSync(QA_PROFILE, { recursive: true, force: true }) } catch { /* best effort */ }
+    })
+  }
+  app.quit()
+})

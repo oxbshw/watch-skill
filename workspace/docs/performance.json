@@ -1,0 +1,155 @@
+{
+  "measuredAt": "2026-08-27T21:49:23.058Z",
+  "machine": {
+    "platform": "win32-x64",
+    "cores": 4,
+    "cpu": "Intel(R) Core(TM) i5-4300M CPU @ 2.60GHz",
+    "memoryGb": 8,
+    "node": "v22.18.0",
+    "gpu": "none detected",
+    "storage": "system temp volume"
+  },
+  "note": "Every timing here was produced by running the code on the machine described above. Rows marked not_measured say why rather than carrying an estimate.",
+  "results": [
+    {
+      "id": "trajectory.projection.small",
+      "what": "Fold a 200-event session into the Watch projection",
+      "budgetMs": 16,
+      "iterations": 200,
+      "p50Ms": 0.372,
+      "p95Ms": 1.276,
+      "p99Ms": 1.621,
+      "maxMs": 1.787
+    },
+    {
+      "id": "trajectory.projection.100k",
+      "what": "Fold a 100,000-event session once",
+      "budgetMs": 5000,
+      "p50Ms": 264.1,
+      "p95Ms": 264.1,
+      "p99Ms": 264.1,
+      "maxMs": 264.1,
+      "iterations": 1,
+      "note": "50000 Watch records extracted"
+    },
+    {
+      "id": "trajectory.projection.100k.replay",
+      "what": "Hash a 100,000-event projection, which is what replay determinism costs",
+      "budgetMs": 2000,
+      "p50Ms": 679.3,
+      "p95Ms": 679.3,
+      "p99Ms": 679.3,
+      "maxMs": 679.3,
+      "iterations": 1
+    },
+    {
+      "id": "selection.resolve",
+      "what": "Resolve a selection against a 100,000-event projection",
+      "budgetMs": 16,
+      "iterations": 200,
+      "p50Ms": 0,
+      "p95Ms": 0,
+      "p99Ms": 0.001,
+      "maxMs": 0.005
+    },
+    {
+      "id": "selection.deeplink.roundtrip",
+      "what": "Serialize a selection to a deep link and restore it",
+      "budgetMs": 4,
+      "iterations": 200,
+      "p50Ms": 0.027,
+      "p95Ms": 0.056,
+      "p99Ms": 0.114,
+      "maxMs": 0.116
+    },
+    {
+      "id": "timeline.build",
+      "what": "Build the sensory timeline over a 200-event session",
+      "budgetMs": 16,
+      "iterations": 200,
+      "p50Ms": 0.187,
+      "p95Ms": 0.231,
+      "p99Ms": 0.401,
+      "maxMs": 0.642
+    },
+    {
+      "id": "memory.compile",
+      "what": "Compile a context packet from a 500-record ledger",
+      "budgetMs": 50,
+      "iterations": 50,
+      "p50Ms": 5.734,
+      "p95Ms": 9.552,
+      "p99Ms": 35.9,
+      "maxMs": 35.9
+    },
+    {
+      "id": "memory.context.tokens",
+      "what": "Tokens memory adds to one turn, against a 600-token budget",
+      "budgetMs": null,
+      "budgetTokens": 600,
+      "tokens": 104,
+      "items": 4,
+      "droppedForBudget": 496
+    },
+    {
+      "id": "library.freshness",
+      "what": "Resolve evidence freshness against a 5,000-source library",
+      "budgetMs": 16,
+      "iterations": 200,
+      "p50Ms": 0.156,
+      "p95Ms": 0.177,
+      "p99Ms": 0.217,
+      "maxMs": 0.224
+    },
+    {
+      "id": "library.facets",
+      "what": "Compute facets over 200 results in a 5,000-source library",
+      "budgetMs": 32,
+      "iterations": 50,
+      "p50Ms": 1.062,
+      "p95Ms": 2.202,
+      "p99Ms": 5.747,
+      "maxMs": 5.747
+    },
+    {
+      "id": "live.bounded",
+      "what": "A live session fed 100,000 events with a 2,000-event bound",
+      "budgetMs": null,
+      "heldEvents": 2000,
+      "trimmed": 98000,
+      "heapGrowthMb": 0.4,
+      "budgetHeldEvents": 2000
+    },
+    {
+      "id": "workspace.render",
+      "what": "Render the whole workspace shell, server-side",
+      "budgetMs": 50,
+      "iterations": 100,
+      "p50Ms": 0.865,
+      "p95Ms": 2.77,
+      "p99Ms": 7.364,
+      "maxMs": 7.364
+    },
+    {
+      "id": "host.readiness",
+      "what": "DSH Host process readiness",
+      "budgetMs": 3000,
+      "status": "not_measured",
+      "reason": "The DSH Host is consumed as published packages and is not launched by this repository’s test suite. Supervision and readiness sequencing are gated by tests/desktop.test.mjs against a real child process; the Host’s own startup time belongs to upstream."
+    },
+    {
+      "id": "core.readiness",
+      "what": "Watch Core process readiness",
+      "budgetMs": 3000,
+      "status": "not_measured",
+      "reason": "Watch Core lives in the watch-skill repository and is measured there. The Bridge handshake against it is gated by tests/core-integration.test.mjs when the engine is installed."
+    },
+    {
+      "id": "ocr.deepseek.latency",
+      "what": "DeepSeek-OCR recognition latency",
+      "budgetMs": null,
+      "status": "not_measured",
+      "reason": "No GPU on this machine. Reporting a number would mean inventing one."
+    }
+  ]
+}

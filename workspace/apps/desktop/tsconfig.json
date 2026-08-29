@@ -1,0 +1,25 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "lib",
+    "rootDir": "src",
+    "lib": [
+      "ES2024",
+      "DOM"
+    ]
+  },
+  "include": [
+    "src/**/*.ts"
+  ],
+  "references": [
+    {
+      "path": "../../packages/watch/contracts"
+    },
+    {
+      "path": "../../packages/watch/core-bridge"
+    },
+    {
+      "path": "../../packages/watch/workspace"
+    }
+  ]
+}

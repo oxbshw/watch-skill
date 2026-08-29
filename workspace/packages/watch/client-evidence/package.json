@@ -1,0 +1,66 @@
+{
+  "name": "@watchskill/dsh-client-evidence",
+  "version": "0.1.0-preview.0",
+  "description": "Browser half: verdict and evidence presentation for Watch tool results",
+  "type": "module",
+  "license": "MIT",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./client": {
+      "types": "./lib/client/index.d.ts",
+      "default": "./lib/client.js"
+    },
+    "./compare": {
+      "types": "./lib/client/CompareView.d.ts",
+      "default": "./lib/client/CompareView.js"
+    },
+    "./compare-engine": {
+      "types": "./lib/compare-engine.d.ts",
+      "default": "./lib/compare-engine.js"
+    },
+    "./compare-mode": {
+      "types": "./lib/client/compare-mode.d.ts",
+      "default": "./lib/client/compare-mode.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "dsh": {
+    "client": {
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-tool",
+        "@deepseek-ai/dsh-client-runtime"
+      ],
+      "platform": "web"
+    }
+  },
+  "files": [
+    "lib/**/*.js",
+    "lib/**/*.js.map",
+    "lib/**/*.d.ts"
+  ],
+  "scripts": {
+    "bundle": "tsdown"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "catalog:",
+    "react": "^18.2.0"
+  },
+  "devDependencies": {
+    "@deepseek-ai/cordis": "catalog:",
+    "@deepseek-ai/dsh-client-ui-primitives": "catalog:",
+    "@deepseek-ai/dsh-client-ui-slots": "catalog:",
+    "@types/react": "~18.3.1",
+    "react": "^18.2.0"
+  },
+  "dependencies": {
+    "@watchskill/dsh-client-brand": "workspace:^",
+    "@watchskill/dsh-contracts": "workspace:^",
+    "@watchskill/dsh-trajectory": "workspace:^",
+    "@watchskill/dsh-workspace": "workspace:^"
+  }
+}

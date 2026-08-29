@@ -1,0 +1,32 @@
+{
+  "name": "@watchskill/dsh-technology",
+  "version": "0.1.0-preview.0",
+  "description": "Technology descriptors, capability lifecycle, and role bindings over DSH Models and Providers",
+  "type": "module",
+  "license": "MIT",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./descriptors": {
+      "types": "./lib/descriptors.d.ts",
+      "default": "./lib/descriptors.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib/**/*.js",
+    "lib/**/*.d.ts"
+  ],
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "catalog:",
+    "@deepseek-ai/schemastery": "^3.18.1"
+  },
+  "devDependencies": {
+    "@deepseek-ai/cordis": "catalog:",
+    "@deepseek-ai/schemastery": "^3.18.1"
+  }
+}

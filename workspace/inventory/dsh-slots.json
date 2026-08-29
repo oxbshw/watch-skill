@@ -1,0 +1,399 @@
+{
+  "generatedBy": "scripts/gen-dsh-slots.mjs",
+  "dshVersion": "0.1.1-rc.2",
+  "note": "DSH's own slot contract, read from the catalogue it embeds in dsh-cordis-client-runner. Registering into a name absent from this list is a silent no-op: it loads, it tests green, it never draws. `kind` decides what a registration means — list is additive, single shadows (and shadowing a seat DSH fills removes an official capability), keyed requires options.key. `scope` says where it renders: a root slot is always mounted, a session slot is absent until a session is open. A slot found only at a call site carries kind \"unknown\", and the gate treats unknown exactly as strictly as single.",
+  "bundlesScanned": 362,
+  "slots": {
+    "conversation.chat.commandview": {
+      "kind": "keyed",
+      "scope": "session",
+      "source": "contract",
+      "declaredBy": [
+        "dsh-client-ui-conversation",
+        "dsh-cordis-client-runner"
+      ]
+    },
+    "conversation.chat.node": {
+      "kind": "keyed",
+      "scope": "session",
+      "source": "contract",
+      "declaredBy": [
+        "dsh-client-ui-conversation",
+        "dsh-cordis-client-runner"
+      ]
+    },
+    "conversation.composer.bar": {
+      "kind": "unknown",
+      "scope": "unknown",
+      "source": "call-site",
+      "declaredBy": [
+        "dsh-client-ui-conversation"
+      ]
+    },
+    "conversation.composer.dock": {
+      "kind": "list",
+      "scope": "session",
+      "source": "contract",
+      "declaredBy": [
+        "dsh-client-ui-conversation",
+        "dsh-cordis-client-runner"
+      ]
+    },
+    "conversation.details.tool": {
+      "kind": "single",
+      "scope": "session",
+      "source": "contract",
+      "declaredBy": [
+        "dsh-client-ui-conversation",
+        "dsh-cordis-client-runner"
+      ]
+    },
+    "conversation.hero.agentPreset": {
+      "kind": "single",
+      "scope": "root",
+      "source": "contract",
+      "declaredBy": [
+        "dsh-client-ui-conversation",
+        "dsh-cordis-client-runner"
+      ]
+    },
+    "conversation.hero.brand.mark": {
+      "kind": "single",
+      "scope": "root",
+      "source": "contract",
+      "declaredBy": [
+        "dsh-client-ui-conversation",
+        "dsh-cordis-client-runner"
+      ]
+    },
+    "conversation.hero.workspace": {
+      "kind": "single",
+      "scope": "root",
+      "source": "contract",
+      "declaredBy": [
+        "dsh-client-ui-conversation",
+        "dsh-cordis-client-runner"
+      ]
+    },
+    "conversation.hero.workspace.directoryFlow": {
+      "kind": "single",
+      "scope": "root",
+      "source": "contract",
+      "declaredBy": [
+        "dsh-client-ui-workspace",
+        "dsh-cordis-client-runner"
+      ]
+    },
+    "conversation.input.attachments": {
+      "kind": "unknown",
+      "scope": "unknown",
+      "source": "call-site",
+      "declaredBy": [
+        "dsh-client-ui-conversation"
+      ]
+    },
+    "conversation.input.dock": {
+      "kind": "list",
+      "scope": "session",
+      "source": "contract",
+      "declaredBy": [
+        "dsh-client-ui-conversation",
+        "dsh-cordis-client-runner"
+      ]
+    },
+    "conversation.input.left": {
+      "kind": "list",
+      "scope": "session",
+      "source": "contract",
+      "declaredBy": [
+        "dsh-client-ui-conversation",
+        "dsh-cordis-client-runner"
+      ]
+    },
+    "conversation.input.model": {
+      "kind": "single",
+      "scope": "session",
+      "source": "contract",
+      "declaredBy": [
+        "dsh-client-ui-conversation",
+        "dsh-cordis-client-runner"
+      ]
+    },
+    "conversation.input.overlay": {
+      "kind": "list",
+      "scope": "session",
+      "source": "contract",
+      "declaredBy": [
+        "dsh-client-ui-conversation",
+        "dsh-cordis-client-runner"
+      ]
+    },
+    "conversation.input.plan": {
+      "kind": "single",
+      "scope": "session",
+      "source": "contract",
+      "declaredBy": [
+        "dsh-client-ui-conversation",
+        "dsh-cordis-client-runner"
+      ]
+    },
+    "conversation.input.right": {
+      "kind": "list",
+      "scope": "session",
+      "source": "contract",
+      "declaredBy": [
+        "dsh-client-ui-conversation",
+        "dsh-cordis-client-runner"
+      ]
+    },
+    "conversation.message.images": {
+      "kind": "single",
+      "scope": "session",
+      "source": "contract",
+      "declaredBy": [
+        "dsh-client-ui-conversation",
+        "dsh-cordis-client-runner"
+      ]
+    },
+    "conversation.session": {
+      "kind": "single",
+      "scope": "session",
+      "source": "contract",
+      "declaredBy": [
+        "dsh-client-ui-conversation",
+        "dsh-cordis-client-runner"
+      ]
+    },
+    "conversation.session.header": {
+      "kind": "single",
+      "scope": "session",
+      "source": "contract",
+      "declaredBy": [
+        "dsh-client-ui-conversation",
+        "dsh-cordis-client-runner"
+      ]
+    },
+    "conversation.session.header.actions": {
+      "kind": "list",
+      "scope": "session",
+      "source": "contract",
+      "declaredBy": [
+        "dsh-client-ui-conversation",
+        "dsh-cordis-client-runner"
+      ]
+    },
+    "conversation.session.header.lineage": {
+      "kind": "single",
+      "scope": "session",
+      "source": "contract",
+      "declaredBy": [
+        "dsh-client-ui-conversation",
+        "dsh-cordis-client-runner"
+      ]
+    },
+    "conversation.session.header.utilities": {
+      "kind": "list",
+      "scope": "session",
+      "source": "contract",
+      "declaredBy": [
+        "dsh-client-ui-conversation",
+        "dsh-cordis-client-runner"
+      ]
+    },
+    "conversation.view": {
+      "kind": "list",
+      "scope": "session",
+      "source": "contract",
+      "declaredBy": [
+        "dsh-client-ui-conversation",
+        "dsh-cordis-client-runner"
+      ]
+    },
+    "details": {
+      "kind": "single",
+      "scope": "session",
+      "source": "contract",
+      "declaredBy": [
+        "dsh-cordis-client-runner"
+      ]
+    },
+    "root": {
+      "kind": "single",
+      "scope": "root",
+      "source": "contract",
+      "declaredBy": [
+        "dsh-cordis-client-runner"
+      ]
+    },
+    "settings.action": {
+      "kind": "list",
+      "scope": "root",
+      "source": "contract",
+      "declaredBy": [
+        "dsh-client-ui-settings-general",
+        "dsh-cordis-client-runner"
+      ]
+    },
+    "settings.close": {
+      "kind": "single",
+      "scope": "root",
+      "source": "contract",
+      "declaredBy": [
+        "dsh-client-ui-settings-general",
+        "dsh-cordis-client-runner"
+      ]
+    },
+    "settings.general.item": {
+      "kind": "list",
+      "scope": "root",
+      "source": "contract",
+      "declaredBy": [
+        "dsh-client-ui-settings-general",
+        "dsh-cordis-client-runner"
+      ]
+    },
+    "settings.header": {
+      "kind": "single",
+      "scope": "root",
+      "source": "contract",
+      "declaredBy": [
+        "dsh-client-ui-settings-general",
+        "dsh-cordis-client-runner"
+      ]
+    },
+    "settings.onboarding": {
+      "kind": "list",
+      "scope": "root",
+      "source": "contract",
+      "declaredBy": [
+        "dsh-client-ui-settings-general",
+        "dsh-cordis-client-runner"
+      ]
+    },
+    "settings.plugin.item": {
+      "kind": "keyed",
+      "scope": "root",
+      "source": "contract",
+      "declaredBy": [
+        "dsh-client-ui-settings-plugins",
+        "dsh-cordis-client-runner"
+      ]
+    },
+    "settings.plugins.tab": {
+      "kind": "list",
+      "scope": "root",
+      "source": "contract",
+      "declaredBy": [
+        "dsh-client-ui-settings-plugins",
+        "dsh-cordis-client-runner"
+      ]
+    },
+    "settings.section": {
+      "kind": "list",
+      "scope": "root",
+      "source": "contract",
+      "declaredBy": [
+        "dsh-client-ui-settings-general",
+        "dsh-cordis-client-runner"
+      ]
+    },
+    "settings.trigger": {
+      "kind": "single",
+      "scope": "root",
+      "source": "contract",
+      "declaredBy": [
+        "dsh-client-ui-settings-general",
+        "dsh-cordis-client-runner"
+      ]
+    },
+    "shell.overlay": {
+      "kind": "list",
+      "scope": "root",
+      "source": "contract",
+      "declaredBy": [
+        "dsh-client-ui-layout",
+        "dsh-cordis-client-runner"
+      ]
+    },
+    "sidebar": {
+      "kind": "single",
+      "scope": "root",
+      "source": "contract",
+      "declaredBy": [
+        "dsh-cordis-client-runner"
+      ]
+    },
+    "sidebar.brand.mark": {
+      "kind": "single",
+      "scope": "root",
+      "source": "contract",
+      "declaredBy": [
+        "dsh-client-ui-sidebar",
+        "dsh-cordis-client-runner"
+      ]
+    },
+    "sidebar.brand.name": {
+      "kind": "single",
+      "scope": "root",
+      "source": "contract",
+      "declaredBy": [
+        "dsh-client-ui-sidebar",
+        "dsh-cordis-client-runner"
+      ]
+    },
+    "sidebar.footer.action": {
+      "kind": "list",
+      "scope": "root",
+      "source": "contract",
+      "declaredBy": [
+        "dsh-client-ui-sidebar",
+        "dsh-cordis-client-runner"
+      ]
+    },
+    "sidebar.settings": {
+      "kind": "single",
+      "scope": "root",
+      "source": "contract",
+      "declaredBy": [
+        "dsh-client-ui-sidebar",
+        "dsh-cordis-client-runner"
+      ]
+    },
+    "sidebar.workspaces": {
+      "kind": "single",
+      "scope": "root",
+      "source": "contract",
+      "declaredBy": [
+        "dsh-client-ui-sidebar",
+        "dsh-cordis-client-runner"
+      ]
+    },
+    "sidebar.workspaces.directoryFlow": {
+      "kind": "single",
+      "scope": "root",
+      "source": "contract",
+      "declaredBy": [
+        "dsh-client-ui-workspace",
+        "dsh-cordis-client-runner"
+      ]
+    },
+    "tool.call.toolview": {
+      "kind": "keyed",
+      "scope": "session",
+      "source": "contract",
+      "declaredBy": [
+        "dsh-client-ui-tool",
+        "dsh-cordis-client-runner"
+      ]
+    },
+    "tool.view.cordis": {
+      "kind": "keyed",
+      "scope": "session",
+      "source": "contract",
+      "declaredBy": [
+        "dsh-client-ui-cordis",
+        "dsh-cordis-client-runner"
+      ]
+    }
+  }
+}

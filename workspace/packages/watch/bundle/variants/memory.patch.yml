@@ -1,0 +1,30 @@
+# Watch Memory — durable, correctable memory without perception.
+#
+# For a deployment that wants an agent to remember how somebody works and does
+# not want it watching anything. The Bridge is still present, because memory
+# projections and the Context Compiler are Watch's, but no sensory tools are
+# mounted: there is nothing here that can look at a screen.
+#
+# `mode` is 'off' as it is everywhere else. Installing a memory bundle is not
+# consent to remember things about a person; changing the mode is.
+
+- insert:
+    - id: watch-core-bridge
+      name: '@watchskill/dsh-core-bridge'
+      config:
+        transport: auto
+        command: watch-skill
+        args: [bridge]
+        cwd: ''
+        startupTimeoutMs: 10000
+        requestTimeoutMs: 30000
+        autoConnect: true
+
+    - id: watch-memory
+      name: '@watchskill/dsh-memory'
+      config:
+        mode: 'off'
+        directory: .watch/memory
+        inferredThreshold: 0.8
+        tokenBudget: 600
+        writeProjections: true

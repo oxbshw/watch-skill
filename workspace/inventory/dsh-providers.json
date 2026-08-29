@@ -1,0 +1,556 @@
+{
+  "generatedBy": "scripts/gen-provider-inventory.mjs",
+  "source": "@earendil-works/pi-ai, vendored by @deepseek-ai/dsh-llm-pi-ai",
+  "note": "Every provider route the pinned DSH ships. Watch narrows none of them: it adds no provider, removes none, and stores no credential — bindings reference a credential DSH holds. `checked: \"never\"` on every row is literal: a descriptor existing means the route is shipped, not that it works, and this product does not conflate the two. Only variable NAMES are recorded, never values.",
+  "deepseekIsOptional": true,
+  "counts": {
+    "self_hosted": 7,
+    "hosted": 30
+  },
+  "total": 37,
+  "providers": [
+    {
+      "id": "amazon-bedrock",
+      "name": "Amazon Bedrock",
+      "classification": "self_hosted",
+      "protocol": "bedrockConverseStream",
+      "baseUrl": null,
+      "credentialEnv": [],
+      "configuredVia": "DSH Settings → Models & Providers",
+      "reachableFromUi": true,
+      "requiresPlugin": false,
+      "checked": "never",
+      "state": "shipped in the pinned catalogue; not configured and not contacted"
+    },
+    {
+      "id": "ant-ling",
+      "name": "Ant Ling",
+      "classification": "hosted",
+      "protocol": "openAICompletions",
+      "baseUrl": "https://api.ant-ling.com/v1",
+      "credentialEnv": [
+        "ANT_LING_API_KEY"
+      ],
+      "configuredVia": "DSH Settings → Models & Providers",
+      "reachableFromUi": true,
+      "requiresPlugin": false,
+      "checked": "never",
+      "state": "shipped in the pinned catalogue; not configured and not contacted"
+    },
+    {
+      "id": "anthropic",
+      "name": "Anthropic",
+      "classification": "hosted",
+      "protocol": "anthropicMessages",
+      "baseUrl": "https://api.anthropic.com",
+      "credentialEnv": [],
+      "configuredVia": "DSH Settings → Models & Providers",
+      "reachableFromUi": true,
+      "requiresPlugin": false,
+      "checked": "never",
+      "state": "shipped in the pinned catalogue; not configured and not contacted"
+    },
+    {
+      "id": "azure-openai-responses",
+      "name": "Azure OpenAI",
+      "classification": "self_hosted",
+      "protocol": "azureOpenAIResponses",
+      "baseUrl": null,
+      "credentialEnv": [
+        "AZURE_OPENAI_API_KEY"
+      ],
+      "configuredVia": "DSH Settings → Models & Providers",
+      "reachableFromUi": true,
+      "requiresPlugin": false,
+      "checked": "never",
+      "state": "shipped in the pinned catalogue; not configured and not contacted"
+    },
+    {
+      "id": "cerebras",
+      "name": "Cerebras",
+      "classification": "hosted",
+      "protocol": "openAICompletions",
+      "baseUrl": "https://api.cerebras.ai/v1",
+      "credentialEnv": [
+        "CEREBRAS_API_KEY"
+      ],
+      "configuredVia": "DSH Settings → Models & Providers",
+      "reachableFromUi": true,
+      "requiresPlugin": false,
+      "checked": "never",
+      "state": "shipped in the pinned catalogue; not configured and not contacted"
+    },
+    {
+      "id": "cloudflare-ai-gateway",
+      "name": "Cloudflare AI Gateway",
+      "classification": "self_hosted",
+      "protocol": "anthropicMessages",
+      "baseUrl": null,
+      "credentialEnv": [],
+      "configuredVia": "DSH Settings → Models & Providers",
+      "reachableFromUi": true,
+      "requiresPlugin": false,
+      "checked": "never",
+      "state": "shipped in the pinned catalogue; not configured and not contacted"
+    },
+    {
+      "id": "cloudflare-workers-ai",
+      "name": "Cloudflare Workers AI",
+      "classification": "self_hosted",
+      "protocol": "openAICompletions",
+      "baseUrl": null,
+      "credentialEnv": [],
+      "configuredVia": "DSH Settings → Models & Providers",
+      "reachableFromUi": true,
+      "requiresPlugin": false,
+      "checked": "never",
+      "state": "shipped in the pinned catalogue; not configured and not contacted"
+    },
+    {
+      "id": "deepseek",
+      "name": "DeepSeek",
+      "classification": "hosted",
+      "protocol": "openAICompletions",
+      "baseUrl": "https://api.deepseek.com",
+      "credentialEnv": [
+        "DEEPSEEK_API_KEY"
+      ],
+      "configuredVia": "DSH Settings → Models & Providers",
+      "reachableFromUi": true,
+      "requiresPlugin": false,
+      "checked": "never",
+      "state": "shipped in the pinned catalogue; not configured and not contacted"
+    },
+    {
+      "id": "fireworks",
+      "name": "Fireworks",
+      "classification": "hosted",
+      "protocol": "anthropicMessages",
+      "baseUrl": "https://api.fireworks.ai/inference",
+      "credentialEnv": [
+        "FIREWORKS_API_KEY"
+      ],
+      "configuredVia": "DSH Settings → Models & Providers",
+      "reachableFromUi": true,
+      "requiresPlugin": false,
+      "checked": "never",
+      "state": "shipped in the pinned catalogue; not configured and not contacted"
+    },
+    {
+      "id": "github-copilot",
+      "name": "GitHub Copilot",
+      "classification": "hosted",
+      "protocol": "anthropicMessages",
+      "baseUrl": "https://api.individual.githubcopilot.com",
+      "credentialEnv": [
+        "COPILOT_GITHUB_TOKEN"
+      ],
+      "configuredVia": "DSH Settings → Models & Providers",
+      "reachableFromUi": true,
+      "requiresPlugin": false,
+      "checked": "never",
+      "state": "shipped in the pinned catalogue; not configured and not contacted"
+    },
+    {
+      "id": "google",
+      "name": "Google",
+      "classification": "hosted",
+      "protocol": "googleGenerativeAI",
+      "baseUrl": "https://generativelanguage.googleapis.com/v1beta",
+      "credentialEnv": [
+        "GEMINI_API_KEY"
+      ],
+      "configuredVia": "DSH Settings → Models & Providers",
+      "reachableFromUi": true,
+      "requiresPlugin": false,
+      "checked": "never",
+      "state": "shipped in the pinned catalogue; not configured and not contacted"
+    },
+    {
+      "id": "google-vertex",
+      "name": "Google Vertex AI",
+      "classification": "self_hosted",
+      "protocol": "googleVertex",
+      "baseUrl": null,
+      "credentialEnv": [],
+      "configuredVia": "DSH Settings → Models & Providers",
+      "reachableFromUi": true,
+      "requiresPlugin": false,
+      "checked": "never",
+      "state": "shipped in the pinned catalogue; not configured and not contacted"
+    },
+    {
+      "id": "groq",
+      "name": "Groq",
+      "classification": "hosted",
+      "protocol": "openAICompletions",
+      "baseUrl": "https://api.groq.com/openai/v1",
+      "credentialEnv": [
+        "GROQ_API_KEY"
+      ],
+      "configuredVia": "DSH Settings → Models & Providers",
+      "reachableFromUi": true,
+      "requiresPlugin": false,
+      "checked": "never",
+      "state": "shipped in the pinned catalogue; not configured and not contacted"
+    },
+    {
+      "id": "huggingface",
+      "name": "Hugging Face",
+      "classification": "hosted",
+      "protocol": "openAICompletions",
+      "baseUrl": "https://router.huggingface.co/v1",
+      "credentialEnv": [
+        "HF_TOKEN"
+      ],
+      "configuredVia": "DSH Settings → Models & Providers",
+      "reachableFromUi": true,
+      "requiresPlugin": false,
+      "checked": "never",
+      "state": "shipped in the pinned catalogue; not configured and not contacted"
+    },
+    {
+      "id": "kimi-coding",
+      "name": "Kimi For Coding",
+      "classification": "hosted",
+      "protocol": "anthropicMessages",
+      "baseUrl": "https://api.kimi.com/coding",
+      "credentialEnv": [
+        "KIMI_API_KEY"
+      ],
+      "configuredVia": "DSH Settings → Models & Providers",
+      "reachableFromUi": true,
+      "requiresPlugin": false,
+      "checked": "never",
+      "state": "shipped in the pinned catalogue; not configured and not contacted"
+    },
+    {
+      "id": "minimax",
+      "name": "MiniMax",
+      "classification": "hosted",
+      "protocol": "anthropicMessages",
+      "baseUrl": "https://api.minimax.io/anthropic",
+      "credentialEnv": [
+        "MINIMAX_API_KEY"
+      ],
+      "configuredVia": "DSH Settings → Models & Providers",
+      "reachableFromUi": true,
+      "requiresPlugin": false,
+      "checked": "never",
+      "state": "shipped in the pinned catalogue; not configured and not contacted"
+    },
+    {
+      "id": "minimax-cn",
+      "name": "MiniMax CN",
+      "classification": "hosted",
+      "protocol": "anthropicMessages",
+      "baseUrl": "https://api.minimaxi.com/anthropic",
+      "credentialEnv": [
+        "MINIMAX_CN_API_KEY"
+      ],
+      "configuredVia": "DSH Settings → Models & Providers",
+      "reachableFromUi": true,
+      "requiresPlugin": false,
+      "checked": "never",
+      "state": "shipped in the pinned catalogue; not configured and not contacted"
+    },
+    {
+      "id": "mistral",
+      "name": "Mistral",
+      "classification": "hosted",
+      "protocol": "mistralConversations",
+      "baseUrl": "https://api.mistral.ai",
+      "credentialEnv": [
+        "MISTRAL_API_KEY"
+      ],
+      "configuredVia": "DSH Settings → Models & Providers",
+      "reachableFromUi": true,
+      "requiresPlugin": false,
+      "checked": "never",
+      "state": "shipped in the pinned catalogue; not configured and not contacted"
+    },
+    {
+      "id": "moonshotai",
+      "name": "Moonshot AI",
+      "classification": "hosted",
+      "protocol": "openAICompletions",
+      "baseUrl": "https://api.moonshot.ai/v1",
+      "credentialEnv": [
+        "MOONSHOT_API_KEY"
+      ],
+      "configuredVia": "DSH Settings → Models & Providers",
+      "reachableFromUi": true,
+      "requiresPlugin": false,
+      "checked": "never",
+      "state": "shipped in the pinned catalogue; not configured and not contacted"
+    },
+    {
+      "id": "moonshotai-cn",
+      "name": "Moonshot AI CN",
+      "classification": "hosted",
+      "protocol": "openAICompletions",
+      "baseUrl": "https://api.moonshot.cn/v1",
+      "credentialEnv": [
+        "MOONSHOT_API_KEY"
+      ],
+      "configuredVia": "DSH Settings → Models & Providers",
+      "reachableFromUi": true,
+      "requiresPlugin": false,
+      "checked": "never",
+      "state": "shipped in the pinned catalogue; not configured and not contacted"
+    },
+    {
+      "id": "nvidia",
+      "name": "NVIDIA",
+      "classification": "hosted",
+      "protocol": "openAICompletions",
+      "baseUrl": "https://integrate.api.nvidia.com/v1",
+      "credentialEnv": [
+        "NVIDIA_API_KEY"
+      ],
+      "configuredVia": "DSH Settings → Models & Providers",
+      "reachableFromUi": true,
+      "requiresPlugin": false,
+      "checked": "never",
+      "state": "shipped in the pinned catalogue; not configured and not contacted"
+    },
+    {
+      "id": "openai",
+      "name": "OpenAI",
+      "classification": "hosted",
+      "protocol": "openAIResponses",
+      "baseUrl": "https://api.openai.com/v1",
+      "credentialEnv": [
+        "OPENAI_API_KEY"
+      ],
+      "configuredVia": "DSH Settings → Models & Providers",
+      "reachableFromUi": true,
+      "requiresPlugin": false,
+      "checked": "never",
+      "state": "shipped in the pinned catalogue; not configured and not contacted"
+    },
+    {
+      "id": "openai-codex",
+      "name": "OpenAI Codex",
+      "classification": "hosted",
+      "protocol": "openAICodexResponses",
+      "baseUrl": "https://chatgpt.com/backend-api",
+      "credentialEnv": [],
+      "configuredVia": "DSH Settings → Models & Providers",
+      "reachableFromUi": true,
+      "requiresPlugin": false,
+      "checked": "never",
+      "state": "shipped in the pinned catalogue; not configured and not contacted"
+    },
+    {
+      "id": "opencode",
+      "name": "OpenCode Zen",
+      "classification": "self_hosted",
+      "protocol": "anthropicMessages",
+      "baseUrl": null,
+      "credentialEnv": [
+        "OPENCODE_API_KEY"
+      ],
+      "configuredVia": "DSH Settings → Models & Providers",
+      "reachableFromUi": true,
+      "requiresPlugin": false,
+      "checked": "never",
+      "state": "shipped in the pinned catalogue; not configured and not contacted"
+    },
+    {
+      "id": "opencode-go",
+      "name": "OpenCode Zen Go",
+      "classification": "self_hosted",
+      "protocol": "anthropicMessages",
+      "baseUrl": null,
+      "credentialEnv": [
+        "OPENCODE_API_KEY"
+      ],
+      "configuredVia": "DSH Settings → Models & Providers",
+      "reachableFromUi": true,
+      "requiresPlugin": false,
+      "checked": "never",
+      "state": "shipped in the pinned catalogue; not configured and not contacted"
+    },
+    {
+      "id": "openrouter",
+      "name": "OpenRouter",
+      "classification": "hosted",
+      "protocol": "openAICompletions",
+      "baseUrl": "https://openrouter.ai/api/v1",
+      "credentialEnv": [
+        "OPENROUTER_API_KEY"
+      ],
+      "configuredVia": "DSH Settings → Models & Providers",
+      "reachableFromUi": true,
+      "requiresPlugin": false,
+      "checked": "never",
+      "state": "shipped in the pinned catalogue; not configured and not contacted"
+    },
+    {
+      "id": "qwen-token-plan",
+      "name": "Qwen Token Plan",
+      "classification": "hosted",
+      "protocol": "openAICompletions",
+      "baseUrl": "https://token-plan.ap-southeast-1.maas.aliyuncs.com/compatible-mode/v1",
+      "credentialEnv": [
+        "QWEN_TOKEN_PLAN_API_KEY"
+      ],
+      "configuredVia": "DSH Settings → Models & Providers",
+      "reachableFromUi": true,
+      "requiresPlugin": false,
+      "checked": "never",
+      "state": "shipped in the pinned catalogue; not configured and not contacted"
+    },
+    {
+      "id": "qwen-token-plan-cn",
+      "name": "Qwen Token Plan CN",
+      "classification": "hosted",
+      "protocol": "openAICompletions",
+      "baseUrl": "https://token-plan.cn-beijing.maas.aliyuncs.com/compatible-mode/v1",
+      "credentialEnv": [
+        "QWEN_TOKEN_PLAN_CN_API_KEY"
+      ],
+      "configuredVia": "DSH Settings → Models & Providers",
+      "reachableFromUi": true,
+      "requiresPlugin": false,
+      "checked": "never",
+      "state": "shipped in the pinned catalogue; not configured and not contacted"
+    },
+    {
+      "id": "together",
+      "name": "Together",
+      "classification": "hosted",
+      "protocol": "openAICompletions",
+      "baseUrl": "https://api.together.ai/v1",
+      "credentialEnv": [
+        "TOGETHER_API_KEY"
+      ],
+      "configuredVia": "DSH Settings → Models & Providers",
+      "reachableFromUi": true,
+      "requiresPlugin": false,
+      "checked": "never",
+      "state": "shipped in the pinned catalogue; not configured and not contacted"
+    },
+    {
+      "id": "vercel-ai-gateway",
+      "name": "Vercel AI Gateway",
+      "classification": "hosted",
+      "protocol": "anthropicMessages",
+      "baseUrl": "https://ai-gateway.vercel.sh",
+      "credentialEnv": [
+        "AI_GATEWAY_API_KEY"
+      ],
+      "configuredVia": "DSH Settings → Models & Providers",
+      "reachableFromUi": true,
+      "requiresPlugin": false,
+      "checked": "never",
+      "state": "shipped in the pinned catalogue; not configured and not contacted"
+    },
+    {
+      "id": "xai",
+      "name": "xAI",
+      "classification": "hosted",
+      "protocol": "openAICompletions",
+      "baseUrl": "https://api.x.ai/v1",
+      "credentialEnv": [
+        "XAI_API_KEY"
+      ],
+      "configuredVia": "DSH Settings → Models & Providers",
+      "reachableFromUi": true,
+      "requiresPlugin": false,
+      "checked": "never",
+      "state": "shipped in the pinned catalogue; not configured and not contacted"
+    },
+    {
+      "id": "xiaomi",
+      "name": "Xiaomi",
+      "classification": "hosted",
+      "protocol": "openAICompletions",
+      "baseUrl": "https://api.xiaomimimo.com/v1",
+      "credentialEnv": [
+        "XIAOMI_API_KEY"
+      ],
+      "configuredVia": "DSH Settings → Models & Providers",
+      "reachableFromUi": true,
+      "requiresPlugin": false,
+      "checked": "never",
+      "state": "shipped in the pinned catalogue; not configured and not contacted"
+    },
+    {
+      "id": "xiaomi-token-plan-ams",
+      "name": "Xiaomi Token Plan AMS",
+      "classification": "hosted",
+      "protocol": "openAICompletions",
+      "baseUrl": "https://token-plan-ams.xiaomimimo.com/v1",
+      "credentialEnv": [
+        "XIAOMI_TOKEN_PLAN_AMS_API_KEY"
+      ],
+      "configuredVia": "DSH Settings → Models & Providers",
+      "reachableFromUi": true,
+      "requiresPlugin": false,
+      "checked": "never",
+      "state": "shipped in the pinned catalogue; not configured and not contacted"
+    },
+    {
+      "id": "xiaomi-token-plan-cn",
+      "name": "Xiaomi Token Plan CN",
+      "classification": "hosted",
+      "protocol": "openAICompletions",
+      "baseUrl": "https://token-plan-cn.xiaomimimo.com/v1",
+      "credentialEnv": [
+        "XIAOMI_TOKEN_PLAN_CN_API_KEY"
+      ],
+      "configuredVia": "DSH Settings → Models & Providers",
+      "reachableFromUi": true,
+      "requiresPlugin": false,
+      "checked": "never",
+      "state": "shipped in the pinned catalogue; not configured and not contacted"
+    },
+    {
+      "id": "xiaomi-token-plan-sgp",
+      "name": "Xiaomi Token Plan SGP",
+      "classification": "hosted",
+      "protocol": "openAICompletions",
+      "baseUrl": "https://token-plan-sgp.xiaomimimo.com/v1",
+      "credentialEnv": [
+        "XIAOMI_TOKEN_PLAN_SGP_API_KEY"
+      ],
+      "configuredVia": "DSH Settings → Models & Providers",
+      "reachableFromUi": true,
+      "requiresPlugin": false,
+      "checked": "never",
+      "state": "shipped in the pinned catalogue; not configured and not contacted"
+    },
+    {
+      "id": "zai",
+      "name": "Z.AI",
+      "classification": "hosted",
+      "protocol": "openAICompletions",
+      "baseUrl": "https://api.z.ai/api/coding/paas/v4",
+      "credentialEnv": [
+        "ZAI_API_KEY"
+      ],
+      "configuredVia": "DSH Settings → Models & Providers",
+      "reachableFromUi": true,
+      "requiresPlugin": false,
+      "checked": "never",
+      "state": "shipped in the pinned catalogue; not configured and not contacted"
+    },
+    {
+      "id": "zai-coding-cn",
+      "name": "Z.AI Coding CN",
+      "classification": "hosted",
+      "protocol": "openAICompletions",
+      "baseUrl": "https://open.bigmodel.cn/api/coding/paas/v4",
+      "credentialEnv": [
+        "ZAI_CODING_CN_API_KEY"
+      ],
+      "configuredVia": "DSH Settings → Models & Providers",
+      "reachableFromUi": true,
+      "requiresPlugin": false,
+      "checked": "never",
+      "state": "shipped in the pinned catalogue; not configured and not contacted"
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "extends": "../../../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "lib",
+    "rootDir": "src",
+    "jsx": "react-jsx",
+    "lib": ["ES2024", "DOM"],
+    "types": ["react"]
+  },
+  "include": ["src/**/*.ts", "src/**/*.tsx"],
+  "references": [
+    { "path": "../brand" },
+    { "path": "../memory" }
+  ]
+}

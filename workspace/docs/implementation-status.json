@@ -1,0 +1,794 @@
+{
+  "note": "The single source of truth for what is built. docs/implementation-status.md is generated from this file by scripts/gen-status.mjs, which also refuses a claim of 'tested' that names no test or 'implemented' that names no source.",
+  "baseline": {
+    "dsh": "0.1.1-rc.2 @ b150a551b8d465e31e418e1b2eaf5e79bbb7d28e",
+    "watchCore": "watch-skill 1.3.0rc2, Bridge protocol 1"
+  },
+  "items": [
+    {
+      "id": "foundation.upstream-lock",
+      "title": "Pinned DSH baseline, consumed as published packages",
+      "phase": "Phase 0 — foundation",
+      "classification": "DSH_EXISTING",
+      "owner": "watch-workspace",
+      "status": "tested",
+      "source_paths": [
+        "upstream/deepseek-harness.lock",
+        "scripts/upstream-sync.mjs"
+      ],
+      "tests": [
+        "scripts/gen-inventory.mjs"
+      ],
+      "acceptance_journey": "npm run inventory:check",
+      "known_limitations": [],
+      "commit": "83e7341"
+    },
+    {
+      "id": "foundation.parity-register",
+      "title": "Every DSH client product capability classified, enforced by a gate",
+      "phase": "Phase 0 — foundation",
+      "classification": "DSH_EXISTING",
+      "owner": "watch-workspace",
+      "status": "tested",
+      "source_paths": [
+        "inventory/parity.yml",
+        "scripts/verify-parity.mjs"
+      ],
+      "tests": [
+        "scripts/verify-parity.mjs"
+      ],
+      "acceptance_journey": "npm run verify:parity — 40/40 covered",
+      "known_limitations": [
+        "Covers the client product tier. Host-tier packages are inventoried but not individually classified."
+      ],
+      "commit": "83e7341"
+    },
+    {
+      "id": "bridge.transport",
+      "title": "JSON-RPC over stdio with deadlines, cancellation, correlation, idempotency",
+      "phase": "Phase 1 — bundle and bridge",
+      "classification": "WATCH_NEW",
+      "owner": "watch-workspace",
+      "status": "tested",
+      "source_paths": [
+        "packages/watch/core-bridge/src/index.ts",
+        "packages/watch/core-bridge/src/transport/stdio.ts",
+        "packages/watch/core-bridge/src/transport/mock.ts"
+      ],
+      "tests": [
+        "tests/bridge-stdio.test.mjs",
+        "tests/bridge-mock.test.mjs",
+        "tests/auto-transport.test.mjs"
+      ],
+      "acceptance_journey": "Split frames, concurrent correlation, deadline, cancel-after-dispatch, engine loss",
+      "known_limitations": [
+        "Remote HTTPS transport is defined in ADR-004 but not implemented; only stdio and mock exist."
+      ],
+      "commit": "83e7341"
+    },
+    {
+      "id": "bridge.contracts",
+      "title": "Pydantic-sourced wire contracts with digest drift detection",
+      "phase": "Phase 2 — evidence slice",
+      "classification": "WATCH_NEW",
+      "owner": "both",
+      "status": "tested",
+      "source_paths": [
+        "packages/watch/contracts/src/index.ts",
+        "packages/watch/contracts/src/digests.ts"
+      ],
+      "tests": [
+        "tests/schema-drift.test.mjs",
+        "tests/core-integration.test.mjs"
+      ],
+      "acceptance_journey": "The installed engine publishes the contract this build was written against",
+      "known_limitations": [
+        "TypeScript types are maintained by hand against the emitted JSON Schema; the generator that would derive them is not built. The digest check is what catches drift."
+      ],
+      "commit": "8d63f4d"
+    },
+    {
+      "id": "bundle.install",
+      "title": "Watch for DSH bundle installs into a stock profile",
+      "phase": "Phase 1 — bundle and bridge",
+      "classification": "WATCH_NEW",
+      "owner": "watch-workspace",
+      "status": "tested",
+      "source_paths": [
+        "packages/watch/bundle/cordis.patch.yml",
+        "packages/watch/bundle/variants/media.patch.yml",
+        "packages/watch/bundle/variants/browser.patch.yml",
+        "packages/watch/bundle/variants/memory.patch.yml",
+        "packages/watch/bundle/variants/document.patch.yml",
+        "scripts/install-smoke.mjs"
+      ],
+      "tests": [
+        "scripts/install-smoke.mjs",
+        "scripts/verify-bundle.mjs",
+        "scripts/upgrade-smoke.mjs"
+      ],
+      "acceptance_journey": "Install, upgrade in place, and uninstall against stock DSH 0.1.1-rc.2 — upstream rows intact, no duplicate composition, session/evidence/memory/settings survive, rollback restores the earlier version",
+      "known_limitations": [
+        "Watch ships as five shapes — Full, Media, Browser, Memory and Document — and every one is checked for baseline collisions, duplicate rows, missing modules and missing dependencies.",
+        "The install smoke runs the Full bundle against a stock profile; the four narrow variants are gated statically rather than installed one at a time.",
+        "The upgrade smoke packs two genuinely different versions, installs A, writes representative state, upgrades to B, and reads the state back. Rollback B to A is supported here and leaves state intact."
+      ],
+      "commit": "77c6c25"
+    },
+    {
+      "id": "tools.agent-surface",
+      "title": "Watch capabilities as DSH agent tools",
+      "phase": "Phase 2 — evidence slice",
+      "classification": "WATCH_NEW",
+      "owner": "watch-workspace",
+      "status": "tested",
+      "source_paths": [
+        "packages/watch/tools/src/index.ts",
+        "packages/watch/tools/src/sensory.ts",
+        "packages/watch/tools/src/browser.ts"
+      ],
+      "tests": [
+        "tests/watch-tools.test.mjs"
+      ],
+      "acceptance_journey": "16 tools registered; refusals carry the engine's fix",
+      "known_limitations": [],
+      "commit": "022d8ad"
+    },
+    {
+      "id": "trajectory.records",
+      "title": "Watch records in DSH's own event system, with replay determinism",
+      "phase": "Phase 2 — evidence slice",
+      "classification": "DSH_EXTENDED",
+      "owner": "watch-workspace",
+      "status": "tested",
+      "source_paths": [
+        "packages/watch/trajectory/src/events.ts",
+        "packages/watch/trajectory/src/projection.ts",
+        "packages/watch/trajectory/src/definition.ts"
+      ],
+      "tests": [
+        "tests/trajectory-roundtrip.test.mjs",
+        "tests/trajectory-registration.test.mjs"
+      ],
+      "acceptance_journey": "Citation to evidence to trajectory, and back; replay hashes identically",
+      "known_limitations": [
+        "Watch publishes its own view target rather than adding rows to DSH's trajectory ledger; upstream's contribution union is closed."
+      ],
+      "commit": "77c6c25"
+    },
+    {
+      "id": "trajectory.selection",
+      "title": "Unified Selection Model and deep links",
+      "phase": "Phase 2 — evidence slice",
+      "classification": "WATCH_NEW",
+      "owner": "watch-workspace",
+      "status": "tested",
+      "source_paths": [
+        "packages/watch/trajectory/src/selection.ts",
+        "packages/watch/trajectory/src/selection-store.ts"
+      ],
+      "tests": [
+        "tests/trajectory-roundtrip.test.mjs",
+        "tests/trajectory-registration.test.mjs"
+      ],
+      "acceptance_journey": "Deep link, destroy client state, reopen, same logical selection",
+      "known_limitations": [
+        "Restores a selection, not a scroll position; DSH's trajectory virtualization is its own."
+      ],
+      "commit": "77c6c25"
+    },
+    {
+      "id": "evidence.inspector",
+      "title": "Evidence Inspector showing resolved records",
+      "phase": "Phase 2 — evidence slice",
+      "classification": "WATCH_NEW",
+      "owner": "watch-workspace",
+      "status": "tested",
+      "source_paths": [
+        "packages/watch/client-evidence/src/client/EvidenceInspector.tsx"
+      ],
+      "tests": [
+        "tests/presentation.test.mjs",
+        "tests/compare-surface.test.mjs"
+      ],
+      "acceptance_journey": "Shows evidence id, revision, range, provenance, artifacts, freshness, verification",
+      "known_limitations": [
+        "The React halves are now type-checked as part of `tsc -b`; before this they were built only by the bundler and carried real errors.",
+        "EvidenceInspector itself imports a CSS module and is covered by the presentation rules test rather than by a rendering gate; CompareView, which has no stylesheet, is rendered directly."
+      ],
+      "commit": "ec2579a"
+    },
+    {
+      "id": "memory.ledger",
+      "title": "MemoryEvent ledger, correction precedence, real forgetting",
+      "phase": "Phase 2+ — memory",
+      "classification": "WATCH_NEW",
+      "owner": "watch-workspace",
+      "status": "tested",
+      "source_paths": [
+        "packages/watch/memory/src/records.ts",
+        "packages/watch/memory/src/ledger.ts",
+        "packages/watch/memory/src/index.ts"
+      ],
+      "tests": [
+        "tests/memory-rules.test.mjs",
+        "tests/memory-service.test.mjs"
+      ],
+      "acceptance_journey": "Correct on next turn; forget survives restart and rebuild",
+      "known_limitations": [
+        "The local ledger is not encrypted at rest. Desktop keychain integration is Phase 5.",
+        "Rejection tombstones like a forget, so a declined proposal cannot be recovered. That is deliberate: a suggestion somebody said no to must not stay in the list they said no to it from."
+      ],
+      "commit": "7604db4"
+    },
+    {
+      "id": "memory.compiler",
+      "title": "Context Compiler with inclusion trace and token budget",
+      "phase": "Phase 2+ — memory",
+      "classification": "WATCH_NEW",
+      "owner": "watch-workspace",
+      "status": "tested",
+      "source_paths": [
+        "packages/watch/memory/src/compiler.ts"
+      ],
+      "tests": [
+        "tests/memory-service.test.mjs"
+      ],
+      "acceptance_journey": "Every included item carries a reason; a hard budget degrades to none",
+      "known_limitations": [
+        "Relevance is lexical overlap. Semantic retrieval via an embeddings role binding is not wired.",
+        "The ledger fold is incremental and cached: an append-only log can advance a fold by reading its suffix, and a benchmark found every reader re-parsing the whole event table. records() is now 0.03ms on a 500-record ledger."
+      ],
+      "commit": "7604db4"
+    },
+    {
+      "id": "memory.projections",
+      "title": "Deterministic taste.md, index.md and log.md",
+      "phase": "Phase 2+ — memory",
+      "classification": "WATCH_NEW",
+      "owner": "watch-workspace",
+      "status": "tested",
+      "source_paths": [
+        "packages/watch/memory/src/projector.ts"
+      ],
+      "tests": [
+        "tests/memory-service.test.mjs"
+      ],
+      "acceptance_journey": "Same ledger renders the same file; explicit and inferred stay separate",
+      "known_limitations": [
+        "USER_EDIT import of a hand-edited Markdown file is defined in ADR-007 but not implemented."
+      ],
+      "commit": "7604db4"
+    },
+    {
+      "id": "memory.tools",
+      "title": "Memory in the agent loop, bounded by ADR-008",
+      "phase": "Phase 2+ — memory",
+      "classification": "WATCH_NEW",
+      "owner": "watch-workspace",
+      "status": "tested",
+      "source_paths": [
+        "packages/watch/memory/src/tools.ts",
+        "packages/watch/tools/src/memory.ts"
+      ],
+      "tests": [
+        "tests/memory-tools.test.mjs"
+      ],
+      "acceptance_journey": "Agent proposes; it cannot mint explicit_user or activate high-impact",
+      "known_limitations": [],
+      "commit": "ea18df8"
+    },
+    {
+      "id": "core.bridge-surface",
+      "title": "Watch Core Bridge: handshake, capability truth, sensory and operator methods",
+      "phase": "Phase 2 — evidence slice",
+      "classification": "WATCH_EXISTING",
+      "owner": "watch-skill",
+      "status": "tested",
+      "source_paths": [
+        "upstream/deepseek-harness.lock"
+      ],
+      "tests": [
+        "tests/core-integration.test.mjs"
+      ],
+      "acceptance_journey": "17 methods reachable; every method the tools call exists on the engine",
+      "known_limitations": [
+        "Source lives in the watch-skill repository: src/watch_skill/surfaces/bridge/. Paths here point at this repo only."
+      ],
+      "commit": "989cab1"
+    },
+    {
+      "id": "browser.operator",
+      "title": "Browser operator with durable receipts and approval gating",
+      "phase": "Phase 2+ — browser",
+      "classification": "WATCH_EXISTING",
+      "owner": "watch-skill",
+      "status": "tested",
+      "source_paths": [
+        "packages/watch/tools/src/browser.ts"
+      ],
+      "tests": [
+        "tests/watch-tools.test.mjs"
+      ],
+      "acceptance_journey": "False-success fixture: page says success, API returns 500, verdict FAILED",
+      "known_limitations": [
+        "The demo fixtures verify over HTTP. A Playwright-driven end-to-end browser fixture is not a release gate."
+      ],
+      "commit": "ae01a67"
+    },
+    {
+      "id": "brand.package",
+      "title": "Watch brand and theme over DSH's token system",
+      "phase": "Phase 3 — web product",
+      "classification": "DSH_EXTENDED",
+      "owner": "watch-workspace",
+      "status": "tested",
+      "source_paths": [
+        "packages/watch/brand/src/identity.ts",
+        "packages/watch/brand/src/client/index.tsx",
+        "packages/watch/brand/src/client/theme.css"
+      ],
+      "tests": [
+        "tests/brand.test.mjs"
+      ],
+      "acceptance_journey": "Watch Workspace reads as a Watch product; green reserved for VERIFIED",
+      "known_limitations": [
+        "Occupies DSH brand slots and defines the token layer. The full workspace shell composition is a separate item.",
+        "No browser test harness, so the React slot occupancy is not covered by a gate; the tone rules are."
+      ],
+      "commit": "bc23fc2"
+    },
+    {
+      "id": "workspace.modes",
+      "title": "Agent / Watch / Live / Memory / Library / Compare / Trajectory modes",
+      "phase": "Phase 3 — web product",
+      "classification": "WATCH_NEW",
+      "owner": "watch-workspace",
+      "status": "tested",
+      "source_paths": [
+        "packages/watch/workspace/src/modes.ts",
+        "packages/watch/workspace/src/shell.ts",
+        "packages/watch/workspace/src/timeline.ts",
+        "packages/watch/workspace/src/client/components.tsx",
+        "packages/watch/workspace/src/client/index.tsx"
+      ],
+      "tests": [
+        "tests/workspace.test.mjs"
+      ],
+      "acceptance_journey": "Seven modes over one session; an absent capability is stated, never hidden or faked",
+      "known_limitations": [
+        "The shell composes the modes and renders from props; each mode body is supplied by its own package (Live, Library, Memory, Compare).",
+        "Rendering is gated through react-dom/server rather than a real browser, so markup, roles and accessible names are asserted — not pixels or focus order."
+      ],
+      "commit": "05827ad"
+    },
+    {
+      "id": "workspace.composer",
+      "title": "Composer extensions: sources, scope, observe, remember, act, verify, budget, privacy",
+      "phase": "Phase 3 — web product",
+      "classification": "DSH_EXTENDED",
+      "owner": "watch-workspace",
+      "status": "tested",
+      "source_paths": [
+        "packages/watch/workspace/src/composer.ts"
+      ],
+      "tests": [
+        "tests/workspace.test.mjs"
+      ],
+      "acceptance_journey": "The agent may narrow every axis and widen none; a refused proposal is refused in full",
+      "known_limitations": [
+        "The eight sections are contract and validation. The progressive-disclosure interaction renders as a summary plus visible refusals rather than eight expandable editors."
+      ],
+      "commit": "05827ad"
+    },
+    {
+      "id": "memory.product-ui",
+      "title": "Memory surfaces: taste, timeline, wiki, decisions, lessons, failures",
+      "phase": "Phase 3 — web product",
+      "classification": "WATCH_NEW",
+      "owner": "watch-workspace",
+      "status": "tested",
+      "source_paths": [
+        "packages/watch/client-memory/src/views.ts",
+        "packages/watch/client-memory/src/client/components.tsx",
+        "packages/watch/memory/src/index.ts"
+      ],
+      "tests": [
+        "tests/memory-product.test.mjs"
+      ],
+      "acceptance_journey": "The second vertical slice end to end: correct, see it in Taste, new session, Why remembered?, edit, forget, restart, replay, export",
+      "known_limitations": [
+        "The Wiki view renders the generated projection; the projection itself is wiki.projections.",
+        "Editing is a correction through the ledger, which is what the service supports. There is no in-place text field that writes a record directly, by design."
+      ],
+      "commit": "a18b39a"
+    },
+    {
+      "id": "providers.role-bindings",
+      "title": "Role bindings over DSH Models and Providers",
+      "phase": "Phase 3 — web product",
+      "classification": "DSH_EXTENDED",
+      "owner": "watch-workspace",
+      "status": "tested",
+      "source_paths": [
+        "packages/watch/technology/src/descriptor.ts"
+      ],
+      "tests": [
+        "tests/technology.test.mjs"
+      ],
+      "acceptance_journey": "One connection serves several roles; no duplicate credential store",
+      "known_limitations": [
+        "Contracts, lifecycle and admission rules are implemented and tested. The DSH Settings UI that edits bindings is not built.",
+        "Credential references point at DSH; no Watch credential store exists, by design."
+      ],
+      "commit": "bc23fc2"
+    },
+    {
+      "id": "technology.center",
+      "title": "Technology descriptors and capability lifecycle",
+      "phase": "Phase 3 — web product",
+      "classification": "WATCH_NEW",
+      "owner": "watch-workspace",
+      "status": "tested",
+      "source_paths": [
+        "packages/watch/technology/src/descriptor.ts"
+      ],
+      "tests": [
+        "tests/technology.test.mjs"
+      ],
+      "acceptance_journey": "Presence on disk does not equal ready",
+      "known_limitations": [
+        "Descriptor, lifecycle and health contracts are implemented. The Settings surface that renders them is not built."
+      ],
+      "commit": "bc23fc2"
+    },
+    {
+      "id": "ocr.engines",
+      "title": "OCR engine family with isolated workers",
+      "phase": "Phase 3 — web product",
+      "classification": "WATCH_NEW",
+      "owner": "both",
+      "status": "tested",
+      "source_paths": [
+        "packages/watch/technology/src/ocr.ts",
+        "packages/watch/technology/src/ocr-worker.ts",
+        "packages/watch/technology/src/ocr-qualification.ts"
+      ],
+      "tests": [
+        "tests/technology.test.mjs",
+        "tests/ocr-engines.test.mjs",
+        "tests/fixtures/ocr-worker-stub.mjs"
+      ],
+      "acceptance_journey": "Worker isolation, pinned-revision refusal, crash/OOM/timeout/cancel semantics, routing fallback, and a qualification matrix that stays NOT_TESTED without a run",
+      "known_limitations": [
+        "Five routes exist: the lightweight local default, a deterministic system fallback, both DeepSeek engines, a cloud route behind explicit consent, and a seam for a third-party engine that cannot declare itself trusted.",
+        "The worker supervisor is proven against a real child process that hangs, crashes, exits 137, announces the wrong revision and speaks the wrong protocol. The Python worker that would load DeepSeek-OCR is not written; the descriptor, pinning, install plan and admission rules that govern it are.",
+        "This machine has no GPU, so neither DeepSeek engine is machine-tested and no quality number for either exists. Every matrix cell for them is NOT_TESTED, and a test asserts no code path can produce otherwise.",
+        "Weight licences remain unreviewed, so mayDistributeWeights() refuses both and installPlan() blocks before hardware is even considered.",
+        "The OOM branch is exercised through exit code 137 rather than a real SIGKILL, because Windows has no signals. The code path is the same one the Linux OOM killer reaches."
+      ],
+      "commit": "6fa2b85"
+    },
+    {
+      "id": "i18n.evidence",
+      "title": "Language-aware evidence contract",
+      "phase": "Phase 3 — web product",
+      "classification": "WATCH_NEW",
+      "owner": "both",
+      "status": "tested",
+      "source_paths": [
+        "packages/watch/contracts/src/language.ts",
+        "packages/watch/workspace/src/client/components.tsx",
+        "packages/watch/brand/src/client/theme.css"
+      ],
+      "tests": [
+        "tests/language.test.mjs",
+        "tests/multilingual.test.mjs",
+        "tests/fixtures/multilingual.mjs",
+        "tests/accessibility.test.mjs"
+      ],
+      "acceptance_journey": "Six scripts round-trip byte for byte through index, search, citation and render; a translation is a view and never what a citation resolves to",
+      "known_limitations": [
+        "Script detection is range-based rather than full ICU. It reports which scripts appear, which is what direction and routing need, and it deliberately reports `Han` rather than claiming a simplified/traditional distinction it cannot make — a test asserts that difference from the OCR matrix vocabulary is deliberate.",
+        "languageTags stay empty rather than guessed: Arabic script is used by several languages.",
+        "RTL-safe layout primitives are now consumed: Isolated() renders the seven kinds needsDirectionIsolation() names, and the surfaces are asserted to use logical offsets only.",
+        "No UI locale bundles are shipped. Claiming launch locales without reviewed translations would be worse than shipping none."
+      ],
+      "commit": "b9db4c4"
+    },
+    {
+      "id": "live.surface",
+      "title": "Live mode with gaps, clocks and reconnect",
+      "phase": "Phase 4 — sensory surfaces",
+      "classification": "WATCH_EXISTING",
+      "owner": "watch-workspace",
+      "status": "tested",
+      "source_paths": [
+        "packages/watch/live/src/session.ts",
+        "packages/watch/live/src/triggers.ts",
+        "packages/watch/live/src/client/components.tsx",
+        "packages/watch/tools/src/sensory.ts"
+      ],
+      "tests": [
+        "tests/live.test.mjs",
+        "tests/triggers-replay.test.mjs",
+        "tests/fixtures/live-session.mjs",
+        "tests/watch-tools.test.mjs"
+      ],
+      "acceptance_journey": "Start, observe, cursor break, reconnect, resnapshot, continue, finalize, replay — on a fixed-clock fixture",
+      "known_limitations": [
+        "The client half is complete and gated: cursors, delta recovery, explicit gaps, three clocks, reconnect, a bounded buffer and triggers.",
+        "A trigger may pin, notify or ask for a snapshot. It may not act, and the effect type has no member that could — a trigger fires on observed content, so one that reached the operator loop would let a page act by putting the right words on screen.",
+        "The transport that carries deltas is the Bridge’s watch.live.observe long poll; a push subscription is not implemented.",
+        "Long-session bounding is proven against a 100,000-event benchmark and a 5,000-event fixture rather than against an eight-hour real capture."
+      ],
+      "commit": "682c3f9"
+    },
+    {
+      "id": "library.surface",
+      "title": "Library of sources and evidence, separate from memory",
+      "phase": "Phase 4 — sensory surfaces",
+      "classification": "WATCH_EXISTING",
+      "owner": "watch-workspace",
+      "status": "tested",
+      "source_paths": [
+        "packages/watch/library/src/sources.ts",
+        "packages/watch/library/src/search.ts",
+        "packages/watch/library/src/client/components.tsx",
+        "packages/watch/tools/src/sensory.ts"
+      ],
+      "tests": [
+        "tests/library.test.mjs",
+        "tests/watch-tools.test.mjs"
+      ],
+      "acceptance_journey": "Index, search, cite an exact timestamp, re-index, and the old evidence still opens — marked stale",
+      "known_limitations": [
+        "Retrieval itself belongs to the engine. This is the model over its results: revisions, freshness, addressability, facets, filters and the stated retrieval path.",
+        "Entities are carried on a source but no extractor populates them here."
+      ],
+      "commit": "2e9d80d"
+    },
+    {
+      "id": "compare.surface",
+      "title": "Compare runs, revisions and before/after states",
+      "phase": "Phase 4 — sensory surfaces",
+      "classification": "WATCH_NEW",
+      "owner": "watch-workspace",
+      "status": "tested",
+      "source_paths": [
+        "packages/watch/trajectory/src/compare.ts",
+        "packages/watch/client-evidence/src/client/CompareView.tsx"
+      ],
+      "tests": [
+        "tests/compare.test.mjs",
+        "tests/compare-surface.test.mjs",
+        "tests/fixtures/before-after.mjs"
+      ],
+      "acceptance_journey": "Before and after: an innocuous first divergence, a verdict divergence that mattered, deep links into both sides, an exported bundle",
+      "known_limitations": [
+        "Channels are derived from resolved evidence modality; unresolved evidence stays on the text channel rather than being guessed onto a sense.",
+        "Console divergences are typed but nothing populates them: Watch records carry no console channel today."
+      ],
+      "commit": "ec2579a"
+    },
+    {
+      "id": "wiki.projections",
+      "title": "Workspace wiki projections with provenance",
+      "phase": "Phase 4 — sensory surfaces",
+      "classification": "WATCH_NEW",
+      "owner": "watch-workspace",
+      "status": "tested",
+      "source_paths": [
+        "packages/watch/wiki/src/projection.ts"
+      ],
+      "tests": [
+        "tests/wiki.test.mjs"
+      ],
+      "acceptance_journey": "Rebuild from empty and after restart is byte-identical; a hand edit proposes and a hostile import is refused",
+      "known_limitations": [
+        "The diff is line-level over statement lines rather than a structural Markdown diff. That is deliberate: a structural diff is a place a clever edit could hide.",
+        "Writing the pages to disk is the caller’s job; this package renders them as values so a rebuild can be compared without touching a filesystem."
+      ],
+      "commit": "35dc582"
+    },
+    {
+      "id": "adapters.obsidian",
+      "title": "Optional Obsidian vault adapter",
+      "phase": "Phase 4 — sensory surfaces",
+      "classification": "WATCH_NEW",
+      "owner": "watch-workspace",
+      "status": "tested",
+      "source_paths": [
+        "packages/watch/adapters/src/obsidian.ts"
+      ],
+      "tests": [
+        "tests/adapters.test.mjs"
+      ],
+      "acceptance_journey": "Export a vault with frontmatter, tags, wikilinks and no dangling links; import an edit as a proposal; refuse a permission written into the folder",
+      "known_limitations": [
+        "NOT MACHINE TESTED: no Obsidian installation is present, so whether an obsidian:// URI actually opens has not been observed. The URI is constructed and never executed.",
+        "NOT MACHINE TESTED: round-tripping through Obsidian’s own editor, which may normalise Markdown in ways this adapter has not seen.",
+        "Optional in the strong sense — a test asserts no core package knows the adapter exists."
+      ],
+      "commit": "4ca9466"
+    },
+    {
+      "id": "adapters.llmwiki",
+      "title": "LLMWiki-compatible import and export",
+      "phase": "Phase 4 — sensory surfaces",
+      "classification": "WATCH_NEW",
+      "owner": "watch-workspace",
+      "status": "tested",
+      "source_paths": [
+        "packages/watch/adapters/src/llmwiki.ts"
+      ],
+      "tests": [
+        "tests/adapters.test.mjs"
+      ],
+      "acceptance_journey": "All five files round-trip content and citations; a bundle claiming explicit_user at full confidence receives neither",
+      "known_limitations": [
+        "NOT MACHINE TESTED: written against LLMWiki’s documented file set; no LLMWiki release was available to exchange a bundle with.",
+        "Import is lossy by design. Origin and confidence are read, reported as claims, and discarded."
+      ],
+      "commit": "4ca9466"
+    },
+    {
+      "id": "memory.governed-learning",
+      "title": "Candidate lifecycle with eval, promotion, canary and rollback",
+      "phase": "Phase 4 — sensory surfaces",
+      "classification": "WATCH_NEW",
+      "owner": "watch-workspace",
+      "status": "tested",
+      "source_paths": [
+        "packages/watch/memory/src/learning.ts",
+        "packages/watch/memory/src/replay.ts"
+      ],
+      "tests": [
+        "tests/learning.test.mjs",
+        "tests/triggers-replay.test.mjs"
+      ],
+      "acceptance_journey": "A candidate is replayed against a digested fixture set; a safety regression is refused however good everything else is, and a swap counts as a regression",
+      "known_limitations": [
+        "The replay harness produces a CandidateEvaluation from real cases, run twice on the same fixtures in the same session so the baseline cannot drift.",
+        "The case runner is injected: the thing being replayed is an agent, and a harness that owned one could not be run in a test.",
+        "No review UI. A candidate queue exists as data, and describeEvaluation() renders the line a reviewer reads."
+      ],
+      "commit": "9bc63af"
+    },
+    {
+      "id": "desktop.shell",
+      "title": "Electron shell around the same Workspace packages",
+      "phase": "Phase 5 — desktop",
+      "classification": "WATCH_NEW",
+      "owner": "watch-workspace",
+      "status": "tested",
+      "source_paths": [
+        "apps/desktop/src/security.ts",
+        "apps/desktop/src/supervisor.ts",
+        "apps/desktop/src/startup.ts",
+        "apps/desktop/src/vault.ts",
+        "apps/desktop/src/updates.ts",
+        "apps/desktop/src/capabilities.ts",
+        "apps/desktop/src/main.ts",
+        "apps/desktop/preload.cjs"
+      ],
+      "tests": [
+        "tests/desktop.test.mjs",
+        "tests/fixtures/supervised-child.mjs",
+        "scripts/verify-desktop-security.mjs",
+        "scripts/desktop-smoke.mjs"
+      ],
+      "acceptance_journey": "Electron 33.4.11 launched on win32: sandbox and context isolation held, the preload exposed exactly nine operations, window.require/process/module were all absent, and the renderer reached ready",
+      "known_limitations": [
+        "MACHINE TESTED on win32 (Windows 10 Pro 19045): a real Electron 33.4.11 launch via `node scripts/desktop-smoke.mjs` — sandbox and context isolation held, the preload exposed exactly nine operations, window.require/process/module were absent, and the renderer reached ready. Not run on macOS or Linux.",
+        "At-rest encryption is proven by writing a sealed record and reading the bytes back outside the application. The OS-backed key store is exercised through an injected stand-in; safeStorage itself is NOT MACHINE TESTED, and the fallback labels itself as not equivalent to OS protection.",
+        "PRODUCTION SIGNING NOT PROVEN. The update path verifies Ed25519 signatures, package digests, downgrades and migration preflight, against development keys only.",
+        "Heavy OCR engines are deliberately not probed at startup: loading one executes code fetched from a model repository, which is what the worker exists to contain. They report unknown until a worker is started.",
+        "The launch smoke is deliberately outside `npm run check`: it needs a desktop session, and a gate that fails headless is a gate people disable."
+      ],
+      "commit": "d9b16ed"
+    },
+    {
+      "id": "ecosystem.sdk",
+      "title": "Third-party Watch capability developer path",
+      "phase": "Phase 6 — distribution",
+      "classification": "WATCH_NEW",
+      "owner": "watch-workspace",
+      "status": "tested",
+      "source_paths": [
+        "packages/watch/sdk/src/capability.ts",
+        "packages/watch/sdk/src/example.ts",
+        "packages/watch/sdk/src/client/example.tsx"
+      ],
+      "tests": [
+        "tests/sdk.test.mjs"
+      ],
+      "acceptance_journey": "A third-party capability declares, probes, observes and submits — and cannot mint VERIFIED by shape or at runtime",
+      "known_limitations": [
+        "The boundary is proven two ways: no SDK export returns a verdict or an evidence record, and every submission is rebuilt from an allowlist so tomorrow’s authority field cannot slip through a denylist.",
+        "Both halves ship as compiled source exercised by the SDK’s own tests — a host example that submits observations, and a client example whose view renders a verdict verbatim or draws no verdict element at all.",
+        "The client example takes the brand’s tone lookup as a parameter rather than importing it: the brand package is a shell baseline module for Watch’s own halves, not for a third-party plugin.",
+        "A third-party capability is installed through the same bundle mechanism Watch itself uses; no separate marketplace exists, and the governing document defers one."
+      ],
+      "commit": "bbf1091"
+    },
+    {
+      "id": "supply-chain.metadata",
+      "title": "SBOM, licences, notices and model provenance gates",
+      "phase": "Phase 6 — distribution",
+      "classification": "WATCH_NEW",
+      "owner": "watch-workspace",
+      "status": "tested",
+      "source_paths": [
+        "scripts/gen-sbom.mjs",
+        "scripts/gen-release-manifest.mjs",
+        "docs/sbom.json",
+        "docs/release-manifest.json",
+        "THIRD_PARTY_NOTICES.md"
+      ],
+      "tests": [
+        "scripts/gen-sbom.mjs",
+        "scripts/gen-release-manifest.mjs",
+        "tests/supply-chain.test.mjs"
+      ],
+      "acceptance_journey": "Repository licence never stands in for a model weight licence; every first-party package is digested and described in a real SPDX document; the compatibility and migration blocks are asserted against the code they describe",
+      "known_limitations": [
+        "Covers the Node tree. The Python side of watch-skill has its own dependency set that this SBOM does not enumerate.",
+        "Integrity digests are over first-party package source. They identify a build; they are not a signature, and signing is PRODUCTION SIGNING NOT PROVEN.",
+        "SPDX licences are declared, never concluded: nobody has audited the files to conclude anything stronger."
+      ],
+      "commit": "7412337"
+    },
+    {
+      "id": "security.offline-proof",
+      "title": "Socket-level proof that offline_only means zero non-loopback egress",
+      "phase": "Phase 6 — distribution",
+      "classification": "WATCH_NEW",
+      "owner": "both",
+      "status": "tested",
+      "source_paths": [
+        "tests/fixtures/egress-sentinel.cjs",
+        "tests/fixtures/offline-exercise.mjs",
+        "upstream/deepseek-harness.lock"
+      ],
+      "tests": [
+        "tests/offline-egress.test.mjs",
+        "docs/phase-2-closure.md"
+      ],
+      "acceptance_journey": "A process-level sentinel installed by --require patches net/tls/dns beneath every outbound path; twelve route families run under offline_only and record zero non-loopback egress, and a self-test arm proves the sentinel catches a real connection",
+      "known_limitations": [
+        "Full-stack on the Workspace side: provider and engine routing, memory retrieval and reranking, library search planning, update checks, capability detection, adapters, the Bridge transport, the SDK, tenancy and the release tooling all run under the sentinel.",
+        "The sentinel patches the floor — net.Socket.connect, net.connect, tls.connect and every dns resolver — rather than stubbing fetch, because a module reaching for undici or a raw socket goes around a fetch stub.",
+        "A violation kills the process rather than throwing, so it cannot be caught by the code that attempted it and reported as a handled network error.",
+        "The Watch Core side has its own socket-level proof in watch-skill tests/test_offline_egress.py; this covers the Node side.",
+        "DSH provider routes are exercised through the Workspace surfaces that would call them. Upstream Host code paths that no Watch surface reaches are not driven here."
+      ],
+      "commit": "90264b6 (watch-skill)"
+    },
+    {
+      "id": "team.tenancy",
+      "title": "Tenant model, RBAC, remote workers and audit",
+      "phase": "Phase 7 — team",
+      "classification": "WATCH_NEW",
+      "owner": "watch-workspace",
+      "status": "tested",
+      "source_paths": [
+        "packages/watch/tenancy/src/identity.ts",
+        "packages/watch/tenancy/src/rbac.ts",
+        "packages/watch/tenancy/src/workers.ts",
+        "packages/watch/tenancy/src/collaboration.ts",
+        "packages/watch/tenancy/src/audit.ts"
+      ],
+      "tests": [
+        "tests/tenancy.test.mjs"
+      ],
+      "acceptance_journey": "Two tenants, adversarially: workspace, memory, artifact, credential and worker-job access all refused across the boundary; authorized sharing works; deletion and revocation take effect on the next request",
+      "known_limitations": [
+        "The authorization model, the worker coordinator and the audit log are in-memory implementations of the rules. Persistence is a backing store implementing the same transitions; no database is bundled here.",
+        "Authentication itself belongs to the deployment. This package takes a Principal and enforces what it may reach; it issues no sessions and stores no passwords.",
+        "Cross-user isolation is proven within a tenant (an admin cannot read another member’s taste) as well as across tenants."
+      ],
+      "commit": "51e2297"
+    }
+  ]
+}

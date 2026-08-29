@@ -1,0 +1,170 @@
+# The gates, on every platform the product claims to support.
+#
+# Three things this deliberately does not do.
+#
+# It does not restate the gate list. `npm run check` is the single definition
+# of what must pass, so a gate added to package.json is picked up here without
+# anyone remembering to edit this file. A CI list that drifts from the local
+# one is worse than no CI, because it makes "green" mean two different things.
+#
+# It does not pretend a Linux container proves native Desktop behaviour. The
+# Electron smoke runs on each operating system's own runner, because the
+# defects that matter — path resolution, process termination, the
+# single-instance lock, packaged resource lookup — are exactly the ones a
+# container hides.
+#
+# And it does not sign. Signing needs credentials this repository does not have
+# and must never contain. `verify:signing` checks the *configuration* on every
+# run and fails closed only when a release is actually requested, so a workflow
+# can never quietly emit an unsigned artifact labelled as released.
+
+name: workspace
+
+on:
+  push:
+    branches: ['**']
+    paths:
+      - 'workspace/**'
+      - '.github/workflows/workspace-ci.yml'
+  pull_request:
+    paths:
+      - 'workspace/**'
+      - '.github/workflows/workspace-ci.yml'
+  workflow_dispatch:
+
+# Pinned, not floating. A toolchain that drifts turns a red build into a
+# question about the runner instead of a question about the change.
+#
+# NODE_VERSION is the floor declared in package.json `engines`. Local
+# validation for this release candidate ran on 22.18.0, which is *below* that
+# floor; CI holds the declared contract rather than the machine's accident.
+env:
+  NODE_VERSION: '22.19.0'
+  PNPM_VERSION: '10.29.1'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Everything whose answer is the same on every platform: types, lint, unit
+  # tests, composition, and the generated-artifact freshness gates. Run once,
+  # because running it three times costs three times as much to learn one fact.
+  check:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: workspace
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          # Keyed on the lockfile, so a dependency change cannot be served a
+          # stale cache — the failure mode where CI passes against packages
+          # nobody has installed.
+          cache: pnpm
+          cache-dependency-path: workspace/pnpm-lock.yaml
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      # Required before the gates, and easy to forget: inventory generation
+      # and parity diffing read the pinned DSH source rather than a
+      # description of it, and a fresh clone has no checkout. Proven by a
+      # cold clone, where `npm run check` stopped here with "upstream
+      # checkout missing".
+      - name: Pinned upstream baseline
+        run: node scripts/upstream-sync.mjs
+
+      # The whole gate suite, defined once in package.json.
+      - name: Gates
+        run: npm run check
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: check-failure
+          path: |
+            workspace/docs/*.json
+            workspace/**/*.log
+          retention-days: 7
+
+  # The parts only the operating system itself can answer.
+  platform:
+    strategy:
+      # Never cancel the siblings on one failure. "It broke on macOS" and "it
+      # broke everywhere" are different findings, and fail-fast hides which.
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: workspace
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+          cache-dependency-path: workspace/pnpm-lock.yaml
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        run: npm run build
+
+      # These two are the reason this job exists on three runners: both read
+      # `process.platform` and both would pass vacuously if only ever run here.
+      - name: Portability
+        run: npm run verify:portability
+
+      - name: Signing configuration
+        run: npm run verify:signing
+
+      - name: Tests
+        run: npm test
+
+      # Electron ships chrome-sandbox without the root ownership and setuid bit
+      # the SUID sandbox requires, and refuses to start rather than run
+      # unsandboxed. Fixing the permissions keeps the smoke on the same sandbox
+      # configuration the product ships with; --no-sandbox would test a
+      # different program.
+      - name: Configure the Electron sandbox (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sandbox=$(find node_modules/.pnpm -path '*/electron/dist/chrome-sandbox' | head -1)
+          test -n "$sandbox"
+          sudo chown root:root "$sandbox"
+          sudo chmod 4755 "$sandbox"
+
+      # Electron needs a display server on Linux. Without xvfb the smoke fails
+      # for a reason that has nothing to do with the product.
+      - name: Desktop smoke (Linux)
+        if: runner.os == 'Linux'
+        run: xvfb-run --auto-servernum node scripts/desktop-smoke.mjs
+
+      - name: Desktop smoke
+        if: runner.os != 'Linux'
+        run: node scripts/desktop-smoke.mjs
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: platform-failure-${{ matrix.os }}
+          path: |
+            workspace/**/*.log
+            workspace/qa/**
+          retention-days: 7

@@ -1,0 +1,84 @@
+{
+  "generatedFrom": {
+    "repository": "https://github.com/deepseek-ai/deepseek-harness",
+    "commit": "b150a551b8d465e31e418e1b2eaf5e79bbb7d28e",
+    "version": "0.1.1-rc.2",
+    "tag": "dsh-v0.1.1-rc.2"
+  },
+  "generator": "scripts/gen-inventory.mjs",
+  "count": 7,
+  "services": [
+    {
+      "service": "commands",
+      "className": "CommandRuntime",
+      "source": "packages/interaction/commands/src/index.ts",
+      "methods": []
+    },
+    {
+      "service": "dynamicCordisRunner",
+      "className": "DynamicCordisRunnerService",
+      "source": "packages/extensions/cordis-host-runner/src/index.ts",
+      "methods": [
+        "getClientCode",
+        "inventory",
+        "invoke",
+        "reportClientGuardFailure",
+        "reportRenderFailure",
+        "resolveInspectQuery",
+        "resolveRequestRun",
+        "runHostHalf",
+        "settleUserRun",
+        "stopFromPanel",
+        "syncInspectManifest",
+        "undefineFromPanel"
+      ]
+    },
+    {
+      "service": "fileReferences",
+      "className": "FileReferenceService",
+      "source": "packages/context/file-reference/src/index.ts",
+      "methods": [
+        "list"
+      ]
+    },
+    {
+      "service": "goals",
+      "className": "GoalService",
+      "source": "packages/goal/goal/src/index.ts",
+      "methods": [
+        "clear",
+        "complete",
+        "create",
+        "edit",
+        "pause",
+        "resume"
+      ]
+    },
+    {
+      "service": "messageFeedback",
+      "className": "MessageFeedbackService",
+      "source": "packages/feedback/message-feedback/src/index.ts",
+      "methods": [
+        "delete",
+        "list",
+        "put"
+      ]
+    },
+    {
+      "service": "pluginInventory",
+      "className": "PluginInventoryGateway",
+      "source": "packages/host/plugin-inventory/src/index.ts",
+      "methods": [
+        "list"
+      ]
+    },
+    {
+      "service": "sessionReferenceResolver",
+      "className": "SessionReferenceResolver",
+      "source": "packages/context/session-reference/src/index.ts",
+      "methods": [
+        "candidates"
+      ]
+    }
+  ]
+}

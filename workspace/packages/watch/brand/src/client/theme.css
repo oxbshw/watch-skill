@@ -1,0 +1,210 @@
+/*
+ * The Watch palette, as semantic tokens over DSH's theme.
+ *
+ * Layered on top of `--dsw-*` rather than replacing it: DSH owns light/dark
+ * switching, contrast and the surfaces every inherited panel already uses, and
+ * Watch adds only what the product's own vocabulary needs.
+ *
+ * The split between the two blocks below is not stylistic, and getting it
+ * wrong cost the product its verdict colours without any visible error.
+ *
+ * DSH declares `--dsw-alias-*` on `body`, not on `:root`. A custom property is
+ * substituted where it is *declared*, so `--watch-tone-success: var(--dsw-…)`
+ * written on `:root` resolves against a `:root` that has no such variable, and
+ * computes to nothing. It then inherits that nothing all the way down. Every
+ * VERIFIED chip was uncoloured and no rule anywhere reported a problem.
+ *
+ * So: literal values on `:root`, and anything derived from a DSH token on
+ * `body`, where its inputs actually exist.
+ *
+ * Two rules are enforced here rather than in review.
+ *
+ * `--watch-tone-success` is defined once and referenced only by VERIFIED. No
+ * other status in the product can reach it, because no other status maps to
+ * the success tone in identity.ts.
+ *
+ * Feature packages use `--watch-tone-*` and never a hex value. A colour spelled
+ * out in a panel is a colour that will be spelled out slightly differently in
+ * the next one, and a theme change then misses it.
+ */
+
+:root {
+  /* Literals only — see the note above. These resolve anywhere. */
+
+  /* Watch Blue: brand, focus, active observation. The product's own colour,
+     used where something is working or being watched right now — never for
+     success, which stays green and stays reserved for VERIFIED. */
+  --watch-accent: #4c8dff;
+  --watch-accent-dim: #2b5dad;
+  --watch-accent-wash: rgba(76, 141, 255, 0.13);
+
+  /* Amber is no longer the brand. It is kept for one job — a state that is
+     genuinely unproven: UNVERIFIED, INCONCLUSIVE, STALE. Not for "nobody has
+     configured this yet", which is a neutral fact and now reads as one. */
+  --watch-amber: #d99026;
+  --watch-amber-wash: rgba(217, 144, 38, 0.12);
+
+  /* Graphite and ink surfaces, sitting under DSH's own layers. */
+  --watch-graphite: #16181c;
+  --watch-ink: #0d0e11;
+
+  /* The observation accent: a left rule on anything currently being watched. */
+  --watch-observing-rule: 3px solid var(--watch-accent);
+}
+
+/*
+ * Everything derived from a DSH token, declared where those tokens exist.
+ *
+ * `body` rather than `:root`. This is the whole reason the verdict colours
+ * were blank.
+ */
+body {
+  /* Status tones. Each maps to exactly one meaning. */
+  --watch-tone-success: var(--dsw-alias-state-success-primary);
+  --watch-tone-error: var(--dsw-alias-state-error-primary);
+  --watch-tone-caution: var(--watch-amber);
+  /* Info is a slate rather than a second blue: with the brand now blue, two
+     blues side by side (Local next to Remote) would read as one state. */
+  --watch-tone-info: var(--dsw-alias-label-secondary);
+  --watch-tone-active: var(--watch-accent);
+  --watch-tone-neutral: var(--dsw-alias-label-tertiary);
+
+  /* Matching washes, for a badge background that keeps its label readable. */
+  --watch-wash-success: var(--dsw-alias-state-success-secondary);
+  --watch-wash-error: var(--dsw-alias-state-error-secondary);
+  --watch-wash-caution: var(--watch-amber-wash);
+  --watch-wash-info: var(--dsw-alias-bg-layer-2);
+  --watch-wash-active: var(--watch-accent-wash);
+  --watch-wash-neutral: var(--dsw-alias-bg-layer-2);
+}
+
+/*
+ * Light themes need darker values to stay legible on pale surfaces.
+ *
+ * DSH marks dark by putting `data-ds-dark-theme` on `body`, so light is its
+ * absence. The previous selector here was `:root[data-dsw-theme='light']`,
+ * which matches nothing in this application and silently never applied.
+ */
+body:not([data-ds-dark-theme]) {
+  --watch-accent: #1d5fd6;
+  --watch-accent-wash: rgba(29, 95, 214, 0.1);
+  --watch-amber: #a8690f;
+  --watch-amber-wash: rgba(168, 105, 15, 0.1);
+}
+
+/*
+ * Every status carries a non-colour signal too.
+ *
+ * A verdict distinguished only by hue disappears on a monochrome display, in
+ * high contrast, and for a colour-blind reader — and this is the one place in
+ * the product where being unable to tell two states apart is unacceptable.
+ */
+[data-watch-tone] {
+  color: var(--watch-tone-neutral);
+}
+
+[data-watch-tone='success'] { color: var(--watch-tone-success); }
+[data-watch-tone='error'] { color: var(--watch-tone-error); }
+[data-watch-tone='caution'] { color: var(--watch-tone-caution); }
+[data-watch-tone='info'] { color: var(--watch-tone-info); }
+[data-watch-tone='active'] { color: var(--watch-tone-active); }
+
+/* High contrast: let the platform take over rather than fighting it. */
+@media (prefers-contrast: more) {
+  :root {
+    --watch-accent: CanvasText;
+    --watch-accent-wash: Canvas;
+    --watch-amber: CanvasText;
+    --watch-amber-wash: Canvas;
+  }
+  [data-watch-tone] {
+    outline: 1px solid currentColor;
+    outline-offset: 1px;
+  }
+}
+
+/* Reduced motion: the observation pulse is decoration, and decoration that
+   moves is the first thing to drop. */
+@media (prefers-reduced-motion: reduce) {
+  [data-watch-observing] {
+    animation: none;
+  }
+}
+
+/*
+ * Focus, made impossible to lose.
+ *
+ * The default focus ring is the first thing a design system overrides and the
+ * last thing anybody checks. Watch draws its own, on `:focus-visible` so a
+ * mouse click does not leave a ring behind, and with an offset so it survives
+ * a button that has its own border — which is most of them here.
+ *
+ * `outline` rather than `box-shadow`: an outline is not clipped by `overflow:
+ * hidden`, and the timeline and the inspector both scroll.
+ */
+:where(button, a, [tabindex], input, select, textarea):focus-visible {
+  outline: 2px solid var(--watch-accent);
+  outline-offset: 2px;
+  /* In forced-colours mode the accent is replaced by the system colour, and
+     the ring has to keep existing rather than becoming invisible. */
+  border-radius: 2px;
+}
+
+@media (forced-colors: active) {
+  :where(button, a, [tabindex], input, select, textarea):focus-visible {
+    outline: 3px solid Highlight;
+  }
+}
+
+/*
+ * Right-to-left, by construction rather than by override.
+ *
+ * Every offset in the Watch surfaces is a logical property — `margin-inline`,
+ * `padding-inline-start`, `border-inline-start`, `text-align: start`. That is
+ * why there is no `[dir='rtl']` block undoing a pile of left-hand values: an
+ * RTL stylesheet that mirrors a LTR one by hand is a stylesheet that will be
+ * mirrored incompletely.
+ *
+ * What does need saying explicitly is the isolation. A path, a URL, a
+ * timestamp or a digest inside an Arabic paragraph reads left to right, and
+ * without isolation the bidi algorithm reorders the surrounding text into
+ * something that looks plausible and is wrong — a timestamp reading 30:2, a
+ * path with its segments reversed.
+ */
+[data-watch-ltr] {
+  unicode-bidi: isolate;
+  direction: ltr;
+}
+
+[data-watch-auto] {
+  unicode-bidi: isolate;
+}
+
+/*
+ * Zoom to 200% without losing anything.
+ *
+ * The requirement is that nothing is cut off and nothing needs horizontal
+ * scrolling at 200%. Fixed pixel heights are what break it, so the surfaces
+ * use `min-height` and let content grow; the timeline scrolls in its own axis
+ * rather than forcing the page to.
+ */
+[data-watch-timeline] {
+  overflow-x: auto;
+  min-height: 3rem;
+}
+
+[data-watch-timeline] ul {
+  flex-wrap: wrap;
+}
+
+/*
+ * The accessible alternative to the timeline is the timeline.
+ *
+ * There is no canvas here and no second text rendering to keep in sync: the
+ * lanes are lists and the entries are buttons with text labels, and the visual
+ * layout is applied over that. A separate "accessible version" is a version
+ * that goes stale.
+ */
+[data-watch-timeline] [data-watch-lane] {
+  display: block;
+}

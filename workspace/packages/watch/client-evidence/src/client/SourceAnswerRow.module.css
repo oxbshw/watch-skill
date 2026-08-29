@@ -1,0 +1,87 @@
+/*
+ * Evidence-linked answer styling.
+ *
+ * Deliberately quieter than the verdict card. This surface is a report of what
+ * was observed, not an outcome, and giving it the same visual weight as a
+ * verdict would blur the distinction the two cards exist to keep apart.
+ */
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: 8px;
+  background: var(--dsw-alias-bg-layer-1);
+  color: var(--dsw-alias-label-primary);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.answer {
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.citations {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 8px 0 0;
+  border-top: 1px solid var(--dsw-alias-border-l1);
+  list-style: none;
+}
+
+.citation {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* A media position is a number and reads left-to-right in every locale. */
+.time {
+  flex: none;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+  color: var(--dsw-alias-label-primary-bluish);
+  unicode-bidi: isolate;
+  direction: ltr;
+}
+
+/* Quoted source text: its own direction, not the surrounding conversation's. */
+.quote {
+  flex: 1 1 20ch;
+  color: var(--dsw-alias-label-secondary);
+  unicode-bidi: isolate;
+}
+
+.tag {
+  flex: none;
+  padding: 1px 6px;
+  border-radius: 3px;
+  background: var(--dsw-alias-bg-layer-2);
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 11px;
+}
+
+.tag[data-warn='true'] {
+  color: var(--dsw-alias-state-warn-label);
+}
+
+.foot {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 12px;
+}
+
+.unverified {
+  color: var(--dsw-alias-state-warn-label);
+}
+
+.thin {
+  color: var(--dsw-alias-label-tertiary);
+}

@@ -1,0 +1,582 @@
+{
+  "generatedBy": "scripts/gen-release-manifest.mjs",
+  "note": "Integrity digests are over each package’s own source, path-sensitive so a rename changes them. The compatibility block is what an installed build is checked against; the migration block is what it can open.",
+  "release": {
+    "name": "@watchskill/watch-workspace",
+    "version": "0.1.0-preview.0",
+    "engines": {
+      "node": "^22.19.0 || >=24.0.0"
+    }
+  },
+  "compatibility": {
+    "deepseekHarness": "0.1.1-rc.2 @ b150a551b8d465e31e418e1b2eaf5e79bbb7d28e",
+    "watchCore": "watch-skill 1.3.0rc2, Bridge protocol 1",
+    "bridgeProtocol": {
+      "min": 1,
+      "max": 1
+    },
+    "schemaDigests": {
+      "answer": "sha256:b1d08711b75396f21b1823a5e69c8b37",
+      "error": "sha256:b6e7b03def9e68dcd25d74347f1c1f77",
+      "evidence": "sha256:9d75abea243404fe19909146a340ecfa",
+      "handshake": "sha256:41e44cf6f9e29e4d4dbe7e4680dfc226",
+      "library": "sha256:c409cf6a0e2c71ade790be43525c7b98",
+      "verification": "sha256:3fb92fb22ccc8aa6258bd3b620bd76b1"
+    },
+    "upstreamLockPresent": true,
+    "onDigestMismatch": "The affected contract family is disabled and both digests are reported. Other families continue."
+  },
+  "migration": {
+    "storeSchemaVersion": 1,
+    "understands": [
+      1
+    ],
+    "transitions": [
+      {
+        "from": null,
+        "to": 1,
+        "kind": "initialize",
+        "reversible": false,
+        "note": "A fresh store is created and stamped."
+      }
+    ],
+    "refusesNewer": true,
+    "onNewerStore": "The store is not opened. The application starts in read-only replay and says which schema it found."
+  },
+  "integrity": {
+    "algorithm": "sha256",
+    "scope": "first-party package source, excluding node_modules and build output",
+    "packages": [
+      {
+        "name": "@watchskill/dsh-adapters",
+        "version": "0.1.0-preview.0",
+        "integrity": "sha256:68cdbec397cf984410a49573bc710fa010cade58510ed4133b72042f9846fb68",
+        "sourceFiles": 5
+      },
+      {
+        "name": "@watchskill/dsh-client-brand",
+        "version": "0.1.0-preview.0",
+        "integrity": "sha256:199dcfda39b5f4d8fcd69fdd1347a1a6e028c5d874676444d31ab78968973336",
+        "sourceFiles": 9
+      },
+      {
+        "name": "@watchskill/dsh-bundle",
+        "version": "0.1.0-preview.0",
+        "integrity": "sha256:8dac3e5e04d9aa13e0e294a025ffcf9f0d9aaf1fa8fa8c716ce2a647907c0883",
+        "sourceFiles": 7
+      },
+      {
+        "name": "@watchskill/dsh-client-evidence",
+        "version": "0.1.0-preview.0",
+        "integrity": "sha256:776480bf82716226ee2631afec88c551c54dd1c1093fb49869981d9fadc4b962",
+        "sourceFiles": 15
+      },
+      {
+        "name": "@watchskill/dsh-client-memory",
+        "version": "0.1.0-preview.0",
+        "integrity": "sha256:a682354ba3e067db27f97bc53268393949d6295d017cb2066558202082aabd5e",
+        "sourceFiles": 9
+      },
+      {
+        "name": "@watchskill/dsh-client-settings",
+        "version": "0.1.0-preview.0",
+        "integrity": "sha256:a1e9f916e852ac078fa0c128d720c7991ddf972201ffcf3201b4e744e13c418b",
+        "sourceFiles": 10
+      },
+      {
+        "name": "@watchskill/dsh-contracts",
+        "version": "0.1.0-preview.0",
+        "integrity": "sha256:27a539ef765111094370d058779fd8bd1e17b6327a94aff0fde14be8e82df63c",
+        "sourceFiles": 7
+      },
+      {
+        "name": "@watchskill/dsh-core-bridge",
+        "version": "0.1.0-preview.0",
+        "integrity": "sha256:c0f2fa98b35a8a0c54aedd521bb7a0449422d872e998a50d326d992ac9834b1e",
+        "sourceFiles": 6
+      },
+      {
+        "name": "@watchskill/dsh-library",
+        "version": "0.1.0-preview.0",
+        "integrity": "sha256:43ebcaeef442ec2c24459c95de968c23a4dacd46f313a2a07a11ca8658c668c6",
+        "sourceFiles": 12
+      },
+      {
+        "name": "@watchskill/dsh-live",
+        "version": "0.1.0-preview.0",
+        "integrity": "sha256:efcf780a698a534a7e416f296330867d3c98e83026fdc2c264b8dc04b36cbfc3",
+        "sourceFiles": 13
+      },
+      {
+        "name": "@watchskill/dsh-memory",
+        "version": "0.1.0-preview.0",
+        "integrity": "sha256:475d19e7a352d01fca54d4b3ade474012f1b29b863deea2aef1b9d19dd34eb6c",
+        "sourceFiles": 10
+      },
+      {
+        "name": "@watchskill/dsh-sdk",
+        "version": "0.1.0-preview.0",
+        "integrity": "sha256:37a1a383079e43e538c32910701b37cd75f7c459a9ef0b2d1b393370e22577ab",
+        "sourceFiles": 6
+      },
+      {
+        "name": "@watchskill/dsh-technology",
+        "version": "0.1.0-preview.0",
+        "integrity": "sha256:e871c409f5ad352ad7e3c13738e9a217f0f3029050f263736ed5f32cd389df75",
+        "sourceFiles": 8
+      },
+      {
+        "name": "@watchskill/dsh-tenancy",
+        "version": "0.1.0-preview.0",
+        "integrity": "sha256:95a419387f355bc2d0582699ff694ad91e35ecf05b8964204fd47143e9b010e4",
+        "sourceFiles": 8
+      },
+      {
+        "name": "@watchskill/dsh-tools",
+        "version": "0.1.0-preview.0",
+        "integrity": "sha256:d5e2c2fbd028d8743ad683f2a8a4857f052e8de7de47c219c45d05b940979ae0",
+        "sourceFiles": 7
+      },
+      {
+        "name": "@watchskill/dsh-trajectory",
+        "version": "0.1.0-preview.0",
+        "integrity": "sha256:dd3b8cf695a597be01edc0f00d3012dff86a2a82e18889ae663c768ea2c42082",
+        "sourceFiles": 9
+      },
+      {
+        "name": "@watchskill/dsh-wiki",
+        "version": "0.1.0-preview.0",
+        "integrity": "sha256:5d22c62d47f6ccd74be885680dfee64642d1c7e76a56f34b284426ff63755cff",
+        "sourceFiles": 4
+      },
+      {
+        "name": "@watchskill/dsh-workspace",
+        "version": "0.1.0-preview.0",
+        "integrity": "sha256:40ea3de786965fdaabab3f484a42749e627a6a1d552518392f11ebf8752bbd62",
+        "sourceFiles": 13
+      },
+      {
+        "name": "@watchskill/watch-desktop",
+        "version": "0.1.0-preview.0",
+        "integrity": "sha256:adc4a14ce88152a13a1268f16b72912a34c0cf4e1dd70a9a33e1577a20aaf47c",
+        "sourceFiles": 11
+      }
+    ]
+  },
+  "spdx": {
+    "spdxVersion": "SPDX-2.3",
+    "dataLicense": "CC0-1.0",
+    "SPDXID": "SPDXRef-DOCUMENT",
+    "name": "@watchskill/watch-workspace-0.1.0-preview.0",
+    "documentNamespace": "https://github.com/oxbshw/watch-workspace/spdx/0.1.0-preview.0/mtdqs6h6",
+    "creationInfo": {
+      "creators": [
+        "Tool: watch-gen-release-manifest"
+      ],
+      "created": "2026-08-29T02:09:02Z"
+    },
+    "packages": [
+      {
+        "SPDXID": "SPDXRef-Package--watchskill-dsh-adapters",
+        "name": "@watchskill/dsh-adapters",
+        "versionInfo": "0.1.0-preview.0",
+        "licenseDeclared": "MIT",
+        "licenseConcluded": "NOASSERTION",
+        "downloadLocation": "NOASSERTION",
+        "filesAnalyzed": false,
+        "copyrightText": "NOASSERTION",
+        "checksums": [
+          {
+            "algorithm": "SHA256",
+            "checksumValue": "68cdbec397cf984410a49573bc710fa010cade58510ed4133b72042f9846fb68"
+          }
+        ]
+      },
+      {
+        "SPDXID": "SPDXRef-Package--watchskill-dsh-client-brand",
+        "name": "@watchskill/dsh-client-brand",
+        "versionInfo": "0.1.0-preview.0",
+        "licenseDeclared": "MIT",
+        "licenseConcluded": "NOASSERTION",
+        "downloadLocation": "NOASSERTION",
+        "filesAnalyzed": false,
+        "copyrightText": "NOASSERTION",
+        "checksums": [
+          {
+            "algorithm": "SHA256",
+            "checksumValue": "199dcfda39b5f4d8fcd69fdd1347a1a6e028c5d874676444d31ab78968973336"
+          }
+        ]
+      },
+      {
+        "SPDXID": "SPDXRef-Package--watchskill-dsh-bundle",
+        "name": "@watchskill/dsh-bundle",
+        "versionInfo": "0.1.0-preview.0",
+        "licenseDeclared": "MIT",
+        "licenseConcluded": "NOASSERTION",
+        "downloadLocation": "NOASSERTION",
+        "filesAnalyzed": false,
+        "copyrightText": "NOASSERTION",
+        "checksums": [
+          {
+            "algorithm": "SHA256",
+            "checksumValue": "8dac3e5e04d9aa13e0e294a025ffcf9f0d9aaf1fa8fa8c716ce2a647907c0883"
+          }
+        ]
+      },
+      {
+        "SPDXID": "SPDXRef-Package--watchskill-dsh-client-evidence",
+        "name": "@watchskill/dsh-client-evidence",
+        "versionInfo": "0.1.0-preview.0",
+        "licenseDeclared": "MIT",
+        "licenseConcluded": "NOASSERTION",
+        "downloadLocation": "NOASSERTION",
+        "filesAnalyzed": false,
+        "copyrightText": "NOASSERTION",
+        "checksums": [
+          {
+            "algorithm": "SHA256",
+            "checksumValue": "776480bf82716226ee2631afec88c551c54dd1c1093fb49869981d9fadc4b962"
+          }
+        ]
+      },
+      {
+        "SPDXID": "SPDXRef-Package--watchskill-dsh-client-memory",
+        "name": "@watchskill/dsh-client-memory",
+        "versionInfo": "0.1.0-preview.0",
+        "licenseDeclared": "MIT",
+        "licenseConcluded": "NOASSERTION",
+        "downloadLocation": "NOASSERTION",
+        "filesAnalyzed": false,
+        "copyrightText": "NOASSERTION",
+        "checksums": [
+          {
+            "algorithm": "SHA256",
+            "checksumValue": "a682354ba3e067db27f97bc53268393949d6295d017cb2066558202082aabd5e"
+          }
+        ]
+      },
+      {
+        "SPDXID": "SPDXRef-Package--watchskill-dsh-client-settings",
+        "name": "@watchskill/dsh-client-settings",
+        "versionInfo": "0.1.0-preview.0",
+        "licenseDeclared": "MIT",
+        "licenseConcluded": "NOASSERTION",
+        "downloadLocation": "NOASSERTION",
+        "filesAnalyzed": false,
+        "copyrightText": "NOASSERTION",
+        "checksums": [
+          {
+            "algorithm": "SHA256",
+            "checksumValue": "a1e9f916e852ac078fa0c128d720c7991ddf972201ffcf3201b4e744e13c418b"
+          }
+        ]
+      },
+      {
+        "SPDXID": "SPDXRef-Package--watchskill-dsh-contracts",
+        "name": "@watchskill/dsh-contracts",
+        "versionInfo": "0.1.0-preview.0",
+        "licenseDeclared": "MIT",
+        "licenseConcluded": "NOASSERTION",
+        "downloadLocation": "NOASSERTION",
+        "filesAnalyzed": false,
+        "copyrightText": "NOASSERTION",
+        "checksums": [
+          {
+            "algorithm": "SHA256",
+            "checksumValue": "27a539ef765111094370d058779fd8bd1e17b6327a94aff0fde14be8e82df63c"
+          }
+        ]
+      },
+      {
+        "SPDXID": "SPDXRef-Package--watchskill-dsh-core-bridge",
+        "name": "@watchskill/dsh-core-bridge",
+        "versionInfo": "0.1.0-preview.0",
+        "licenseDeclared": "MIT",
+        "licenseConcluded": "NOASSERTION",
+        "downloadLocation": "NOASSERTION",
+        "filesAnalyzed": false,
+        "copyrightText": "NOASSERTION",
+        "checksums": [
+          {
+            "algorithm": "SHA256",
+            "checksumValue": "c0f2fa98b35a8a0c54aedd521bb7a0449422d872e998a50d326d992ac9834b1e"
+          }
+        ]
+      },
+      {
+        "SPDXID": "SPDXRef-Package--watchskill-dsh-library",
+        "name": "@watchskill/dsh-library",
+        "versionInfo": "0.1.0-preview.0",
+        "licenseDeclared": "MIT",
+        "licenseConcluded": "NOASSERTION",
+        "downloadLocation": "NOASSERTION",
+        "filesAnalyzed": false,
+        "copyrightText": "NOASSERTION",
+        "checksums": [
+          {
+            "algorithm": "SHA256",
+            "checksumValue": "43ebcaeef442ec2c24459c95de968c23a4dacd46f313a2a07a11ca8658c668c6"
+          }
+        ]
+      },
+      {
+        "SPDXID": "SPDXRef-Package--watchskill-dsh-live",
+        "name": "@watchskill/dsh-live",
+        "versionInfo": "0.1.0-preview.0",
+        "licenseDeclared": "MIT",
+        "licenseConcluded": "NOASSERTION",
+        "downloadLocation": "NOASSERTION",
+        "filesAnalyzed": false,
+        "copyrightText": "NOASSERTION",
+        "checksums": [
+          {
+            "algorithm": "SHA256",
+            "checksumValue": "efcf780a698a534a7e416f296330867d3c98e83026fdc2c264b8dc04b36cbfc3"
+          }
+        ]
+      },
+      {
+        "SPDXID": "SPDXRef-Package--watchskill-dsh-memory",
+        "name": "@watchskill/dsh-memory",
+        "versionInfo": "0.1.0-preview.0",
+        "licenseDeclared": "MIT",
+        "licenseConcluded": "NOASSERTION",
+        "downloadLocation": "NOASSERTION",
+        "filesAnalyzed": false,
+        "copyrightText": "NOASSERTION",
+        "checksums": [
+          {
+            "algorithm": "SHA256",
+            "checksumValue": "475d19e7a352d01fca54d4b3ade474012f1b29b863deea2aef1b9d19dd34eb6c"
+          }
+        ]
+      },
+      {
+        "SPDXID": "SPDXRef-Package--watchskill-dsh-sdk",
+        "name": "@watchskill/dsh-sdk",
+        "versionInfo": "0.1.0-preview.0",
+        "licenseDeclared": "MIT",
+        "licenseConcluded": "NOASSERTION",
+        "downloadLocation": "NOASSERTION",
+        "filesAnalyzed": false,
+        "copyrightText": "NOASSERTION",
+        "checksums": [
+          {
+            "algorithm": "SHA256",
+            "checksumValue": "37a1a383079e43e538c32910701b37cd75f7c459a9ef0b2d1b393370e22577ab"
+          }
+        ]
+      },
+      {
+        "SPDXID": "SPDXRef-Package--watchskill-dsh-technology",
+        "name": "@watchskill/dsh-technology",
+        "versionInfo": "0.1.0-preview.0",
+        "licenseDeclared": "MIT",
+        "licenseConcluded": "NOASSERTION",
+        "downloadLocation": "NOASSERTION",
+        "filesAnalyzed": false,
+        "copyrightText": "NOASSERTION",
+        "checksums": [
+          {
+            "algorithm": "SHA256",
+            "checksumValue": "e871c409f5ad352ad7e3c13738e9a217f0f3029050f263736ed5f32cd389df75"
+          }
+        ]
+      },
+      {
+        "SPDXID": "SPDXRef-Package--watchskill-dsh-tenancy",
+        "name": "@watchskill/dsh-tenancy",
+        "versionInfo": "0.1.0-preview.0",
+        "licenseDeclared": "MIT",
+        "licenseConcluded": "NOASSERTION",
+        "downloadLocation": "NOASSERTION",
+        "filesAnalyzed": false,
+        "copyrightText": "NOASSERTION",
+        "checksums": [
+          {
+            "algorithm": "SHA256",
+            "checksumValue": "95a419387f355bc2d0582699ff694ad91e35ecf05b8964204fd47143e9b010e4"
+          }
+        ]
+      },
+      {
+        "SPDXID": "SPDXRef-Package--watchskill-dsh-tools",
+        "name": "@watchskill/dsh-tools",
+        "versionInfo": "0.1.0-preview.0",
+        "licenseDeclared": "MIT",
+        "licenseConcluded": "NOASSERTION",
+        "downloadLocation": "NOASSERTION",
+        "filesAnalyzed": false,
+        "copyrightText": "NOASSERTION",
+        "checksums": [
+          {
+            "algorithm": "SHA256",
+            "checksumValue": "d5e2c2fbd028d8743ad683f2a8a4857f052e8de7de47c219c45d05b940979ae0"
+          }
+        ]
+      },
+      {
+        "SPDXID": "SPDXRef-Package--watchskill-dsh-trajectory",
+        "name": "@watchskill/dsh-trajectory",
+        "versionInfo": "0.1.0-preview.0",
+        "licenseDeclared": "MIT",
+        "licenseConcluded": "NOASSERTION",
+        "downloadLocation": "NOASSERTION",
+        "filesAnalyzed": false,
+        "copyrightText": "NOASSERTION",
+        "checksums": [
+          {
+            "algorithm": "SHA256",
+            "checksumValue": "dd3b8cf695a597be01edc0f00d3012dff86a2a82e18889ae663c768ea2c42082"
+          }
+        ]
+      },
+      {
+        "SPDXID": "SPDXRef-Package--watchskill-dsh-wiki",
+        "name": "@watchskill/dsh-wiki",
+        "versionInfo": "0.1.0-preview.0",
+        "licenseDeclared": "MIT",
+        "licenseConcluded": "NOASSERTION",
+        "downloadLocation": "NOASSERTION",
+        "filesAnalyzed": false,
+        "copyrightText": "NOASSERTION",
+        "checksums": [
+          {
+            "algorithm": "SHA256",
+            "checksumValue": "5d22c62d47f6ccd74be885680dfee64642d1c7e76a56f34b284426ff63755cff"
+          }
+        ]
+      },
+      {
+        "SPDXID": "SPDXRef-Package--watchskill-dsh-workspace",
+        "name": "@watchskill/dsh-workspace",
+        "versionInfo": "0.1.0-preview.0",
+        "licenseDeclared": "MIT",
+        "licenseConcluded": "NOASSERTION",
+        "downloadLocation": "NOASSERTION",
+        "filesAnalyzed": false,
+        "copyrightText": "NOASSERTION",
+        "checksums": [
+          {
+            "algorithm": "SHA256",
+            "checksumValue": "40ea3de786965fdaabab3f484a42749e627a6a1d552518392f11ebf8752bbd62"
+          }
+        ]
+      },
+      {
+        "SPDXID": "SPDXRef-Package--watchskill-watch-desktop",
+        "name": "@watchskill/watch-desktop",
+        "versionInfo": "0.1.0-preview.0",
+        "licenseDeclared": "MIT",
+        "licenseConcluded": "NOASSERTION",
+        "downloadLocation": "NONE",
+        "filesAnalyzed": false,
+        "copyrightText": "NOASSERTION",
+        "checksums": [
+          {
+            "algorithm": "SHA256",
+            "checksumValue": "adc4a14ce88152a13a1268f16b72912a34c0cf4e1dd70a9a33e1577a20aaf47c"
+          }
+        ]
+      }
+    ],
+    "relationships": [
+      {
+        "spdxElementId": "SPDXRef-DOCUMENT",
+        "relationshipType": "DESCRIBES",
+        "relatedSpdxElement": "SPDXRef-Package--watchskill-dsh-adapters"
+      },
+      {
+        "spdxElementId": "SPDXRef-DOCUMENT",
+        "relationshipType": "DESCRIBES",
+        "relatedSpdxElement": "SPDXRef-Package--watchskill-dsh-client-brand"
+      },
+      {
+        "spdxElementId": "SPDXRef-DOCUMENT",
+        "relationshipType": "DESCRIBES",
+        "relatedSpdxElement": "SPDXRef-Package--watchskill-dsh-bundle"
+      },
+      {
+        "spdxElementId": "SPDXRef-DOCUMENT",
+        "relationshipType": "DESCRIBES",
+        "relatedSpdxElement": "SPDXRef-Package--watchskill-dsh-client-evidence"
+      },
+      {
+        "spdxElementId": "SPDXRef-DOCUMENT",
+        "relationshipType": "DESCRIBES",
+        "relatedSpdxElement": "SPDXRef-Package--watchskill-dsh-client-memory"
+      },
+      {
+        "spdxElementId": "SPDXRef-DOCUMENT",
+        "relationshipType": "DESCRIBES",
+        "relatedSpdxElement": "SPDXRef-Package--watchskill-dsh-client-settings"
+      },
+      {
+        "spdxElementId": "SPDXRef-DOCUMENT",
+        "relationshipType": "DESCRIBES",
+        "relatedSpdxElement": "SPDXRef-Package--watchskill-dsh-contracts"
+      },
+      {
+        "spdxElementId": "SPDXRef-DOCUMENT",
+        "relationshipType": "DESCRIBES",
+        "relatedSpdxElement": "SPDXRef-Package--watchskill-dsh-core-bridge"
+      },
+      {
+        "spdxElementId": "SPDXRef-DOCUMENT",
+        "relationshipType": "DESCRIBES",
+        "relatedSpdxElement": "SPDXRef-Package--watchskill-dsh-library"
+      },
+      {
+        "spdxElementId": "SPDXRef-DOCUMENT",
+        "relationshipType": "DESCRIBES",
+        "relatedSpdxElement": "SPDXRef-Package--watchskill-dsh-live"
+      },
+      {
+        "spdxElementId": "SPDXRef-DOCUMENT",
+        "relationshipType": "DESCRIBES",
+        "relatedSpdxElement": "SPDXRef-Package--watchskill-dsh-memory"
+      },
+      {
+        "spdxElementId": "SPDXRef-DOCUMENT",
+        "relationshipType": "DESCRIBES",
+        "relatedSpdxElement": "SPDXRef-Package--watchskill-dsh-sdk"
+      },
+      {
+        "spdxElementId": "SPDXRef-DOCUMENT",
+        "relationshipType": "DESCRIBES",
+        "relatedSpdxElement": "SPDXRef-Package--watchskill-dsh-technology"
+      },
+      {
+        "spdxElementId": "SPDXRef-DOCUMENT",
+        "relationshipType": "DESCRIBES",
+        "relatedSpdxElement": "SPDXRef-Package--watchskill-dsh-tenancy"
+      },
+      {
+        "spdxElementId": "SPDXRef-DOCUMENT",
+        "relationshipType": "DESCRIBES",
+        "relatedSpdxElement": "SPDXRef-Package--watchskill-dsh-tools"
+      },
+      {
+        "spdxElementId": "SPDXRef-DOCUMENT",
+        "relationshipType": "DESCRIBES",
+        "relatedSpdxElement": "SPDXRef-Package--watchskill-dsh-trajectory"
+      },
+      {
+        "spdxElementId": "SPDXRef-DOCUMENT",
+        "relationshipType": "DESCRIBES",
+        "relatedSpdxElement": "SPDXRef-Package--watchskill-dsh-wiki"
+      },
+      {
+        "spdxElementId": "SPDXRef-DOCUMENT",
+        "relationshipType": "DESCRIBES",
+        "relatedSpdxElement": "SPDXRef-Package--watchskill-dsh-workspace"
+      },
+      {
+        "spdxElementId": "SPDXRef-DOCUMENT",
+        "relationshipType": "DESCRIBES",
+        "relatedSpdxElement": "SPDXRef-Package--watchskill-watch-desktop"
+      }
+    ]
+  }
+}

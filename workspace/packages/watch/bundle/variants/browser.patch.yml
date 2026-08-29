@@ -1,0 +1,33 @@
+# Watch Browser — observe a page, act on it, and prove what happened.
+#
+# Media perception plus the operator loop. This is the bundle for the case the
+# product exists for: the agent clicks something, and Watch establishes whether
+# the world actually changed, rather than reporting that the click succeeded.
+#
+# Memory is absent on purpose. Verification needs no memory, and a bundle that
+# quietly acquired durable memory about a person because it was convenient is
+# the failure ADR-006 exists to prevent.
+
+- insert:
+    - id: watch-core-bridge
+      name: '@watchskill/dsh-core-bridge'
+      config:
+        transport: auto
+        command: watch-skill
+        args: [bridge]
+        cwd: ''
+        startupTimeoutMs: 10000
+        requestTimeoutMs: 30000
+        autoConnect: true
+
+    - id: watch-tools
+      name: '@watchskill/dsh-tools'
+      config:
+        queryTimeoutMs: 120000
+        verifyTimeoutMs: 60000
+
+    - id: watch-client-evidence
+      name: '@watchskill/dsh-client-evidence'
+
+    - id: watch-trajectory
+      name: '@watchskill/dsh-trajectory'

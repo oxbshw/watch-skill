@@ -1,0 +1,486 @@
+{
+  "generatedFrom": {
+    "repository": "https://github.com/deepseek-ai/deepseek-harness",
+    "commit": "b150a551b8d465e31e418e1b2eaf5e79bbb7d28e",
+    "version": "0.1.1-rc.2",
+    "tag": "dsh-v0.1.1-rc.2"
+  },
+  "generator": "scripts/gen-inventory.mjs",
+  "count": 44,
+  "slots": [
+    {
+      "slot": "conversation",
+      "register": [
+        "packages/client/ui-conversation/src/client/apply.ts"
+      ],
+      "inject": [],
+      "consume": []
+    },
+    {
+      "slot": "conversation.chat.assistant-actions",
+      "register": [
+        "packages/client/ui-message-feedback/src/client/index.ts"
+      ],
+      "inject": [
+        "packages/client/ui-message-feedback/src/client/index.ts"
+      ],
+      "consume": []
+    },
+    {
+      "slot": "conversation.chat.node",
+      "register": [
+        "packages/client/ui-conversation/src/client/chat/register-node-renderers.ts",
+        "packages/client/ui-goal/src/client/index.ts",
+        "packages/client/ui-tool/src/client/apply.ts",
+        "packages/client/ui-workflow-run/src/client/index.ts"
+      ],
+      "inject": [
+        "packages/client/ui-conversation/src/client/chat/register-node-renderers.ts",
+        "packages/client/ui-goal/src/client/index.ts",
+        "packages/client/ui-tool/src/client/apply.ts",
+        "packages/client/ui-workflow-run/src/client/index.ts"
+      ],
+      "consume": []
+    },
+    {
+      "slot": "conversation.chat.turnTail",
+      "register": [
+        "packages/client/ui-deliverables/src/client/index.ts"
+      ],
+      "inject": [
+        "packages/client/ui-deliverables/src/client/index.ts"
+      ],
+      "consume": []
+    },
+    {
+      "slot": "conversation.composer",
+      "register": [
+        "packages/client/ui-conversation/src/client/apply.ts",
+        "packages/client/ui-subagent/src/client/index.ts",
+        "packages/client/ui-user-questions/src/client/index.ts"
+      ],
+      "inject": [
+        "packages/client/ui-subagent/src/client/index.ts",
+        "packages/client/ui-user-questions/src/client/index.ts"
+      ],
+      "consume": []
+    },
+    {
+      "slot": "conversation.composer.bar",
+      "register": [
+        "packages/client/ui-conversation/src/client/apply.ts"
+      ],
+      "inject": [],
+      "consume": []
+    },
+    {
+      "slot": "conversation.composer.dock",
+      "register": [
+        "packages/client/ui-conversation/src/client/apply.ts"
+      ],
+      "inject": [],
+      "consume": []
+    },
+    {
+      "slot": "conversation.details.tool",
+      "register": [
+        "packages/client/ui-tool/src/client/apply.ts"
+      ],
+      "inject": [
+        "packages/client/ui-tool/src/client/apply.ts"
+      ],
+      "consume": []
+    },
+    {
+      "slot": "conversation.hero.agentPreset",
+      "register": [
+        "packages/client/ui-agent-preset/src/client/index.ts"
+      ],
+      "inject": [],
+      "consume": []
+    },
+    {
+      "slot": "conversation.hero.brand.mark",
+      "register": [
+        "packages/client/ui-brand-official/src/client/index.ts"
+      ],
+      "inject": [
+        "packages/client/ui-brand-official/src/client/index.ts"
+      ],
+      "consume": []
+    },
+    {
+      "slot": "conversation.hero.workspace",
+      "register": [
+        "packages/client/ui-workspace/src/client/index.ts"
+      ],
+      "inject": [
+        "packages/client/ui-workspace/src/client/index.ts"
+      ],
+      "consume": []
+    },
+    {
+      "slot": "conversation.hero.workspace.directoryFlow",
+      "register": [
+        "packages/client/ui-directory-picker-browse/src/client/index.ts",
+        "packages/client/ui-directory-picker-native/src/client/index.ts"
+      ],
+      "inject": [
+        "packages/client/ui-directory-picker-browse/src/client/index.ts",
+        "packages/client/ui-directory-picker-native/src/client/index.ts"
+      ],
+      "consume": []
+    },
+    {
+      "slot": "conversation.input.attachments",
+      "register": [
+        "packages/client/ui-attachment/src/client/index.ts"
+      ],
+      "inject": [
+        "packages/client/ui-attachment/src/client/index.ts"
+      ],
+      "consume": []
+    },
+    {
+      "slot": "conversation.input.dock",
+      "register": [
+        "packages/client/ui-conversation/src/client/queue/QueueDock.tsx",
+        "packages/client/ui-conversation/src/client/skeleton/TodoPanel.tsx",
+        "packages/client/ui-goal/src/client/index.ts"
+      ],
+      "inject": [
+        "packages/client/ui-conversation/src/client/queue/QueueDock.tsx",
+        "packages/client/ui-conversation/src/client/skeleton/TodoPanel.tsx",
+        "packages/client/ui-goal/src/client/index.ts"
+      ],
+      "consume": []
+    },
+    {
+      "slot": "conversation.input.model",
+      "register": [
+        "packages/client/ui-model-selection/src/client/index.ts"
+      ],
+      "inject": [
+        "packages/client/ui-model-selection/src/client/index.ts"
+      ],
+      "consume": []
+    },
+    {
+      "slot": "conversation.input.overlay",
+      "register": [
+        "packages/client/ui-commands/src/client/index.ts",
+        "packages/client/ui-input-trigger/src/client/index.ts"
+      ],
+      "inject": [
+        "packages/client/ui-commands/src/client/index.ts",
+        "packages/client/ui-input-trigger/src/client/index.ts"
+      ],
+      "consume": []
+    },
+    {
+      "slot": "conversation.input.plan",
+      "register": [
+        "packages/client/ui-plan/src/client/index.ts"
+      ],
+      "inject": [
+        "packages/client/ui-plan/src/client/index.ts"
+      ],
+      "consume": []
+    },
+    {
+      "slot": "conversation.message.images",
+      "register": [
+        "packages/client/ui-attachment/src/client/index.ts"
+      ],
+      "inject": [
+        "packages/client/ui-attachment/src/client/index.ts"
+      ],
+      "consume": []
+    },
+    {
+      "slot": "conversation.session",
+      "register": [
+        "packages/client/ui-conversation/src/client/apply.ts"
+      ],
+      "inject": [],
+      "consume": []
+    },
+    {
+      "slot": "conversation.session.header",
+      "register": [
+        "packages/client/ui-conversation/src/client/apply.ts"
+      ],
+      "inject": [],
+      "consume": []
+    },
+    {
+      "slot": "conversation.session.header.actions",
+      "register": [
+        "packages/client/ui-agent-preset/src/client/index.ts",
+        "packages/client/ui-jobs/src/client/index.ts"
+      ],
+      "inject": [
+        "packages/client/ui-jobs/src/client/index.ts"
+      ],
+      "consume": []
+    },
+    {
+      "slot": "conversation.session.header.lineage",
+      "register": [
+        "packages/client/ui-subagent/src/client/index.ts"
+      ],
+      "inject": [
+        "packages/client/ui-subagent/src/client/index.ts"
+      ],
+      "consume": []
+    },
+    {
+      "slot": "conversation.session.header.utilities",
+      "register": [
+        "packages/session-query/session-log-export/src/client/index.ts"
+      ],
+      "inject": [
+        "packages/session-query/session-log-export/src/client/index.ts"
+      ],
+      "consume": []
+    },
+    {
+      "slot": "conversation.view",
+      "register": [
+        "packages/client/ui-conversation/src/client/apply.ts",
+        "packages/client/ui-trajectory/src/client/index.ts"
+      ],
+      "inject": [
+        "packages/client/ui-trajectory/src/client/index.ts"
+      ],
+      "consume": []
+    },
+    {
+      "slot": "demo.seat",
+      "register": [],
+      "inject": [
+        "scripts/gen-client-catalog.spec.ts"
+      ],
+      "consume": []
+    },
+    {
+      "slot": "details",
+      "register": [
+        "packages/client/ui-conversation/src/client/apply.ts"
+      ],
+      "inject": [],
+      "consume": []
+    },
+    {
+      "slot": "root",
+      "register": [
+        "packages/client/ui-layout/src/client/index.ts"
+      ],
+      "inject": [],
+      "consume": []
+    },
+    {
+      "slot": "settings.action",
+      "register": [
+        "packages/client/ui-settings-general/src/client/index.ts"
+      ],
+      "inject": [
+        "packages/client/ui-settings-general/src/client/index.ts"
+      ],
+      "consume": []
+    },
+    {
+      "slot": "settings.close",
+      "register": [
+        "packages/client/ui-settings-general/src/client/index.ts"
+      ],
+      "inject": [
+        "packages/client/ui-settings-general/src/client/index.ts"
+      ],
+      "consume": []
+    },
+    {
+      "slot": "settings.general.item",
+      "register": [
+        "packages/client/locale/src/client/index.ts",
+        "packages/client/ui-agent-preset/src/client/index.ts",
+        "packages/client/ui-conversation/src/client/apply.ts",
+        "packages/client/ui-permission-presets/src/client/index.ts",
+        "packages/client/ui-theme/src/client/index.ts"
+      ],
+      "inject": [
+        "packages/client/locale/src/client/index.ts",
+        "packages/client/ui-agent-preset/src/client/index.ts",
+        "packages/client/ui-conversation/src/client/apply.ts",
+        "packages/client/ui-permission-presets/src/client/index.ts",
+        "packages/client/ui-theme/src/client/index.ts"
+      ],
+      "consume": []
+    },
+    {
+      "slot": "settings.header",
+      "register": [
+        "packages/client/ui-settings-general/src/client/index.ts"
+      ],
+      "inject": [
+        "packages/client/ui-settings-general/src/client/index.ts"
+      ],
+      "consume": []
+    },
+    {
+      "slot": "settings.onboarding",
+      "register": [
+        "packages/client/ui-settings-models/src/client/index.ts"
+      ],
+      "inject": [
+        "packages/client/ui-settings-models/src/client/index.ts"
+      ],
+      "consume": []
+    },
+    {
+      "slot": "settings.plugin.item",
+      "register": [
+        "packages/client/ui-settings-plugins/src/client/index.ts"
+      ],
+      "inject": [
+        "packages/client/ui-settings-plugins/src/client/index.ts"
+      ],
+      "consume": []
+    },
+    {
+      "slot": "settings.plugins.tab",
+      "register": [
+        "packages/client/ui-settings-plugin-inventory/src/client/index.ts",
+        "packages/client/ui-settings-plugins/src/client/index.ts"
+      ],
+      "inject": [
+        "packages/client/ui-settings-plugin-inventory/src/client/index.ts",
+        "packages/client/ui-settings-plugins/src/client/index.ts"
+      ],
+      "consume": []
+    },
+    {
+      "slot": "settings.section",
+      "register": [
+        "packages/client/ui-agent-preset/src/client/index.ts",
+        "packages/client/ui-settings-general/src/client/index.ts",
+        "packages/client/ui-settings-models/src/client/index.ts",
+        "packages/client/ui-settings-plugins/src/client/index.ts"
+      ],
+      "inject": [
+        "packages/client/ui-agent-preset/src/client/index.ts",
+        "packages/client/ui-settings-general/src/client/index.ts",
+        "packages/client/ui-settings-models/src/client/index.ts",
+        "packages/client/ui-settings-plugins/src/client/index.ts"
+      ],
+      "consume": []
+    },
+    {
+      "slot": "settings.trigger",
+      "register": [
+        "packages/client/ui-settings-general/src/client/index.ts"
+      ],
+      "inject": [
+        "packages/client/ui-settings-general/src/client/index.ts"
+      ],
+      "consume": []
+    },
+    {
+      "slot": "sidebar",
+      "register": [
+        "packages/client/ui-sidebar/src/client/index.ts"
+      ],
+      "inject": [],
+      "consume": []
+    },
+    {
+      "slot": "sidebar.brand.mark",
+      "register": [
+        "packages/client/ui-brand-official/src/client/index.ts"
+      ],
+      "inject": [
+        "packages/client/ui-brand-official/src/client/index.ts"
+      ],
+      "consume": []
+    },
+    {
+      "slot": "sidebar.brand.name",
+      "register": [
+        "packages/client/ui-brand-official/src/client/index.ts"
+      ],
+      "inject": [
+        "packages/client/ui-brand-official/src/client/index.ts"
+      ],
+      "consume": []
+    },
+    {
+      "slot": "sidebar.footer.action",
+      "register": [
+        "packages/extensions/ui-cordis/src/client/index.ts"
+      ],
+      "inject": [
+        "packages/extensions/ui-cordis/src/client/index.ts"
+      ],
+      "consume": []
+    },
+    {
+      "slot": "sidebar.settings",
+      "register": [
+        "packages/client/ui-settings-general/src/client/index.ts"
+      ],
+      "inject": [
+        "packages/client/ui-settings-general/src/client/index.ts"
+      ],
+      "consume": []
+    },
+    {
+      "slot": "sidebar.workspaces",
+      "register": [
+        "packages/client/ui-workspace/src/client/index.ts"
+      ],
+      "inject": [
+        "packages/client/ui-workspace/src/client/index.ts"
+      ],
+      "consume": []
+    },
+    {
+      "slot": "sidebar.workspaces.directoryFlow",
+      "register": [
+        "packages/client/ui-directory-picker-browse/src/client/index.ts",
+        "packages/client/ui-directory-picker-native/src/client/index.ts"
+      ],
+      "inject": [
+        "packages/client/ui-directory-picker-browse/src/client/index.ts",
+        "packages/client/ui-directory-picker-native/src/client/index.ts"
+      ],
+      "consume": []
+    },
+    {
+      "slot": "tool.call.toolview",
+      "register": [
+        "packages/client/connection/src/client/fixture.ts",
+        "packages/client/ui-skill/src/client/index.ts",
+        "packages/client/ui-tool/src/client/tool/toolviews/ask-question-row.tsx",
+        "packages/client/ui-tool/src/client/tool/toolviews/bash-sample.tsx",
+        "packages/client/ui-tool/src/client/tool/toolviews/file-mutation-row.tsx",
+        "packages/client/ui-tool/src/client/tool/toolviews/read-row.tsx",
+        "packages/client/ui-tool/src/client/tool/toolviews/search-row.tsx",
+        "packages/client/ui-tool/src/client/tool/toolviews/todo-row.tsx",
+        "packages/client/ui-tool/src/client/tool/toolviews/web-row.tsx",
+        "packages/extensions/ui-cordis/src/client/index.ts"
+      ],
+      "inject": [
+        "packages/client/ui-skill/src/client/index.ts",
+        "packages/client/ui-tool/src/client/tool/toolviews/ask-question-row.tsx",
+        "packages/client/ui-tool/src/client/tool/toolviews/bash-sample.tsx",
+        "packages/client/ui-tool/src/client/tool/toolviews/file-mutation-row.tsx",
+        "packages/client/ui-tool/src/client/tool/toolviews/read-row.tsx",
+        "packages/client/ui-tool/src/client/tool/toolviews/search-row.tsx",
+        "packages/client/ui-tool/src/client/tool/toolviews/todo-row.tsx",
+        "packages/client/ui-tool/src/client/tool/toolviews/web-row.tsx",
+        "packages/extensions/ui-cordis/src/client/index.ts"
+      ],
+      "consume": []
+    }
+  ]
+}

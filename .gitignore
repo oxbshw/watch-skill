@@ -9,6 +9,10 @@ __pycache__/
 dist/
 build/
 
+# Node. The workspace keeps its own rules in workspace/.gitignore; this covers
+# an install that lands at the repository root by mistake.
+node_modules/
+
 # Environment / secrets
 .env
 .env.*

@@ -1,0 +1,34 @@
+{
+  "extends": "../../../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "lib",
+    "rootDir": "src",
+    "jsx": "react-jsx",
+    "lib": [
+      "ES2024",
+      "DOM"
+    ],
+    "types": [
+      "react"
+    ],
+    "noEmit": false
+  },
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.tsx"
+  ],
+  "references": [
+    {
+      "path": "../contracts"
+    },
+    {
+      "path": "../trajectory"
+    },
+    {
+      "path": "../brand"
+    },
+    {
+      "path": "../workspace"
+    }
+  ]
+}
