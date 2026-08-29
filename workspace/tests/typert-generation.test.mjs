@@ -28,6 +28,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { cpSync, mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { createHash } from 'node:crypto'
 import { createRequire } from 'node:module'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
@@ -179,8 +180,12 @@ test('no ambient declaration impersonates the protocol in maintained source', ()
   // The upstream fixture uses an ambient `declare module` as a test double.
   // Shipping one would let generation validate a protocol the Host never runs.
   const { spawnSync } = require('node:child_process')
+  // Assembled rather than written out. Spelling the ambient form as a literal
+  // would put it in this file, and `git grep` would then report this test as
+  // the very thing it exists to forbid.
+  const ambient = ['declare', 'module', `'@deepseek-ai/dsh-typert-protocol'`].join(' ')
   const grep = spawnSync('git',
-    ['grep', '-l', "declare module '@deepseek-ai/dsh-typert-protocol'", '--', 'workspace'],
+    ['grep', '-l', ambient, '--', 'workspace'],
     { cwd: join(ROOT, '..'), encoding: 'utf8' })
   // git grep exits 1 when it matches nothing, which is exactly the passing
   // case, so the status is read rather than thrown on.
@@ -309,4 +314,54 @@ test('a copy of the protocol outside node_modules is not the protocol', async ()
     rmSync(root, { recursive: true, force: true })
     rmSync(copyRoot, { recursive: true, force: true })
   }
+})
+
+// ── the bill of materials tells the truth about the patch ───────────────────
+
+test('the SBOM records the patched dependency rather than an ordinary one', () => {
+  const sbom = JSON.parse(readFileSync(join(ROOT, 'docs', 'sbom.json'), 'utf8'))
+  const patched = sbom.patchedDependencies ?? []
+  assert.equal(patched.length, 1, 'exactly one patched dependency')
+
+  const [entry] = patched
+  assert.equal(entry.name, '@deepseek-ai/dsh-typert-generator')
+  assert.equal(entry.upstreamVersion, '0.1.1-rc.2')
+  assert.equal(entry.patched, true)
+  assert.equal(entry.license, 'MIT')
+  assert.match(entry.scope, /build-time only/)
+  assert.match(entry.upstreamRepository, /deepseek-harness/)
+  assert.notEqual(entry.reason, '', 'a patch nobody explained is one nobody can review')
+
+  // The digest pnpm verifies on install, and the one this document claims.
+  // A patch edited without regenerating the SBOM is a mismatch a reader can act
+  // on; a document that simply omits the digest is not.
+  assert.match(entry.patchSha256, /^[0-9a-f]{64}$/)
+  assert.equal(entry.lockfileHash, entry.patchSha256,
+    'the SBOM digest must equal the digest recorded in pnpm-lock.yaml')
+  assert.equal(entry.digestsAgree, true)
+
+  // The patch file on disk has to be the one both of them name.
+  const onDisk = createHash('sha256')
+    .update(readFileSync(join(ROOT, entry.patchPath)))
+    .digest('hex')
+  assert.equal(onDisk, entry.patchSha256, 'the patch file changed without the SBOM')
+
+  for (const runtime of entry.runtimePackagesUnmodified) {
+    assert.doesNotMatch(entry.name, new RegExp(runtime.replace(/[/@-]/g, '.')),
+      'a runtime package must never be the patched one')
+  }
+})
+
+test('the patched generator is not listed as an ordinary third-party package', () => {
+  const sbom = JSON.parse(readFileSync(join(ROOT, 'docs', 'sbom.json'), 'utf8'))
+  const listed = sbom.thirdParty.filter(
+    pkg => pkg.name === '@deepseek-ai/dsh-typert-generator')
+  for (const pkg of listed) {
+    assert.equal(pkg.version, '0.1.1-rc.2',
+      'the upstream version is what the dependency graph resolves')
+  }
+  // It may appear in thirdParty -- it is a real dependency -- but the patched
+  // record has to exist alongside it, or a reader sees an unmodified release.
+  assert.ok((sbom.patchedDependencies ?? []).some(
+    entry => entry.name === '@deepseek-ai/dsh-typert-generator'))
 })

@@ -2812,6 +2812,27 @@
       "mayDistribute": true
     }
   ],
+  "patchedDependencies": [
+    {
+      "name": "@deepseek-ai/dsh-typert-generator",
+      "upstreamVersion": "0.1.1-rc.2",
+      "patched": true,
+      "patchPath": "patches/@deepseek-ai__dsh-typert-generator@0.1.1-rc.2.patch",
+      "patchSha256": "d9b7fb3b182ac9d2e913e380c6fcc14fc52bbf3eb1c93f62f793c13832a699aa",
+      "lockfileHash": "d9b7fb3b182ac9d2e913e380c6fcc14fc52bbf3eb1c93f62f793c13832a699aa",
+      "digestsAgree": true,
+      "scope": "build-time only; not present in any published runtime artifact",
+      "reason": "The generator recognises the @Remote decorator only from a registered workspace package or an ambient module declaration, so a package that depends on @deepseek-ai/dsh-typert-protocol through node_modules generates an empty protocol. The patch adds one branch that accepts a declaration resolved from the genuinely installed protocol package.",
+      "upstreamRepository": "https://github.com/deepseek-ai/deepseek-harness",
+      "license": "MIT",
+      "runtimePackagesUnmodified": [
+        "@deepseek-ai/dsh-typert-protocol",
+        "@deepseek-ai/dsh-api-gateway",
+        "@deepseek-ai/dsh-typert-registry",
+        "@deepseek-ai/dsh-client-connection"
+      ]
+    }
+  ],
   "counts": {
     "firstParty": 18,
     "thirdParty": 377,

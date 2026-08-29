@@ -20,6 +20,7 @@
  */
 
 import { readFileSync, writeFileSync, existsSync, readdirSync } from 'node:fs'
+import { createHash } from 'node:crypto'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -164,6 +165,80 @@ function normalizeLicense(value) {
   return 'UNKNOWN'
 }
 
+/** The digest pnpm recorded for one patched spec, or null. */
+function lockfileHashFor(lock, spec) {
+  const lines = lock.split(String.fromCharCode(10)).map(line => line.trimEnd())
+  const index = lines.findIndex(line => line.trim() === `'${spec}':` || line.trim() === `${spec}:`)
+  if (index < 0) return null
+  for (const line of lines.slice(index + 1, index + 5)) {
+    const match = /^\s+hash:\s*([0-9a-f]{64})\s*$/.exec(line)
+    if (match !== null) return match[1]
+    if (/^\S/.test(line)) break
+  }
+  return null
+}
+
+/**
+ * Dependencies this repository modifies, and what the modification is.
+ *
+ * A patched dependency is modified source, and a bill of materials that lists
+ * it as an ordinary upstream release is wrong about the most important thing it
+ * records. The digest is the one pnpm verifies on install, so a patch edited
+ * without regenerating this document is a mismatch a reader can act on.
+ *
+ * The scope matters as much as the fact. This is a build-time generator: it
+ * runs during `npm run build` and ships in nothing. The runtime Typert
+ * protocol, Gateway, registry and Connection are the packages a released build
+ * actually executes, and none of them is patched.
+ */
+function patchedDependencies() {
+  const manifest = JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8'))
+  const declared = manifest.pnpm?.patchedDependencies ?? {}
+  const lock = existsSync(join(ROOT, 'pnpm-lock.yaml'))
+    ? readFileSync(join(ROOT, 'pnpm-lock.yaml'), 'utf8')
+    : ''
+
+  return Object.entries(declared).map(([spec, patchPath]) => {
+    const at = spec.lastIndexOf('@')
+    const name = spec.slice(0, at)
+    const version = spec.slice(at + 1)
+    const absolute = join(ROOT, patchPath)
+    const contents = existsSync(absolute) ? readFileSync(absolute) : null
+    const digest = contents === null
+      ? null
+      : createHash('sha256').update(contents).digest('hex')
+    // Read from the block rather than with a regex built out of the spec:
+    // a package name carries slashes, dots and an @, and escaping all of them
+    // into a pattern is a way to get null and not notice.
+    const recorded = lockfileHashFor(lock, spec)
+
+    return {
+      name,
+      upstreamVersion: version,
+      patched: true,
+      patchPath,
+      patchSha256: digest,
+      lockfileHash: recorded,
+      digestsAgree: digest !== null && digest === recorded,
+      scope: 'build-time only; not present in any published runtime artifact',
+      reason:
+        'The generator recognises the @Remote decorator only from a registered '
+        + 'workspace package or an ambient module declaration, so a package that '
+        + 'depends on @deepseek-ai/dsh-typert-protocol through node_modules '
+        + 'generates an empty protocol. The patch adds one branch that accepts a '
+        + 'declaration resolved from the genuinely installed protocol package.',
+      upstreamRepository: 'https://github.com/deepseek-ai/deepseek-harness',
+      license: 'MIT',
+      runtimePackagesUnmodified: [
+        '@deepseek-ai/dsh-typert-protocol',
+        '@deepseek-ai/dsh-api-gateway',
+        '@deepseek-ai/dsh-typert-registry',
+        '@deepseek-ai/dsh-client-connection',
+      ],
+    }
+  })
+}
+
 /**
  * Model weights this distribution knows about.
  *
@@ -201,6 +276,7 @@ function main() {
   const first = watchPackages()
   const third = thirdPartyPackages()
   const weights = modelWeights()
+  const patched = patchedDependencies()
 
   const problems = []
 
@@ -234,6 +310,7 @@ function main() {
     firstParty: first,
     thirdParty: third,
     modelWeights: weights,
+    patchedDependencies: patched,
     counts: {
       firstParty: first.length,
       thirdParty: third.length,
