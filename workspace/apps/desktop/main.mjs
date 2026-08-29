@@ -151,12 +151,27 @@ function findNode() {
   return null
 }
 
-/** Locate the DSH CLI this build supervises. */
+/**
+ * Locate the DSH CLI this build supervises.
+ *
+ * `WATCH_DSH_CLI` wins, then the workspace's own install, then a `watch-smoke`
+ * checkout beside the workspace or beside the repository containing it.
+ *
+ * Both sibling depths are searched on purpose. The workspace used to be the
+ * repository root, so three levels up from here reached its siblings; it is a
+ * subdirectory now and the sibling is one level further out. Getting this
+ * wrong does not fail loudly -- the app starts in safe mode with no Host,
+ * which reads as a broken install rather than a missing path.
+ */
 function findCli() {
-  for (const dir of [
+  const candidates = [
+    process.env.WATCH_DSH_CLI,
     join(HERE, '..', '..', 'node_modules', '@deepseek-ai', 'dsh'),
     join(HERE, '..', '..', '..', 'watch-smoke', 'node_modules', '@deepseek-ai', 'dsh'),
-  ]) {
+    join(HERE, '..', '..', '..', '..', 'watch-smoke', 'node_modules', '@deepseek-ai', 'dsh'),
+  ].filter(dir => dir !== undefined)
+
+  for (const dir of candidates) {
     const entry = join(dir, 'lib', 'bin.js')
     if (existsSync(entry)) return entry
   }
