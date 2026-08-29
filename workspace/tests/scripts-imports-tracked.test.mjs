@@ -3,8 +3,8 @@
  *
  * This exists because it happened. `scripts/doctor.mjs` was changed to import
  * `./lib/node-range.mjs`, the commit went out, and the module did not: a bare
- * `lib/` in .gitignore -- written for the `packages/*/*/lib` build output --
- * also matched `scripts/lib/`, so `git add` skipped it with a hint that
+ * `lib/` in .gitignore -- written for the per-package build output -- also
+ * matched `scripts/lib/`, so `git add` skipped it with a hint that
  * scrolled past. Everything passed locally, because locally the file was
  * there. The first clean clone got
  *

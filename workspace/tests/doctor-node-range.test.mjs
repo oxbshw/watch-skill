@@ -20,7 +20,7 @@
  */
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { execFileSync } from 'node:child_process'
+import { spawnSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -73,9 +73,16 @@ test('the doctor reports the level the predicates imply for the Node running it'
   // The predicates being right is worth nothing if the report does not use
   // them. This runs the real doctor and checks the one finding whose input --
   // the Node executing this test -- is known here.
-  const out = execFileSync(process.execPath, [join(ROOT, 'scripts', 'doctor.mjs'), '--json'],
+  // `spawnSync`, not `execFileSync`: the doctor exits non-zero whenever any
+  // required check failed, which on a fresh CI checkout it always has -- the
+  // upstream baseline is not synced there. The report on stdout is the point
+  // and it is written either way, so the exit code is not read here.
+  const run = spawnSync(process.execPath, [join(ROOT, 'scripts', 'doctor.mjs'), '--json'],
     { encoding: 'utf8' })
-  const node = JSON.parse(out).findings.find(finding => finding.name === 'node')
+  assert.equal(run.error, undefined, `could not run the doctor: ${run.error?.message}`)
+  assert.notEqual(run.stdout.trim(), '',
+    `the doctor printed no report (exit ${run.status}): ${run.stderr}`)
+  const node = JSON.parse(run.stdout).findings.find(finding => finding.name === 'node')
   assert.ok(node !== undefined, 'the doctor reported no node finding at all')
 
   const expected = nodeSatisfies(DECLARED, process.version)
