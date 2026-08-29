@@ -17,6 +17,11 @@ export * from '../search.js'
 /** Services this half needs before it can register anything. */
 export const inject = ['slots', 'remote']
 
+// The boot graph reads `dsh.client.inject` from package.json, not this
+// constant, so `@deepseek-ai/dsh-api-remotes` is declared there as well. With
+// only the slots entry the module still loaded and `ctx.remote` was undefined,
+// which is a mount that fails silently rather than a plugin that refuses.
+
 /** The minimal shape of DSH's slot service this module uses. */
 interface SlotService {
   inject(name: string, register: () => void): void
