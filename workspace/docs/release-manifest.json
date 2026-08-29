@@ -86,8 +86,8 @@
       {
         "name": "@watchskill/dsh-contracts",
         "version": "0.1.0-preview.0",
-        "integrity": "sha256:6ab508ddba90b33cf3c68f8366a9b8ea80fb43767744298910702012007023e4",
-        "sourceFiles": 8
+        "integrity": "sha256:ff49ae107798cb15bcbde41c9782e9d5589cd2f7a68986b27440648365363631",
+        "sourceFiles": 9
       },
       {
         "name": "@watchskill/dsh-core-bridge",
@@ -98,8 +98,8 @@
       {
         "name": "@watchskill/dsh-library",
         "version": "0.1.0-preview.0",
-        "integrity": "sha256:43ebcaeef442ec2c24459c95de968c23a4dacd46f313a2a07a11ca8658c668c6",
-        "sourceFiles": 12
+        "integrity": "sha256:a0ed61076338e1acf8aeedab050505f6c5d493e5ccbf7e7ec158fbde907b842a",
+        "sourceFiles": 13
       },
       {
         "name": "@watchskill/dsh-live",
@@ -134,7 +134,7 @@
       {
         "name": "@watchskill/dsh-tools",
         "version": "0.1.0-preview.0",
-        "integrity": "sha256:113583a2997a553b4b30366763e4470a56b9da15063a2aac1d93f8b9968fdc60",
+        "integrity": "sha256:d5ef85370684a9f4657743caaafe61108f17bb4c354ecad775a640e4e959d7d4",
         "sourceFiles": 8
       },
       {
@@ -173,7 +173,7 @@
       "creators": [
         "Tool: watch-gen-release-manifest"
       ],
-      "created": "2026-08-29T16:40:23Z"
+      "created": "2026-08-29T20:41:26Z"
     },
     "packages": [
       {
@@ -284,7 +284,7 @@
         "checksums": [
           {
             "algorithm": "SHA256",
-            "checksumValue": "6ab508ddba90b33cf3c68f8366a9b8ea80fb43767744298910702012007023e4"
+            "checksumValue": "ff49ae107798cb15bcbde41c9782e9d5589cd2f7a68986b27440648365363631"
           }
         ]
       },
@@ -316,7 +316,7 @@
         "checksums": [
           {
             "algorithm": "SHA256",
-            "checksumValue": "43ebcaeef442ec2c24459c95de968c23a4dacd46f313a2a07a11ca8658c668c6"
+            "checksumValue": "a0ed61076338e1acf8aeedab050505f6c5d493e5ccbf7e7ec158fbde907b842a"
           }
         ]
       },
@@ -412,7 +412,7 @@
         "checksums": [
           {
             "algorithm": "SHA256",
-            "checksumValue": "113583a2997a553b4b30366763e4470a56b9da15063a2aac1d93f8b9968fdc60"
+            "checksumValue": "d5ef85370684a9f4657743caaafe61108f17bb4c354ecad775a640e4e959d7d4"
           }
         ]
       },

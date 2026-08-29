@@ -236,6 +236,13 @@
       "kind": "third_party"
     },
     {
+      "name": "@deepseek-ai/dsh-typert-generator",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
       "name": "@deepseek-ai/dsh-typert-protocol",
       "version": "0.1.1-rc.2",
       "license": "MIT",
@@ -358,6 +365,34 @@
       "name": "@humanwhocodes/retry",
       "version": "0.4.3",
       "license": "Apache-2.0",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@jridgewell/gen-mapping",
+      "version": "0.3.13",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@jridgewell/resolve-uri",
+      "version": "3.1.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@jridgewell/sourcemap-codec",
+      "version": "1.6.0",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@jridgewell/trace-mapping",
+      "version": "0.3.31",
+      "license": "MIT",
       "path": null,
       "kind": "third_party"
     },
@@ -2567,6 +2602,13 @@
       "kind": "third_party"
     },
     {
+      "name": "typescript",
+      "version": "6.0.3",
+      "license": "Apache-2.0",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
       "name": "typescript-eslint",
       "version": "8.68.0",
       "license": "MIT",
@@ -2772,7 +2814,7 @@
   ],
   "counts": {
     "firstParty": 18,
-    "thirdParty": 371,
+    "thirdParty": 377,
     "modelWeights": 5,
     "distributableWeights": 3
   }

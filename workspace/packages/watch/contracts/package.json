@@ -15,7 +15,14 @@
       "types": "./lib/query.d.ts",
       "default": "./lib/query.js"
     },
+    "./query/wire": {
+      "types": "./lib/query/wire.d.ts",
+      "default": "./lib/query/wire.js"
+    },
     "./package.json": "./package.json"
   },
-  "files": ["lib/**/*.js", "lib/**/*.d.ts"]
+  "files": [
+    "lib/**/*.js",
+    "lib/**/*.d.ts"
+  ]
 }

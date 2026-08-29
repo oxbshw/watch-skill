@@ -55,11 +55,24 @@ import type {
 } from '@watchskill/dsh-contracts/query'
 import type { WatchResult } from '@watchskill/dsh-contracts'
 import type {
-  IndexQuery, IndexQueryResult, LibraryIndex, SearchResult,
+  IndexQuery, IndexQueryResult, IndexableRecord, LibraryIndex, SearchResult,
 } from '@watchskill/dsh-library'
+import type {
+  LibraryGetRequest, LibraryGetResponse,
+  LibraryRecord, LibrarySearchRequest, LibrarySearchResponse,
+} from '@watchskill/dsh-contracts/query/wire'
 
 /** The two reads this namespace serves, narrowed off the request union. */
 type LibraryRequest = Extract<QueryRequest, { namespace: 'library' }>
+
+/**
+ * The request as it appears on the wire.
+ *
+ * Structurally the union `parseQueryRequest` produces, stated concretely so
+ * Typert has a type graph to emit descriptors from. It is a claim about the
+ * caller, not a guarantee: the boundary parses it again.
+ */
+export type QueryRequestWire = QueryRequest
 
 /** What the read plane needs from its host. */
 export interface ReadPlaneConfig {
@@ -153,6 +166,21 @@ export async function answerQuery(
 }
 
 /**
+ * The service key, on the Context both faces share.
+ *
+ * This is not documentation. Typert analyses a package's public export graph
+ * and binds a Remote through the Cordis Context declaration; without this the
+ * service is discovered as a package and emits no artifact, because nothing
+ * ties `WatchQueryService` to the key `watchQuery` that the Gateway exposes as
+ * `ctx.remote.watchQuery`.
+ */
+declare module '@deepseek-ai/cordis' {
+  interface Context {
+    watchQuery: WatchQueryService
+  }
+}
+
+/**
  * The Typert Remote a Watch surface calls.
  *
  * `watchQuery` is both the Cordis service key and the wire namespace, so the
@@ -166,10 +194,33 @@ export class WatchQueryService extends TypertRemoteService {
     this.#config = config
   }
 
-  /** The wire entry point. Everything it decides lives in `answerQuery`. */
-  @Remote('read')
-  async read(request: unknown): Promise<WatchResult<QuerySnapshot<unknown>>> {
-    return await answerQuery(request, this.#config)
+  /**
+   * One concrete method per read, rather than one `read` over a union.
+   *
+   * DSH already routes by method, so a discriminated union inside a single
+   * entry point would be a second router with its own schema to generate.
+   * One request type and one response type per method is what Typert emits
+   * a strict codec from most directly.
+   *
+   * `signal` is last, as Typert requires, and is not serialised.
+   */
+  @Remote('librarySearch')
+  librarySearch(
+    request: LibrarySearchRequest, signal: AbortSignal,
+  ): Promise<LibrarySearchResponse> {
+    // Not `async`: Typert requires a Promise return, and the search is
+    // synchronous today. Saying so here rather than marking the method
+    // async with nothing to await keeps the lint rule meaningful for when
+    // bounded execution makes this genuinely asynchronous.
+    return Promise.resolve(searchLibrary(request, this.#config, signal))
+  }
+
+  /** One record by id. A direct lookup, not a one-result search. */
+  @Remote('libraryGet')
+  libraryGet(
+    request: LibraryGetRequest, signal: AbortSignal,
+  ): Promise<LibraryGetResponse> {
+    return Promise.resolve(getLibraryRecord(request, this.#config, signal))
   }
 }
 
@@ -307,4 +358,107 @@ function snapshot(
 /** Install the read plane onto a host context. */
 export function applyReadPlane(ctx: Context, config: ReadPlaneConfig): void {
   new WatchQueryService(ctx, config)
+}
+
+/**
+ * Answer a Library search against the shared index.
+ *
+ * Separate from the Service so the whole path is testable without a DSH
+ * runtime, and so the Service stays a Typert adapter with no decisions in it.
+ */
+export function searchLibrary(
+  request: LibrarySearchRequest,
+  config: ReadPlaneConfig,
+  signal: AbortSignal,
+): LibrarySearchResponse {
+  if (signal.aborted) {
+    return {
+      outcome: 'deadline_exceeded',
+      protocol: WATCH_QUERY_PROTOCOL_VERSION,
+      requestId: request.requestId,
+      deadlineMs: request.deadlineMs,
+    }
+  }
+  const index = config.index()
+  const found = index.search({
+    text: request.query,
+    limit: request.limit,
+    offset: 0,
+  })
+  return {
+    outcome: 'page',
+    protocol: WATCH_QUERY_PROTOCOL_VERSION,
+    requestId: request.requestId,
+    revision: revisionOf(index),
+    records: found.results.map(toWireRecord),
+    nextCursor: null,
+    total: found.total,
+    indexState: found.health === 'ready' ? 'ready' : 'stale',
+  }
+}
+
+/** Flatten one search result into the wire record shape. */
+function toWireRecord(result: SearchResult): LibraryRecord {
+  return {
+    recordId: result.sourceId,
+    // The revision lives on the hit, not the result: one source can be hit
+    // at more than one revision, and the first hit is the one shown.
+    revisionId: result.hits[0]?.sourceRevisionId ?? '',
+    title: result.title,
+    modality: result.kind,
+    observedAt: null,
+    source: '',
+    runId: null,
+    verdict: null,
+    tags: [],
+    evidenceIds: [...new Set(result.hits.flatMap(hit => hit.evidenceIds))],
+    current: result.current,
+  }
+}
+
+/**
+ * Answer a Library get.
+ *
+ * `index.record()` is a keyed lookup. Implementing this as a search with
+ * `limit: 1` and then checking whether the single result happened to be the
+ * requested id reports every record except the top-ranked one as absent.
+ */
+export function getLibraryRecord(
+  request: LibraryGetRequest,
+  config: ReadPlaneConfig,
+  signal: AbortSignal,
+): LibraryGetResponse {
+  const base = { protocol: WATCH_QUERY_PROTOCOL_VERSION, requestId: request.requestId }
+  if (signal.aborted) {
+    return { outcome: 'deadline_exceeded', ...base, deadlineMs: request.deadlineMs }
+  }
+  const index = config.index()
+  const found = index.record(request.recordId)
+  const revision = revisionOf(index)
+  return found === undefined
+    ? { outcome: 'absent', ...base, revision, recordId: request.recordId }
+    : { outcome: 'record', ...base, revision, record: fromIndexRecord(found) }
+}
+
+/**
+ * The persisted record, as the wire carries it.
+ *
+ * Every field is the stored one. Nothing is derived from a temporal range: a
+ * range is media-relative, and an earlier version of this shape turned a clip
+ * beginning at offset zero into a 1970 timestamp.
+ */
+function fromIndexRecord(record: IndexableRecord): LibraryRecord {
+  return {
+    recordId: record.recordId,
+    revisionId: record.revisionId,
+    title: record.title,
+    modality: record.kind,
+    observedAt: record.observedAt,
+    source: record.source ?? '',
+    runId: record.runId,
+    verdict: record.verdict,
+    tags: [...record.tags],
+    evidenceIds: [...record.evidenceIds],
+    current: true,
+  }
 }

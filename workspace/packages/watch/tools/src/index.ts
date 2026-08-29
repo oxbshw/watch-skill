@@ -426,3 +426,12 @@ function abortOf(exec: { readonly signal?: AbortSignal }): { signal?: AbortSigna
 export default { name: 'watch-tools', inject, apply }
 
 export * from './library-search.js'
+
+/**
+ * The read plane's public face.
+ *
+ * Exported because Typert analyses a package's public export graph: a Remote
+ * that is only reachable through an internal module is not discovered, and no
+ * host or client artifact is emitted for it.
+ */
+export * from './read-plane.js'

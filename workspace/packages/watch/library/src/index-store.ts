@@ -260,6 +260,19 @@ export class LibraryIndex {
     return this.#health
   }
 
+  /**
+   * One record by id, or undefined.
+   *
+   * A direct lookup rather than a search. The read plane's `get` was briefly
+   * implemented as a search with `limit: 1` whose single result was then
+   * compared to the requested id, which reports every record except the
+   * first-ranked one as missing. `#documents` is already keyed by record id;
+   * this is the accessor that key exists for.
+   */
+  record(recordId: string): IndexableRecord | undefined {
+    return this.#documents.get(recordId)
+  }
+
   get size(): number {
     return this.#documents.size
   }
