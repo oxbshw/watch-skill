@@ -158,7 +158,7 @@
       {
         "name": "@watchskill/watch-desktop",
         "version": "0.1.0-preview.0",
-        "integrity": "sha256:b6184b2e75310b67395428a61b047f3ce6f790761972c4b6ebc302aa63731356",
+        "integrity": "sha256:adc4a14ce88152a13a1268f16b72912a34c0cf4e1dd70a9a33e1577a20aaf47c",
         "sourceFiles": 11
       }
     ]
@@ -168,12 +168,12 @@
     "dataLicense": "CC0-1.0",
     "SPDXID": "SPDXRef-DOCUMENT",
     "name": "@watchskill/watch-workspace-0.1.0-preview.0",
-    "documentNamespace": "https://github.com/oxbshw/watch-workspace/spdx/0.1.0-preview.0/mtdobmbt",
+    "documentNamespace": "https://github.com/oxbshw/watch-workspace/spdx/0.1.0-preview.0/mtdqs6h6",
     "creationInfo": {
       "creators": [
         "Tool: watch-gen-release-manifest"
       ],
-      "created": "2026-08-29T01:00:11Z"
+      "created": "2026-08-29T02:09:02Z"
     },
     "packages": [
       {
@@ -476,7 +476,7 @@
         "checksums": [
           {
             "algorithm": "SHA256",
-            "checksumValue": "b6184b2e75310b67395428a61b047f3ce6f790761972c4b6ebc302aa63731356"
+            "checksumValue": "adc4a14ce88152a13a1268f16b72912a34c0cf4e1dd70a9a33e1577a20aaf47c"
           }
         ]
       }

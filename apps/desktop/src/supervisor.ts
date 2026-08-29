@@ -28,6 +28,15 @@
 import { spawn, type ChildProcess } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
 
+/**
+ * How long to wait for the kernel to reap a child after SIGKILL.
+ *
+ * SIGKILL cannot be caught, so this is not a grace period -- it is a bound on
+ * waiting for a process that is already dying, so `stop()` cannot hang if the
+ * exit event never arrives.
+ */
+const REAP_TIMEOUT_MS = 2_000
+
 /** What a supervised child is. */
 export type ChildRole = 'dsh-host' | 'watch-core'
 
@@ -174,22 +183,47 @@ export class SupervisedChild {
     this.stopping = true
     this.setState('stopping', '')
 
-    await new Promise<void>(resolve => {
-      const timer = setTimeout(() => {
+    await new Promise<void>((resolve) => {
+      let settled = false
+      const finish = (): void => {
+        if (settled) return
+        settled = true
+        clearTimeout(grace)
+        clearTimeout(reap)
+        resolve()
+      }
+
+      // The child telling us it is gone is the only reliable signal. Node
+      // emits 'exit' once it has reaped the process, so every path below waits
+      // for it rather than assuming a signal took effect.
+      child.once('exit', finish)
+
+      let reap: ReturnType<typeof setTimeout> | undefined
+      const grace = setTimeout(() => {
         try {
           child.kill('SIGKILL')
         } catch {
           // Already gone between the check and the kill.
+          finish()
+          return
         }
-        resolve()
+        // Deliberately not resolving here.
+        //
+        // SIGKILL is asynchronous on POSIX: the signal is delivered and the
+        // kernel reaps the process a moment later. Resolving on send reported
+        // the child as stopped while `process.kill(pid, 0)` could still find
+        // it -- which passed on Windows, where SIGKILL maps to
+        // TerminateProcess and the handle is gone by the time kill() returns,
+        // and failed on macOS. Found by the first CI run on another platform.
+        reap = setTimeout(finish, REAP_TIMEOUT_MS)
+        reap.unref?.()
       }, this.spec.stopGraceMs)
-      timer.unref?.()
-      child.once('exit', () => { clearTimeout(timer); resolve() })
+      grace.unref?.()
+
       try {
         child.kill('SIGTERM')
       } catch {
-        clearTimeout(timer)
-        resolve()
+        finish()
       }
     })
 
