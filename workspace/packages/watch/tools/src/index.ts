@@ -23,6 +23,7 @@ import type { Context } from '@deepseek-ai/cordis'
 import s from '@deepseek-ai/schemastery'
 import { defineTool } from '@deepseek-ai/dsh-tools'
 import { applyLibrarySearch } from './library-search.js'
+import { applyReadPlane } from './read-plane.js'
 import type { GenericCallView, JsonValue } from '@deepseek-ai/dsh-tools'
 import type {} from '@deepseek-ai/dsh-system-prompt'
 import type {} from '@watchskill/dsh-core-bridge'
@@ -62,6 +63,13 @@ export interface Config {
    * search, not one that guesses at a convenient directory.
    */
   readonly libraryRoots?: readonly string[]
+  /**
+   * Which workspace this host answers for.
+   *
+   * Read-plane cursors are bound to it, so a cursor issued here cannot be
+   * replayed against another workspace's snapshot.
+   */
+  readonly workspaceScope?: string
 }
 
 /** Schemastery validation for the tool-surface policy. */
@@ -318,7 +326,16 @@ export function apply(ctx: Context, config: Config): void {
   // Library search runs on the host because that is the only place that can
   // read the evidence store: a client plugin gets no config, and ctx.remote
   // is an event bus rather than a query client.
-  applyLibrarySearch(ctx, { roots: config.libraryRoots ?? [] })
+  const library = applyLibrarySearch(ctx, { roots: config.libraryRoots ?? [] })
+
+  // The same index, reachable by the surfaces as well as by the agent. A
+  // `conversation.view` entry is handed `{ inspect, onInspectDone }` and
+  // nothing else, so without this the Library mode has no way to obtain the
+  // records it renders and defaults to an empty array.
+  applyReadPlane(ctx, {
+    index: library.index,
+    scope: config.workspaceScope ?? 'default',
+  })
 
   ctx.tools.register(defineTool({
     name: 'watch_verify',

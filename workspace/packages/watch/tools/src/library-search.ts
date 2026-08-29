@@ -218,8 +218,18 @@ function asJson(value: unknown): JsonValue {
   return value as JsonValue
 }
 
-/** Register the search tool. */
-export function applyLibrarySearch(ctx: Context, config: LibrarySearchConfig): void {
+/**
+ * Register the search tool, and hand back the index it holds.
+ *
+ * The accessor is returned rather than the index itself so the read plane sees
+ * a rebuild the moment it happens, without either side holding a reference to
+ * an object the other has replaced. One index answers both the agent's tool
+ * and the person's surface: two would drift inside a release and disagree
+ * about what the library contains.
+ */
+export function applyLibrarySearch(
+  ctx: Context, config: LibrarySearchConfig,
+): { readonly index: () => LibraryIndex } {
   // Built once and rebuilt on request. Holding it means a search does not
   // re-read the corpus on every keystroke; rebuilding on request means a
   // person is never stuck with an index that has fallen behind.
@@ -305,4 +315,7 @@ export function applyLibrarySearch(ctx: Context, config: LibrarySearchConfig): v
       })
     },
   }))
+
+  // The tool and the read plane share this. See the note on the signature.
+  return { index: () => indexNow(false) }
 }

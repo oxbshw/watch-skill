@@ -134,8 +134,8 @@
       {
         "name": "@watchskill/dsh-tools",
         "version": "0.1.0-preview.0",
-        "integrity": "sha256:d5e2c2fbd028d8743ad683f2a8a4857f052e8de7de47c219c45d05b940979ae0",
-        "sourceFiles": 7
+        "integrity": "sha256:113583a2997a553b4b30366763e4470a56b9da15063a2aac1d93f8b9968fdc60",
+        "sourceFiles": 8
       },
       {
         "name": "@watchskill/dsh-trajectory",
@@ -173,7 +173,7 @@
       "creators": [
         "Tool: watch-gen-release-manifest"
       ],
-      "created": "2026-08-29T15:52:32Z"
+      "created": "2026-08-29T16:40:23Z"
     },
     "packages": [
       {
@@ -412,7 +412,7 @@
         "checksums": [
           {
             "algorithm": "SHA256",
-            "checksumValue": "d5e2c2fbd028d8743ad683f2a8a4857f052e8de7de47c219c45d05b940979ae0"
+            "checksumValue": "113583a2997a553b4b30366763e4470a56b9da15063a2aac1d93f8b9968fdc60"
           }
         ]
       },
