@@ -37,6 +37,7 @@ import { join, dirname, basename, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { manualPath } from './lib/manual-paths.mjs'
 import { ensureCli } from './lib/dsh-cli.mjs'
+import { withPinnedPnpm } from './lib/pnpm-shim.mjs'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const HOME = manualPath('WATCH_MANUAL_HOME', ['dsh-home'])
@@ -331,6 +332,212 @@ function writeOverlay(corePath, memoryDir, evidenceRoot) {
   return path
 }
 
+/**
+ * Install the layers the profile declares.
+ *
+ * `dsh plugin install` writes a manifest naming `@deepseek-ai/dsh-base` and
+ * `@deepseek-ai/dsh-web-app` under `dsh.profile.bundles`, with `dependencies`
+ * empty, and installs neither. The bundle list is a declaration of what
+ * composes; it is not a dependency graph, and nothing else turns one into the
+ * other.
+ *
+ * Skipping this produced the worst available failure. Composition passed --
+ * `--dump-config` reads the declaration, so every gate that asks "are the rows
+ * there" said yes -- and the application then died at boot on
+ * ERR_MODULE_NOT_FOUND for a dozen packages, because module resolution starts
+ * at the profile directory and the profile had none of them.
+ *
+ * Pinned to the same DSH the CLI and the parity baseline are pinned to, so the
+ * profile cannot be composed against one version and measured against another.
+ */
+function installDeclaredBundles(cli, env) {
+  const manifestPath = join(HOME, 'profiles', PROFILE, 'package.json')
+  if (!existsSync(manifestPath)) fail(`the profile manifest was not created at ${manifestPath}`)
+  const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'))
+  const declared = manifest.dsh?.profile?.bundles ?? []
+  const installed = Object.keys(manifest.dependencies ?? {})
+
+  // Watch's own bundle arrives as a packed tarball a few lines later.
+  const wanted = declared.filter(name =>
+    name.startsWith('@deepseek-ai/') && !installed.includes(name))
+  if (wanted.length === 0) return
+
+  const version = pinnedDshVersion()
+  process.stdout.write(`installing the profile's declared layers (${wanted.join(', ')})
+`)
+  const added = run(
+    process.execPath,
+    [cli.entry, 'plugin', '--profile', PROFILE, 'add',
+      ...wanted.map(name => `${name}@${version}`)],
+    { env, cwd: ROOT },
+  )
+  if (added.status !== 0) fail('installing the declared layers failed', added.stderr || added.stdout)
+}
+
+/** The DSH version upstream/deepseek-harness.lock pins. */
+function pinnedDshVersion() {
+  const lock = readFileSync(join(ROOT, 'upstream', 'deepseek-harness.lock'), 'utf8')
+  const version = /^version:\s*(.+)$/m.exec(lock)?.[1]?.trim()
+  if (version === undefined || version === '') {
+    fail('upstream/deepseek-harness.lock names no version')
+  }
+  return version
+}
+
+/** The package a plugin reference names, without any subpath export. */
+function packageOf(reference) {
+  const parts = reference.split('/')
+  return reference.startsWith('@') ? parts.slice(0, 2).join('/') : parts[0]
+}
+
+/**
+ * Install every package the composed profile imports, as a direct dependency.
+ *
+ * Three facts about a DSH profile have to hold at once, and missing any one of
+ * them produces a profile that composes and cannot boot.
+ *
+ * `dsh.profile.bundles` names layers, not packages. The base layer's patch
+ * list names plugins -- `dsh-fs`, `dsh-sandbox`, `dsh-scope`, `dsh-timeout`
+ * and a dozen more -- that are not dependencies of `@deepseek-ai/dsh-base`,
+ * because a bundle declares what composes rather than what to fetch.
+ *
+ * So those plugins are not transitive dependencies of anything, and pnpm
+ * prunes what nothing depends on. Installing them and then running any further
+ * `pnpm add` removed them again: the profile lost fifty-odd packages per
+ * install, and each attempt to fix it by adding one more package removed
+ * more. They have to be direct dependencies.
+ *
+ * And they have to be added together. One `add` with the whole set computes
+ * one graph; several adds compute several, and every one after the first
+ * prunes what the previous one installed.
+ *
+ * The set comes from `dsh --dump-config`, which is DSH's own answer to what
+ * the profile consists of, so it follows the baseline instead of being a list
+ * here that a later version outgrows. The peers are read from the Watch
+ * packages that declare them, for the same reason.
+ */
+function installComposedPlugins(cli, env, overlay) {
+  const args = [cli.entry, '--profile', PROFILE]
+  if (overlay !== null) args.push('--patch', overlay)
+  args.push('--dump-config')
+  const dumped = run(process.execPath, args, { env, cwd: ROOT })
+  if (dumped.status !== 0) {
+    fail('`dsh --dump-config` failed, so the composed plugin set is unknown',
+      dumped.stderr || dumped.stdout)
+  }
+
+  const version = pinnedDshVersion()
+  const specs = new Set()
+  for (const match of (dumped.stdout ?? '').matchAll(/name:\s*'([^']+)'/g)) {
+    // A plugin may be named by a subpath export --
+    // `@deepseek-ai/dsh-tool-subagent-control/list-agents` is one entry in the
+    // composed tree -- and a subpath is not something a registry can resolve.
+    // Installing it verbatim fails the whole batch with
+    // ERR_PNPM_SPEC_NOT_SUPPORTED_BY_ANY_RESOLVER, naming one entry out of a
+    // hundred and thirty.
+    const name = packageOf(match[1])
+    if (!name.startsWith('@deepseek-ai/')) continue
+    // Only `dsh-*` follows the DSH release line. The cordis plugins in the
+    // same scope are versioned on their own -- cordis-plugin-timer is at 1.1.3
+    // where DSH is at 0.1.1-rc.2 -- so pinning the whole scope to the baseline
+    // version asks the registry for releases that do not exist, and the
+    // install fails naming none of them.
+    specs.add(name.startsWith('@deepseek-ai/dsh-') ? `${name}@${version}` : name)
+  }
+  if (specs.size === 0) fail('the composed profile named no plugin packages')
+
+  for (const [name, range] of Object.entries(composedPeers())) specs.add(`${name}@${range}`)
+
+  process.stdout.write(`installing ${String(specs.size)} composed package(s)
+`)
+  const added = run(
+    process.execPath, [cli.entry, 'plugin', '--profile', PROFILE, 'add', ...specs],
+    { env, cwd: ROOT },
+  )
+  if (added.status !== 0) {
+    fail('installing the composed packages failed', added.stderr || added.stdout)
+  }
+
+  installPeerClosure(cli, env, version)
+}
+
+/**
+ * Install what the installed plugins declare as peers, until nothing is left.
+ *
+ * DSH's plugin packages name their siblings in `peerDependencies` --
+ * `dsh-session-telemetry-otel` peers on `dsh-session-telemetry`, and so on
+ * down. In DSH's own repository every one of those resolves because the whole
+ * workspace is present. A profile is not a workspace: pnpm does not
+ * materialise an unsatisfied peer, and the first thing that imports one dies
+ * at boot with ERR_MODULE_NOT_FOUND naming a package nothing asked for
+ * directly.
+ *
+ * So the peers become direct dependencies too. It is a fixpoint rather than
+ * one pass, because the peers have peers; it converges quickly and the loop is
+ * bounded so a cycle cannot hang a build.
+ */
+function installPeerClosure(cli, env, version) {
+  const modules = join(HOME, 'profiles', PROFILE, 'node_modules')
+
+  for (let round = 0; round < 6; round += 1) {
+    const missing = new Set()
+    for (const scope of ['@deepseek-ai', '@watchskill']) {
+      const dir = join(modules, scope)
+      if (!existsSync(dir)) continue
+      for (const name of readdirSync(dir)) {
+        const manifestPath = join(dir, name, 'package.json')
+        if (!existsSync(manifestPath)) continue
+        let manifest
+        try {
+          manifest = JSON.parse(readFileSync(manifestPath, 'utf8'))
+        } catch {
+          continue
+        }
+        const optional = manifest.peerDependenciesMeta ?? {}
+        for (const peer of Object.keys(manifest.peerDependencies ?? {})) {
+          if (!peer.startsWith('@deepseek-ai/')) continue
+          if (optional[peer]?.optional === true) continue
+          if (existsSync(join(modules, ...peer.split('/')))) continue
+          missing.add(peer.startsWith('@deepseek-ai/dsh-') ? `${peer}@${version}` : peer)
+        }
+      }
+    }
+    if (missing.size === 0) return
+
+    process.stdout.write(
+      `  round ${String(round + 1)}: ${String(missing.size)} unsatisfied peer(s)
+`)
+    const added = run(
+      process.execPath, [cli.entry, 'plugin', '--profile', PROFILE, 'add', ...missing],
+      { env, cwd: ROOT },
+    )
+    if (added.status !== 0) fail('installing peer packages failed', added.stderr || added.stdout)
+  }
+  fail('the peer closure did not settle', 'six rounds of peer installation still found more')
+}
+
+/**
+ * Peer dependencies the Watch packages need the profile to provide.
+ *
+ * Read from the workspace catalog rather than restated, so a catalog bump
+ * moves the profile with it.
+ */
+function composedPeers() {
+  const catalog = readFileSync(join(ROOT, 'pnpm-workspace.yaml'), 'utf8')
+  const cordis = /"@deepseek-ai\/cordis":\s*(\S+)/.exec(catalog)?.[1]
+  if (cordis === undefined) fail('pnpm-workspace.yaml declares no @deepseek-ai/cordis catalog entry')
+  // React is a peer of every client package and is not in the catalog: the
+  // workspace takes it from its own devDependencies.
+  const manifest = JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8'))
+  const react = manifest.devDependencies?.react ?? manifest.dependencies?.react
+  if (react === undefined) fail('the workspace declares no react version for the profile to match')
+  return {
+    '@deepseek-ai/cordis': cordis,
+    react,
+    'react-dom': react,
+  }
+}
+
 function main() {
   const cli = findCli()
   if (cli === null) fail('the DSH CLI is not installed')
@@ -345,7 +552,7 @@ function main() {
   if (process.argv.includes('--rebuild')) removeTree(HOME)
   mkdirSync(HOME, { recursive: true })
   const env = {
-    ...process.env,
+    ...withPinnedPnpm(ROOT),
     DSH_HOME: HOME,
     // `dsh plugin` forwards to pnpm, and pnpm asks before removing a
     // node_modules whose store layout it does not recognise -- then aborts with
@@ -381,23 +588,13 @@ function main() {
   if (existsSync(profileManifest)) linkTarballs(tarballs)
   clearStaleInstalls()
 
-  pinProfilePackageManager()
-
   const init = run(process.execPath, [cli.entry, 'plugin', '--profile', PROFILE, 'install'], { env, cwd: ROOT })
   if (init.status !== 0) fail('`dsh plugin install` failed', init.stderr || init.stdout)
 
-  // `dsh plugin install` is what creates the manifest, so on a fresh profile
-  // the pin above had no file to write to and that first install ran with
-  // whatever pnpm Corepack chose. Pin it now that the file exists, drop a tree
-  // linked from another major's store, and install again -- the second run is
-  // the one whose linkage survives.
+  // Recorded once the manifest exists, so a person running pnpm in the profile
+  // by hand gets the same version the shim gave DSH.
   pinProfilePackageManager()
-  const relinked = clearStaleInstalls()
-  if (relinked) {
-    const again = run(
-      process.execPath, [cli.entry, 'plugin', '--profile', PROFILE, 'install'], { env, cwd: ROOT })
-    if (again.status !== 0) fail('`dsh plugin install` failed after re-pinning', again.stderr || again.stdout)
-  }
+  installDeclaredBundles(cli, env)
 
   linkTarballs(tarballs)
 
@@ -423,6 +620,10 @@ function main() {
       copyFileSync(join(FIXTURES, entry), join(seedDir, entry))
     }
   }
+
+  // Before composition is checked, and before anything tries to boot: the
+  // declared bundles are not the whole package set the composition imports.
+  installComposedPlugins(cli, env, overlay)
 
   const dump = run(
     process.execPath,

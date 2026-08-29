@@ -58,8 +58,16 @@ const OUT = join(ROOT, 'inventory', 'dsh-slots.json')
 /** Trees that may hold a real DSH install, in preference order. */
 const CANDIDATES = [
   process.env.WATCH_DSH_TREE,
-  join(manualRoot(), 'dsh-home', 'profiles', 'web', 'node_modules'),
+  // The CLI the smoke gates provision is a complete install of the pinned
+  // DSH, and it carries `@deepseek-ai/dsh` itself -- which is what makes the
+  // version knowable. The manual profile is listed after the workspace on
+  // purpose: it holds the runtime packages but not the CLI, so a scan of it
+  // reports `unknown` and a fraction of the bundles. Preferring whichever tree
+  // merely exists made the inventory depend on whether anyone had built a
+  // profile on this machine.
+  join(manualRoot(), 'dsh-cli', 'node_modules'),
   join(ROOT, 'node_modules'),
+  join(manualRoot(), 'dsh-home', 'profiles', 'web', 'node_modules'),
 ].filter(path => path !== undefined)
 
 /**
@@ -134,14 +142,23 @@ function main() {
   let tree
   let slots = new Map()
   let bundles = 0
-  for (const candidate of CANDIDATES) {
-    if (!existsSync(candidate)) continue
-    const found = scanTree(candidate)
-    if (found.slots.size === 0) continue
-    tree = candidate
-    slots = found.slots
-    bundles = found.bundles
-    break
+  // Two passes. A tree that carries `@deepseek-ai/dsh` can say which DSH it
+  // is, and an inventory that cannot name its version is not one anybody can
+  // check a bump against -- so those are preferred outright, and a tree
+  // without it is used only when nothing better exists.
+  const identifiable = candidate =>
+    existsSync(join(candidate, '@deepseek-ai', 'dsh', 'package.json'))
+  for (const pass of [identifiable, () => true]) {
+    for (const candidate of CANDIDATES) {
+      if (!existsSync(candidate) || !pass(candidate)) continue
+      const found = scanTree(candidate)
+      if (found.slots.size === 0) continue
+      tree = candidate
+      slots = found.slots
+      bundles = found.bundles
+      break
+    }
+    if (tree !== undefined) break
   }
 
   if (tree === undefined) {
@@ -190,7 +207,17 @@ function main() {
   const json = `${JSON.stringify(document, null, 2)}\n`
 
   if (check) {
-    if (!existsSync(OUT) || readFileSync(OUT, 'utf8') !== json) {
+    // `bundlesScanned` counts what this machine had to read, not anything
+    // DSH guarantees: a full CLI install and a profile tree reach the same
+    // slot contract through different numbers of files. Comparing it made
+    // the gate fail on whose machine ran it, which is the defect the SBOM
+    // had. The contract is what has to match.
+    const contract = value => JSON.stringify({
+      dshVersion: value.dshVersion,
+      slots: value.slots,
+    })
+    const committed = existsSync(OUT) ? JSON.parse(readFileSync(OUT, 'utf8')) : null
+    if (committed === null || contract(committed) !== contract(document)) {
       process.stderr.write('watch: inventory/dsh-slots.json is stale — run `node scripts/gen-dsh-slots.mjs`\n')
       process.exit(1)
     }
