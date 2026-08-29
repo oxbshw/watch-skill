@@ -18,12 +18,18 @@
 # run and fails closed only when a release is actually requested, so a workflow
 # can never quietly emit an unsigned artifact labelled as released.
 
-name: gates
+name: workspace
 
 on:
   push:
     branches: ['**']
+    paths:
+      - 'workspace/**'
+      - '.github/workflows/workspace-ci.yml'
   pull_request:
+    paths:
+      - 'workspace/**'
+      - '.github/workflows/workspace-ci.yml'
   workflow_dispatch:
 
 # Pinned, not floating. A toolchain that drifts turns a red build into a
@@ -46,6 +52,9 @@ jobs:
   # because running it three times costs three times as much to learn one fact.
   check:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: workspace
     steps:
       - uses: actions/checkout@v4
 
@@ -60,7 +69,7 @@ jobs:
           # stale cache — the failure mode where CI passes against packages
           # nobody has installed.
           cache: pnpm
-          cache-dependency-path: pnpm-lock.yaml
+          cache-dependency-path: workspace/pnpm-lock.yaml
 
       - name: Install
         run: pnpm install --frozen-lockfile
@@ -82,8 +91,8 @@ jobs:
         with:
           name: check-failure
           path: |
-            docs/*.json
-            **/*.log
+            workspace/docs/*.json
+            workspace/**/*.log
           retention-days: 7
 
   # The parts only the operating system itself can answer.
@@ -95,6 +104,9 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
     runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: workspace
     steps:
       - uses: actions/checkout@v4
 
@@ -106,7 +118,7 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
-          cache-dependency-path: pnpm-lock.yaml
+          cache-dependency-path: workspace/pnpm-lock.yaml
 
       - name: Install
         run: pnpm install --frozen-lockfile
@@ -153,6 +165,6 @@ jobs:
         with:
           name: platform-failure-${{ matrix.os }}
           path: |
-            **/*.log
-            qa/**
+            workspace/**/*.log
+            workspace/qa/**
           retention-days: 7
