@@ -22,6 +22,8 @@ import { existsSync, readFileSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
+import { nodeSatisfies, nodeBelowTestedFloorOnly } from './lib/node-range.mjs'
+
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const JSON_OUT = process.argv.includes('--json')
 
@@ -38,24 +40,6 @@ function probe(command, args) {
   }
 }
 
-/** `^22.19.0 || >=24.0.0` against the running Node, without a semver dependency. */
-function nodeSatisfies(declared, actual) {
-  const [major, minor, patch] = actual.replace(/^v/, '').split('.').map(Number)
-  for (const clause of declared.split('||').map(part => part.trim())) {
-    const caret = /^\^(\d+)\.(\d+)\.(\d+)$/.exec(clause)
-    if (caret !== null) {
-      const [, cMajor, cMinor, cPatch] = caret.map(Number)
-      if (major !== cMajor) continue
-      if (minor > cMinor) return true
-      if (minor === cMinor && patch >= cPatch) return true
-      continue
-    }
-    const atLeast = /^>=(\d+)/.exec(clause)
-    if (atLeast !== null && major >= Number(atLeast[1])) return true
-  }
-  return false
-}
-
 const findings = []
 const add = (level, name, detail, fix = null) => {
   findings.push({ level, name, detail, ...fix === null ? {} : { fix } })
@@ -70,6 +54,10 @@ if (declaredNode === '') {
   add('warn', 'node', `${actualNode}, and package.json declares no range`)
 } else if (nodeSatisfies(declaredNode, actualNode)) {
   add('ok', 'node', `${actualNode} satisfies ${declaredNode}`)
+} else if (nodeBelowTestedFloorOnly(declaredNode, actualNode)) {
+  add('warn', 'node', `${actualNode} is below the tested ${declaredNode}`,
+    'Everything runs here, but CI does not test this patch level. '
+    + 'Upgrade before trusting a failure you cannot reproduce on CI.')
 } else {
   add('fail', 'node', `${actualNode} does not satisfy ${declaredNode}`,
     'Install a Node in the declared range. nvm, fnm and volta all work.')
