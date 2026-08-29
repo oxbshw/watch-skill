@@ -138,6 +138,20 @@
       "kind": "third_party"
     },
     {
+      "name": "@deepseek-ai/cordis-plugin-include",
+      "version": "1.0.6",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/cordis-plugin-loader",
+      "version": "1.0.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
       "name": "@deepseek-ai/cosmokit",
       "version": "1.8.2",
       "license": "MIT",
@@ -152,6 +166,41 @@
       "kind": "third_party"
     },
     {
+      "name": "@deepseek-ai/dsh-agent-default-model",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-agent-presets",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-api-gateway",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-api-remotes",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-atomic-write",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
       "name": "@deepseek-ai/dsh-attachment",
       "version": "0.1.1-rc.2",
       "license": "MIT",
@@ -160,6 +209,13 @@
     },
     {
       "name": "@deepseek-ai/dsh-brand",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-client-connection",
       "version": "0.1.1-rc.2",
       "license": "MIT",
       "path": null,
@@ -187,6 +243,83 @@
       "kind": "third_party"
     },
     {
+      "name": "@deepseek-ai/dsh-commands",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-compaction",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-cordis-host-runner",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-credentials",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-file-reference",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-goal",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-home-paths",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-host-apiproxy",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-host-directory-picker",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-host-plugin-inventory",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-host-webserver",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
       "name": "@deepseek-ai/dsh-invariants",
       "version": "0.1.1-rc.2",
       "license": "MIT",
@@ -194,7 +327,35 @@
       "kind": "third_party"
     },
     {
+      "name": "@deepseek-ai/dsh-jobs",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
       "name": "@deepseek-ai/dsh-llm",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-message-feedback",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-native-command",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-output-retention",
       "version": "0.1.1-rc.2",
       "license": "MIT",
       "path": null,
@@ -209,6 +370,83 @@
     },
     {
       "name": "@deepseek-ai/dsh-session",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-session-persistence",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-session-projection",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-session-projection-cache",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-session-query",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-session-reference",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-session-title",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-settings",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-skill",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-storage",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-storage-domain",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-subagent",
       "version": "0.1.1-rc.2",
       "license": "MIT",
       "path": null,
@@ -250,7 +488,28 @@
       "kind": "third_party"
     },
     {
+      "name": "@deepseek-ai/dsh-typert-registry",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
       "name": "@deepseek-ai/dsh-user-approval",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-user-questions",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-workspace",
       "version": "0.1.1-rc.2",
       "license": "MIT",
       "path": null,
@@ -1449,6 +1708,13 @@
     {
       "name": "fdir",
       "version": "6.5.0",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "fflate",
+      "version": "0.8.3",
       "license": "MIT",
       "path": null,
       "kind": "third_party"
@@ -2728,6 +2994,13 @@
       "kind": "third_party"
     },
     {
+      "name": "ws",
+      "version": "8.21.3",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
       "name": "yauzl",
       "version": "2.10.0",
       "license": "MIT",
@@ -2842,7 +3115,7 @@
   ],
   "counts": {
     "firstParty": 18,
-    "thirdParty": 378,
+    "thirdParty": 417,
     "modelWeights": 5,
     "distributableWeights": 3
   }

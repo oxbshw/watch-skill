@@ -190,11 +190,21 @@ declare module '@deepseek-ai/cordis' {
  * client reaches it as `ctx.remote.watchQuery`.
  */
 export class WatchQueryService extends TypertRemoteService {
-  readonly #config: ReadPlaneConfig
+  /**
+   * Deliberately not a `#private` field.
+   *
+   * Cordis hands a Service to callers through a Proxy, and a private field is
+   * unreachable through one: the Gateway invoked this method and got
+   * "Cannot read private member #config from an object whose class did not
+   * declare it". Every direct unit test passed, because a direct call has no
+   * proxy in front of it -- which is the whole argument for exercising this
+   * through the real Gateway.
+   */
+  readonly config: ReadPlaneConfig
 
   constructor(ctx: Context, config: ReadPlaneConfig) {
     super(ctx, 'watchQuery')
-    this.#config = config
+    this.config = config
   }
 
   /**
@@ -215,7 +225,7 @@ export class WatchQueryService extends TypertRemoteService {
     // synchronous today. Saying so here rather than marking the method
     // async with nothing to await keeps the lint rule meaningful for when
     // bounded execution makes this genuinely asynchronous.
-    return Promise.resolve(searchLibrary(request, this.#config, signal))
+    return Promise.resolve(searchLibrary(request, this.config, signal))
   }
 
   /** One record by id. A direct lookup, not a one-result search. */
@@ -223,7 +233,7 @@ export class WatchQueryService extends TypertRemoteService {
   libraryGet(
     request: LibraryGetRequest, signal: AbortSignal,
   ): Promise<LibraryGetResponse> {
-    return Promise.resolve(getLibraryRecord(request, this.#config, signal))
+    return Promise.resolve(getLibraryRecord(request, this.config, signal))
   }
 }
 
@@ -401,29 +411,50 @@ export function searchLibrary(
     protocol: WATCH_QUERY_PROTOCOL_VERSION,
     requestId: checked.requestId,
     revision: revisionOf(index),
-    records: found.results.map(toWireRecord),
+    records: found.results.map(result => toWireRecord(result, index)),
     nextCursor: null,
     total: found.total,
     indexState: found.health === 'ready' ? 'ready' : 'stale',
   }
 }
 
-/** Flatten one search result into the wire record shape. */
-function toWireRecord(result: SearchResult): LibraryRecord {
+/**
+ * Flatten one search result into the wire record shape.
+ *
+ * The persisted record is looked up rather than reconstructed from the hit. A
+ * `SearchResult` carries what matching produced -- title, kind, hits -- and not
+ * the provenance the surface has to show, so building the wire record from it
+ * alone returned a null observedAt, an empty source and no runId. A search
+ * result and a get result describe the same record and must not disagree about
+ * where it came from.
+ */
+function toWireRecord(result: SearchResult, index: LibraryIndex): LibraryRecord {
+  const stored = index.record(result.sourceId)
+  const evidenceIds = [...new Set(result.hits.flatMap(hit => hit.evidenceIds))]
+  if (stored === undefined) {
+    // Indexed and then removed between the search and this read. Say what the
+    // hit knows and nothing more; inventing provenance would be worse.
+    return {
+      recordId: result.sourceId,
+      // The revision lives on the hit, not the result: one source can be hit at
+      // more than one revision, and the first hit is the one shown.
+      revisionId: result.hits[0]?.sourceRevisionId ?? '',
+      title: result.title,
+      modality: result.kind,
+      observedAt: null,
+      source: '',
+      runId: null,
+      verdict: null,
+      tags: [],
+      evidenceIds,
+      current: result.current,
+    }
+  }
   return {
-    recordId: result.sourceId,
-    // The revision lives on the hit, not the result: one source can be hit
-    // at more than one revision, and the first hit is the one shown.
-    revisionId: result.hits[0]?.sourceRevisionId ?? '',
-    title: result.title,
-    modality: result.kind,
-    observedAt: null,
-    source: '',
-    runId: null,
-    verdict: null,
-    tags: [],
-    evidenceIds: [...new Set(result.hits.flatMap(hit => hit.evidenceIds))],
+    ...fromIndexRecord(stored),
+    // `current` is a property of this hit against the index, not of the record.
     current: result.current,
+    evidenceIds: evidenceIds.length > 0 ? evidenceIds : [...stored.evidenceIds],
   }
 }
 

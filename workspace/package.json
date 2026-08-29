@@ -58,7 +58,9 @@
   },
   "devDependencies": {
     "@deepseek-ai/cordis": "catalog:",
+    "@deepseek-ai/dsh-api-gateway": "catalog:",
     "@deepseek-ai/dsh-typert-generator": "catalog:",
+    "@deepseek-ai/dsh-typert-registry": "catalog:",
     "@deepseek-ai/schemastery": "^3.18.1",
     "@eslint/js": "^9.39.5",
     "@types/node": "^22.20.0",
