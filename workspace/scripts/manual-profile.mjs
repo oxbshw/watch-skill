@@ -95,10 +95,20 @@ function removeTree(target) {
 }
 
 function findCli() {
-  for (const dir of [
+  // `WATCH_DSH_CLI` first, then the workspace's own install, then a
+  // `watch-smoke` checkout beside either the workspace or the repository.
+  //
+  // The two-levels-up entry is not redundant: the workspace used to be the
+  // repository root, so one level up reached its siblings. It is a
+  // subdirectory now, and the sibling it wants is a level further out.
+  const candidates = [
+    process.env.WATCH_DSH_CLI,
     join(ROOT, 'node_modules', '@deepseek-ai', 'dsh'),
     join(ROOT, '..', 'watch-smoke', 'node_modules', '@deepseek-ai', 'dsh'),
-  ]) {
+    join(ROOT, '..', '..', 'watch-smoke', 'node_modules', '@deepseek-ai', 'dsh'),
+  ].filter(path => path !== undefined)
+
+  for (const dir of candidates) {
     if (!existsSync(join(dir, 'package.json'))) continue
     const manifest = JSON.parse(readFileSync(join(dir, 'package.json'), 'utf8'))
     const bin = typeof manifest.bin === 'string' ? manifest.bin : manifest.bin?.dsh
