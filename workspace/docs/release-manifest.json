@@ -168,12 +168,12 @@
     "dataLicense": "CC0-1.0",
     "SPDXID": "SPDXRef-DOCUMENT",
     "name": "@watchskill/watch-workspace-0.1.0-preview.0",
-    "documentNamespace": "https://github.com/oxbshw/watch-workspace/spdx/0.1.0-preview.0/mtdsy3ys",
+    "documentNamespace": "https://github.com/oxbshw/watch-skill/spdx/@watchskill/watch-workspace/0.1.0-preview.0",
     "creationInfo": {
       "creators": [
         "Tool: watch-gen-release-manifest"
       ],
-      "created": "2026-08-29T03:09:38Z"
+      "created": "2026-08-29T08:09:08Z"
     },
     "packages": [
       {

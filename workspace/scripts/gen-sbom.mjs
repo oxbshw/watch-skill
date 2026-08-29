@@ -23,6 +23,8 @@ import { readFileSync, writeFileSync, existsSync, readdirSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
+import { parseLockfilePackages, platformFamily } from './lib/pnpm-lockfile.mjs'
+
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const OUTPUT = join(ROOT, 'docs', 'sbom.json')
 
@@ -67,17 +69,17 @@ function watchPackages() {
 }
 
 /**
- * Every installed third-party package.
+ * The licence of every package that is actually on disk, by `name@version`.
  *
- * Read from the pnpm store layout rather than from the lockfile, because what
- * is actually on disk is what actually ships, and a lockfile can describe a
- * tree that was never materialized.
+ * Only a lookup table now. What ships is decided from the lockfile; this
+ * answers what each entry is licensed under, which the lockfile does not
+ * record.
  */
-function installedPackages() {
+function installedLicenses() {
   const store = join(ROOT, 'node_modules', '.pnpm')
-  if (!existsSync(store)) return []
+  const licenses = new Map()
+  if (!existsSync(store)) return licenses
 
-  const found = new Map()
   for (const entry of readdirSync(store)) {
     if (entry === 'node_modules' || entry === 'lock.yaml') continue
     const modules = join(store, entry, 'node_modules')
@@ -87,21 +89,71 @@ function installedPackages() {
         ? readdirSync(join(modules, scope)).map(name => `${scope}/${name}`)
         : [scope]
       for (const name of paths) {
-        const found_manifest = manifest(join(modules, name, 'package.json'))
-        if (found_manifest === null || found_manifest.name === undefined) continue
-        const key = `${found_manifest.name}@${found_manifest.version}`
-        if (found.has(key)) continue
-        found.set(key, {
-          name: found_manifest.name,
-          version: found_manifest.version ?? 'unknown',
-          license: normalizeLicense(found_manifest.license ?? found_manifest.licenses),
-          path: null,
-          kind: 'third_party',
-        })
+        const found = manifest(join(modules, name, 'package.json'))
+        if (found === null || found.name === undefined) continue
+        const key = `${found.name}@${found.version ?? 'unknown'}`
+        if (!licenses.has(key)) {
+          licenses.set(key, normalizeLicense(found.license ?? found.licenses))
+        }
       }
     }
   }
-  return [...found.values()].sort((a, b) => a.name.localeCompare(b.name))
+  return licenses
+}
+
+/**
+ * Every third-party package this distribution resolves, from the lockfile.
+ *
+ * The lockfile is the source rather than the installed tree because it names
+ * every platform variant on every machine. See scripts/lib/pnpm-lockfile.mjs
+ * for what went wrong when this was read off disk.
+ *
+ * A platform binary absent from this host takes the licence of an installed
+ * sibling — the same package built for another target. Siblings that disagree
+ * are a real problem rather than something to pick a winner from, so they stop
+ * the build.
+ */
+function thirdPartyPackages() {
+  const locked = parseLockfilePackages(readFileSync(join(ROOT, 'pnpm-lock.yaml'), 'utf8'))
+  const onDisk = installedLicenses()
+
+  const families = new Map()
+  for (const pkg of locked) {
+    const family = platformFamily(pkg.name)
+    if (family === null) continue
+    const license = onDisk.get(`${pkg.name}@${pkg.version}`)
+    if (license === undefined) continue
+    const key = `${family}@${pkg.version}`
+    if (!families.has(key)) families.set(key, new Set())
+    families.get(key).add(license)
+  }
+
+  for (const [family, licenses] of families) {
+    if (licenses.size > 1) {
+      process.stderr.write(
+        `watch: ${family} platform builds disagree on their licence `
+        + `(${[...licenses].sort().join(', ')}). The SBOM cannot state one.
+`,
+      )
+      process.exit(1)
+    }
+  }
+
+  return locked
+    .map(pkg => {
+      const family = platformFamily(pkg.name)
+      const inherited = family === null
+        ? undefined
+        : [...(families.get(`${family}@${pkg.version}`) ?? [])][0]
+      return {
+        name: pkg.name,
+        version: pkg.version,
+        license: onDisk.get(`${pkg.name}@${pkg.version}`) ?? inherited ?? 'UNKNOWN',
+        path: null,
+        kind: 'third_party',
+      }
+    })
+    .sort((a, b) => a.name.localeCompare(b.name) || a.version.localeCompare(b.version))
 }
 
 /** Reduce the shapes a `license` field takes to one string. */
@@ -147,7 +199,7 @@ function main() {
   const check = process.argv.includes('--check')
 
   const first = watchPackages()
-  const third = installedPackages()
+  const third = thirdPartyPackages()
   const weights = modelWeights()
 
   const problems = []

@@ -159,8 +159,15 @@ function spdxDocument(packages, root) {
     dataLicense: 'CC0-1.0',
     SPDXID: 'SPDXRef-DOCUMENT',
     name: `${root.name}-${root.version}`,
+    // Two things this must not do: name a repository that no longer exists,
+    // and change on every run. It pointed at oxbshw/watch-workspace, which was
+    // folded into this repository, and it appended Date.now() -- so two
+    // generations of an identical build produced two different documents and
+    // the field had to be excluded from the staleness comparison to keep the
+    // gate quiet. Name plus version identifies the document, and identical
+    // input now produces an identical namespace.
     documentNamespace:
-      `https://github.com/oxbshw/watch-workspace/spdx/${root.version}/${Date.now().toString(36)}`,
+      `https://github.com/oxbshw/watch-skill/spdx/${root.name}/${root.version}`,
     creationInfo: {
       // A tool, named. An SPDX document with no creator is one nobody can ask
       // about a field they do not understand.
@@ -272,14 +279,19 @@ function main() {
     process.exit(1)
   }
 
-  // The namespace and creation time change every run by design, so staleness
-  // is judged on everything that describes the build rather than on the whole
-  // document.
+  // Only the creation time is excluded, and only because it is a wall clock:
+  // it moves whenever the document is rewritten and would otherwise make every
+  // run look stale. The namespace used to be excluded for the same reason,
+  // which meant a namespace naming the wrong repository could never be
+  // corrected -- the generator compared everything except the field that was
+  // wrong and reported itself up to date. It is derived from name and version
+  // now, so it is checked like anything else that describes the build.
   const comparable = value => JSON.stringify({
     release: value.release,
     compatibility: value.compatibility,
     migration: value.migration,
     integrity: value.integrity,
+    namespace: value.spdx.documentNamespace,
     packages: value.spdx.packages,
   })
 

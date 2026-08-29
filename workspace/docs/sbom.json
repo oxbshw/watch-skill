@@ -376,6 +376,104 @@
       "kind": "third_party"
     },
     {
+      "name": "@rolldown/binding-android-arm-eabi",
+      "version": "1.2.6",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@rolldown/binding-android-arm64",
+      "version": "1.2.6",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@rolldown/binding-darwin-arm64",
+      "version": "1.2.6",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@rolldown/binding-darwin-x64",
+      "version": "1.2.6",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@rolldown/binding-freebsd-x64",
+      "version": "1.2.6",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@rolldown/binding-linux-arm-gnueabihf",
+      "version": "1.2.6",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@rolldown/binding-linux-arm64-gnu",
+      "version": "1.2.6",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@rolldown/binding-linux-arm64-musl",
+      "version": "1.2.6",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@rolldown/binding-linux-ppc64-gnu",
+      "version": "1.2.6",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@rolldown/binding-linux-s390x-gnu",
+      "version": "1.2.6",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@rolldown/binding-linux-x64-gnu",
+      "version": "1.2.6",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@rolldown/binding-linux-x64-musl",
+      "version": "1.2.6",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@rolldown/binding-openharmony-arm64",
+      "version": "1.2.6",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@rolldown/binding-win32-arm64-msvc",
+      "version": "1.2.6",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
       "name": "@rolldown/binding-win32-x64-msvc",
       "version": "1.2.6",
       "license": "MIT",
@@ -538,14 +636,14 @@
     },
     {
       "name": "@types/node",
-      "version": "22.20.1",
+      "version": "20.19.43",
       "license": "MIT",
       "path": null,
       "kind": "third_party"
     },
     {
       "name": "@types/node",
-      "version": "20.19.43",
+      "version": "22.20.1",
       "license": "MIT",
       "path": null,
       "kind": "third_party"
@@ -663,7 +761,161 @@
       "kind": "third_party"
     },
     {
+      "name": "@yuku-codegen/binding-android-arm64",
+      "version": "0.8.7",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@yuku-codegen/binding-darwin-arm64",
+      "version": "0.8.7",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@yuku-codegen/binding-darwin-x64",
+      "version": "0.8.7",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@yuku-codegen/binding-freebsd-x64",
+      "version": "0.8.7",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@yuku-codegen/binding-linux-arm-gnu",
+      "version": "0.8.7",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@yuku-codegen/binding-linux-arm-musl",
+      "version": "0.8.7",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@yuku-codegen/binding-linux-arm64-gnu",
+      "version": "0.8.7",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@yuku-codegen/binding-linux-arm64-musl",
+      "version": "0.8.7",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@yuku-codegen/binding-linux-x64-gnu",
+      "version": "0.8.7",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@yuku-codegen/binding-linux-x64-musl",
+      "version": "0.8.7",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@yuku-codegen/binding-win32-arm64",
+      "version": "0.8.7",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
       "name": "@yuku-codegen/binding-win32-x64",
+      "version": "0.8.7",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@yuku-parser/binding-android-arm64",
+      "version": "0.8.7",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@yuku-parser/binding-darwin-arm64",
+      "version": "0.8.7",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@yuku-parser/binding-darwin-x64",
+      "version": "0.8.7",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@yuku-parser/binding-freebsd-x64",
+      "version": "0.8.7",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@yuku-parser/binding-linux-arm-gnu",
+      "version": "0.8.7",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@yuku-parser/binding-linux-arm-musl",
+      "version": "0.8.7",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@yuku-parser/binding-linux-arm64-gnu",
+      "version": "0.8.7",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@yuku-parser/binding-linux-arm64-musl",
+      "version": "0.8.7",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@yuku-parser/binding-linux-x64-gnu",
+      "version": "0.8.7",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@yuku-parser/binding-linux-x64-musl",
+      "version": "0.8.7",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@yuku-parser/binding-win32-arm64",
       "version": "0.8.7",
       "license": "MIT",
       "path": null,
@@ -1077,14 +1329,14 @@
     },
     {
       "name": "eslint-visitor-keys",
-      "version": "5.0.1",
+      "version": "4.2.1",
       "license": "Apache-2.0",
       "path": null,
       "kind": "third_party"
     },
     {
       "name": "eslint-visitor-keys",
-      "version": "4.2.1",
+      "version": "5.0.1",
       "license": "Apache-2.0",
       "path": null,
       "kind": "third_party"
@@ -1448,6 +1700,76 @@
     },
     {
       "name": "lightningcss",
+      "version": "1.32.0",
+      "license": "MPL-2.0",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "lightningcss-android-arm64",
+      "version": "1.32.0",
+      "license": "MPL-2.0",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "lightningcss-darwin-arm64",
+      "version": "1.32.0",
+      "license": "MPL-2.0",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "lightningcss-darwin-x64",
+      "version": "1.32.0",
+      "license": "MPL-2.0",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "lightningcss-freebsd-x64",
+      "version": "1.32.0",
+      "license": "MPL-2.0",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "lightningcss-linux-arm-gnueabihf",
+      "version": "1.32.0",
+      "license": "MPL-2.0",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "lightningcss-linux-arm64-gnu",
+      "version": "1.32.0",
+      "license": "MPL-2.0",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "lightningcss-linux-arm64-musl",
+      "version": "1.32.0",
+      "license": "MPL-2.0",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "lightningcss-linux-x64-gnu",
+      "version": "1.32.0",
+      "license": "MPL-2.0",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "lightningcss-linux-x64-musl",
+      "version": "1.32.0",
+      "license": "MPL-2.0",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "lightningcss-win32-arm64-msvc",
       "version": "1.32.0",
       "license": "MPL-2.0",
       "path": null,
@@ -1819,15 +2141,15 @@
     },
     {
       "name": "minimatch",
-      "version": "3.1.5",
-      "license": "ISC",
+      "version": "10.2.6",
+      "license": "BlueOak-1.0.0",
       "path": null,
       "kind": "third_party"
     },
     {
       "name": "minimatch",
-      "version": "10.2.6",
-      "license": "BlueOak-1.0.0",
+      "version": "3.1.5",
+      "license": "ISC",
       "path": null,
       "kind": "third_party"
     },
@@ -2450,7 +2772,7 @@
   ],
   "counts": {
     "firstParty": 18,
-    "thirdParty": 325,
+    "thirdParty": 371,
     "modelWeights": 5,
     "distributableWeights": 3
   }
