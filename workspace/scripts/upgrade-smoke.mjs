@@ -37,8 +37,9 @@ import { spawnSync } from 'node:child_process'
 import {
   existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync, rmSync,
 } from 'node:fs'
-import { join, dirname, resolve, basename } from 'node:path'
+import { join, dirname, basename } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { ensureCli } from './lib/dsh-cli.mjs'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const HOME = process.env.WATCH_UPGRADE_HOME ?? join(ROOT, '.dsh-upgrade')
@@ -73,19 +74,16 @@ function run(command, args, options = {}) {
 }
 
 /** Locate the `dsh` CLI, whichever tree it was installed into. */
+/**
+ * The pinned DSH CLI, installed into the harness's own directory if absent.
+ *
+ * This used to search two fixed places and, finding neither, print an
+ * instruction to create `../watch-smoke` by hand. That made a documented gate
+ * depend on an undocumented sibling, and CI -- which has no such directory --
+ * never ran it at all.
+ */
 function findCli() {
-  for (const dir of [
-    join(ROOT, 'node_modules', '@deepseek-ai', 'dsh'),
-    join(ROOT, '..', 'watch-smoke', 'node_modules', '@deepseek-ai', 'dsh'),
-  ]) {
-    if (!existsSync(join(dir, 'package.json'))) continue
-    const manifest = JSON.parse(readFileSync(join(dir, 'package.json'), 'utf8'))
-    const bin = typeof manifest.bin === 'string' ? manifest.bin : manifest.bin?.dsh
-    if (bin === undefined) continue
-    const entry = resolve(dir, bin)
-    if (existsSync(entry)) return { entry, version: manifest.version }
-  }
-  return null
+  return ensureCli(ROOT)
 }
 
 /** The bundle's transitive first-party dependencies, deepest first. */

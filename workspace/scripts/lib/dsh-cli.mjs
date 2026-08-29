@@ -39,6 +39,21 @@ export function pinnedVersion(root) {
 }
 
 /**
+ * The exact pnpm the workspace pins, validated before it is interpolated.
+ *
+ * The same spec the bootstrap runs, so the CLI these gates measure against is
+ * fetched by the resolver that built everything else.
+ */
+export function pinnedPackageManager(root) {
+  const manifest = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'))
+  const spec = manifest.packageManager
+  if (typeof spec !== 'string' || !/^pnpm@\d+\.\d+\.\d+$/.test(spec)) {
+    throw new Error(`package.json packageManager must pin an exact pnpm, got ${String(spec)}`)
+  }
+  return spec
+}
+
+/**
  * Where the harness keeps the copy it installed itself.
  *
  * Beside the rest of the manual-QA material rather than inside the
@@ -94,8 +109,8 @@ export function ensureCli(root, env = process.env) {
 
   const dir = cacheDir()
   mkdirSync(dir, { recursive: true })
-  // A manifest of its own, so npm treats this as a project rather than walking
-  // up and installing into the workspace.
+  // A manifest of its own, so the installer treats this as a project
+  // rather than walking up and installing into the workspace.
   writeFileSync(
     join(dir, 'package.json'),
     `${JSON.stringify({ name: 'watch-dsh-cli', private: true, version: '0.0.0' }, null, 2)}\n`,
@@ -103,8 +118,12 @@ export function ensureCli(root, env = process.env) {
   )
   process.stdout.write(`watch: installing @deepseek-ai/dsh@${wanted} for the smoke gates\n`)
   const result = spawnSync(
-    `npm install --no-audit --no-fund --loglevel error @deepseek-ai/dsh@${wanted}`,
-    { cwd: dir, stdio: 'inherit', shell: true },
+    // pnpm, through the same pinned Corepack spec the bootstrap uses. Not a
+    // preference: npm spent thirty minutes resolving this tree and wrote
+    // nothing, where pnpm's content-addressed store finished in under two.
+    `corepack ${pinnedPackageManager(root)} add @deepseek-ai/dsh@${wanted}`,
+    { cwd: dir, stdio: 'inherit', shell: true,
+      env: { ...env, COREPACK_ENABLE_DOWNLOAD_PROMPT: '0' } },
   )
   if (result.status !== 0) return findCli(root, env)
   return findCli(root, env)

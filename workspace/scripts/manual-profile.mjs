@@ -33,9 +33,10 @@ import { spawnSync } from 'node:child_process'
 import {
   existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync, rmSync, copyFileSync,
 } from 'node:fs'
-import { join, dirname, resolve, basename, sep } from 'node:path'
+import { join, dirname, basename, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { manualPath } from './lib/manual-paths.mjs'
+import { ensureCli } from './lib/dsh-cli.mjs'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const HOME = manualPath('WATCH_MANUAL_HOME', ['dsh-home'])
@@ -95,29 +96,16 @@ function removeTree(target) {
   }
 }
 
+/**
+ * The pinned DSH CLI, installed into the harness's own directory if absent.
+ *
+ * This used to search two fixed places and, finding neither, print an
+ * instruction to create `../watch-smoke` by hand. That made a documented gate
+ * depend on an undocumented sibling, and CI -- which has no such directory --
+ * never ran it at all.
+ */
 function findCli() {
-  // `WATCH_DSH_CLI` first, then the workspace's own install, then a
-  // `watch-smoke` checkout beside either the workspace or the repository.
-  //
-  // The two-levels-up entry is not redundant: the workspace used to be the
-  // repository root, so one level up reached its siblings. It is a
-  // subdirectory now, and the sibling it wants is a level further out.
-  const candidates = [
-    process.env.WATCH_DSH_CLI,
-    join(ROOT, 'node_modules', '@deepseek-ai', 'dsh'),
-    join(ROOT, '..', 'watch-smoke', 'node_modules', '@deepseek-ai', 'dsh'),
-    join(ROOT, '..', '..', 'watch-smoke', 'node_modules', '@deepseek-ai', 'dsh'),
-  ].filter(path => path !== undefined)
-
-  for (const dir of candidates) {
-    if (!existsSync(join(dir, 'package.json'))) continue
-    const manifest = JSON.parse(readFileSync(join(dir, 'package.json'), 'utf8'))
-    const bin = typeof manifest.bin === 'string' ? manifest.bin : manifest.bin?.dsh
-    if (bin === undefined) continue
-    const entry = resolve(dir, bin)
-    if (existsSync(entry)) return { entry, version: manifest.version }
-  }
-  return null
+  return ensureCli(ROOT)
 }
 
 /** The bundle's transitive first-party dependencies, deepest first. */
@@ -147,6 +135,39 @@ function bundlePackages() {
 }
 
 /**
+ * Pin the profile to the pnpm this repository builds with.
+ *
+ * `dsh plugin` forwards to whatever `pnpm` resolves to in the profile
+ * directory, and nothing there pinned one. With Corepack installed that means
+ * the newest pnpm: 11.24.0 on the machine this was found on, against the
+ * 10.29.1 the workspace uses. pnpm 11 no longer reads `pnpm.overrides` from
+ * package.json, and `pnpm.overrides` is precisely how the profile points at
+ * the packed Watch tarballs -- so every Watch package was silently dropped
+ * from the resolution and `plugin add` failed with a libuv assertion rather
+ * than anything that named the cause.
+ *
+ * Stamping `packageManager` into the profile manifest is what makes the
+ * profile reproducible: Corepack reads it from the directory the command runs
+ * in, so the same version installs the bundle as built it.
+ */
+function pinProfilePackageManager() {
+  const manifestPath = join(HOME, 'profiles', PROFILE, 'package.json')
+  if (!existsSync(manifestPath)) return
+  const workspace = JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8'))
+  const spec = workspace.packageManager
+  if (typeof spec !== 'string' || !/^pnpm@\d+\.\d+\.\d+$/.test(spec)) {
+    fail('the workspace pins no exact pnpm', `package.json packageManager is ${String(spec)}`)
+  }
+  const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'))
+  if (manifest.packageManager === spec) return
+  manifest.packageManager = spec
+  writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}
+`, 'utf8')
+  process.stdout.write(`pinned the profile to ${spec}
+`)
+}
+
+/**
  * Drop the profile's copies of the Watch packages before reinstalling.
  *
  * pnpm keys a `file:` dependency on its path and version, and neither changes
@@ -162,6 +183,28 @@ function bundlePackages() {
 function clearStaleInstalls() {
   const profileModules = join(HOME, 'profiles', PROFILE, 'node_modules')
   if (!existsSync(profileModules)) return
+
+  // A tree linked by a different pnpm major cannot be reused by this one.
+  // pnpm refuses with ERR_PNPM_UNEXPECTED_STORE -- the store is versioned, and
+  // v11 links are not v10 links -- so the only repair is to drop the tree and
+  // let it be rebuilt. Selectively removing the Watch packages, which is what
+  // this did, leaves exactly the linkage pnpm objects to.
+  const modulesState = join(profileModules, '.modules.yaml')
+  if (existsSync(modulesState)) {
+    const state = readFileSync(modulesState, 'utf8')
+    const linkedStore = /store[\\/]+v(\d+)/.exec(state)?.[1]
+    const wanted = /^pnpm@(\d+)\./.exec(
+      JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8')).packageManager ?? '')?.[1]
+    if (linkedStore !== undefined && wanted !== undefined && linkedStore !== wanted) {
+      process.stdout.write(
+        `profile node_modules was linked from store v${linkedStore}; `
+        + `this pnpm uses v${wanted}. Rebuilding it.\n`,
+      )
+      removeTree(profileModules)
+      return
+    }
+  }
+
   removeTree(join(profileModules, '@watchskill'))
   const store = join(profileModules, '.pnpm')
   if (!existsSync(store)) return
@@ -275,7 +318,18 @@ function main() {
 
   if (process.argv.includes('--rebuild')) removeTree(HOME)
   mkdirSync(HOME, { recursive: true })
-  const env = { ...process.env, DSH_HOME: HOME }
+  const env = {
+    ...process.env,
+    DSH_HOME: HOME,
+    // `dsh plugin` forwards to pnpm, and pnpm asks before removing a
+    // node_modules whose store layout it does not recognise -- then aborts with
+    // ERR_PNPM_ABORTED_REMOVE_MODULES_DIR_NO_TTY when there is nobody to ask.
+    // This script is unattended by design and runs in CI, so it says so. The
+    // stale layout it has to purge is what a previously unpinned pnpm left
+    // behind; see pinProfilePackageManager above.
+    CI: 'true',
+    COREPACK_ENABLE_DOWNLOAD_PROMPT: '0',
+  }
 
   process.stdout.write(`dsh ${cli.version}\n`)
   process.stdout.write('packing workspace packages\n')
@@ -295,8 +349,13 @@ function main() {
   if (existsSync(profileManifest)) linkTarballs(tarballs)
   clearStaleInstalls()
 
+  pinProfilePackageManager()
+
   const init = run(process.execPath, [cli.entry, 'plugin', '--profile', PROFILE, 'install'], { env, cwd: ROOT })
   if (init.status !== 0) fail('`dsh plugin install` failed', init.stderr || init.stdout)
+
+  // Again after install: `dsh plugin install` rewrites the manifest.
+  pinProfilePackageManager()
 
   linkTarballs(tarballs)
 

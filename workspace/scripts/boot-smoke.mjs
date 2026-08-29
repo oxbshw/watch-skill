@@ -23,10 +23,11 @@
  */
 
 import { spawn } from 'node:child_process'
-import { existsSync, readFileSync } from 'node:fs'
-import { join, dirname, resolve } from 'node:path'
+import { existsSync } from 'node:fs'
+import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { manualPath } from './lib/manual-paths.mjs'
+import { ensureCli } from './lib/dsh-cli.mjs'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const HOME = manualPath('WATCH_MANUAL_HOME', ['dsh-home'])
@@ -39,19 +40,16 @@ function fail(message, detail) {
   process.exit(1)
 }
 
+/**
+ * The pinned DSH CLI, installed into the harness's own directory if absent.
+ *
+ * This used to search two fixed places and, finding neither, print an
+ * instruction to create `../watch-smoke` by hand. That made a documented gate
+ * depend on an undocumented sibling, and CI -- which has no such directory --
+ * never ran it at all.
+ */
 function findCli() {
-  for (const dir of [
-    join(ROOT, 'node_modules', '@deepseek-ai', 'dsh'),
-    join(ROOT, '..', 'watch-smoke', 'node_modules', '@deepseek-ai', 'dsh'),
-  ]) {
-    if (!existsSync(join(dir, 'package.json'))) continue
-    const manifest = JSON.parse(readFileSync(join(dir, 'package.json'), 'utf8'))
-    const bin = typeof manifest.bin === 'string' ? manifest.bin : manifest.bin?.dsh
-    if (bin === undefined) continue
-    const entry = resolve(dir, bin)
-    if (existsSync(entry)) return { entry, version: manifest.version }
-  }
-  return null
+  return ensureCli(ROOT)
 }
 
 async function main() {
