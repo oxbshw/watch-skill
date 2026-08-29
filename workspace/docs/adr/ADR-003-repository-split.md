@@ -1,7 +1,12 @@
 # ADR-003: Two repositories, one product
 
-- Status: Accepted
+- Status: Superseded by [ADR-010](ADR-010-single-repository.md)
 - Date: 2026-08-27
+- Superseded: 2026-08-29
+
+> The two repositories became one. What this ADR decided, and why, is
+> left as written; ADR-010 records what replaced it and what the split
+> cost that this document did not anticipate.
 
 ## Context
 
