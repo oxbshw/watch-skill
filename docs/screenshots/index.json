@@ -1,0 +1,218 @@
+[
+  {
+    "name": "wide-01-onboarding",
+    "file": "docs/screenshots/wide-01-onboarding.png",
+    "note": "first-run dialog: Internal Testing Notice",
+    "captured": true
+  },
+  {
+    "name": "wide-03-workspace",
+    "file": "docs/screenshots/wide-03-workspace.png",
+    "note": "the workspace, entered without configuring any provider",
+    "captured": true
+  },
+  {
+    "name": "wide-05-mode-chat",
+    "file": "docs/screenshots/wide-05-mode-chat.png",
+    "note": "Chat mode",
+    "captured": true
+  },
+  {
+    "name": "wide-05-mode-trajectory",
+    "file": "docs/screenshots/wide-05-mode-trajectory.png",
+    "note": "Trajectory mode",
+    "captured": true
+  },
+  {
+    "name": "wide-05-mode-watch",
+    "file": "docs/screenshots/wide-05-mode-watch.png",
+    "note": "Watch mode",
+    "captured": true
+  },
+  {
+    "name": "wide-05-mode-live",
+    "file": "docs/screenshots/wide-05-mode-live.png",
+    "note": "Live mode",
+    "captured": true
+  },
+  {
+    "name": "wide-05-mode-memory",
+    "file": "docs/screenshots/wide-05-mode-memory.png",
+    "note": "Memory mode",
+    "captured": true
+  },
+  {
+    "name": "wide-05-mode-library",
+    "file": "docs/screenshots/wide-05-mode-library.png",
+    "note": "Library mode",
+    "captured": true
+  },
+  {
+    "name": "wide-05-mode-compare",
+    "file": "docs/screenshots/wide-05-mode-compare.png",
+    "note": "Compare mode",
+    "captured": true
+  },
+  {
+    "name": "wide-06-settings-general",
+    "file": "docs/screenshots/wide-06-settings-general.png",
+    "note": "DSH General kept above the Watch sections",
+    "captured": true
+  },
+  {
+    "name": "wide-07-settings-roles",
+    "file": "docs/screenshots/wide-07-settings-roles.png",
+    "note": "Role Bindings section",
+    "captured": true
+  },
+  {
+    "name": "wide-07-settings-engines",
+    "file": "docs/screenshots/wide-07-settings-engines.png",
+    "note": "Perception section",
+    "captured": true
+  },
+  {
+    "name": "wide-07-settings-sources",
+    "file": "docs/screenshots/wide-07-settings-sources.png",
+    "note": "Sources section",
+    "captured": true
+  },
+  {
+    "name": "wide-07-settings-memory-settings",
+    "file": "docs/screenshots/wide-07-settings-memory-settings.png",
+    "note": "Memory section",
+    "captured": true
+  },
+  {
+    "name": "wide-07-settings-verification",
+    "file": "docs/screenshots/wide-07-settings-verification.png",
+    "note": "Verification section",
+    "captured": true
+  },
+  {
+    "name": "wide-07-settings-diagnostics",
+    "file": "docs/screenshots/wide-07-settings-diagnostics.png",
+    "note": "Diagnostics section",
+    "captured": true
+  },
+  {
+    "name": "wide-07-settings-about",
+    "file": "docs/screenshots/wide-07-settings-about.png",
+    "note": "About section",
+    "captured": true
+  },
+  {
+    "name": "wide-08-sidebar-collapsed",
+    "file": "docs/screenshots/wide-08-sidebar-collapsed.png",
+    "note": "the collapsed rail: mark visible, attribution not reflowed",
+    "captured": true
+  },
+  {
+    "name": "narrow-01-onboarding",
+    "file": null,
+    "note": "no first-run dialog: already dismissed in this profile",
+    "captured": false
+  },
+  {
+    "name": "narrow-03-workspace",
+    "file": "docs/screenshots/narrow-03-workspace.png",
+    "note": "the workspace, entered without configuring any provider",
+    "captured": true
+  },
+  {
+    "name": "narrow-05-mode-chat",
+    "file": "docs/screenshots/narrow-05-mode-chat.png",
+    "note": "Chat mode",
+    "captured": true
+  },
+  {
+    "name": "narrow-05-mode-trajectory",
+    "file": "docs/screenshots/narrow-05-mode-trajectory.png",
+    "note": "Trajectory mode",
+    "captured": true
+  },
+  {
+    "name": "narrow-05-mode-watch",
+    "file": "docs/screenshots/narrow-05-mode-watch.png",
+    "note": "Watch mode",
+    "captured": true
+  },
+  {
+    "name": "narrow-05-mode-live",
+    "file": "docs/screenshots/narrow-05-mode-live.png",
+    "note": "Live mode",
+    "captured": true
+  },
+  {
+    "name": "narrow-05-mode-memory",
+    "file": "docs/screenshots/narrow-05-mode-memory.png",
+    "note": "Memory mode",
+    "captured": true
+  },
+  {
+    "name": "narrow-05-mode-library",
+    "file": "docs/screenshots/narrow-05-mode-library.png",
+    "note": "Library mode",
+    "captured": true
+  },
+  {
+    "name": "narrow-05-mode-compare",
+    "file": "docs/screenshots/narrow-05-mode-compare.png",
+    "note": "Compare mode",
+    "captured": true
+  },
+  {
+    "name": "narrow-06-settings-general",
+    "file": "docs/screenshots/narrow-06-settings-general.png",
+    "note": "DSH General kept above the Watch sections",
+    "captured": true
+  },
+  {
+    "name": "narrow-07-settings-roles",
+    "file": "docs/screenshots/narrow-07-settings-roles.png",
+    "note": "Role Bindings section",
+    "captured": true
+  },
+  {
+    "name": "narrow-07-settings-engines",
+    "file": "docs/screenshots/narrow-07-settings-engines.png",
+    "note": "Perception section",
+    "captured": true
+  },
+  {
+    "name": "narrow-07-settings-sources",
+    "file": "docs/screenshots/narrow-07-settings-sources.png",
+    "note": "Sources section",
+    "captured": true
+  },
+  {
+    "name": "narrow-07-settings-memory-settings",
+    "file": "docs/screenshots/narrow-07-settings-memory-settings.png",
+    "note": "Memory section",
+    "captured": true
+  },
+  {
+    "name": "narrow-07-settings-verification",
+    "file": "docs/screenshots/narrow-07-settings-verification.png",
+    "note": "Verification section",
+    "captured": true
+  },
+  {
+    "name": "narrow-07-settings-diagnostics",
+    "file": "docs/screenshots/narrow-07-settings-diagnostics.png",
+    "note": "Diagnostics section",
+    "captured": true
+  },
+  {
+    "name": "narrow-07-settings-about",
+    "file": "docs/screenshots/narrow-07-settings-about.png",
+    "note": "About section",
+    "captured": true
+  },
+  {
+    "name": "narrow-08-sidebar-collapsed",
+    "file": "docs/screenshots/narrow-08-sidebar-collapsed.png",
+    "note": "the collapsed rail: mark visible, attribution not reflowed",
+    "captured": true
+  }
+]

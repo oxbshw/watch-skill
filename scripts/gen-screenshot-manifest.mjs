@@ -12,12 +12,16 @@
  * It also reports byte-identical images as a failure, since that is how the
  * earlier set looked healthy while showing nothing.
  *
+ * Paths are recorded relative to the repository root. An absolute path from
+ * the machine that ran the capture is not evidence anybody else can check, and
+ * a temporary directory stops existing.
+ *
  * Usage:
  *   node scripts/gen-screenshot-manifest.mjs <capture-dir>
  *   node scripts/gen-screenshot-manifest.mjs <capture-dir> --check
  */
 import { readFileSync, writeFileSync, existsSync, statSync } from 'node:fs'
-import { join, dirname, basename } from 'node:path'
+import { join, dirname, relative, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { createHash } from 'node:crypto'
 
@@ -48,13 +52,13 @@ const REVIEW = {
   '05-mode-chat': {
     route: 'Chat mode',
     expected: "DSH's own conversation view, unchanged, as one tab among seven",
-    observed: 'the upstream conversation view with the composer and model picker intact',
+    observed: 'a completed turn: prompt, context injections, assistant reply, feedback controls and the turn stats bar',
     verdict: 'pass',
   },
   '05-mode-trajectory': {
     route: 'Trajectory mode',
     expected: "DSH's own trajectory view, unchanged",
-    observed: 'the upstream timeline with Duration/Turns/Calls and its own search',
+    observed: 'the upstream timeline with the turn expanded: system prompt, user, two context injections, assistant',
     verdict: 'pass',
   },
   '05-mode-watch': {
@@ -72,7 +76,7 @@ const REVIEW = {
   '05-mode-memory': {
     route: 'Memory mode',
     expected: 'the memory ledger, correctable and with provenance',
-    observed: 'the ledger surface with its empty state and the route to Settings',
+    observed: 'heading, lead, empty state naming Settings and the agent, and the not-encrypted note',
     verdict: 'pass',
   },
   '05-mode-library': {
@@ -178,6 +182,14 @@ function pngSize(file) {
 }
 
 function build(captureDir) {
+  const inside = relative(ROOT, captureDir)
+  if (inside.startsWith('..') || inside === '') {
+    process.stderr.write(
+      `watch: ${captureDir} is outside the repository.\n`
+      + 'The manifest records repository-relative paths, so the capture has to live in one.\n',
+    )
+    process.exit(2)
+  }
   const index = JSON.parse(readFileSync(join(captureDir, 'index.json'), 'utf8'))
   const shots = Object.values(index)
   const rows = []
@@ -192,7 +204,7 @@ function build(captureDir) {
 
     rows.push({
       name: shot.name,
-      file: captured ? basename(shot.file) : null,
+      file: captured ? relative(ROOT, shot.file).split(sep).join('/') : null,
       route: review.route,
       app: 'web',
       viewport,
@@ -230,7 +242,7 @@ function build(captureDir) {
   return {
     generatedBy: 'scripts/gen-screenshot-manifest.mjs',
     note: 'expected is written before the capture; observed is what a reviewer saw on opening the file.',
-    captureDir,
+    captureDir: relative(ROOT, captureDir).split(sep).join('/'),
     scenario: SCENARIO,
     totals: {
       shots: rows.length,

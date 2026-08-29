@@ -23,7 +23,7 @@
 
 import { app, BrowserWindow } from 'electron'
 import { writeFileSync, mkdirSync, appendFileSync, rmSync, readFileSync } from 'node:fs'
-import { join, dirname } from 'node:path'
+import { join, dirname, relative, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { tmpdir } from 'node:os'
 
@@ -35,6 +35,18 @@ import { tmpdir } from 'node:os'
 // same script loads with no arguments and does not load with two.
 /** The repository this script lives in, so it can read what it photographs. */
 const REPO = join(dirname(fileURLToPath(import.meta.url)), '..')
+
+/**
+ * A path a reader on another machine can resolve.
+ *
+ * Shots written inside the repository are recorded relative to its root, so
+ * the index can be committed. Anything outside keeps its absolute path,
+ * because a relative one would be meaningless.
+ */
+const portablePath = (absolute) => {
+  const inside = relative(REPO, absolute)
+  return inside.startsWith('..') ? absolute : inside.split(sep).join('/')
+}
 
 const URL = process.env.WATCH_QA_URL ?? 'http://127.0.0.1:8931'
 const OUT = process.env.WATCH_QA_OUT ?? 'G:/watch-manual/qa/screenshots'
@@ -188,7 +200,7 @@ async function capture(win, name, note, reached = true) {
   const image = await win.webContents.capturePage()
   const file = join(OUT, name + '.png')
   writeFileSync(file, image.toPNG())
-  shots.push({ name, file, note, captured: true })
+  shots.push({ name, file: portablePath(file), note, captured: true })
   say('  ' + name.padEnd(38) + ' ' + note)
   return true
 }
@@ -415,7 +427,7 @@ process.on('uncaughtException', error => {
 app.whenReady().then(async () => {
   mkdirSync(OUT, { recursive: true })
   writeFileSync(join(OUT, 'capture.log'), '', 'utf8')
-  say('capturing ' + URL + ' -> ' + OUT)
+  say('capturing ' + URL + ' -> ' + portablePath(OUT))
 
   // One window, resized between passes.
   //
@@ -444,7 +456,7 @@ app.whenReady().then(async () => {
 
   writeFileSync(join(OUT, 'index.json'), JSON.stringify(shots, null, 2) + '\n', 'utf8')
   say(String(shots.length) + ' shot(s) written')
-  say('qa profile: ' + QA_PROFILE)
+  say('qa profile: isolated, outside the repository')
 
   // Removed on exit unless asked otherwise. A profile that survives between
   // runs is how a capture stops being reproducible — the second run inherits
