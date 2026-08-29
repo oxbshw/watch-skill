@@ -135,6 +135,53 @@ jobs:
             workspace/**/*.log
           retention-days: 7
 
+  # The build, from a checkout that has never been built.
+  #
+  # `check` and `platform` both start on a fresh runner, which sounds like this
+  # and is not: each builds once, so their first compilation is also their only
+  # one. Neither can observe the state a contributor's machine is in — full of
+  # ignored build output that a compilation happily resolves — and neither can
+  # tell an idempotent build from one that only works the first time.
+  #
+  # That gap shipped a red pipeline. A client half imported
+  # `@watchskill/dsh-tools/remote`, which is generated, ignored, and therefore
+  # invisible to `git status`. `npm run check` passed locally with 1309 tests
+  # green while every CI job failed on TS2307 for a module plainly present in
+  # the author's tree.
+  #
+  # So this builds a copy containing only what git carries, twice, and checks
+  # that the second build changes nothing. It is its own job rather than a line
+  # in `npm run check` because its subject is a different tree — and because
+  # when it fails, "the cold build is broken" should be the name on the failure
+  # rather than a step buried inside a suite.
+  cold-build:
+    needs: changes
+    if: needs.changes.outputs.workspace == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: workspace
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+          cache-dependency-path: workspace/pnpm-lock.yaml
+
+      # The gate installs into its own copy. This install is what the gate
+      # itself needs to run, and it warms the store that copy installs from.
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Cold build
+        run: npm run verify:clean-build
+
   # The parts only the operating system itself can answer.
   platform:
     needs: changes
@@ -229,7 +276,7 @@ jobs:
   # in this workflow, not a change that needed no testing.
   workspace-required:
     if: always()
-    needs: [changes, check, platform]
+    needs: [changes, check, cold-build, platform]
     runs-on: ubuntu-latest
     steps:
       - name: Gather the results
