@@ -323,6 +323,9 @@ importers:
       '@watchskill/dsh-technology':
         specifier: workspace:^
         version: link:../technology
+      '@watchskill/dsh-tools':
+        specifier: workspace:^
+        version: link:../tools
       '@watchskill/dsh-workspace':
         specifier: workspace:^
         version: link:../workspace

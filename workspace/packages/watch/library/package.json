@@ -65,6 +65,7 @@
     "@watchskill/dsh-client-brand": "workspace:^",
     "@watchskill/dsh-contracts": "workspace:^",
     "@watchskill/dsh-technology": "workspace:^",
+    "@watchskill/dsh-tools": "workspace:^",
     "@watchskill/dsh-workspace": "workspace:^"
   }
 }
