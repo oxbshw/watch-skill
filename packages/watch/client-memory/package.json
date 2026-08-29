@@ -7,19 +7,40 @@
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
   "exports": {
-    ".": { "types": "./lib/index.d.ts", "default": "./lib/index.js" },
-    "./client": { "types": "./lib/client/index.d.ts", "default": "./lib/client.js" },
-    "./components": { "types": "./lib/client/components.d.ts", "default": "./lib/client/components.js" },
+    ".": {
+      "types": "./lib/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./client": {
+      "types": "./lib/client/index.d.ts",
+      "default": "./lib/client.js"
+    },
+    "./components": {
+      "types": "./lib/client/components.d.ts",
+      "default": "./lib/client/components.js"
+    },
+    "./memory-mode": {
+      "types": "./lib/client/memory-mode.d.ts",
+      "default": "./lib/client/memory-mode.js"
+    },
     "./package.json": "./package.json"
   },
   "dsh": {
     "client": {
-      "inject": ["@deepseek-ai/dsh-client-ui-slots"],
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-slots"
+      ],
       "platform": "web"
     }
   },
-  "files": ["lib/**/*.js", "lib/**/*.js.map", "lib/**/*.d.ts"],
-  "scripts": { "bundle": "tsdown" },
+  "files": [
+    "lib/**/*.js",
+    "lib/**/*.js.map",
+    "lib/**/*.d.ts"
+  ],
+  "scripts": {
+    "bundle": "tsdown"
+  },
   "peerDependencies": {
     "@deepseek-ai/cordis": "catalog:",
     "react": "^18.2.0"

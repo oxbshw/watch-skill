@@ -5,7 +5,8 @@
  */
 
 import type { Context } from '@deepseek-ai/cordis'
-import { MemoryWorkbench, WhyRememberedChip } from './components.js'
+import { MemoryModeView } from './memory-mode.js'
+import { WhyRememberedChip } from './components.js'
 
 export * from './components.js'
 export * from '../views.js'
@@ -37,7 +38,7 @@ export function apply(ctx: Context): void {
   slots.inject('conversation.view', () => {
     slots.register(
       { name: 'conversation.view', id: 'memory', label: 'Memory', order: 40 },
-      MemoryWorkbench,
+      MemoryModeView,
     )
   })
   // The chip goes to the input dock rather than to a chat node.
