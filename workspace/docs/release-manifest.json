@@ -92,7 +92,7 @@
       {
         "name": "@watchskill/dsh-core-bridge",
         "version": "0.1.0-preview.0",
-        "integrity": "sha256:c0f2fa98b35a8a0c54aedd521bb7a0449422d872e998a50d326d992ac9834b1e",
+        "integrity": "sha256:52a0ea1f1925d8886db7814ae99c5978dbebfa9928e969f7ad3358c73dddcf7d",
         "sourceFiles": 6
       },
       {
@@ -168,12 +168,12 @@
     "dataLicense": "CC0-1.0",
     "SPDXID": "SPDXRef-DOCUMENT",
     "name": "@watchskill/watch-workspace-0.1.0-preview.0",
-    "documentNamespace": "https://github.com/oxbshw/watch-workspace/spdx/0.1.0-preview.0/mtdqs6h6",
+    "documentNamespace": "https://github.com/oxbshw/watch-workspace/spdx/0.1.0-preview.0/mtdsy3ys",
     "creationInfo": {
       "creators": [
         "Tool: watch-gen-release-manifest"
       ],
-      "created": "2026-08-29T02:09:02Z"
+      "created": "2026-08-29T03:09:38Z"
     },
     "packages": [
       {
@@ -300,7 +300,7 @@
         "checksums": [
           {
             "algorithm": "SHA256",
-            "checksumValue": "c0f2fa98b35a8a0c54aedd521bb7a0449422d872e998a50d326d992ac9834b1e"
+            "checksumValue": "52a0ea1f1925d8886db7814ae99c5978dbebfa9928e969f7ad3358c73dddcf7d"
           }
         ]
       },

@@ -112,6 +112,12 @@ export class StdioTransport implements Transport {
     child.stdout.on('data', (chunk: Buffer) => { this.receive(chunk) })
     // Core's stderr is diagnostics, never protocol. Keeping the tail lets a
     // non-zero exit report why instead of just reporting that it happened.
+    // A pipe can break asynchronously, after every write callback has already
+    // run. Without a listener Node raises that as an uncaught exception, which
+    // is how a broken pipe became `Error: write EPIPE` in CI rather than a
+    // failed request. The write callbacks report; this only stops the throw.
+    child.stdin.on('error', () => { /* reported by the write callbacks */ })
+
     child.stderr.on('data', (chunk: Buffer) => {
       this.lastStderr = (this.lastStderr + chunk.toString('utf8')).slice(-4096)
     })
@@ -215,20 +221,26 @@ export class StdioTransport implements Transport {
         correlationId: request.correlationId,
       })
       const body = Buffer.from(frame, 'utf8')
+      // Both writes carry the same handler. The header had one and the body
+      // did not, so an EPIPE on the body -- the larger write, and the likelier
+      // one to hit a pipe that just closed -- reached the stream as an
+      // unhandled 'error' and took the process down with `write EPIPE`
+      // instead of failing the request. `settle` removes the pending entry,
+      // so being called from both writes reports once.
+      const onWriteError = (cause: Error | null | undefined): void => {
+        if (cause == null) return
+        this.settle(id, watchError(
+          'bridge.write_failed',
+          `Could not send "${request.method}" to Watch Core: ${describe(cause)}`,
+          'Reconnect Watch Core and retry.',
+          { retryable: true, correlationId: request.correlationId },
+        ))
+      }
       child.stdin.write(
         `Content-Length: ${String(body.byteLength)}${HEADER_TERMINATOR}`,
-        (cause) => {
-          if (cause != null) {
-            this.settle(id, watchError(
-              'bridge.write_failed',
-              `Could not send "${request.method}" to Watch Core: ${describe(cause)}`,
-              'Reconnect Watch Core and retry.',
-              { retryable: true, correlationId: request.correlationId },
-            ))
-          }
-        },
+        onWriteError,
       )
-      child.stdin.write(body)
+      child.stdin.write(body, onWriteError)
     })
   }
 
@@ -276,8 +288,13 @@ export class StdioTransport implements Transport {
     const child = this.child
     if (child === null || child.stdin.destroyed) return
     const body = Buffer.from(JSON.stringify({ jsonrpc: '2.0', method, params }), 'utf8')
-    child.stdin.write(`Content-Length: ${String(body.byteLength)}${HEADER_TERMINATOR}`)
-    child.stdin.write(body)
+    // `destroyed` above is checked before the write, and the child can exit in
+    // between. A notification's failure is not reportable -- that is why this
+    // method exists separately -- so the callback swallows rather than
+    // pretending, but it has to be there or the stream throws.
+    const swallow = (): void => { /* a notification that did not land is not an error we can raise */ }
+    child.stdin.write(`Content-Length: ${String(body.byteLength)}${HEADER_TERMINATOR}`, swallow)
+    child.stdin.write(body, swallow)
   }
 
   /** Accumulate bytes and drain every complete frame they contain. */
