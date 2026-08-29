@@ -1,0 +1,28 @@
+{
+  "//": [
+    "The Library's Host face.",
+    "",
+    "`tsconfig.json` compiles both faces: it includes src/**/*.tsx and references",
+    "brand and workspace, which are React packages. That is right for the build,",
+    "and wrong for Typert generation -- the Host program would then contain UI",
+    "components and a React dependency edge, and the generated Host descriptors",
+    "would be derived from a program that is not the Host.",
+    "",
+    "Everything under src/client is excluded here. The Host sources import only",
+    "dsh-contracts and dsh-technology, both of which are Host packages, so this",
+    "face is closed."
+  ],
+  "extends": "../../../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "lib",
+    "rootDir": "src",
+    "tsBuildInfoFile": "lib/.tsbuildinfo.host",
+    "types": ["node"]
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["src/client/**"],
+  "references": [
+    { "path": "../contracts" },
+    { "path": "../technology" }
+  ]
+}

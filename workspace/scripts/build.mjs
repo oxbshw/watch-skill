@@ -100,6 +100,13 @@ function main() {
   // emitted types, so building them in the other order fails on a cold tree.
   step('building node halves', tool('tsc'), ['-b'])
 
+  // Between the two compilations, and not beside either. Typert derives the
+  // wire protocol from the Host program, so it needs the Host types to exist;
+  // the client bundles import the generated Remote declaration, so they need
+  // its output to exist. Generating after the bundles would ship a client
+  // built against the previous protocol.
+  step('generating typert artifacts', process.execPath, [join(ROOT, 'scripts', 'gen-typert.mjs')])
+
   for (const { dir, name } of clientPackages()) {
     step(`bundling ${name}`, tool('tsdown'), [], dir)
   }

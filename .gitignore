@@ -51,3 +51,10 @@ t.xml
 .agents/
 .preview/
 .playwright-mcp/
+
+# The embedding cache the offline suite fills, named by
+# FASTEMBED_CACHE_PATH in .github/workflows/ci.yml and cached there by
+# actions/cache. Anchored to the root and to this exact directory: it is
+# 241MB of downloaded weights, and a broader rule would be able to hide
+# source or fixtures.
+/ci-model-cache/

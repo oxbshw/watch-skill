@@ -1,0 +1,21 @@
+diff --git a/lib/index.js b/lib/index.js
+index c1fdc25c01f22fa16e266223817614f84adb0573..9b3f54fb41e318e5a4dc8ab707cc5dc03e0a7b9a 100644
+--- a/lib/index.js
++++ b/lib/index.js
+@@ -1277,6 +1277,16 @@ var FaceAnalyzer = class {
+ 		const declaration = preferredDeclaration(resolved);
+ 		if (declaration === void 0) return false;
+ 		if (this.registrationForFile(declaration.getSourceFile().fileName)?.name === "@deepseek-ai/dsh-typert-protocol") return true;
++		// watch-skill: accept a declaration resolved from the genuinely installed
++		// protocol package. Upstream recognises only a registered workspace package
++		// or an ambient `declare module` test double, so an external package that
++		// depends on @deepseek-ai/dsh-typert-protocol through node_modules matches
++		// neither and generation reports zero invocations. The symbol-name check
++		// above still applies, and the identity comes from the resolved file path
++		// rather than from the import specifier, so an alias or re-export cannot
++		// impersonate the protocol.
++		const external = externalModuleIdentityForFile(declaration.getSourceFile().fileName);
++		if (external?.package === "@deepseek-ai/dsh-typert-protocol") return true;
+ 		for (let current = declaration; current !== void 0; current = optionalParent(current)) if (ts.isModuleDeclaration(current) && ts.isStringLiteral(current.name) && current.name.text === "@deepseek-ai/dsh-typert-protocol") return true;
+ 		return false;
+ 	}

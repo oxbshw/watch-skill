@@ -1,0 +1,81 @@
+{
+  "compilerOptions": {
+    "noEmit": true,
+    "lib": [
+      "ES2024",
+      "DOM"
+    ],
+    "paths": {
+      "@watchskill/dsh-contracts": [
+        "./packages/watch/contracts/src/index.ts"
+      ],
+      "@watchskill/dsh-contracts/query": [
+        "./packages/watch/contracts/src/query.ts"
+      ],
+      "@watchskill/dsh-contracts/query/wire": [
+        "./packages/watch/contracts/src/query/wire.ts"
+      ],
+      "@watchskill/dsh-technology": [
+        "./packages/watch/technology/src/index.ts"
+      ],
+      "@watchskill/dsh-technology/descriptors": [
+        "./packages/watch/technology/src/descriptors.ts"
+      ],
+      "@watchskill/dsh-core-bridge": [
+        "./packages/watch/core-bridge/src/index.ts"
+      ],
+      "@watchskill/dsh-memory": [
+        "./packages/watch/memory/src/index.ts"
+      ],
+      "@watchskill/dsh-memory/records": [
+        "./packages/watch/memory/src/records.ts"
+      ],
+      "@watchskill/dsh-memory/tools": [
+        "./packages/watch/memory/src/tools.ts"
+      ],
+      "@watchskill/dsh-library": [
+        "./packages/watch/library/src/index.ts"
+      ],
+      "@watchskill/dsh-library/client": [
+        "./packages/watch/library/src/client/index.tsx"
+      ],
+      "@watchskill/dsh-library/components": [
+        "./packages/watch/library/src/client/components.tsx"
+      ],
+      "@watchskill/dsh-library/index-store": [
+        "./packages/watch/library/src/index-store.ts"
+      ],
+      "@watchskill/dsh-library/library-mode": [
+        "./packages/watch/library/src/client/library-mode.tsx"
+      ],
+      "@watchskill/dsh-library/search-view": [
+        "./packages/watch/library/src/client/search-view.tsx"
+      ],
+      "@watchskill/dsh-tools": [
+        "./packages/watch/tools/src/index.ts"
+      ]
+    }
+  },
+  "extends": "./tsconfig.base.json",
+  "files": [],
+  "references": [
+    {
+      "path": "./packages/watch/contracts"
+    },
+    {
+      "path": "./packages/watch/technology"
+    },
+    {
+      "path": "./packages/watch/core-bridge"
+    },
+    {
+      "path": "./packages/watch/memory"
+    },
+    {
+      "path": "./packages/watch/library/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/watch/tools"
+    }
+  ]
+}

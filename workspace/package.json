@@ -1,7 +1,7 @@
 {
   "name": "@watchskill/watch-workspace",
   "version": "0.1.0-preview.0",
-  "description": "Watch Workspace — an evidence-native agent distribution built on DeepSeek Harness",
+  "description": "Watch Workspace \u2014 an evidence-native agent distribution built on DeepSeek Harness",
   "private": true,
   "type": "module",
   "license": "MIT",
@@ -16,7 +16,7 @@
     "brand": "node scripts/brand-assets.mjs",
     "brand:check": "node scripts/brand-assets.mjs --check",
     "build": "node scripts/build.mjs",
-    "check": "npm run inventory:check && npm run verify:parity && npm run verify:bundle && npm run verify:desktop && npm run verify:verdict && npm run verify:slots && npm run verify:portability && npm run verify:signing && npm run slots:check && npm run brand:check && npm run providers:check && npm run status:check && npm run closure:check && npm run lint && npm run build && npm run ocr:check && npm run verify:client && npm run sbom && npm run release:check && npm run test",
+    "check": "npm run inventory:check && npm run verify:parity && npm run verify:bundle && npm run verify:desktop && npm run verify:verdict && npm run verify:slots && npm run verify:portability && npm run verify:signing && npm run slots:check && npm run brand:check && npm run providers:check && npm run status:check && npm run closure:check && npm run lint && npm run verify:typert-face && npm run build && npm run typert:check && npm run ocr:check && npm run verify:client && npm run sbom && npm run release:check && npm run test",
     "closure": "node scripts/gen-spec-closure.mjs",
     "closure:check": "node scripts/gen-spec-closure.mjs --check",
     "doctor": "node scripts/doctor.mjs",
@@ -42,6 +42,8 @@
     "status": "node scripts/gen-status.mjs",
     "status:check": "node scripts/gen-status.mjs --check",
     "test": "node --test --test-reporter spec \"tests/**/*.test.mjs\"",
+    "typert:check": "node scripts/gen-typert.mjs --check",
+    "typert:generate": "node scripts/gen-typert.mjs",
     "upstream:sync": "node scripts/upstream-sync.mjs",
     "upstream:verify": "node scripts/upstream-sync.mjs --verify",
     "verify:bundle": "node scripts/verify-bundle.mjs",
@@ -51,10 +53,12 @@
     "verify:portability": "node scripts/verify-portability.mjs",
     "verify:signing": "node scripts/verify-signing.mjs",
     "verify:slots": "node scripts/verify-slots.mjs",
+    "verify:typert-face": "node scripts/verify-typert-face.mjs",
     "verify:verdict": "node scripts/verify-verdict-authority.mjs"
   },
   "devDependencies": {
     "@deepseek-ai/cordis": "catalog:",
+    "@deepseek-ai/dsh-typert-generator": "catalog:",
     "@deepseek-ai/schemastery": "^3.18.1",
     "@eslint/js": "^9.39.5",
     "@types/node": "^22.20.0",
@@ -87,6 +91,9 @@
   "pnpm": {
     "onlyBuiltDependencies": [
       "electron"
-    ]
+    ],
+    "patchedDependencies": {
+      "@deepseek-ai/dsh-typert-generator@0.1.1-rc.2": "patches/@deepseek-ai__dsh-typert-generator@0.1.1-rc.2.patch"
+    }
   }
 }
