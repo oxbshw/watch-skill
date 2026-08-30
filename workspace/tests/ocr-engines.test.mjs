@@ -262,6 +262,30 @@ describe('failure is reported as what it was, and never retried', () => {
     }
   })
 
+  test('stopping a worker that has already exited is not an error', async () => {
+    // `stop()` writes a shutdown. When the worker is already gone — crashed,
+    // OOM-killed, or killed by this module for ignoring a cancel — that write
+    // lands on a closed pipe, and EPIPE on a stream with no error listener
+    // takes the supervisor down: it would die while tidying up after a worker
+    // that did exactly what it was told. A Linux runner threw exactly that,
+    // `Error: write EPIPE` out of `OcrWorker.stop`, and failed an otherwise
+    // green pipeline.
+    //
+    // What this asserts is the property, not the race. Whether a write to a
+    // dead child's stdin raises EPIPE depends on the platform and on how
+    // quickly the pipe tears down — it does not raise here on Windows, with or
+    // without the guard in `send`. So this pins the contract that stopping
+    // something already stopped must not reject, and it is a Linux run that
+    // exercises the path where that contract was actually broken.
+    const engine = worker('crash')
+    await engine.start()
+    const result = await engine.recognize({})
+    assert.equal(result.ok, false, 'the crash must surface as a failed request')
+
+    await assert.doesNotReject(() => engine.stop(), 'stopping something already stopped')
+    await assert.doesNotReject(() => engine.stop(), 'and stop is idempotent')
+  })
+
   test('cancelling before dispatch never starts the work', async () => {
     const engine = worker('ok')
     try {

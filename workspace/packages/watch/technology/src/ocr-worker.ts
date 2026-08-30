@@ -265,6 +265,18 @@ export class OcrWorker {
       this.setHealth('unavailable', `The worker could not be started: ${error.message}`,
         'Check the command in the engine descriptor.')
     })
+    // A pipe to a process that has already gone is not a fault to propagate.
+    //
+    // With no listener, an EPIPE on stdin is an unhandled `error` event on a
+    // stream, and an unhandled stream error takes the process down. It arrives
+    // on exactly the path where the worker is *supposed* to be gone --
+    // `stop()` writing a shutdown to a child that already exited -- so the
+    // supervisor would die while tidying up after a worker that did what it
+    // was told. `send` guards the synchronous half of the same thing.
+    child.stdin.on('error', () => {
+      // Recorded nowhere on purpose: `onExit` already sets the health, and a
+      // second message about the same event would read as a second fault.
+    })
 
     const hello = await this.awaitHello()
     if (!hello.ok) {
@@ -422,8 +434,24 @@ export class OcrWorker {
     return { ok: false, error: { code, message, fix, retryable } }
   }
 
+  /**
+   * Write one request, unless there is nothing left to write to.
+   *
+   * `stop()` sends a shutdown to a worker that may already have exited —
+   * including the worker this module deliberately kills for ignoring a cancel
+   * — and writing to a closed pipe throws EPIPE. Stopping something that has
+   * already stopped is not an error, so this refuses to write rather than
+   * letting the caller's cleanup path fail.
+   */
   private send(request: WorkerRequest): void {
-    this.child?.stdin.write(`${JSON.stringify(request)}\n`)
+    const stdin = this.child?.stdin
+    if (stdin === undefined || stdin.destroyed || stdin.writableEnded) return
+    try {
+      stdin.write(`${JSON.stringify(request)}\n`)
+    } catch {
+      // The worker exited between the check above and the write. There is
+      // nothing to deliver to and nothing a caller could do about it.
+    }
   }
 
   private onData(chunk: string): void {

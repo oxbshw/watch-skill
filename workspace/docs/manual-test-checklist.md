@@ -13,10 +13,18 @@ so "the screen looked right" is never the pass condition on its own.
 | | |
 |---|---|
 | **Web** | http://127.0.0.1:8931 — open it in any browser |
-| **Desktop** | already open as a window; if you closed it, run `npx electron .` in `G:/watch-workspace/apps/desktop` |
-| **Demo data home** | `G:/watch-manual/dsh-home` |
-| **Fixtures** | `G:/watch-manual/dsh-home/watch-fixtures` |
-| **Logs** | `G:/watch-manual/logs` |
+| **Desktop** | already open as a window; if you closed it, run `npx electron .` in `workspace/apps/desktop` |
+| **Demo data home** | `<manual root>/dsh-home` |
+| **Fixtures** | `<manual root>/dsh-home/watch-fixtures` |
+| **Logs** | `<manual root>/logs` |
+
+`<manual root>` is the platform's own state directory plus `watch-manual` —
+`%LOCALAPPDATA%\watch-manual` on Windows, `~/Library/Application
+Support/watch-manual` on macOS, `$XDG_STATE_HOME/watch-manual` (or
+`~/.local/state/watch-manual`) elsewhere. `WATCH_MANUAL_ROOT` moves all of it
+at once, and whoever handed this over will have said if they set it. These
+paths used to name one maintainer's drive, which meant the scripts worked and
+the instructions did not.
 
 Everything seeded is marked `demo: true` and prefixed `DEMO:`. If you see a
 record that looks real and is not marked, **that is a bug** — it means something
@@ -111,12 +119,32 @@ the contract digest, and each check as held / did not hold / did not run.
 *Bug if:* it still shows the empty state, shows a different record, or renders a
 check that did not run as a failure.
 
+**B6 — Library is answered by the host, and says so.** Open Library.
+*Expect:* the lead says search runs on *this workspace's own host*, the status
+line reads "Index ready. Answered by this workspace's own host.", and the
+seeded records are listed with a count. The rebuild control reads **Search
+again**, because the index belongs to the host and this control cannot rebuild
+it. Verification and Sort are disabled: the host answers by query and modality
+and has no parameter for either.
+*Bug if:* the surface lists nothing while the fixtures are present; or it says
+it is searching locally; or Verification and Sort are enabled and changing them
+changes nothing. A filter that silently does nothing is worse than one that is
+plainly unavailable.
+
+**B7 — A record names itself, not a place on disk.** Read the identifier under
+each Library row.
+*Expect:* an identifier — letters, digits, dots, dashes, underscores — such as
+`demo_src_installer` or `file-1480cba57555253c`, and a readable title.
+*Bug if:* any row shows a filesystem path. **Report immediately.** The read
+plane's rule is that a record never carries a location, and a path in the
+browser is that rule broken in the direction that leaks the host's layout.
+
 ---
 
 ## C. Evidence and the verdict — the core claim
 
 This is the section that matters most. Fixtures for it are in
-`G:/watch-manual/dsh-home/watch-fixtures`.
+`<manual root>/dsh-home/watch-fixtures`.
 
 **C1 — A citation resolves to an exact place.** Open `01-recorded-source.json`
 through the Library / evidence surface.
@@ -328,7 +356,7 @@ media upload.
 ## K. Desktop-specific
 
 **K1 — Safe mode.** Stop the Desktop app's Host (or rename
-`G:/watch-manual/dsh-home` and relaunch).
+`<manual root>/dsh-home` and relaunch).
 *Expect:* the window opens in **safe mode**, naming the reason. It does not open
 onto nothing, and it does not open onto a dead origin.
 *Bug if:* a blank window, a crash, or an error dialog with no path forward.
@@ -388,7 +416,7 @@ Sections A, C, D, I, J and K are reachable with no session at all.
 
 For anything you find, the useful report is: **which check**, **what you did**,
 **what you saw**, **what you expected**. Attach the relevant file from
-`G:/watch-manual/logs` if the app was involved in the failure.
+`<manual root>/logs` if the app was involved in the failure.
 
 Three findings should be reported immediately rather than batched, because each
 one is a release blocker on its own:
