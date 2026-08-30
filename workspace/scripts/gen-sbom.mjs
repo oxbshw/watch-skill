@@ -63,6 +63,30 @@ function licenceReview() {
   }))
 }
 
+/**
+ * What the committed document already says each package is licensed under.
+ *
+ * The last resort, and it needs its reason stated. A licence is only readable
+ * from an installed copy, and pnpm installs one platform's optional packages;
+ * a Windows-only package is simply not on a Linux runner, so regenerating
+ * there turns a known licence into UNKNOWN and the gate objects to a package
+ * nobody touched.
+ *
+ * So a package this machine cannot see keeps the answer a machine that could
+ * see it wrote down. That is a memo, not a review: a package appearing for the
+ * first time is in nobody's document, resolves to UNKNOWN, and still has to be
+ * reviewed deliberately before it passes.
+ */
+function committedLicenses() {
+  const licenses = new Map()
+  if (!existsSync(OUTPUT)) return licenses
+  const document = JSON.parse(readFileSync(OUTPUT, 'utf8'))
+  for (const pkg of document.thirdParty ?? []) {
+    if (pkg.license !== 'UNKNOWN') licenses.set(`${pkg.name}@${pkg.version}`, pkg.license)
+  }
+  return licenses
+}
+
 /** Read a manifest, or null when it is unreadable. */
 function manifest(path) {
   if (!existsSync(path)) return null
@@ -161,6 +185,7 @@ function thirdPartyPackages() {
   }
 
   const reviewed = licenceReview()
+  const remembered = committedLicenses()
 
   return locked
     .map(pkg => {
@@ -178,7 +203,11 @@ function thirdPartyPackages() {
       return {
         name: pkg.name,
         version: pkg.version,
-        license: decided ?? onDisk.get(`${pkg.name}@${pkg.version}`) ?? inherited ?? 'UNKNOWN',
+        license: decided
+          ?? onDisk.get(`${pkg.name}@${pkg.version}`)
+          ?? inherited
+          ?? remembered.get(`${pkg.name}@${pkg.version}`)
+          ?? 'UNKNOWN',
         path: null,
         kind: 'third_party',
       }
