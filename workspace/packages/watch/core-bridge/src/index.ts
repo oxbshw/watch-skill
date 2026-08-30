@@ -11,7 +11,7 @@
  * will not start leaves the Workspace fully usable with Watch features
  * disabled and a stated fix. It never blocks boot.
  *
- * @module @watchskill/dsh-core-bridge
+ * @module @deepwatch/dsh-core-bridge
  */
 
 import { randomUUID } from 'node:crypto'
@@ -24,13 +24,13 @@ import type {
   WatchCoreHealth,
   WatchError,
   WatchResult,
-} from '@watchskill/dsh-contracts'
+} from '@deepwatch/dsh-contracts'
 import {
   WATCH_PROTOCOL_VERSION,
   detectSchemaDrift,
   isContractUnverified,
   watchError,
-} from '@watchskill/dsh-contracts'
+} from '@deepwatch/dsh-contracts'
 import type { Transport } from './transport.js'
 import { MockTransport } from './transport/mock.js'
 import { StdioTransport } from './transport/stdio.js'

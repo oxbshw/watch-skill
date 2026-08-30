@@ -19,10 +19,10 @@
  * so a redaction is a property of the evidence rather than of the viewer, and
  * cannot be undone by forwarding.
  *
- * @module @watchskill/dsh-tenancy/collaboration
+ * @module @deepwatch/dsh-tenancy/collaboration
  */
 
-import type { SpatialRegion, TemporalRange } from '@watchskill/dsh-contracts'
+import type { SpatialRegion, TemporalRange } from '@deepwatch/dsh-contracts'
 import type { ResourceKind, ResourceOwner, Role } from './identity.js'
 
 /** What may be shared into a workspace. */

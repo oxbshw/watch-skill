@@ -51,7 +51,7 @@ function step(label, command, args, cwd = ROOT) {
  *
  * The order is not cosmetic. A client bundle that imports another package's
  * client entry reads that package's *built* bundle, so building alphabetically
- * had `client-evidence` resolve `@watchskill/dsh-workspace/client` before
+ * had `client-evidence` resolve `@deepwatch/dsh-workspace/client` before
  * `workspace` had been bundled — MISSING_EXPORT for a symbol that was plainly
  * in the source. It only stayed hidden while no client package imported
  * another.
@@ -110,7 +110,7 @@ function clientPackages() {
  * already on disk, ignored by git and invisible to `git status`, and the full
  * `tsc -b` resolved it happily. A cold clone had no such file, so the first
  * compilation stopped at `TS2307: Cannot find module
- * '@watchskill/dsh-tools/remote'` — a build that passed for everyone who had
+ * '@deepwatch/dsh-tools/remote'` — a build that passed for everyone who had
  * built before and failed for everyone who had not.
  *
  * So stage 1 builds the Host-face aggregate, which is the graph Typert reads

@@ -6,7 +6,7 @@
 
 ## Context
 
-ADR-003 put Watch Core and the Watch Workspace in separate repositories so that
+ADR-003 put Watch Core and the DeepWatch in separate repositories so that
 two release trains moving at different speeds would not be coupled, and so that
 Python consumers would not install hundreds of Node packages. Both goals were
 right. The split was not the only way to reach them, and it charged for them in
@@ -37,7 +37,7 @@ release trains kept separate by packaging and tagging rather than by distance.
 | Product | Location | Version | Tag namespace | Publishes to |
 |---|---|---|---|---|
 | Watch Core | repository root | `pyproject.toml` | `v*` | PyPI, MCP Registry, GHCR |
-| Watch Workspace | `workspace/` | `workspace/package.json` | `workspace-v*` | nothing; private |
+| DeepWatch | `workspace/` | `workspace/package.json` | `workspace-v*` | nothing; private |
 
 Core's wheel packages `src/watch_skill` and nothing else, so a Python consumer
 still installs no Node. The Workspace stays `"private": true`, so no part of it

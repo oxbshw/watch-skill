@@ -2,10 +2,10 @@
  * Watch's generated Remote, mounted into the Client's `ctx.remote`.
  *
  * This package exists to break a cycle, and the cycle is worth stating because
- * the arrangement only makes sense against it. `@watchskill/dsh-tools` is the
+ * the arrangement only makes sense against it. `@deepwatch/dsh-tools` is the
  * Host: it owns `WatchQueryService`, and Typert generates the Remote from that
  * Host program. It reads the Library's index, so tools depends on
- * `@watchskill/dsh-library`. When the Library's browser half also mounted the
+ * `@deepwatch/dsh-library`. When the Library's browser half also mounted the
  * generated contribution, the Library depended on tools in return — a real
  * cyclic workspace dependency that pnpm warned about, and a build order no
  * staging can honestly satisfy, because the Library's client could not compile
@@ -18,14 +18,14 @@
  * `ctx.remote.$mount` is how a distribution outside upstream's own assembly
  * contributes a namespace — `@deepseek-ai/dsh-api-remotes` imports its seven
  * contributions statically, and anything else mounts its own. What arrives is
- * `@watchskill/dsh-tools/remote`, generated from the Host service by Typert, so
+ * `@deepwatch/dsh-tools/remote`, generated from the Host service by Typert, so
  * a surface calls `ctx.remote.watchQuery.librarySearch` against the same strict
  * codecs the Host validates with.
  *
  * The artifact is client-safe by construction: it imports zod and nothing else,
  * and carries descriptors rather than any Host implementation.
  *
- * @module @watchskill/dsh-client-remotes/client
+ * @module @deepwatch/dsh-client-remotes/client
  */
 
 import type { Context } from '@deepseek-ai/cordis'
@@ -34,8 +34,8 @@ import type { TypertDisposer, TypertRemoteNamespaceMap } from '@deepseek-ai/dsh-
 // augmentation alone. Restating the shape locally is how a mount ends up typed
 // against a contract the runtime does not have.
 import type {} from '@deepseek-ai/dsh-api-gateway/client'
-import type { WatchQueryRemote } from '@watchskill/dsh-library/read-plane'
-import TYPERT_REMOTE from '@watchskill/dsh-tools/remote'
+import type { WatchQueryRemote } from '@deepwatch/dsh-library/read-plane'
+import TYPERT_REMOTE from '@deepwatch/dsh-tools/remote'
 
 /**
  * The Client Remote service, which the Gateway's browser half installs.

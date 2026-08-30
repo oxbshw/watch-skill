@@ -7,7 +7,7 @@ profile. It gives an agent you already run senses, and an independent answer to
 ## Install
 
 ```bash
-dsh plugin --profile web add @watchskill/dsh-bundle
+dsh plugin --profile web add @deepwatch/dsh-bundle
 ```
 
 That is the whole installation. The package declares `dsh.bundle.patch`, so DSH
@@ -66,7 +66,7 @@ targeted row's whole `config`, so restate every key you want to keep.
 ## Uninstall
 
 ```bash
-dsh plugin --profile web remove @watchskill/dsh-bundle
+dsh plugin --profile web remove @deepwatch/dsh-bundle
 ```
 
 The rows are purely additive, so removing the bundle leaves the host profile
@@ -74,5 +74,5 @@ exactly as it was.
 
 ## Attribution
 
-Built on DeepSeek Harness · Extended by Watch Skill. Watch Skill is an
-independent project and is not affiliated with or endorsed by DeepSeek.
+Built on DeepSeek Harness · Powered by Watch Skill. DeepWatch and Watch Skill are
+independent projects and are not affiliated with or endorsed by DeepSeek.

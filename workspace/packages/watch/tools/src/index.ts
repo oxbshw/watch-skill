@@ -15,7 +15,7 @@
  *    fallback to guessing from the conversation. The model is told, in its
  *    system prompt, that this is the contract.
  *
- * @module @watchskill/dsh-tools
+ * @module @deepwatch/dsh-tools
  */
 
 import { randomUUID } from 'node:crypto'
@@ -27,8 +27,8 @@ import { applyReadPlane } from './read-plane.js'
 import { LibraryGenerations } from './library-generations.js'
 import type { GenericCallView, JsonValue } from '@deepseek-ai/dsh-tools'
 import type {} from '@deepseek-ai/dsh-system-prompt'
-import type {} from '@watchskill/dsh-core-bridge'
-import type { EvidenceRecord, VerificationOutcome, WatchResult } from '@watchskill/dsh-contracts'
+import type {} from '@deepwatch/dsh-core-bridge'
+import type { EvidenceRecord, VerificationOutcome, WatchResult } from '@deepwatch/dsh-contracts'
 import { SENSORY_GUIDANCE, applySensoryTools } from './sensory.js'
 import { applyMemory } from './memory.js'
 import { BROWSER_GUIDANCE, applyBrowserTools } from './browser.js'

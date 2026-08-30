@@ -35,7 +35,7 @@ import {
   resolveModes,
   sessionHeader,
   sidebarRows,
-} from '@watchskill/dsh-workspace'
+} from '@deepwatch/dsh-workspace'
 import {
   ComposerPanel,
   InspectorTabs,
@@ -46,12 +46,12 @@ import {
   Sidebar,
   StatusBadge,
   WorkspaceShell,
-} from '@watchskill/dsh-workspace/components'
-import { MemoryCardRow, MemoryWorkbench } from '@watchskill/dsh-client-memory/components'
-import { MEMORY_VIEWS, toCard } from '@watchskill/dsh-client-memory'
-import { LiveSurface } from '@watchskill/dsh-live/components'
-import { startSession } from '@watchskill/dsh-live'
-import { project } from '@watchskill/dsh-trajectory'
+} from '@deepwatch/dsh-workspace/components'
+import { MemoryCardRow, MemoryWorkbench } from '@deepwatch/dsh-client-memory/components'
+import { MEMORY_VIEWS, toCard } from '@deepwatch/dsh-client-memory'
+import { LiveSurface } from '@deepwatch/dsh-live/components'
+import { startSession } from '@deepwatch/dsh-live'
+import { project } from '@deepwatch/dsh-trajectory'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const THEME = readFileSync(
@@ -390,7 +390,7 @@ describe('right to left, by construction', () => {
 
 describe('the timeline is readable without seeing it', () => {
   test('every lane is a labelled group of text buttons', async () => {
-    const { project: projectEvents } = await import('@watchskill/dsh-trajectory')
+    const { project: projectEvents } = await import('@deepwatch/dsh-trajectory')
     const events = [
       { type: 'tool/call', seq: 1, time: 1, data: { callId: 'c1', name: 'watch_verify', arguments: {}, turn: 1, step: 1 } },
       {

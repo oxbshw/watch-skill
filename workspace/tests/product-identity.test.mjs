@@ -1,5 +1,5 @@
 /**
- * The product is Watch Workspace, and DeepSeek Harness is what it is built on.
+ * The product is DeepWatch, and DeepSeek Harness is what it is built on.
  *
  * Every assertion here exists because the opposite was true at some point in
  * this pass, and none of it was caught by a component test. The product looked
@@ -31,8 +31,8 @@ const SETTINGS = read('packages/watch/client-settings/src/client/index.tsx')
 const SLOTS = JSON.parse(read('inventory/dsh-slots.json'))
 
 test('the product identity', async t => {
-  await t.test('the product is named Watch Workspace', () => {
-    assert.match(BRAND, /export const PRODUCT_NAME = 'Watch Workspace'/)
+  await t.test('the product is named DeepWatch', () => {
+    assert.match(BRAND, /export const PRODUCT_NAME = 'DeepWatch'/)
   })
 
   await t.test('the desktop window uses the same name, character for character', () => {
@@ -42,7 +42,7 @@ test('the product identity', async t => {
     const brandName = /export const PRODUCT_NAME = '([^']+)'/.exec(BRAND)?.[1]
     const desktopName = /^const PRODUCT_NAME = '([^']+)'$/m.exec(DESKTOP)?.[1]
     assert.equal(desktopName, brandName)
-    assert.equal(desktopName, 'Watch Workspace')
+    assert.equal(desktopName, 'DeepWatch')
   })
 
   await t.test('the desktop window refuses a title the page proposes', () => {
@@ -54,7 +54,7 @@ test('the product identity', async t => {
 
   await t.test('the desktop package carries the Watch identity', () => {
     const manifest = JSON.parse(read('apps/desktop/package.json'))
-    assert.equal(manifest.productName, 'Watch Workspace')
+    assert.equal(manifest.productName, 'DeepWatch')
   })
 
   await t.test('the document title and favicon are claimed at runtime', () => {
@@ -72,7 +72,7 @@ test('DeepSeek Harness attribution', async t => {
   await t.test('the attribution line is exact', () => {
     assert.match(
       BRAND,
-      /export const ATTRIBUTION = 'Built on DeepSeek Harness · Extended by Watch Skill'/,
+      /export const ATTRIBUTION = 'Built on DeepSeek Harness · Powered by Watch Skill'/,
     )
   })
 
@@ -109,13 +109,13 @@ test('DeepSeek Harness attribution', async t => {
 
 test('the bundle composes the whole product', async t => {
   const CLIENT_ROWS = [
-    ['watch-brand', '@watchskill/dsh-client-brand'],
-    ['watch-client-evidence', '@watchskill/dsh-client-evidence'],
-    ['watch-workspace', '@watchskill/dsh-workspace'],
-    ['watch-live', '@watchskill/dsh-live'],
-    ['watch-library', '@watchskill/dsh-library'],
-    ['watch-client-memory', '@watchskill/dsh-client-memory'],
-    ['watch-client-settings', '@watchskill/dsh-client-settings'],
+    ['watch-brand', '@deepwatch/dsh-client-brand'],
+    ['watch-client-evidence', '@deepwatch/dsh-client-evidence'],
+    ['watch-workspace', '@deepwatch/dsh-workspace'],
+    ['watch-live', '@deepwatch/dsh-live'],
+    ['watch-library', '@deepwatch/dsh-library'],
+    ['watch-client-memory', '@deepwatch/dsh-client-memory'],
+    ['watch-client-settings', '@deepwatch/dsh-client-settings'],
   ]
 
   for (const [id, module] of CLIENT_ROWS) {
@@ -143,7 +143,7 @@ test('the bundle composes the whole product', async t => {
     // `lib/identity.js` it imports, so the profile installed a package that
     // could not be loaded. The glob is what every other package uses.
     for (const [, module] of CLIENT_ROWS) {
-      const directory = module.replace('@watchskill/dsh-', '')
+      const directory = module.replace('@deepwatch/dsh-', '')
       const path = `packages/watch/${directory === 'client-brand' ? 'brand' : directory}/package.json`
       if (!existsSync(join(ROOT, path))) continue
       const manifest = JSON.parse(read(path))

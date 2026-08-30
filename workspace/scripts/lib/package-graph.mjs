@@ -17,8 +17,8 @@
  * manifest never mentions.
  *
  * The cycle this exists to prevent was real and cost a red pipeline:
- * `@watchskill/dsh-tools` reads the Library's index, so tools depends on
- * `@watchskill/dsh-library`; the Library's browser half then mounted the Typert
+ * `@deepwatch/dsh-tools` reads the Library's index, so tools depends on
+ * `@deepwatch/dsh-library`; the Library's browser half then mounted the Typert
  * Remote generated *from* tools, so the Library depended on tools in return. It
  * installed. It even compiled, on a machine where the generated file already
  * existed. On a cold clone the first `tsc` stopped with TS2307, because no

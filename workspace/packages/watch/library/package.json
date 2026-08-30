@@ -1,5 +1,5 @@
 {
-  "name": "@watchskill/dsh-library",
+  "name": "@deepwatch/dsh-library",
   "version": "0.1.0-preview.0",
   "description": "Library \u2014 sources, revisions, index state, search, facets and collections",
   "type": "module",
@@ -40,7 +40,7 @@
   "dsh": {
     "client": {
       "inject": [
-        "@watchskill/dsh-client-remotes",
+        "@deepwatch/dsh-client-remotes",
         "@deepseek-ai/dsh-client-ui-slots"
       ],
       "platform": "web"
@@ -69,9 +69,9 @@
     "react": "^18.2.0"
   },
   "dependencies": {
-    "@watchskill/dsh-client-brand": "workspace:^",
-    "@watchskill/dsh-contracts": "workspace:^",
-    "@watchskill/dsh-technology": "workspace:^",
-    "@watchskill/dsh-workspace": "workspace:^"
+    "@deepwatch/dsh-client-brand": "workspace:^",
+    "@deepwatch/dsh-contracts": "workspace:^",
+    "@deepwatch/dsh-technology": "workspace:^",
+    "@deepwatch/dsh-workspace": "workspace:^"
   }
 }

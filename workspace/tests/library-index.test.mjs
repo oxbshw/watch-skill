@@ -16,7 +16,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
   INDEX_VERSION, LibraryIndex, MAX_LIMIT, isWithinRoots, snippetFor, tokenize,
-} from '@watchskill/dsh-library'
+} from '@deepwatch/dsh-library'
 
 /** A record with sensible defaults, so each test states only what it varies. */
 const record = (over = {}) => ({

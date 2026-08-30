@@ -146,7 +146,7 @@ function bundlePackages() {
     for (const dependency of Object.keys(found.manifest.dependencies ?? {})) visit(dependency)
     order.push(found.dir)
   }
-  for (const dependency of Object.keys(byName.get('@watchskill/dsh-bundle')?.manifest.dependencies ?? {})) {
+  for (const dependency of Object.keys(byName.get('@deepwatch/dsh-bundle')?.manifest.dependencies ?? {})) {
     visit(dependency)
   }
   order.push('packages/watch/bundle')
@@ -230,7 +230,7 @@ function clearStaleInstalls() {
     }
   }
 
-  removeTree(join(profileModules, '@watchskill'))
+  removeTree(join(profileModules, '@deepwatch'))
   const store = join(profileModules, '.pnpm')
   if (!existsSync(store)) return false
   for (const entry of readdirSync(store)) {

@@ -17,7 +17,7 @@ import {
   parseAnswer,
   parseVerdict,
   verdictTone,
-} from '@watchskill/dsh-contracts'
+} from '@deepwatch/dsh-contracts'
 
 const ALL_VERDICTS = ['VERIFIED', 'FAILED', 'UNVERIFIED', 'INCONCLUSIVE', 'STALE', 'BLOCKED']
 

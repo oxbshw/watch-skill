@@ -1,5 +1,5 @@
 {
-  "name": "@watchskill/dsh-tools",
+  "name": "@deepwatch/dsh-tools",
   "version": "0.1.0-preview.0",
   "description": "Host plugin: Watch capabilities registered as DeepSeek Harness agent tools",
   "type": "module",
@@ -31,10 +31,10 @@
     "lib/typert.remote-client.d.ts.map"
   ],
   "dependencies": {
-    "@watchskill/dsh-contracts": "workspace:^",
-    "@watchskill/dsh-core-bridge": "workspace:^",
-    "@watchskill/dsh-library": "workspace:^",
-    "@watchskill/dsh-memory": "workspace:^"
+    "@deepwatch/dsh-contracts": "workspace:^",
+    "@deepwatch/dsh-core-bridge": "workspace:^",
+    "@deepwatch/dsh-library": "workspace:^",
+    "@deepwatch/dsh-memory": "workspace:^"
   },
   "peerDependencies": {
     "@deepseek-ai/cordis": "catalog:",

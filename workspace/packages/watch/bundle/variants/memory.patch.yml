@@ -10,7 +10,7 @@
 
 - insert:
     - id: watch-core-bridge
-      name: '@watchskill/dsh-core-bridge'
+      name: '@deepwatch/dsh-core-bridge'
       config:
         transport: auto
         command: watch-skill
@@ -21,7 +21,7 @@
         autoConnect: true
 
     - id: watch-memory
-      name: '@watchskill/dsh-memory'
+      name: '@deepwatch/dsh-memory'
       config:
         mode: 'off'
         directory: .watch/memory

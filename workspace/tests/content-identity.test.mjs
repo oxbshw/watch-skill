@@ -38,7 +38,7 @@ import {
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const REPO = join(ROOT, '..')
 
-/** The identifier grammar `@watchskill/dsh-contracts/query` enforces. */
+/** The identifier grammar `@deepwatch/dsh-contracts/query` enforces. */
 const IDENTIFIER = /^[A-Za-z0-9][A-Za-z0-9._-]*$/
 
 /** One record's bytes. Anonymous: it names no id of its own. */

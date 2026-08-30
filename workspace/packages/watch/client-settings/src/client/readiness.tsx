@@ -14,7 +14,7 @@
  * Nothing is `success` — green belongs to a VERIFIED verdict, and a configured
  * capability is not a verdict.
  *
- * @module @watchskill/dsh-client-settings/readiness
+ * @module @deepwatch/dsh-client-settings/readiness
  */
 
 import type { ReactNode } from 'react'

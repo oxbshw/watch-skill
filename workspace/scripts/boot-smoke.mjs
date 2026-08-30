@@ -9,7 +9,7 @@
  * wrong order, a config key the schema rejects. Every one of them produces a
  * perfect composed tree and a profile that dies on the first boot.
  *
- * That is not hypothetical. `@watchskill/dsh-tools` shipped with
+ * That is not hypothetical. `@deepwatch/dsh-tools` shipped with
  * `export default apply` — the bare function — so the loader read
  * `plugin.inject` off a function that had none, and the first
  * `ctx.systemPrompt` access threw at startup. The composed tree was correct,

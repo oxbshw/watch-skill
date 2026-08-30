@@ -10,7 +10,7 @@
  * being left to whoever assembles a footer. They are legal statements, and a
  * legal statement that depends on being remembered will eventually not be.
  *
- * @module @watchskill/dsh-client-brand/client
+ * @module @deepwatch/dsh-client-brand/client
  */
 
 import type { Context } from '@deepseek-ai/cordis'
@@ -41,7 +41,7 @@ export const inject = ['slots']
  *
  *   - Where the mark stands alone, it carries the product name.
  *   - Where the name is already beside it — the sidebar sets mark and name in
- *     adjacent slots — the mark is decorative, and announcing "Watch Workspace"
+ *     adjacent slots — the mark is decorative, and announcing "DeepWatch"
  *     twice is worse than announcing it once.
  */
 function WatchMark({ size = 18, decorative = false }: {

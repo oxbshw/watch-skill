@@ -35,12 +35,12 @@ reply is not expected; a *refusal to reach the network* is.
 
 ---
 
-## A. It opens, and it is Watch Workspace
+## A. It opens, and it is DeepWatch
 
 **A1 — Web loads, branded.** Open http://127.0.0.1:8931.
-*Expect:* the browser tab reads **Watch Workspace** with the orca as its icon.
-The sidebar header shows the orca beside the words "Watch Workspace", and the
-sidebar footer carries "Built on DeepSeek Harness · Extended by Watch Skill"
+*Expect:* the browser tab reads **DeepWatch** with the orca as its icon.
+The sidebar header shows the orca beside the words "DeepWatch", and the
+sidebar footer carries "Built on DeepSeek Harness · Powered by Watch Skill"
 above the independence disclosure.
 *Bug if:* the tab or the sidebar says "DeepSeek Harness"; the orca is stretched,
 clipped, pixelated, or sitting on a grey chequerboard; the attribution or the
@@ -122,19 +122,37 @@ check that did not run as a failure.
 **B6 — Library is answered by the host, and says so.** Open Library.
 *Expect:* the lead says search runs on *this workspace's own host*, the status
 line reads "Index ready. Answered by this workspace's own host.", and the
-seeded records are listed with a count. The rebuild control reads **Search
-again**, because the index belongs to the host and this control cannot rebuild
-it. Verification and Sort are disabled: the host answers by query and modality
-and has no parameter for either.
+seeded records are listed with a count. Verification and Sort are disabled: the
+host answers by query and modality and has no parameter for either.
 *Bug if:* the surface lists nothing while the fixtures are present; or it says
 it is searching locally; or Verification and Sort are enabled and changing them
 changes nothing. A filter that silently does nothing is worse than one that is
 plainly unavailable.
 
+**B6b — Refresh finds a record added while the app was running.** With
+DeepWatch open, copy any file from `<manual root>/dsh-home/watch-fixtures` to a
+new name in the same directory. Search again first, then press **Refresh
+library**.
+*Expect:* the plain search does **not** find it — a search answers from what the
+host holds and never re-reads the corpus on its own. Refresh shows "Refreshing…"
+while it runs, then a line naming the new record count and generation, and the
+results include the new file without restarting anything.
+*Bug if:* the ordinary search picks it up (a search with a hidden side effect);
+or Refresh reports success and the count does not move; or the control stays
+"Refreshing…" after the answer arrived; or the app has to be restarted.
+
+**B6c — A refresh that fails leaves a working Library.** Rename the fixtures
+directory away, press **Refresh library**, then put it back.
+*Expect:* a red line saying the refresh failed and that the previous index is
+still searchable — and it is: the records from before are still listed and still
+searchable.
+*Bug if:* the Library empties, the surface reports success, or the failure
+message names a filesystem path.
+
 **B7 — A record names itself, not a place on disk.** Read the identifier under
 each Library row.
 *Expect:* an identifier — letters, digits, dots, dashes, underscores — such as
-`demo_src_installer` or `file-1480cba57555253c`, and a readable title.
+`demo_src_installer` or a sixteen-character content id, and a readable title.
 *Bug if:* any row shows a filesystem path. **Report immediately.** The read
 plane's rule is that a record never carries a location, and a path in the
 browser is that rule broken in the direction that leaks the host's layout.
@@ -378,7 +396,7 @@ treated as observed content — never as an instruction.
 
 **K6 — Desktop identity.** Look at the window title bar, the taskbar and
 Alt-Tab.
-*Expect:* "Watch Workspace" in all three, with the orca as the window icon.
+*Expect:* "DeepWatch" in all three, with the orca as the window icon.
 *Bug if:* any of them says "DeepSeek Harness" or shows Electron's default icon.
 A brief flash of the wrong title during startup is also a bug — the title is
 held against the page deliberately.

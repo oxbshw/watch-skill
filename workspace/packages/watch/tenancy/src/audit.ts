@@ -19,7 +19,7 @@
  * forgotten would mean the deletion did not delete it, and the place it
  * survived would be the log nobody thinks to check.
  *
- * @module @watchskill/dsh-tenancy/audit
+ * @module @deepwatch/dsh-tenancy/audit
  */
 
 /** What gets audited. Every entry is one of these; there is no `other`. */

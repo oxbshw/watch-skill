@@ -2,27 +2,27 @@
  * The Library's end of the read plane: what the surface asks, and what it does
  * with the answer.
  *
- * The Host end is `@watchskill/dsh-tools`, which registers `WatchQueryService`
+ * The Host end is `@deepwatch/dsh-tools`, which registers `WatchQueryService`
  * and lets Typert generate a strict Remote from it. The Library does not import
  * that generated artifact and does not mount it. Doing either would make the
  * package that owns the Library capability depend on the package that reads it,
- * which is the cycle `@watchskill/dsh-client-remotes` exists to remove.
+ * which is the cycle `@deepwatch/dsh-client-remotes` exists to remove.
  *
  * So the namespace is described here from the contracts both ends already
- * share. `@watchskill/dsh-contracts/query/wire` is the single definition of
+ * share. `@deepwatch/dsh-contracts/query/wire` is the single definition of
  * every request and response on this wire — the generated declaration imports
  * its types from exactly that module — and `RemoteResult` is upstream's own
  * envelope. Nothing below restates a shape either side owns.
  *
  * That leaves one thing a shared contract cannot prove: that the namespace
  * really is called `watchQuery` and really carries these two methods. Two
- * things hold it. `@watchskill/dsh-client-remotes` compares this interface
+ * things hold it. `@deepwatch/dsh-client-remotes` compares this interface
  * against the generated one at compile time, so a changed signature stops the
  * build; and `tests/remote-client-mount.test.mjs` mounts the real contribution
  * through the real Gateway and calls it, so a changed *name* fails a test
  * rather than a page.
  *
- * @module @watchskill/dsh-library/client/read-plane
+ * @module @deepwatch/dsh-library/client/read-plane
  */
 
 import type { RemoteResult } from '@deepseek-ai/dsh-typert-protocol'
@@ -35,8 +35,8 @@ import type {
   LibrarySearchPage,
   LibrarySearchRequest,
   LibrarySearchResponse,
-} from '@watchskill/dsh-contracts/query/wire'
-import { WATCH_QUERY_WIRE_VERSION } from '@watchskill/dsh-contracts/query/wire'
+} from '@deepwatch/dsh-contracts/query/wire'
+import { WATCH_QUERY_WIRE_VERSION } from '@deepwatch/dsh-contracts/query/wire'
 import type { IndexHealth, IndexQueryResult } from '../index-store.js'
 
 /**

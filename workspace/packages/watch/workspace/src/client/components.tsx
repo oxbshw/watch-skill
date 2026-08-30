@@ -18,12 +18,12 @@
  * below. A colour written out here is a colour that gets written out slightly
  * differently in the next panel, and then a theme change misses one of them.
  *
- * @module @watchskill/dsh-workspace/components
+ * @module @deepwatch/dsh-workspace/components
  */
 
 import type { ReactNode } from 'react'
-import { toneFor, tokenFor } from '@watchskill/dsh-client-brand'
-import { needsDirectionIsolation } from '@watchskill/dsh-contracts'
+import { toneFor, tokenFor } from '@deepwatch/dsh-client-brand'
+import { needsDirectionIsolation } from '@deepwatch/dsh-contracts'
 import {
   MODE_DESCRIPTORS,
   WORKSPACE_MODES,

@@ -18,7 +18,7 @@
  * over the same events — the arrangement upstream already uses for `chat` and
  * `trajectory`, and additive by construction.
  *
- * @module @watchskill/dsh-trajectory/definition
+ * @module @deepwatch/dsh-trajectory/definition
  */
 
 import type { WatchProjection } from './projection.js'

@@ -29,7 +29,7 @@
  * carries its own limit, and a caller can pass an `AbortSignal`. An unbounded
  * search over a large corpus is a denial of service you wrote yourself.
  *
- * @module @watchskill/dsh-library/index-store
+ * @module @deepwatch/dsh-library/index-store
  */
 
 import type { SearchHit, SearchResult } from './search.js'

@@ -105,7 +105,7 @@ function bundlePackages() {
     for (const dependency of Object.keys(found.manifest.dependencies ?? {})) visit(dependency)
     order.push(found.dir)
   }
-  for (const dependency of Object.keys(byName.get('@watchskill/dsh-bundle')?.manifest.dependencies ?? {})) {
+  for (const dependency of Object.keys(byName.get('@deepwatch/dsh-bundle')?.manifest.dependencies ?? {})) {
     visit(dependency)
   }
   order.push('packages/watch/bundle')
@@ -311,14 +311,14 @@ function main() {
   const manifest = JSON.parse(
     readFileSync(join(HOME, 'profiles', PROFILE, 'package.json'), 'utf8'))
   const bundles = manifest.dsh?.profile?.bundles ?? []
-  if (!bundles.includes('@watchskill/dsh-bundle')) {
+  if (!bundles.includes('@deepwatch/dsh-bundle')) {
     problems.push('the Watch bundle is no longer in the profile layer stack')
   }
-  if (bundles.filter(entry => entry === '@watchskill/dsh-bundle').length > 1) {
+  if (bundles.filter(entry => entry === '@deepwatch/dsh-bundle').length > 1) {
     problems.push('the Watch bundle is listed twice in the layer stack')
   }
 
-  const installedVersion = manifest.dependencies?.['@watchskill/dsh-bundle'] ?? ''
+  const installedVersion = manifest.dependencies?.['@deepwatch/dsh-bundle'] ?? ''
   if (!installedVersion.includes('upgrade-b')) {
     problems.push(
       `the profile still resolves ${installedVersion}; the upgrade did not take effect`,
@@ -353,7 +353,7 @@ function main() {
   )
   const rollbackManifest = JSON.parse(
     readFileSync(join(HOME, 'profiles', PROFILE, 'package.json'), 'utf8'))
-  const rolledBackTo = rollbackManifest.dependencies?.['@watchskill/dsh-bundle'] ?? ''
+  const rolledBackTo = rollbackManifest.dependencies?.['@deepwatch/dsh-bundle'] ?? ''
   const rollbackWorked = rollback.status === 0 && rolledBackTo.includes('upgrade-a')
   const stateAfterRollback = readState(stateDir)
 

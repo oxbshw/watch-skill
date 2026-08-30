@@ -19,10 +19,10 @@
  * boundary is a coordinator that has leaked a workload description — which
  * frequently contains a URL, a source name and an expectation.
  *
- * @module @watchskill/dsh-tenancy/workers
+ * @module @deepwatch/dsh-tenancy/workers
  */
 
-import type { CapabilityTruth } from '@watchskill/dsh-contracts'
+import type { CapabilityTruth } from '@deepwatch/dsh-contracts'
 import type { ResourceOwner } from './identity.js'
 
 /** What a worker says it can do, and what has actually run on it. */

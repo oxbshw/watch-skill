@@ -147,7 +147,7 @@ describe('media egress is a separate consent from a provider key', () => {
   test('holding a key does not permit media to leave', async () => {
     // §39.5 point 7, and §26 decision 11: "configured API key لا تعني media
     // upload consent." Two independent flags, and the agent may flip neither.
-    const { defaultComposer, proposeChange } = await import('@watchskill/dsh-workspace')
+    const { defaultComposer, proposeChange } = await import('@deepwatch/dsh-workspace')
     const withNetwork = {
       ...defaultComposer(),
       privacy: { offlineOnly: false, localMediaOnly: true, egressRoutes: ['api.example.com'] },
@@ -163,7 +163,7 @@ describe('media egress is a separate consent from a provider key', () => {
   })
 
   test('a cloud engine needs its own consent even with the network open', async () => {
-    const technology = await import('@watchskill/dsh-technology')
+    const technology = await import('@deepwatch/dsh-technology')
     const health = new Map(
       technology.OCR_ENGINES.map(engine => [engine.id, { usable: true, state: 'ready' }]))
     const decision = technology.routeOcr(

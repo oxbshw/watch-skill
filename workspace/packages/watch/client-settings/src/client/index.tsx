@@ -11,7 +11,7 @@
  * agent is (Intelligence), what it can perceive (Perception), what it keeps
  * (Memory), what it can prove (Truth), and what it actually is (System).
  *
- * @module @watchskill/dsh-client-settings/client
+ * @module @deepwatch/dsh-client-settings/client
  */
 
 import type { Context } from '@deepseek-ai/cordis'

@@ -11,7 +11,7 @@
  * name in this file against `inventory/dsh-slots.json`, extracted from the
  * pinned packages' own `renderSlot` call sites.
  *
- * @module @watchskill/dsh-workspace/client
+ * @module @deepwatch/dsh-workspace/client
  */
 
 import type { Context } from '@deepseek-ai/cordis'

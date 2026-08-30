@@ -15,7 +15,7 @@
  * Regenerate with `python scripts/gen_bridge_schemas.py` in `watch-skill`, then
  * copy the `families` block from `schemas/bridge/manifest.json`.
  *
- * @module @watchskill/dsh-contracts/digests
+ * @module @deepwatch/dsh-contracts/digests
  */
 
 /** One contract family: a group of fields consumers break on together. */

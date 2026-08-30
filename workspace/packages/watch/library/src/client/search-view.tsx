@@ -17,7 +17,7 @@
  * is a real control, and the index's condition is announced rather than only
  * coloured.
  *
- * @module @watchskill/dsh-library/client/search-view
+ * @module @deepwatch/dsh-library/client/search-view
  */
 
 import type { ReactNode } from 'react'

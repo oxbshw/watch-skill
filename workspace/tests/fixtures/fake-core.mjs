@@ -22,7 +22,7 @@
  */
 
 import { Buffer } from 'node:buffer'
-import { EXPECTED_SCHEMA_DIGESTS } from '@watchskill/dsh-contracts'
+import { EXPECTED_SCHEMA_DIGESTS } from '@deepwatch/dsh-contracts'
 
 const HEADER_TERMINATOR = '\r\n\r\n'
 

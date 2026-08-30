@@ -25,7 +25,7 @@
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { Context } from '@deepseek-ai/cordis'
-import WatchMemoryService from '@watchskill/dsh-memory'
+import WatchMemoryService from '@deepwatch/dsh-memory'
 import { manualPath } from './lib/manual-paths.mjs'
 
 const HOME = manualPath('WATCH_MANUAL_HOME', ['dsh-home'])

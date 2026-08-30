@@ -12,7 +12,7 @@
  * identity to share (no Symbol, no instanceof, no singleton state), so a
  * client bundle can inline it without duplicating a shared instance.
  *
- * @module @watchskill/dsh-contracts
+ * @module @deepwatch/dsh-contracts
  */
 
 /** The Bridge protocol version this build of the Workspace speaks. */

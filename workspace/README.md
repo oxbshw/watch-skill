@@ -1,4 +1,4 @@
-# Watch Workspace
+# DeepWatch
 
 An evidence-native agent workspace built on [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness).
 
@@ -26,7 +26,7 @@ pip install watch-skill
 ```
 
 ```bash
-dsh plugin --profile web add @watchskill/dsh-bundle
+dsh plugin --profile web add @deepwatch/dsh-bundle
 ```
 
 The Bridge finds the engine on `PATH` and connects on its own. Without it the
@@ -139,8 +139,9 @@ green while the interface drew nothing.
 
 ## Attribution
 
-Built on DeepSeek Harness · Extended by Watch Skill
+Built on DeepSeek Harness · Powered by Watch Skill
 
-Watch Skill is an independent project and is not affiliated with or endorsed by
+DeepWatch and Watch Skill are independent projects and are not affiliated with
+or endorsed by
 DeepSeek. DeepSeek Harness is MIT licensed; its notices are preserved in
 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

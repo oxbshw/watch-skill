@@ -56,7 +56,7 @@ documented setup step that the CI workflow did not perform, so CI would have
 failed every run for a reason unrelated to any change.
 
 A gate ran before the build it reads. `ocr:check` imports
-`@watchskill/dsh-technology/descriptors`, which is built output, and sat four
+`@deepwatch/dsh-technology/descriptors`, which is built output, and sat four
 steps ahead of `build` in the chain. Any machine that had built once passed.
 
 The integrity digest could never have matched. The release manifest digested raw

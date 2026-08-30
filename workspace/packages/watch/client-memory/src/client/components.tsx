@@ -10,12 +10,12 @@
  * Operations are buttons on the card. A confirm that takes four clicks is a
  * confirm nobody performs, and an uncorrected memory is worse than none.
  *
- * @module @watchskill/dsh-client-memory/components
+ * @module @deepwatch/dsh-client-memory/components
  */
 
 import type { ReactNode } from 'react'
-import { toneFor, tokenFor } from '@watchskill/dsh-client-brand'
-import type { MemoryEvent } from '@watchskill/dsh-memory'
+import { toneFor, tokenFor } from '@deepwatch/dsh-client-brand'
+import type { MemoryEvent } from '@deepwatch/dsh-memory'
 import {
   MEMORY_VIEWS,
   MODE_DESCRIPTION,

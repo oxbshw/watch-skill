@@ -26,7 +26,7 @@ import { fileURLToPath } from 'node:url'
 import {
   DEFAULT_THRESHOLDS, characterErrorRate, hallucinationRate, omissionRate,
   wordAccuracy, wordErrorRate,
-} from '@watchskill/dsh-technology/descriptors'
+} from '@deepwatch/dsh-technology/descriptors'
 
 import { manualPath } from './lib/manual-paths.mjs'
 
@@ -63,7 +63,7 @@ function moduleSource(document) {
     ' * ground-truth corpus. Do not edit: a number typed into a component is a',
     ' * number nobody measured.',
     ' *',
-    ' * @module @watchskill/dsh-client-settings/ocr-measured',
+    ' * @module @deepwatch/dsh-client-settings/ocr-measured',
     ' */',
     '',
     '/** One workload tier, with the numbers the run produced. */',

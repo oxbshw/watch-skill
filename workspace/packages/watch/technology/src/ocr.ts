@@ -20,7 +20,7 @@
  * dark-mode UI, or mixed scripts. One global number would hide exactly the
  * cases a user cares about, so the matrix is per engine × workload × script.
  *
- * @module @watchskill/dsh-technology/ocr
+ * @module @deepwatch/dsh-technology/ocr
  */
 
 import type { TechnologyDescriptor } from './descriptor.js'

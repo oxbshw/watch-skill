@@ -46,7 +46,7 @@ added afterwards.
 | Watch rows present | 10 of 10 | derived from the bundle, each found in the dump |
 | Upstream rows lost | 0 | id-set diff against the profile without the overlay |
 | Upstream rows Watch disables | 1 — `ui-brand-official` | the only `disabled: true` the bundle declares |
-| That one recorded as intentional | yes | parity register: `intentionally_replaced`, ADR-001, replaced by `@watchskill/dsh-brand` |
+| That one recorded as intentional | yes | parity register: `intentionally_replaced`, ADR-001, replaced by `@deepwatch/dsh-brand` |
 | Rows the manual overlay disables | 0 | disabled-set diff: identical with and without the overlay |
 
 Every DSH agent capability is present in the composed tree: `agent-loop`,

@@ -15,7 +15,7 @@
  * It is not a mock of an adapter. It is an adapter, of a source that happens to
  * be synthetic, which is why the lifecycle it exercises is the real one.
  *
- * @module @watchskill/dsh-live/synthetic-source
+ * @module @deepwatch/dsh-live/synthetic-source
  */
 
 import { observationAt } from './capture.js'

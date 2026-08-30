@@ -38,11 +38,11 @@ const CHECK = process.argv.includes('--check')
  * The packages whose Remotes are generated.
  *
  * Named rather than discovered. Unscoped analysis walks every registered
- * package and fails on `@watchskill/dsh-library`, which declares client-only
+ * package and fails on `@deepwatch/dsh-library`, which declares client-only
  * export subpaths that the Host face deliberately excludes — so the scope is
  * the set of packages that actually contribute a Remote.
  */
-const CONTRIBUTORS = ['@watchskill/dsh-tools']
+const CONTRIBUTORS = ['@deepwatch/dsh-tools']
 
 /** What each artifact is written as, from the generator's own field names. */
 const ARTIFACTS = [

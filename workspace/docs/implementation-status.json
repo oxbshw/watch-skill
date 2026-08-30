@@ -331,7 +331,7 @@
       "tests": [
         "tests/brand.test.mjs"
       ],
-      "acceptance_journey": "Watch Workspace reads as a Watch product; green reserved for VERIFIED",
+      "acceptance_journey": "DeepWatch reads as a Watch product; green reserved for VERIFIED",
       "known_limitations": [
         "Occupies DSH brand slots and defines the token layer. The full workspace shell composition is a separate item.",
         "No browser test harness, so the React slot occupancy is not covered by a gate; the tone rules are."

@@ -11,13 +11,13 @@
  * list. An agent producing different text is ordinary. The same claim going
  * from VERIFIED to FAILED is not.
  *
- * @module @watchskill/dsh-client-evidence/client/compare-mode
+ * @module @deepwatch/dsh-client-evidence/client/compare-mode
  */
 
 import type { ReactNode } from 'react'
 import { useMemo, useState } from 'react'
-import { EmptyState, Facts, ModeSurface, Note, Panel } from '@watchskill/dsh-workspace/surface'
-import type { ModeViewProps } from '@watchskill/dsh-workspace/surface'
+import { EmptyState, Facts, ModeSurface, Note, Panel } from '@deepwatch/dsh-workspace/surface'
+import type { ModeViewProps } from '@deepwatch/dsh-workspace/surface'
 import { compareRecords, describeIncompatibility } from '../compare-engine.js'
 import type { ClaimDifference, ComparableRecord } from '../compare-engine.js'
 

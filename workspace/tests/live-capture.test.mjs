@@ -15,7 +15,7 @@
 
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { CaptureSession, SOURCES, SyntheticSource, sourceById } from '@watchskill/dsh-live'
+import { CaptureSession, SOURCES, SyntheticSource, sourceById } from '@deepwatch/dsh-live'
 
 const wait = ms => new Promise(resolve => { setTimeout(resolve, ms) })
 

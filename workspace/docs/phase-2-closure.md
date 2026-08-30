@@ -62,7 +62,7 @@ eventually disagree with Core and the disagreement would be invisible.
 
 ## Watch event types
 
-Ten, defined in `@watchskill/dsh-trajectory`. Five are produced today from
+Ten, defined in `@deepwatch/dsh-trajectory`. Five are produced today from
 tool results; the rest are defined and reachable but only emitted once their
 capability is wired.
 

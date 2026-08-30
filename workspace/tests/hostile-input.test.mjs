@@ -21,10 +21,10 @@ import { dirname, join } from 'node:path'
 import { tmpdir } from 'node:os'
 
 import { Context } from '@deepseek-ai/cordis'
-import WatchCoreService from '@watchskill/dsh-core-bridge'
-import { LibraryIndex, isWithinRoots } from '@watchskill/dsh-library/index-store'
-import { isContractUnverified } from '@watchskill/dsh-contracts'
-import { mayOpenExternally, navigationPolicy } from '@watchskill/watch-desktop'
+import WatchCoreService from '@deepwatch/dsh-core-bridge'
+import { LibraryIndex, isWithinRoots } from '@deepwatch/dsh-library/index-store'
+import { isContractUnverified } from '@deepwatch/dsh-contracts'
+import { mayOpenExternally, navigationPolicy } from '@deepwatch/desktop'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const HOSTILE = join(HERE, 'fixtures', 'hostile-core.mjs')

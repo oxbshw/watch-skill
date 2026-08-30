@@ -12,13 +12,13 @@
  * passes on any machine that has built before and fails on every cold clone.
  *
  * That is not a hypothetical here. The Library's browser half mounted the
- * Typert Remote generated from `@watchskill/dsh-tools`, which reads the
+ * Typert Remote generated from `@deepwatch/dsh-tools`, which reads the
  * Library's index — so each package needed the other, and the first compilation
  * on a clean checkout stopped at
  *
- *     TS2307: Cannot find module '@watchskill/dsh-tools/remote'
+ *     TS2307: Cannot find module '@deepwatch/dsh-tools/remote'
  *
- * The fix was a composition boundary, `@watchskill/dsh-client-remotes`. This
+ * The fix was a composition boundary, `@deepwatch/dsh-client-remotes`. This
  * gate is what keeps the boundary from being quietly deleted: it re-derives the
  * same graph pnpm resolves, and the project graph `tsc -b` resolves, and refuses
  * a cycle in either.
@@ -59,7 +59,7 @@ function main() {
       message: `the first-party package graph has a cycle:\n         ${describe(packageCycle, packages)}`,
       fix: 'A package that owns a capability must not also depend on the package '
         + 'that consumes it. Move the consuming edge to a composition package — '
-        + '@watchskill/dsh-client-remotes is the one that already exists for this.',
+        + '@deepwatch/dsh-client-remotes is the one that already exists for this.',
     })
   }
 

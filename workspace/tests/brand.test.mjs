@@ -22,7 +22,7 @@ import {
   isSuccessTone,
   tokenFor,
   toneFor,
-} from '@watchskill/dsh-client-brand'
+} from '@deepwatch/dsh-client-brand'
 
 describe('the success tone', () => {
   test('exactly one status reaches it, and it is VERIFIED', () => {
@@ -88,7 +88,7 @@ describe('tokens, not hex', () => {
 
 describe('identity and attribution', () => {
   test('the product is named Watch, not DeepSeek anything', () => {
-    assert.equal(PRODUCT_NAME, 'Watch Workspace')
+    assert.equal(PRODUCT_NAME, 'DeepWatch')
     assert.ok(!PRODUCT_NAME.toLowerCase().includes('deepseek'))
   })
 

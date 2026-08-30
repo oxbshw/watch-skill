@@ -1,5 +1,5 @@
 {
-  "name": "@watchskill/dsh-adapters",
+  "name": "@deepwatch/dsh-adapters",
   "version": "0.1.0-preview.0",
   "description": "Optional adapters: Obsidian vaults and LLMWiki bundles. Watch works fully without either.",
   "type": "module",
@@ -18,7 +18,7 @@
     "lib/**/*.d.ts"
   ],
   "dependencies": {
-    "@watchskill/dsh-memory": "workspace:^",
-    "@watchskill/dsh-wiki": "workspace:^"
+    "@deepwatch/dsh-memory": "workspace:^",
+    "@deepwatch/dsh-wiki": "workspace:^"
   }
 }

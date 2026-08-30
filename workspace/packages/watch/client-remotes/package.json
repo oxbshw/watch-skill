@@ -1,5 +1,5 @@
 {
-  "name": "@watchskill/dsh-client-remotes",
+  "name": "@deepwatch/dsh-client-remotes",
   "version": "0.1.0-preview.0",
   "description": "Client composition: mounts Watch's generated Typert Remote into ctx.remote",
   "type": "module",
@@ -44,7 +44,7 @@
     "react": "^18.2.0"
   },
   "dependencies": {
-    "@watchskill/dsh-library": "workspace:^",
-    "@watchskill/dsh-tools": "workspace:^"
+    "@deepwatch/dsh-library": "workspace:^",
+    "@deepwatch/dsh-tools": "workspace:^"
   }
 }

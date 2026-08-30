@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Is this machine able to build and run Watch Workspace?
+ * Is this machine able to build and run DeepWatch?
  *
  * The rule this follows, and the reason it is short: it checks what the
  * repository actually needs, and reports everything else as optional with the

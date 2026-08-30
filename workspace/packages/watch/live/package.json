@@ -1,5 +1,5 @@
 {
-  "name": "@watchskill/dsh-live",
+  "name": "@deepwatch/dsh-live",
   "version": "0.1.0-preview.0",
   "description": "Live mode \u2014 cursors, gaps, clocks, reconnect and a bounded buffer",
   "type": "module",
@@ -66,8 +66,8 @@
     "react": "^18.2.0"
   },
   "dependencies": {
-    "@watchskill/dsh-client-brand": "workspace:^",
-    "@watchskill/dsh-contracts": "workspace:^",
-    "@watchskill/dsh-workspace": "workspace:^"
+    "@deepwatch/dsh-client-brand": "workspace:^",
+    "@deepwatch/dsh-contracts": "workspace:^",
+    "@deepwatch/dsh-workspace": "workspace:^"
   }
 }

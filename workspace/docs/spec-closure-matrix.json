@@ -325,7 +325,7 @@
     {
       "id": "dod.surfaces-web",
       "section": "25 / Product surfaces",
-      "requirement": "Watch Workspace Web works local and single-user hosted.",
+      "requirement": "DeepWatch Web works local and single-user hosted.",
       "status": "PASS",
       "evidence": "Local Web runs: the real DSH Web Host serving the Watch bundle on loopback, with Watch Core spawned as a child over stdio and the Watch client bundle served to the browser.",
       "source_paths": [

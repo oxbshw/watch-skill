@@ -5,7 +5,7 @@
  *
  * The first is that the graph is acyclic *now*. That is what
  * `scripts/verify-package-graph.mjs` reports, and the reason it exists is a
- * cycle that shipped: `@watchskill/dsh-tools` reads the Library's index, and
+ * cycle that shipped: `@deepwatch/dsh-tools` reads the Library's index, and
  * the Library's browser half mounted the Typert Remote generated from tools.
  * pnpm printed a WARN and installed. `tsc` succeeded on every machine that had
  * built before, and failed on every cold clone with TS2307 — because no build
@@ -103,13 +103,13 @@ describe('this workspace', () => {
     // general rule catches the cycle; this says which direction was wrong, so
     // somebody re-adding the dependency reads the reason and not just a cycle.
     const packages = packageGraph(ROOT)
-    assert.equal(packages.get('@watchskill/dsh-library')?.has('@watchskill/dsh-tools'), false,
+    assert.equal(packages.get('@deepwatch/dsh-library')?.has('@deepwatch/dsh-tools'), false,
       'the Library must not depend on the Host that reads it; the Remote is '
-      + 'mounted by @watchskill/dsh-client-remotes')
-    assert.equal(packages.get('@watchskill/dsh-tools')?.has('@watchskill/dsh-library'), true,
+      + 'mounted by @deepwatch/dsh-client-remotes')
+    assert.equal(packages.get('@deepwatch/dsh-tools')?.has('@deepwatch/dsh-library'), true,
       'the Host does read the Library index, and that edge is the correct one')
     assert.equal(
-      packages.get('@watchskill/dsh-client-remotes')?.has('@watchskill/dsh-tools'), true,
+      packages.get('@deepwatch/dsh-client-remotes')?.has('@deepwatch/dsh-tools'), true,
       'the composition package is what may depend on the generated Remote')
   })
 

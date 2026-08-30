@@ -1,5 +1,5 @@
 {
-  "name": "@watchskill/dsh-client-memory",
+  "name": "@deepwatch/dsh-client-memory",
   "version": "0.1.0-preview.0",
   "description": "Browser half: the Memory product surfaces — taste, timeline, wiki, decisions, lessons, failures, sources",
   "type": "module",
@@ -52,7 +52,7 @@
     "react": "^18.2.0"
   },
   "dependencies": {
-    "@watchskill/dsh-client-brand": "workspace:^",
-    "@watchskill/dsh-memory": "workspace:^"
+    "@deepwatch/dsh-client-brand": "workspace:^",
+    "@deepwatch/dsh-memory": "workspace:^"
   }
 }

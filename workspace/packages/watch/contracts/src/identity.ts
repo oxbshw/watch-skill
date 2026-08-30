@@ -24,7 +24,7 @@
  * Browser-safe: hashing goes through the Web Crypto API where the caller has
  * bytes, and every id here is derived from a digest the caller already holds.
  *
- * @module @watchskill/dsh-contracts/identity
+ * @module @deepwatch/dsh-contracts/identity
  */
 
 /** The one digest algorithm this contract uses. Mirrors `DIGEST_ALGORITHM`. */
@@ -74,7 +74,7 @@ export function revisionIdFor(
  * the same id for the same bytes.
  *
  * Sixteen hex characters with no prefix, which is both what Core hands out and
- * an identifier `@watchskill/dsh-contracts/query` will accept — so an id
+ * an identifier `@deepwatch/dsh-contracts/query` will accept — so an id
  * derived here can be sent straight back through a read that validates it.
  */
 export function contentIdFor(

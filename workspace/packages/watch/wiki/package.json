@@ -1,5 +1,5 @@
 {
-  "name": "@watchskill/dsh-wiki",
+  "name": "@deepwatch/dsh-wiki",
   "version": "0.1.0-preview.0",
   "description": "Deterministic workspace wiki projections over the memory ledger",
   "type": "module",
@@ -18,6 +18,6 @@
     "lib/**/*.d.ts"
   ],
   "dependencies": {
-    "@watchskill/dsh-memory": "workspace:^"
+    "@deepwatch/dsh-memory": "workspace:^"
   }
 }

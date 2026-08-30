@@ -19,7 +19,7 @@
  * sitting. Native permissions are denied by default, and each one is granted
  * only in response to a capability the person actually invoked.
  *
- * @module @watchskill/watch-desktop/security
+ * @module @deepwatch/desktop/security
  */
 
 /**

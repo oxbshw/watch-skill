@@ -67,55 +67,55 @@ importers:
       '@types/react':
         specifier: ~18.3.31
         version: 18.3.31
-      '@watchskill/dsh-adapters':
+      '@deepwatch/dsh-adapters':
         specifier: workspace:*
         version: link:packages/watch/adapters
-      '@watchskill/dsh-client-brand':
+      '@deepwatch/dsh-client-brand':
         specifier: workspace:*
         version: link:packages/watch/brand
-      '@watchskill/dsh-client-evidence':
+      '@deepwatch/dsh-client-evidence':
         specifier: workspace:*
         version: link:packages/watch/client-evidence
-      '@watchskill/dsh-client-memory':
+      '@deepwatch/dsh-client-memory':
         specifier: workspace:*
         version: link:packages/watch/client-memory
-      '@watchskill/dsh-contracts':
+      '@deepwatch/dsh-contracts':
         specifier: workspace:*
         version: link:packages/watch/contracts
-      '@watchskill/dsh-core-bridge':
+      '@deepwatch/dsh-core-bridge':
         specifier: workspace:*
         version: link:packages/watch/core-bridge
-      '@watchskill/dsh-library':
+      '@deepwatch/dsh-library':
         specifier: workspace:*
         version: link:packages/watch/library
-      '@watchskill/dsh-live':
+      '@deepwatch/dsh-live':
         specifier: workspace:*
         version: link:packages/watch/live
-      '@watchskill/dsh-memory':
+      '@deepwatch/dsh-memory':
         specifier: workspace:*
         version: link:packages/watch/memory
-      '@watchskill/dsh-sdk':
+      '@deepwatch/dsh-sdk':
         specifier: workspace:*
         version: link:packages/watch/sdk
-      '@watchskill/dsh-technology':
+      '@deepwatch/dsh-technology':
         specifier: workspace:*
         version: link:packages/watch/technology
-      '@watchskill/dsh-tenancy':
+      '@deepwatch/dsh-tenancy':
         specifier: workspace:*
         version: link:packages/watch/tenancy
-      '@watchskill/dsh-tools':
+      '@deepwatch/dsh-tools':
         specifier: workspace:*
         version: link:packages/watch/tools
-      '@watchskill/dsh-trajectory':
+      '@deepwatch/dsh-trajectory':
         specifier: workspace:*
         version: link:packages/watch/trajectory
-      '@watchskill/dsh-wiki':
+      '@deepwatch/dsh-wiki':
         specifier: workspace:*
         version: link:packages/watch/wiki
-      '@watchskill/dsh-workspace':
+      '@deepwatch/dsh-workspace':
         specifier: workspace:*
         version: link:packages/watch/workspace
-      '@watchskill/watch-desktop':
+      '@deepwatch/desktop':
         specifier: workspace:*
         version: link:apps/desktop
       eslint:
@@ -142,13 +142,13 @@ importers:
 
   apps/desktop:
     dependencies:
-      '@watchskill/dsh-contracts':
+      '@deepwatch/dsh-contracts':
         specifier: workspace:^
         version: link:../../packages/watch/contracts
-      '@watchskill/dsh-core-bridge':
+      '@deepwatch/dsh-core-bridge':
         specifier: workspace:^
         version: link:../../packages/watch/core-bridge
-      '@watchskill/dsh-workspace':
+      '@deepwatch/dsh-workspace':
         specifier: workspace:^
         version: link:../../packages/watch/workspace
     devDependencies:
@@ -158,10 +158,10 @@ importers:
 
   packages/watch/adapters:
     dependencies:
-      '@watchskill/dsh-memory':
+      '@deepwatch/dsh-memory':
         specifier: workspace:^
         version: link:../memory
-      '@watchskill/dsh-wiki':
+      '@deepwatch/dsh-wiki':
         specifier: workspace:^
         version: link:../wiki
 
@@ -182,58 +182,58 @@ importers:
 
   packages/watch/bundle:
     dependencies:
-      '@watchskill/dsh-client-brand':
+      '@deepwatch/dsh-client-brand':
         specifier: workspace:^
         version: link:../brand
-      '@watchskill/dsh-client-evidence':
+      '@deepwatch/dsh-client-evidence':
         specifier: workspace:^
         version: link:../client-evidence
-      '@watchskill/dsh-client-memory':
+      '@deepwatch/dsh-client-memory':
         specifier: workspace:^
         version: link:../client-memory
-      '@watchskill/dsh-client-remotes':
+      '@deepwatch/dsh-client-remotes':
         specifier: workspace:^
         version: link:../client-remotes
-      '@watchskill/dsh-client-settings':
+      '@deepwatch/dsh-client-settings':
         specifier: workspace:^
         version: link:../client-settings
-      '@watchskill/dsh-core-bridge':
+      '@deepwatch/dsh-core-bridge':
         specifier: workspace:^
         version: link:../core-bridge
-      '@watchskill/dsh-library':
+      '@deepwatch/dsh-library':
         specifier: workspace:^
         version: link:../library
-      '@watchskill/dsh-live':
+      '@deepwatch/dsh-live':
         specifier: workspace:^
         version: link:../live
-      '@watchskill/dsh-memory':
+      '@deepwatch/dsh-memory':
         specifier: workspace:^
         version: link:../memory
-      '@watchskill/dsh-technology':
+      '@deepwatch/dsh-technology':
         specifier: workspace:^
         version: link:../technology
-      '@watchskill/dsh-tools':
+      '@deepwatch/dsh-tools':
         specifier: workspace:^
         version: link:../tools
-      '@watchskill/dsh-trajectory':
+      '@deepwatch/dsh-trajectory':
         specifier: workspace:^
         version: link:../trajectory
-      '@watchskill/dsh-workspace':
+      '@deepwatch/dsh-workspace':
         specifier: workspace:^
         version: link:../workspace
 
   packages/watch/client-evidence:
     dependencies:
-      '@watchskill/dsh-client-brand':
+      '@deepwatch/dsh-client-brand':
         specifier: workspace:^
         version: link:../brand
-      '@watchskill/dsh-contracts':
+      '@deepwatch/dsh-contracts':
         specifier: workspace:^
         version: link:../contracts
-      '@watchskill/dsh-trajectory':
+      '@deepwatch/dsh-trajectory':
         specifier: workspace:^
         version: link:../trajectory
-      '@watchskill/dsh-workspace':
+      '@deepwatch/dsh-workspace':
         specifier: workspace:^
         version: link:../workspace
     devDependencies:
@@ -255,10 +255,10 @@ importers:
 
   packages/watch/client-memory:
     dependencies:
-      '@watchskill/dsh-client-brand':
+      '@deepwatch/dsh-client-brand':
         specifier: workspace:^
         version: link:../brand
-      '@watchskill/dsh-memory':
+      '@deepwatch/dsh-memory':
         specifier: workspace:^
         version: link:../memory
     devDependencies:
@@ -277,10 +277,10 @@ importers:
 
   packages/watch/client-remotes:
     dependencies:
-      '@watchskill/dsh-library':
+      '@deepwatch/dsh-library':
         specifier: workspace:^
         version: link:../library
-      '@watchskill/dsh-tools':
+      '@deepwatch/dsh-tools':
         specifier: workspace:^
         version: link:../tools
     devDependencies:
@@ -302,10 +302,10 @@ importers:
 
   packages/watch/client-settings:
     dependencies:
-      '@watchskill/dsh-client-brand':
+      '@deepwatch/dsh-client-brand':
         specifier: workspace:^
         version: link:../brand
-      '@watchskill/dsh-technology':
+      '@deepwatch/dsh-technology':
         specifier: workspace:^
         version: link:../technology
     devDependencies:
@@ -329,7 +329,7 @@ importers:
 
   packages/watch/core-bridge:
     dependencies:
-      '@watchskill/dsh-contracts':
+      '@deepwatch/dsh-contracts':
         specifier: workspace:^
         version: link:../contracts
     devDependencies:
@@ -342,16 +342,16 @@ importers:
 
   packages/watch/library:
     dependencies:
-      '@watchskill/dsh-client-brand':
+      '@deepwatch/dsh-client-brand':
         specifier: workspace:^
         version: link:../brand
-      '@watchskill/dsh-contracts':
+      '@deepwatch/dsh-contracts':
         specifier: workspace:^
         version: link:../contracts
-      '@watchskill/dsh-technology':
+      '@deepwatch/dsh-technology':
         specifier: workspace:^
         version: link:../technology
-      '@watchskill/dsh-workspace':
+      '@deepwatch/dsh-workspace':
         specifier: workspace:^
         version: link:../workspace
     devDependencies:
@@ -373,13 +373,13 @@ importers:
 
   packages/watch/live:
     dependencies:
-      '@watchskill/dsh-client-brand':
+      '@deepwatch/dsh-client-brand':
         specifier: workspace:^
         version: link:../brand
-      '@watchskill/dsh-contracts':
+      '@deepwatch/dsh-contracts':
         specifier: workspace:^
         version: link:../contracts
-      '@watchskill/dsh-workspace':
+      '@deepwatch/dsh-workspace':
         specifier: workspace:^
         version: link:../workspace
     devDependencies:
@@ -407,20 +407,20 @@ importers:
 
   packages/watch/sdk:
     dependencies:
-      '@watchskill/dsh-contracts':
+      '@deepwatch/dsh-contracts':
         specifier: workspace:^
         version: link:../contracts
-      '@watchskill/dsh-technology':
+      '@deepwatch/dsh-technology':
         specifier: workspace:^
         version: link:../technology
-      '@watchskill/dsh-trajectory':
+      '@deepwatch/dsh-trajectory':
         specifier: workspace:^
         version: link:../trajectory
     devDependencies:
       '@types/react':
         specifier: ~18.3.1
         version: 18.3.31
-      '@watchskill/dsh-client-brand':
+      '@deepwatch/dsh-client-brand':
         specifier: workspace:*
         version: link:../brand
       react:
@@ -438,22 +438,22 @@ importers:
 
   packages/watch/tenancy:
     dependencies:
-      '@watchskill/dsh-contracts':
+      '@deepwatch/dsh-contracts':
         specifier: workspace:^
         version: link:../contracts
 
   packages/watch/tools:
     dependencies:
-      '@watchskill/dsh-contracts':
+      '@deepwatch/dsh-contracts':
         specifier: workspace:^
         version: link:../contracts
-      '@watchskill/dsh-core-bridge':
+      '@deepwatch/dsh-core-bridge':
         specifier: workspace:^
         version: link:../core-bridge
-      '@watchskill/dsh-library':
+      '@deepwatch/dsh-library':
         specifier: workspace:^
         version: link:../library
-      '@watchskill/dsh-memory':
+      '@deepwatch/dsh-memory':
         specifier: workspace:^
         version: link:../memory
     devDependencies:
@@ -478,25 +478,25 @@ importers:
 
   packages/watch/trajectory:
     dependencies:
-      '@watchskill/dsh-contracts':
+      '@deepwatch/dsh-contracts':
         specifier: workspace:^
         version: link:../contracts
 
   packages/watch/wiki:
     dependencies:
-      '@watchskill/dsh-memory':
+      '@deepwatch/dsh-memory':
         specifier: workspace:^
         version: link:../memory
 
   packages/watch/workspace:
     dependencies:
-      '@watchskill/dsh-client-brand':
+      '@deepwatch/dsh-client-brand':
         specifier: workspace:^
         version: link:../brand
-      '@watchskill/dsh-contracts':
+      '@deepwatch/dsh-contracts':
         specifier: workspace:^
         version: link:../contracts
-      '@watchskill/dsh-trajectory':
+      '@deepwatch/dsh-trajectory':
         specifier: workspace:^
         version: link:../trajectory
     devDependencies:

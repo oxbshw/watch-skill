@@ -117,10 +117,10 @@ function checkPatch(label, patchFile, manifest, baseline, packages) {
       problems.push(`${label}: row "${row.id}" names no module, so the Loader has nothing to import`)
       continue
     }
-    if (row.module.startsWith("@watchskill/") && !packages.has(row.module)) {
+    if (row.module.startsWith("@deepwatch/") && !packages.has(row.module)) {
       problems.push(`${label}: row "${row.id}" names ${row.module}, which is not a package in this workspace`)
     }
-    if (row.module.startsWith("@watchskill/") && !dependencies.has(row.module)) {
+    if (row.module.startsWith("@deepwatch/") && !dependencies.has(row.module)) {
       problems.push(
         `${label}: row "${row.id}" mounts ${row.module}, but the bundle does not depend on it — `
         + "the profile install would resolve the layer and then fail to import the module",
@@ -192,7 +192,7 @@ function main() {
       problems.push(`row "${row.id}" names no module, so the Loader has nothing to import`)
       continue
     }
-    if (row.module.startsWith('@watchskill/') && !packages.has(row.module)) {
+    if (row.module.startsWith('@deepwatch/') && !packages.has(row.module)) {
       problems.push(`row "${row.id}" names ${row.module}, which is not a package in this workspace`)
     }
   }
@@ -201,7 +201,7 @@ function main() {
   // resolves the layer and then fails to import the module it names.
   const dependencies = new Set(Object.keys(manifest.dependencies ?? {}))
   for (const row of rows) {
-    if (row.module?.startsWith('@watchskill/') && !dependencies.has(row.module)) {
+    if (row.module?.startsWith('@deepwatch/') && !dependencies.has(row.module)) {
       problems.push(
         `row "${row.id}" mounts ${row.module}, but the bundle does not depend on it — `
         + 'the profile install would resolve the layer and then fail to import the module',

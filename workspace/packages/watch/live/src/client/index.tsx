@@ -1,7 +1,7 @@
 /**
  * The Live surface, registered into DSH's slots.
  *
- * @module @watchskill/dsh-live/client
+ * @module @deepwatch/dsh-live/client
  */
 
 import type { Context } from '@deepseek-ai/cordis'

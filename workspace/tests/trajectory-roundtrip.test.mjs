@@ -29,7 +29,7 @@ import {
   withRecords,
   recordFromMemoryEvent,
   WATCH_EVENT_TYPES,
-} from '@watchskill/dsh-trajectory'
+} from '@deepwatch/dsh-trajectory'
 
 const SESSION = 'sess_phase2'
 const WORKSPACE = 'ws_phase2'

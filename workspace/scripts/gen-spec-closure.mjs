@@ -175,7 +175,7 @@ const REQUIREMENTS = [
     ['tests/memory-product.test.mjs', 'tests/memory-rules.test.mjs', 'tests/security.test.mjs'], [], true),
 
   R('dod.surfaces-web', '25 / Product surfaces',
-    'Watch Workspace Web works local and single-user hosted.',
+    'DeepWatch Web works local and single-user hosted.',
     'PASS',
     'Local Web runs: the real DSH Web Host serving the Watch bundle on loopback, with Watch Core spawned as a child over stdio and the Watch client bundle served to the browser.',
     ['scripts/manual-profile.mjs', 'packages/watch/bundle/cordis.patch.yml'],

@@ -1,6 +1,6 @@
 # Third-party notices
 
-Watch Workspace is a downstream distribution of DeepSeek Harness. The upstream
+DeepWatch is a downstream distribution of DeepSeek Harness. The upstream
 project is not vendored: it is consumed as published npm packages pinned in
 [`upstream/deepseek-harness.lock`](upstream/deepseek-harness.lock), and a
 source checkout is used only for audit and inventory generation.
@@ -49,7 +49,8 @@ Licensed MIT; see the package's own LICENSE in the installed tree.
 The DeepSeek name is not part of this product's name, and DeepSeek marks are
 not shipped. Attribution to the upstream project is required and visible:
 
-> Built on DeepSeek Harness · Extended by Watch Skill
+> Built on DeepSeek Harness · Powered by Watch Skill
 
-Watch Skill is an independent project and is not affiliated with or endorsed
+DeepWatch and Watch Skill are independent projects and are not affiliated with
+or endorsed
 by DeepSeek.

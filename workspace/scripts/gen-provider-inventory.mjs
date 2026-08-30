@@ -54,7 +54,7 @@ function moduleSource(document) {
     ' * `@earendil-works/pi-ai`. Do not edit: the catalogue is the source of',
     ' * truth and this is a count of it.',
     ' *',
-    ' * @module @watchskill/dsh-client-settings/providers',
+    ' * @module @deepwatch/dsh-client-settings/providers',
     ' */',
     '',
     '/** Every provider route the pinned DSH ships. */',

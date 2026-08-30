@@ -144,7 +144,7 @@ jobs:
   # tell an idempotent build from one that only works the first time.
   #
   # That gap shipped a red pipeline. A client half imported
-  # `@watchskill/dsh-tools/remote`, which is generated, ignored, and therefore
+  # `@deepwatch/dsh-tools/remote`, which is generated, ignored, and therefore
   # invisible to `git status`. `npm run check` passed locally with 1309 tests
   # green while every CI job failed on TS2307 for a module plainly present in
   # the author's tree.

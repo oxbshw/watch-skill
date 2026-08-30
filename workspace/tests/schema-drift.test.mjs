@@ -16,13 +16,13 @@ import { test, describe } from 'node:test'
 import assert from 'node:assert/strict'
 
 import { Context } from '@deepseek-ai/cordis'
-import WatchCoreService from '@watchskill/dsh-core-bridge'
+import WatchCoreService from '@deepwatch/dsh-core-bridge'
 import {
   EXPECTED_SCHEMA_DIGESTS,
   FAMILY_CAPABILITIES,
   detectSchemaDrift,
   isContractUnverified,
-} from '@watchskill/dsh-contracts'
+} from '@deepwatch/dsh-contracts'
 
 describe('drift detection', () => {
   test('a matching contract produces no drift', () => {

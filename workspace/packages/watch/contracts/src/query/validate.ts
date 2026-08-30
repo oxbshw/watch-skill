@@ -24,7 +24,7 @@
  * Order matters. Everything here runs before the index is touched, so an
  * oversized or malformed request costs a bounds check and never a search.
  *
- * @module @watchskill/dsh-contracts/query/validate
+ * @module @deepwatch/dsh-contracts/query/validate
  */
 
 import { QUERY_LIMITS, isIdentifier, isSafeCount } from '../query.js'

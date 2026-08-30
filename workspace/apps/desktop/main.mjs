@@ -37,7 +37,7 @@ import { app, BrowserWindow, ipcMain, dialog, shell } from 'electron'
  * value is asserted identical by a test, which is the part that keeps two
  * copies from drifting.
  */
-const PRODUCT_NAME = 'Watch Workspace'
+const PRODUCT_NAME = 'DeepWatch'
 
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -215,7 +215,7 @@ async function startHost() {
     command: node,
     args,
     env: { DSH_HOME },
-    // The profile directory, so Node resolves `@watchskill/*` from the
+    // The profile directory, so Node resolves `@deepwatch/*` from the
     // packages the profile actually installed rather than from whatever tree
     // the parent happened to be started in. Getting this wrong resolves the
     // plugins from the development workspace when run there, and from nothing

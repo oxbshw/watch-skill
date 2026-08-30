@@ -1,7 +1,7 @@
 /**
  * Mounting memory into the agent loop.
  *
- * `@watchskill/dsh-memory` owns what a memory is and what may be done with
+ * `@deepwatch/dsh-memory` owns what a memory is and what may be done with
  * one; this connects it to DSH — registering the tools with the real
  * `defineTool`, and putting the compiled context into the system prompt.
  *
@@ -9,14 +9,14 @@
  * and a memory package that could not be loaded without a tool runtime would
  * not be — so it takes `defineTool` as an argument and this file supplies it.
  *
- * @module @watchskill/dsh-tools/memory
+ * @module @deepwatch/dsh-tools/memory
  */
 
 import type { Context } from '@deepseek-ai/cordis'
 import { defineTool } from '@deepseek-ai/dsh-tools'
 import type {} from '@deepseek-ai/dsh-system-prompt'
-import { applyMemoryTools } from '@watchskill/dsh-memory'
-import type { ScopeContext } from '@watchskill/dsh-memory'
+import { applyMemoryTools } from '@deepwatch/dsh-memory'
+import type { ScopeContext } from '@deepwatch/dsh-memory'
 
 /**
  * Read a service that may not be there, without asking Cordis for it.

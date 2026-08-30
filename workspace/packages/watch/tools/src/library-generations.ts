@@ -28,11 +28,11 @@
  * or abandoned rebuild leaves the previous generation searchable, which is the
  * difference between a refresh that did not work and a Library that broke.
  *
- * @module @watchskill/dsh-tools/library-generations
+ * @module @deepwatch/dsh-tools/library-generations
  */
 
-import type { LibraryIndex } from '@watchskill/dsh-library'
-import type { LibraryIndexState } from '@watchskill/dsh-contracts/query/wire'
+import type { LibraryIndex } from '@deepwatch/dsh-library'
+import type { LibraryIndexState } from '@deepwatch/dsh-contracts/query/wire'
 
 import { buildIndex, buildIndexCancellable } from './library-search.js'
 

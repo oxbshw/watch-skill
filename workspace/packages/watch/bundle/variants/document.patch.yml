@@ -11,7 +11,7 @@
 
 - insert:
     - id: watch-core-bridge
-      name: '@watchskill/dsh-core-bridge'
+      name: '@deepwatch/dsh-core-bridge'
       config:
         transport: auto
         command: watch-skill
@@ -22,13 +22,13 @@
         autoConnect: true
 
     - id: watch-tools
-      name: '@watchskill/dsh-tools'
+      name: '@deepwatch/dsh-tools'
       config:
         queryTimeoutMs: 120000
         verifyTimeoutMs: 60000
 
     - id: watch-technology
-      name: '@watchskill/dsh-technology'
+      name: '@deepwatch/dsh-technology'
 
     - id: watch-client-evidence
-      name: '@watchskill/dsh-client-evidence'
+      name: '@deepwatch/dsh-client-evidence'

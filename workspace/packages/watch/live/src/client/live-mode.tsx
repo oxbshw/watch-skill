@@ -11,12 +11,12 @@
  * calls no probe and no permission API; a prompt on page load teaches people to
  * click Allow without reading, and after that the prompt means nothing.
  *
- * @module @watchskill/dsh-live/client/live-mode
+ * @module @deepwatch/dsh-live/client/live-mode
  */
 
 import type { ReactNode } from 'react'
-import { EmptyState, Facts, ModeSurface, Panel, Unavailable } from '@watchskill/dsh-workspace/surface'
-import type { ModeViewProps } from '@watchskill/dsh-workspace/surface'
+import { EmptyState, Facts, ModeSurface, Panel, Unavailable } from '@deepwatch/dsh-workspace/surface'
+import type { ModeViewProps } from '@deepwatch/dsh-workspace/surface'
 import { SOURCES } from '../sources-catalogue.js'
 import type { CaptureReceipt, CaptureState, Observation, PermissionState } from '../capture.js'
 

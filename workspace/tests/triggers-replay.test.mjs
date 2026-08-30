@@ -24,7 +24,7 @@ import {
   evaluateTriggers,
   mayAct,
   startSession,
-} from '@watchskill/dsh-live'
+} from '@deepwatch/dsh-live'
 import {
   canPromote,
   describeEvaluation,
@@ -33,7 +33,7 @@ import {
   fixtureSetDigest,
   propose,
   scoreCase,
-} from '@watchskill/dsh-memory'
+} from '@deepwatch/dsh-memory'
 
 // ── triggers ────────────────────────────────────────────────────────────────
 

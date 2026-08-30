@@ -13,7 +13,7 @@ allowed to render — is downstream of that.
 
 ```mermaid
 flowchart TB
-    U["User"] --> UI["Watch Workspace UI"]
+    U["User"] --> UI["DeepWatch UI"]
     UI --> DSH["DeepSeek Harness Host + Cordis"]
     DSH --> P["Watch plugins (host + browser halves)"]
     P --> B["Watch Bridge — JSON-RPC over stdio"]
@@ -142,13 +142,14 @@ present. Both directions are tested. See
 ## Where the rules live
 
 A rule that governs what a screen may imply lives in
-`@watchskill/dsh-contracts`, not in a component — "green belongs to VERIFIED
+`@deepwatch/dsh-contracts`, not in a component — "green belongs to VERIFIED
 alone" holds the same whether the renderer is a React card, a terminal summary
 or a CI annotation. One place to change, one place to test.
 
 ## Attribution
 
-**Built on DeepSeek Harness · Extended by Watch Skill**
+**Built on DeepSeek Harness · Powered by Watch Skill**
 
-Watch Skill is an independent project and is not affiliated with or endorsed by
+DeepWatch and Watch Skill are independent projects and are not affiliated with
+or endorsed by
 DeepSeek. See [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md).

@@ -17,7 +17,7 @@
  *
  * Every one of those is asserted below, against the real parts: upstream's own
  * Typert registry and Gateway client halves, the artifact `npm run build`
- * actually emits for `@watchskill/dsh-client-remotes`, and the Library's own
+ * actually emits for `@deepwatch/dsh-client-remotes`, and the Library's own
  * consumer code reading through the namespace it ends up with.
  *
  * The one thing that is a fixture is the carrier. There is no browser here and
@@ -102,7 +102,7 @@ const REGISTRY_CLIENT = await loadBundle(
 const GATEWAY_CLIENT = await loadBundle(
   dsh('@deepseek-ai/dsh-api-gateway'), '@deepseek-ai/dsh-api-gateway')
 const WATCH_REMOTES = await loadBundle(
-  'packages/watch/client-remotes/lib/client.js', '@watchskill/dsh-client-remotes')
+  'packages/watch/client-remotes/lib/client.js', '@deepwatch/dsh-client-remotes')
 
 // ── the two ends, and the carrier between them ──────────────────────────────
 
@@ -182,7 +182,7 @@ async function client(gateway) {
   return { ctx, wire }
 }
 
-/** Both ends, joined, with `@watchskill/dsh-client-remotes` applied. */
+/** Both ends, joined, with `@deepwatch/dsh-client-remotes` applied. */
 async function mounted(records = CORPUS) {
   const { gateway, index } = await host(records)
   const { ctx, wire } = await client(gateway)

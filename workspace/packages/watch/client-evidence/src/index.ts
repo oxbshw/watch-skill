@@ -6,7 +6,7 @@
  * mounts a package's node half first and reads its `dsh.client` declaration
  * from there.
  *
- * @module @watchskill/dsh-client-evidence
+ * @module @deepwatch/dsh-client-evidence
  */
 
 export * from './compare-engine.js'

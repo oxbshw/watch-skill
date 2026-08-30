@@ -25,7 +25,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { createElement } from 'react'
 
 import { Context } from '@deepseek-ai/cordis'
-import WatchMemoryService from '@watchskill/dsh-memory'
+import WatchMemoryService from '@deepwatch/dsh-memory'
 
 import {
   MEMORY_OPERATIONS,
@@ -38,13 +38,13 @@ import {
   recordsForView,
   toCard,
   whyChip,
-} from '@watchskill/dsh-client-memory'
+} from '@deepwatch/dsh-client-memory'
 
 import {
   MemoryCardRow,
   MemoryWorkbench,
   WhyRememberedChip,
-} from '@watchskill/dsh-client-memory/components'
+} from '@deepwatch/dsh-client-memory/components'
 
 /** A literal newline, spelled once. */
 const NEWLINE = '\n'

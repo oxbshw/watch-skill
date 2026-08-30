@@ -83,7 +83,7 @@ function main() {
   if (typeof build.appId !== 'string' || !build.appId.includes('.')) {
     problems.push('build.appId must be a reverse-DNS identifier; a signature is bound to it')
   }
-  if (build.productName !== 'Watch Workspace') {
+  if (build.productName !== 'DeepWatch') {
     problems.push(`build.productName is ${String(build.productName)}, not the product name`)
   }
   for (const [key, target] of [['win', 'icon'], ['mac', 'icon'], ['linux', 'icon']]) {

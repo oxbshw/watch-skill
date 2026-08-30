@@ -1,5 +1,5 @@
 {
-  "name": "@watchskill/dsh-technology",
+  "name": "@deepwatch/dsh-technology",
   "version": "0.1.0-preview.0",
   "description": "Technology descriptors, capability lifecycle, and role bindings over DSH Models and Providers",
   "type": "module",

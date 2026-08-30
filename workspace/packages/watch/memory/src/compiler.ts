@@ -12,7 +12,7 @@
  * shows a person, and what lets them correct the specific record that made the
  * agent behave the way it did.
  *
- * @module @watchskill/dsh-memory/compiler
+ * @module @deepwatch/dsh-memory/compiler
  */
 
 import type { MemoryRecord, ScopeContext } from './records.js'

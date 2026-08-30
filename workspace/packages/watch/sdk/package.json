@@ -1,5 +1,5 @@
 {
-  "name": "@watchskill/dsh-sdk",
+  "name": "@deepwatch/dsh-sdk",
   "version": "0.1.0-preview.0",
   "description": "The third-party Watch capability developer path \u2014 declare, probe, observe, request",
   "type": "module",
@@ -22,9 +22,9 @@
     "lib/**/*.d.ts"
   ],
   "dependencies": {
-    "@watchskill/dsh-contracts": "workspace:^",
-    "@watchskill/dsh-technology": "workspace:^",
-    "@watchskill/dsh-trajectory": "workspace:^"
+    "@deepwatch/dsh-contracts": "workspace:^",
+    "@deepwatch/dsh-technology": "workspace:^",
+    "@deepwatch/dsh-trajectory": "workspace:^"
   },
   "peerDependencies": {
     "react": "^18.2.0"
@@ -37,6 +37,6 @@
   "devDependencies": {
     "@types/react": "~18.3.1",
     "react": "^18.2.0",
-    "@watchskill/dsh-client-brand": "workspace:*"
+    "@deepwatch/dsh-client-brand": "workspace:*"
   }
 }

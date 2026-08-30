@@ -1,7 +1,7 @@
 {
-  "name": "@watchskill/watch-desktop",
+  "name": "@deepwatch/desktop",
   "version": "0.1.0-preview.0",
-  "description": "Watch Workspace \u2014 an Electron shell around the same Workspace packages",
+  "description": "DeepWatch — an Electron shell around the same Workspace packages",
   "type": "module",
   "private": true,
   "license": "MIT",
@@ -17,17 +17,17 @@
     "start": "electron main.mjs"
   },
   "dependencies": {
-    "@watchskill/dsh-contracts": "workspace:^",
-    "@watchskill/dsh-core-bridge": "workspace:^",
-    "@watchskill/dsh-workspace": "workspace:^"
+    "@deepwatch/dsh-contracts": "workspace:^",
+    "@deepwatch/dsh-core-bridge": "workspace:^",
+    "@deepwatch/dsh-workspace": "workspace:^"
   },
   "devDependencies": {
     "electron": "^33.4.11"
   },
-  "productName": "Watch Workspace",
+  "productName": "DeepWatch",
   "build": {
-    "appId": "com.watchskill.workspace",
-    "productName": "Watch Workspace",
+    "appId": "io.deepwatch.desktop",
+    "productName": "DeepWatch",
     "win": {
       "icon": "../../packages/watch/brand/assets/watch-orca.ico"
     },

@@ -1,5 +1,5 @@
 {
-  "name": "@watchskill/dsh-contracts",
+  "name": "@deepwatch/dsh-contracts",
   "version": "0.1.0-preview.0",
   "description": "Watch Bridge wire contracts shared by the Host plugins and the browser halves",
   "type": "module",

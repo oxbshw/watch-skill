@@ -23,7 +23,7 @@
  * world. Every cell is one engine on one workload in one script, and there is
  * no function here that produces a single overall score.
  *
- * @module @watchskill/dsh-technology/ocr-qualification
+ * @module @deepwatch/dsh-technology/ocr-qualification
  */
 
 import type { OcrWorkload, QualificationEntry, QualificationState, ScriptTag } from './ocr.js'

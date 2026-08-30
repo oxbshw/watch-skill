@@ -1,12 +1,12 @@
 /**
  * The Library surface, registered into DSH's slots.
  *
- * @module @watchskill/dsh-library/client
+ * @module @deepwatch/dsh-library/client
  */
 
 import type { Context } from '@deepseek-ai/cordis'
 import type { ReactNode } from 'react'
-import type { ModeViewProps } from '@watchskill/dsh-workspace/surface'
+import type { ModeViewProps } from '@deepwatch/dsh-workspace/surface'
 import { LibraryModeView } from './library-mode.js'
 import type { WatchQueryRemote } from './read-plane.js'
 
@@ -30,7 +30,7 @@ export * from '../search.js'
  * on the strength of the second entry alone fails the fiber with "cannot get
  * property "remote" without inject".
  *
- * The mount itself belongs to `@watchskill/dsh-client-remotes`. This package
+ * The mount itself belongs to `@deepwatch/dsh-client-remotes`. This package
  * owns the Library capability, and a package that owns a capability does not
  * also own the transport that carries it; when it did, the two depended on
  * each other.

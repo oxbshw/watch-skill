@@ -25,12 +25,12 @@
  *      full capability readiness list lives in Diagnostics, where there is
  *      width for it and where somebody goes to look things up.
  *
- * @module @watchskill/dsh-client-settings/onboarding
+ * @module @deepwatch/dsh-client-settings/onboarding
  */
 
 import type { ReactNode } from 'react'
 import { Button, Modal } from '@deepseek-ai/dsh-client-ui-primitives'
-import { PRODUCT_NAME, WATCH_MARK_PNG, tokenFor } from '@watchskill/dsh-client-brand'
+import { PRODUCT_NAME, WATCH_MARK_PNG, tokenFor } from '@deepwatch/dsh-client-brand'
 import { READINESS } from './readiness.js'
 
 /** What DSH hands an onboarding step. */

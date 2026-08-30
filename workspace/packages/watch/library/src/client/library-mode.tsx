@@ -7,13 +7,13 @@
  * other. TypeScript refused the circular project reference, which was the right
  * answer to the wrong arrangement.
  *
- * @module @watchskill/dsh-library/client/library-mode
+ * @module @deepwatch/dsh-library/client/library-mode
  */
 
 import type { ReactNode } from 'react'
-import { parseVerdict } from '@watchskill/dsh-contracts'
-import { Facts, ModeSurface, Panel, readToolResult } from '@watchskill/dsh-workspace/surface'
-import type { ModeViewProps } from '@watchskill/dsh-workspace/surface'
+import { parseVerdict } from '@deepwatch/dsh-contracts'
+import { Facts, ModeSurface, Panel, readToolResult } from '@deepwatch/dsh-workspace/surface'
+import type { ModeViewProps } from '@deepwatch/dsh-workspace/surface'
 import { LibrarySearch } from './search-view.js'
 import type { IndexableRecord } from '../index-store.js'
 import type { WatchQueryRemote } from './read-plane.js'

@@ -262,14 +262,14 @@ test('the modes are registered as the bodies DSH renders', async t => {
     // import their own view locally, and it is the view that reaches across.
     for (const [name, source] of Object.entries(BODIES)) {
       assert.match(
-        source, /@watchskill\/dsh-workspace\/surface/,
+        source, /@deepwatch\/dsh-workspace\/surface/,
         `the ${name} body does not use the plain ESM scaffold entry`,
       )
     }
     // And the rule holds everywhere, not only in the files this test names.
     const offenders = []
     for (const file of shippedSources()) {
-      if (/from '@watchskill\/dsh-[a-z-]+\/client'/.test(read(file))) offenders.push(file)
+      if (/from '@deepwatch\/dsh-[a-z-]+\/client'/.test(read(file))) offenders.push(file)
     }
     assert.deepEqual(offenders, [], 'a shipped source imports a loader-wrapped bundle')
   })

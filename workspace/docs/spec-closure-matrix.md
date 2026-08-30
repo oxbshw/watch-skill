@@ -179,7 +179,7 @@ Tests: `tests/memory-product.test.mjs`, `tests/memory-rules.test.mjs`, `tests/se
 
 ### `dod.surfaces-web` — PASS
 
-> Watch Workspace Web works local and single-user hosted.
+> DeepWatch Web works local and single-user hosted.
 
 Local Web runs: the real DSH Web Host serving the Watch bundle on loopback, with Watch Core spawned as a child over stdio and the Watch client bundle served to the browser.
 

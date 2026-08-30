@@ -3,133 +3,133 @@
   "note": "A repository licence covers code. Model weights are a separate grant, and weightsLicenseReviewed records whether anyone has actually established the right to distribute them. The two are never merged.",
   "firstParty": [
     {
-      "name": "@watchskill/dsh-adapters",
+      "name": "@deepwatch/dsh-adapters",
       "version": "0.1.0-preview.0",
       "license": "MIT",
       "path": "packages/watch/adapters",
       "kind": "first_party"
     },
     {
-      "name": "@watchskill/dsh-client-brand",
+      "name": "@deepwatch/dsh-client-brand",
       "version": "0.1.0-preview.0",
       "license": "MIT",
       "path": "packages/watch/brand",
       "kind": "first_party"
     },
     {
-      "name": "@watchskill/dsh-bundle",
+      "name": "@deepwatch/dsh-bundle",
       "version": "0.1.0-preview.0",
       "license": "MIT",
       "path": "packages/watch/bundle",
       "kind": "first_party"
     },
     {
-      "name": "@watchskill/dsh-client-evidence",
+      "name": "@deepwatch/dsh-client-evidence",
       "version": "0.1.0-preview.0",
       "license": "MIT",
       "path": "packages/watch/client-evidence",
       "kind": "first_party"
     },
     {
-      "name": "@watchskill/dsh-client-memory",
+      "name": "@deepwatch/dsh-client-memory",
       "version": "0.1.0-preview.0",
       "license": "MIT",
       "path": "packages/watch/client-memory",
       "kind": "first_party"
     },
     {
-      "name": "@watchskill/dsh-client-remotes",
+      "name": "@deepwatch/dsh-client-remotes",
       "version": "0.1.0-preview.0",
       "license": "MIT",
       "path": "packages/watch/client-remotes",
       "kind": "first_party"
     },
     {
-      "name": "@watchskill/dsh-client-settings",
+      "name": "@deepwatch/dsh-client-settings",
       "version": "0.1.0-preview.0",
       "license": "MIT",
       "path": "packages/watch/client-settings",
       "kind": "first_party"
     },
     {
-      "name": "@watchskill/dsh-contracts",
+      "name": "@deepwatch/dsh-contracts",
       "version": "0.1.0-preview.0",
       "license": "MIT",
       "path": "packages/watch/contracts",
       "kind": "first_party"
     },
     {
-      "name": "@watchskill/dsh-core-bridge",
+      "name": "@deepwatch/dsh-core-bridge",
       "version": "0.1.0-preview.0",
       "license": "MIT",
       "path": "packages/watch/core-bridge",
       "kind": "first_party"
     },
     {
-      "name": "@watchskill/dsh-library",
+      "name": "@deepwatch/dsh-library",
       "version": "0.1.0-preview.0",
       "license": "MIT",
       "path": "packages/watch/library",
       "kind": "first_party"
     },
     {
-      "name": "@watchskill/dsh-live",
+      "name": "@deepwatch/dsh-live",
       "version": "0.1.0-preview.0",
       "license": "MIT",
       "path": "packages/watch/live",
       "kind": "first_party"
     },
     {
-      "name": "@watchskill/dsh-memory",
+      "name": "@deepwatch/dsh-memory",
       "version": "0.1.0-preview.0",
       "license": "MIT",
       "path": "packages/watch/memory",
       "kind": "first_party"
     },
     {
-      "name": "@watchskill/dsh-sdk",
+      "name": "@deepwatch/dsh-sdk",
       "version": "0.1.0-preview.0",
       "license": "MIT",
       "path": "packages/watch/sdk",
       "kind": "first_party"
     },
     {
-      "name": "@watchskill/dsh-technology",
+      "name": "@deepwatch/dsh-technology",
       "version": "0.1.0-preview.0",
       "license": "MIT",
       "path": "packages/watch/technology",
       "kind": "first_party"
     },
     {
-      "name": "@watchskill/dsh-tenancy",
+      "name": "@deepwatch/dsh-tenancy",
       "version": "0.1.0-preview.0",
       "license": "MIT",
       "path": "packages/watch/tenancy",
       "kind": "first_party"
     },
     {
-      "name": "@watchskill/dsh-tools",
+      "name": "@deepwatch/dsh-tools",
       "version": "0.1.0-preview.0",
       "license": "MIT",
       "path": "packages/watch/tools",
       "kind": "first_party"
     },
     {
-      "name": "@watchskill/dsh-trajectory",
+      "name": "@deepwatch/dsh-trajectory",
       "version": "0.1.0-preview.0",
       "license": "MIT",
       "path": "packages/watch/trajectory",
       "kind": "first_party"
     },
     {
-      "name": "@watchskill/dsh-wiki",
+      "name": "@deepwatch/dsh-wiki",
       "version": "0.1.0-preview.0",
       "license": "MIT",
       "path": "packages/watch/wiki",
       "kind": "first_party"
     },
     {
-      "name": "@watchskill/dsh-workspace",
+      "name": "@deepwatch/dsh-workspace",
       "version": "0.1.0-preview.0",
       "license": "MIT",
       "path": "packages/watch/workspace",

@@ -12,22 +12,22 @@
  * `machine_tested`, and no accuracy or speed figure at all for an engine that
  * has not run on this machine.
  *
- * @module @watchskill/dsh-client-settings/components
+ * @module @deepwatch/dsh-client-settings/components
  */
 
 import type { ReactNode } from 'react'
-import { ATTRIBUTION, INDEPENDENCE, PRODUCT_NAME, WATCH_MARK_PNG, tokenFor } from '@watchskill/dsh-client-brand'
-import type { BrandTone } from '@watchskill/dsh-client-brand'
+import { ATTRIBUTION, INDEPENDENCE, PRODUCT_NAME, WATCH_MARK_PNG, tokenFor } from '@deepwatch/dsh-client-brand'
+import type { BrandTone } from '@deepwatch/dsh-client-brand'
 // The `/descriptors` subpath, not the package root: the root re-exports the
 // OCR worker, which imports `node:child_process` to supervise a real process.
 // Correct on the host, fatal in a browser bundle.
-import { OCR_ENGINES, ROLES } from '@watchskill/dsh-technology/descriptors'
+import { OCR_ENGINES, ROLES } from '@deepwatch/dsh-technology/descriptors'
 import { ReadinessList } from './readiness.js'
 import { OCR_BY_WORKLOAD, OCR_DEVICE, OCR_ENGINE, OCR_MEASURED } from '../ocr-measured.js'
 import {
   DEEPSEEK_IS_OPTIONAL, HOSTED_COUNT, PROVIDER_COUNT, SAMPLE_PROVIDERS, SELF_HOSTED_COUNT,
 } from '../providers.js'
-import type { RoleId, TechnologyDescriptor } from '@watchskill/dsh-technology/descriptors'
+import type { RoleId, TechnologyDescriptor } from '@deepwatch/dsh-technology/descriptors'
 
 /** What a settings section is handed by DSH. */
 export interface SectionProps {
@@ -568,7 +568,7 @@ export function DiagnosticsSection(
       <h2 style={T.h2}>Versions</h2>
       <div style={T.card}>
         <div style={T.meta}>
-          <Row label="Watch Workspace">0.1.0-preview.0</Row>
+          <Row label="DeepWatch">0.1.0-preview.0</Row>
           <Row label="DeepSeek Harness">0.1.1-rc.2</Row>
           <Row label="Bridge protocol">1</Row>
           <Row label="Memory store schema">1</Row>
@@ -627,7 +627,7 @@ export function AboutSection(): ReactNode {
       </div>
       <div style={T.card}>
         <div style={T.meta}>
-          <Row label="Watch Workspace">0.1.0-preview.0</Row>
+          <Row label="DeepWatch">0.1.0-preview.0</Row>
           <Row label="Watch Core">1.3.0rc2</Row>
           <Row label="Built on">DeepSeek Harness 0.1.1-rc.2</Row>
           <Row label="DSH commit">b150a551b8d465e31e418e1b2eaf5e79bbb7d28e</Row>
@@ -642,7 +642,7 @@ export function AboutSection(): ReactNode {
       <h2 style={T.h2}>Licences</h2>
       <div style={T.card}>
         <div style={T.meta}>
-          <Row label="Watch Workspace">MIT</Row>
+          <Row label="DeepWatch">MIT</Row>
           <Row label="DeepSeek Harness">MIT, and its notice is carried unmodified</Row>
           <Row label="Third-party notices">THIRD_PARTY_NOTICES.md, shipped with this distribution</Row>
           <Row label="Model weights">

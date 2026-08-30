@@ -19,9 +19,9 @@
  */
 
 import type { ReactNode } from 'react'
-import type { WatchSelection } from '@watchskill/dsh-trajectory'
-import type { PresentableVerdict } from '@watchskill/dsh-contracts'
-import { formatTimestamp, freshnessLabel, verdictTone } from '@watchskill/dsh-contracts'
+import type { WatchSelection } from '@deepwatch/dsh-trajectory'
+import type { PresentableVerdict } from '@deepwatch/dsh-contracts'
+import { formatTimestamp, freshnessLabel, verdictTone } from '@deepwatch/dsh-contracts'
 import css from './EvidenceInspector.module.css'
 
 /** The evidence record as Watch Core returns it. */

@@ -29,9 +29,9 @@ import {
   replayDigest,
   startSession,
   toReplay,
-} from '@watchskill/dsh-live'
+} from '@deepwatch/dsh-live'
 
-import { LiveHeader, LiveSurface } from '@watchskill/dsh-live/components'
+import { LiveHeader, LiveSurface } from '@deepwatch/dsh-live/components'
 
 import {
   BROKEN_DELTA,

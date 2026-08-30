@@ -2,7 +2,7 @@
   "generatedBy": "scripts/gen-dsh-slots.mjs",
   "dshVersion": "0.1.1-rc.2",
   "note": "DSH's own slot contract, read from the catalogue it embeds in dsh-cordis-client-runner. Registering into a name absent from this list is a silent no-op: it loads, it tests green, it never draws. `kind` decides what a registration means — list is additive, single shadows (and shadowing a seat DSH fills removes an official capability), keyed requires options.key. `scope` says where it renders: a root slot is always mounted, a session slot is absent until a session is open. A slot found only at a call site carries kind \"unknown\", and the gate treats unknown exactly as strictly as single.",
-  "bundlesScanned": 362,
+  "bundlesScanned": 415,
   "slots": {
     "conversation.chat.commandview": {
       "kind": "keyed",

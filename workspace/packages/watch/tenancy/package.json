@@ -1,5 +1,5 @@
 {
-  "name": "@watchskill/dsh-tenancy",
+  "name": "@deepwatch/dsh-tenancy",
   "version": "0.1.0-preview.0",
   "description": "Tenants, roles, remote workers, sharing and audit \u2014 enforced server-side",
   "type": "module",
@@ -18,6 +18,6 @@
     "lib/**/*.d.ts"
   ],
   "dependencies": {
-    "@watchskill/dsh-contracts": "workspace:^"
+    "@deepwatch/dsh-contracts": "workspace:^"
   }
 }

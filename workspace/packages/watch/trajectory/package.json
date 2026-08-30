@@ -1,5 +1,5 @@
 {
-  "name": "@watchskill/dsh-trajectory",
+  "name": "@deepwatch/dsh-trajectory",
   "version": "0.1.0-preview.0",
   "description": "Watch records inside the DeepSeek Harness Trajectory, with unified selection, deep links and replay",
   "type": "module",
@@ -15,6 +15,6 @@
   },
   "files": ["lib/**/*.js", "lib/**/*.d.ts"],
   "dependencies": {
-    "@watchskill/dsh-contracts": "workspace:^"
+    "@deepwatch/dsh-contracts": "workspace:^"
   }
 }

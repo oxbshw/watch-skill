@@ -16,7 +16,7 @@
  * cannot show and what would change that. An empty surface that explains itself
  * is a product; an empty surface that looks busy is a lie with a chart on it.
  *
- * @module @watchskill/dsh-workspace/surface
+ * @module @deepwatch/dsh-workspace/surface
  */
 
 import type { ReactNode } from 'react'

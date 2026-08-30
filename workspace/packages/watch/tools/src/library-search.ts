@@ -26,7 +26,7 @@
  * in the result, because a search that quietly returns less than it should is
  * worse than one that says it is behind.
  *
- * @module @watchskill/dsh-tools/library-search
+ * @module @deepwatch/dsh-tools/library-search
  */
 
 import { createHash } from 'node:crypto'
@@ -35,9 +35,9 @@ import { basename, join } from 'node:path'
 import type { Context } from '@deepseek-ai/cordis'
 import { defineTool } from '@deepseek-ai/dsh-tools'
 import type { JsonValue } from '@deepseek-ai/dsh-tools'
-import { contentIdFor, revisionIdFor } from '@watchskill/dsh-contracts/identity'
-import { LibraryIndex, MAX_LIMIT, isWithinRoots } from '@watchskill/dsh-library'
-import type { IndexableRecord } from '@watchskill/dsh-library'
+import { contentIdFor, revisionIdFor } from '@deepwatch/dsh-contracts/identity'
+import { LibraryIndex, MAX_LIMIT, isWithinRoots } from '@deepwatch/dsh-library'
+import type { IndexableRecord } from '@deepwatch/dsh-library'
 
 /** Where the index is allowed to read from. */
 export interface LibrarySearchConfig {
@@ -165,7 +165,7 @@ export function recordFromFile(
   // `demo.mp4` returned yesterday's answers for today's file.
   //
   // So the fallback is Core's own content identity, mirrored in
-  // `@watchskill/dsh-contracts/identity` and tested against the Python. The
+  // `@deepwatch/dsh-contracts/identity` and tested against the Python. The
   // same bytes are one record wherever they are read from, and different bytes
   // are two.
   const digest = contentDigest(raw)

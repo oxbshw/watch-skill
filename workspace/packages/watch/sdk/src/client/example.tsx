@@ -22,11 +22,11 @@
  * composition does not claim falls back to the generic row, so a third-party
  * view is never able to take a surface away from anything.
  *
- * @module @watchskill/dsh-sdk/client-example
+ * @module @deepwatch/dsh-sdk/client-example
  */
 
 import type { ReactNode } from 'react'
-import type { Verdict } from '@watchskill/dsh-contracts'
+import type { Verdict } from '@deepwatch/dsh-contracts'
 
 /**
  * The verdicts a view may render.

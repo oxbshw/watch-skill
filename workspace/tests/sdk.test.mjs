@@ -31,13 +31,13 @@ import {
   runExample,
   sanitizeCandidate,
   validateDeclaration,
-} from '@watchskill/dsh-sdk'
+} from '@deepwatch/dsh-sdk'
 import {
   SubtitleReadingView,
   readToolValue,
   registerExampleView,
-} from '@watchskill/dsh-sdk/client-example'
-import { toneFor, tokenFor } from '@watchskill/dsh-client-brand'
+} from '@deepwatch/dsh-sdk/client-example'
+import { toneFor, tokenFor } from '@deepwatch/dsh-client-brand'
 
 /** A stand-in for Watch Core, recording everything it is asked. */
 function fakeCore(overrides = {}) {
@@ -82,7 +82,7 @@ function fakeCore(overrides = {}) {
 
 describe('a third-party capability cannot mint VERIFIED', () => {
   test('nothing the SDK exports produces a verdict or an evidence record', async () => {
-    const sdk = await import('@watchskill/dsh-sdk')
+    const sdk = await import('@deepwatch/dsh-sdk')
     for (const [name, value] of Object.entries(sdk)) {
       if (typeof value !== 'function') continue
       // A name that promises minting is the first sign of the boundary moving.

@@ -11,13 +11,13 @@
  * JSON: Watch Core streams OCR text and transcripts, which contain newlines,
  * and a length-prefixed frame cannot be split by content.
  *
- * @module @watchskill/dsh-core-bridge/transport/stdio
+ * @module @deepwatch/dsh-core-bridge/transport/stdio
  */
 
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process'
 import { Buffer } from 'node:buffer'
-import type { JsonRpcResponse, WatchError, WatchResult } from '@watchskill/dsh-contracts'
-import { JSON_RPC, watchError } from '@watchskill/dsh-contracts'
+import type { JsonRpcResponse, WatchError, WatchResult } from '@deepwatch/dsh-contracts'
+import { JSON_RPC, watchError } from '@deepwatch/dsh-contracts'
 import type { Transport, TransportEvent, TransportRequest } from '../transport.js'
 
 /** Everything the transport needs to launch and talk to a Core process. */

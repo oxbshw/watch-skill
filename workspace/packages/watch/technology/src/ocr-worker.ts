@@ -34,7 +34,7 @@
  * decision they make, and the weight licence gate in `ocr.ts` has to clear
  * before it is even offerable.
  *
- * @module @watchskill/dsh-technology/ocr-worker
+ * @module @deepwatch/dsh-technology/ocr-worker
  */
 
 import { spawn } from 'node:child_process'

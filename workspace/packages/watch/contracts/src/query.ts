@@ -50,7 +50,7 @@
  * Browser-safe like the rest of this package: no Node imports, no runtime
  * identity, nothing a client bundle would have to deduplicate.
  *
- * @module @watchskill/dsh-contracts/query
+ * @module @deepwatch/dsh-contracts/query
  */
 
 import type { WatchResult } from './index.js'

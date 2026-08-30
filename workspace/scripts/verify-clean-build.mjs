@@ -13,7 +13,7 @@
  * whole solution compiled in one `tsc -b`. On a cold clone the first
  * compilation stopped at
  *
- *     TS2307: Cannot find module '@watchskill/dsh-tools/remote'
+ *     TS2307: Cannot find module '@deepwatch/dsh-tools/remote'
  *
  * and three platform jobs and the gate suite went red at once, while `npm run
  * check` on the author's machine reported 1309 passing tests.

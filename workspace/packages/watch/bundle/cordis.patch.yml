@@ -2,7 +2,7 @@
 #
 # This file is the whole distribution mechanism. A package declaring
 # `dsh.bundle.patch` in its manifest becomes a profile layer when it is
-# installed with `dsh plugin --profile <name> add @watchskill/dsh-bundle`, and
+# installed with `dsh plugin --profile <name> add @deepwatch/dsh-bundle`, and
 # the rows below are appended to whatever the profile already composes.
 #
 # It is a patch overlay, not a tree: it is applied after the dsh-base and
@@ -39,7 +39,7 @@
     #       requestTimeoutMs: 30000
     #       autoConnect: true
     - id: watch-core-bridge
-      name: '@watchskill/dsh-core-bridge'
+      name: '@deepwatch/dsh-core-bridge'
       config:
         transport: auto
         command: watch-skill
@@ -57,7 +57,7 @@
     # Bridge exists. Removing the Bridge row leaves the agent with no Watch
     # tools at all rather than with tools that fail when called.
     - id: watch-tools
-      name: '@watchskill/dsh-tools'
+      name: '@deepwatch/dsh-tools'
       config:
         queryTimeoutMs: 120000
         verifyTimeoutMs: 60000
@@ -76,13 +76,13 @@
     # row fills, and claims the document title and favicon at runtime — the
     # HTML shell is a built DSH artifact and is not forked.
     - id: watch-brand
-      name: '@watchskill/dsh-client-brand'
+      name: '@deepwatch/dsh-client-brand'
 
     # The browser end of the read plane: Watch's generated Typert Remote,
     # mounted into `ctx.remote`.
     #
     # Its own row rather than a line inside the Library, and the reason is a
-    # dependency cycle rather than taste. `@watchskill/dsh-tools` is the Host
+    # dependency cycle rather than taste. `@deepwatch/dsh-tools` is the Host
     # that answers these reads, and it reads the Library's index — so tools
     # depends on the Library. When the Library's browser half also mounted the
     # generated contribution, the Library depended on tools in return, and no
@@ -93,7 +93,7 @@
     # injects `remote.watchQuery`, so without the mount it parks rather than
     # drawing a tab whose search answers from nothing.
     - id: watch-client-remotes
-      name: '@watchskill/dsh-client-remotes'
+      name: '@deepwatch/dsh-client-remotes'
 
     # Evidence: keyed tool views, plus the Compare mode.
     #
@@ -103,31 +103,31 @@
     # sync. Remove this row and the Watch tools still work — their results
     # simply render in DSH's generic tool card.
     - id: watch-client-evidence
-      name: '@watchskill/dsh-client-evidence'
+      name: '@deepwatch/dsh-client-evidence'
 
     # The shell: the Watch mode, the sidebar section, the status strip in the
     # session header, the sensory timeline and the composer panel.
     - id: watch-workspace
-      name: '@watchskill/dsh-workspace'
+      name: '@deepwatch/dsh-workspace'
 
     # The Live mode.
     - id: watch-live
-      name: '@watchskill/dsh-live'
+      name: '@deepwatch/dsh-live'
 
     # The Library mode.
     - id: watch-library
-      name: '@watchskill/dsh-library'
+      name: '@deepwatch/dsh-library'
 
     # The Memory mode, and the "why was this remembered?" chip.
     - id: watch-client-memory
-      name: '@watchskill/dsh-client-memory'
+      name: '@deepwatch/dsh-client-memory'
 
     # The Technology & Capability Center: role bindings, engines, sources,
     # memory, verification, diagnostics and about, added to DSH's own settings
     # panel. `settings.section` is a list, so upstream's General, Models and
     # Plugins sections are untouched and keep the top of the list.
     - id: watch-client-settings
-      name: '@watchskill/dsh-client-settings'
+      name: '@deepwatch/dsh-client-settings'
 
     # Durable, correctable memory. `off` by default and deliberately so:
     # durable memory about a person is not something a deployment should
@@ -149,7 +149,7 @@
     # it will move behind the OS keychain, and until then `local_personal`
     # means a plain file with the profile's own permissions.
     - id: watch-memory
-      name: '@watchskill/dsh-memory'
+      name: '@deepwatch/dsh-memory'
       config:
         mode: 'off'
         directory: .watch/memory

@@ -8,7 +8,7 @@
  * There is no second credential store and no second provider registry. A
  * descriptor references a DSH credential; it never holds one.
  *
- * @module @watchskill/dsh-technology
+ * @module @deepwatch/dsh-technology
  */
 
 export * from './descriptor.js'

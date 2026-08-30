@@ -1,7 +1,7 @@
 {
-  "name": "@watchskill/dsh-workspace",
+  "name": "@deepwatch/dsh-workspace",
   "version": "0.1.0-preview.0",
-  "description": "Browser half: the Watch Workspace product shell \u2014 modes, header, inspector and sensory timeline",
+  "description": "Browser half: the DeepWatch product shell \u2014 modes, header, inspector and sensory timeline",
   "type": "module",
   "license": "MIT",
   "main": "lib/index.js",
@@ -58,8 +58,8 @@
     "react": "^18.2.0"
   },
   "dependencies": {
-    "@watchskill/dsh-client-brand": "workspace:^",
-    "@watchskill/dsh-contracts": "workspace:^",
-    "@watchskill/dsh-trajectory": "workspace:^"
+    "@deepwatch/dsh-client-brand": "workspace:^",
+    "@deepwatch/dsh-contracts": "workspace:^",
+    "@deepwatch/dsh-trajectory": "workspace:^"
   }
 }

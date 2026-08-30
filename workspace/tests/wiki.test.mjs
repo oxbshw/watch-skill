@@ -22,7 +22,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
 import { Context } from '@deepseek-ai/cordis'
-import WatchMemoryService from '@watchskill/dsh-memory'
+import WatchMemoryService from '@deepwatch/dsh-memory'
 
 import {
   WIKI_SECTIONS,
@@ -33,7 +33,7 @@ import {
   slugFor,
   toCandidates,
   validateUserEdit,
-} from '@watchskill/dsh-wiki'
+} from '@deepwatch/dsh-wiki'
 
 const SCOPE = { userId: 'user_1', workspaceId: 'ws_1', projectId: 'proj_1', sessionId: 'sess_1' }
 

@@ -24,7 +24,7 @@
  * citation that resolved to a translation would be citing something no one
  * ever said.
  *
- * @module @watchskill/dsh-contracts/language
+ * @module @deepwatch/dsh-contracts/language
  */
 
 /**

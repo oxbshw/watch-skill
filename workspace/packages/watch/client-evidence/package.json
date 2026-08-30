@@ -1,5 +1,5 @@
 {
-  "name": "@watchskill/dsh-client-evidence",
+  "name": "@deepwatch/dsh-client-evidence",
   "version": "0.1.0-preview.0",
   "description": "Browser half: verdict and evidence presentation for Watch tool results",
   "type": "module",
@@ -58,9 +58,9 @@
     "react": "^18.2.0"
   },
   "dependencies": {
-    "@watchskill/dsh-client-brand": "workspace:^",
-    "@watchskill/dsh-contracts": "workspace:^",
-    "@watchskill/dsh-trajectory": "workspace:^",
-    "@watchskill/dsh-workspace": "workspace:^"
+    "@deepwatch/dsh-client-brand": "workspace:^",
+    "@deepwatch/dsh-contracts": "workspace:^",
+    "@deepwatch/dsh-trajectory": "workspace:^",
+    "@deepwatch/dsh-workspace": "workspace:^"
   }
 }

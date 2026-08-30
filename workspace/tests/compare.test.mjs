@@ -19,7 +19,7 @@ import {
   comparisonDigest,
   hasVerdictDivergence,
   project,
-} from '@watchskill/dsh-trajectory'
+} from '@deepwatch/dsh-trajectory'
 
 function toolCall(seq, callId, name) {
   return {

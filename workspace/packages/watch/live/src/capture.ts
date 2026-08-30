@@ -26,7 +26,7 @@
  * that leaks a handle on the unhappy path leaks it on the path that actually
  * happens.
  *
- * @module @watchskill/dsh-live/capture
+ * @module @deepwatch/dsh-live/capture
  */
 
 /** Where a session is. Every terminal state is reachable and named. */

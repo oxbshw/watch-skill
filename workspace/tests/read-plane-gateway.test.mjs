@@ -81,7 +81,7 @@ test('the generated contribution registers and the service mounts', async () => 
   assert.equal(typeof ctx.watchQuery, 'object', 'the service mounted on its key')
 
   const packages = ctx.typert.listPackages()
-  const mine = packages.find(entry => entry.package === '@watchskill/dsh-tools')
+  const mine = packages.find(entry => entry.package === '@deepwatch/dsh-tools')
   assert.ok(mine !== undefined, 'the generated package is registered')
   assert.equal(mine.face, 'host')
 })

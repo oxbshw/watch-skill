@@ -12,7 +12,7 @@
  * outranks everything else. ADR-008 in one sentence — it suggests, a person
  * decides.
  *
- * @module @watchskill/dsh-memory/tools
+ * @module @deepwatch/dsh-memory/tools
  */
 
 import type { Context } from '@deepseek-ai/cordis'

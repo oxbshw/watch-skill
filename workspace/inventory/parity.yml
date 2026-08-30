@@ -115,7 +115,7 @@ capabilities:
     status: intentionally_replaced
     classification: DSH_EXTENDED
     adr: docs/adr/ADR-001-dsh-foundation.md
-    replaced_by: "@watchskill/dsh-brand"
+    replaced_by: "@deepwatch/dsh-brand"
     note: >-
       The only intentional replacement in the register. Attribution and MIT
       notices remain mandatory and visible; the DeepSeek name is not used in

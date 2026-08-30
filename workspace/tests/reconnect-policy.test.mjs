@@ -20,7 +20,7 @@ import { dirname, join } from 'node:path'
 import { tmpdir } from 'node:os'
 
 import { Context } from '@deepseek-ai/cordis'
-import WatchCoreService from '@watchskill/dsh-core-bridge'
+import WatchCoreService from '@deepwatch/dsh-core-bridge'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const HOSTILE = join(HERE, 'fixtures', 'hostile-core.mjs')

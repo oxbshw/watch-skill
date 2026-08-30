@@ -12,7 +12,7 @@ inside it; pick the second if you are working on Watch itself.
 pip install watch-skill
 
 # the capabilities, into the profile you use
-dsh plugin --profile web add @watchskill/dsh-bundle
+dsh plugin --profile web add @deepwatch/dsh-bundle
 ```
 
 Restart the profile. The Bridge finds `watch-skill` on `PATH` and connects on
@@ -64,7 +64,7 @@ is the one outcome worth avoiding.
 
 ---
 
-## 2. Work on Watch Workspace
+## 2. Work on DeepWatch
 
 ```bash
 pnpm install

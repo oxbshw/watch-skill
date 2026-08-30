@@ -25,8 +25,8 @@ import { join } from 'node:path'
 import { createHash } from 'node:crypto'
 
 import { Context } from '@deepseek-ai/cordis'
-import WatchMemoryService from '@watchskill/dsh-memory'
-import { admit, isHighImpact, isProtectedSubject } from '@watchskill/dsh-memory'
+import WatchMemoryService from '@deepwatch/dsh-memory'
+import { admit, isHighImpact, isProtectedSubject } from '@deepwatch/dsh-memory'
 import {
   buildWiki,
   diffUserEdit,
@@ -34,13 +34,13 @@ import {
   slugFor,
   toCandidates,
   validateUserEdit,
-} from '@watchskill/dsh-wiki'
-import { fromLlmWiki, importVaultFile, toVault } from '@watchskill/dsh-adapters'
-import { defaultComposer, proposeChange } from '@watchskill/dsh-workspace'
-import { EXAMPLE_DECLARATION, createCapabilityHost, sanitizeCandidate } from '@watchskill/dsh-sdk'
-import { isDeepLink, parseDeepLink } from '@watchskill/watch-desktop'
-import { AuditLog, AuditRefusal } from '@watchskill/dsh-tenancy'
-import { checkApproval, consume, grantFor, revoke } from '@watchskill/dsh-contracts'
+} from '@deepwatch/dsh-wiki'
+import { fromLlmWiki, importVaultFile, toVault } from '@deepwatch/dsh-adapters'
+import { defaultComposer, proposeChange } from '@deepwatch/dsh-workspace'
+import { EXAMPLE_DECLARATION, createCapabilityHost, sanitizeCandidate } from '@deepwatch/dsh-sdk'
+import { isDeepLink, parseDeepLink } from '@deepwatch/desktop'
+import { AuditLog, AuditRefusal } from '@deepwatch/dsh-tenancy'
+import { checkApproval, consume, grantFor, revoke } from '@deepwatch/dsh-contracts'
 
 import { BENIGN, HOSTILE_LINKS, INJECTIONS } from './fixtures/injection-corpus.mjs'
 

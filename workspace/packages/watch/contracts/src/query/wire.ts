@@ -30,7 +30,7 @@
  * Browser-safe: no Node imports, no runtime identity, nothing a client bundle
  * would have to deduplicate.
  *
- * @module @watchskill/dsh-contracts/query/wire
+ * @module @deepwatch/dsh-contracts/query/wire
  */
 
 /** The read-plane contract version a wire message declares. */

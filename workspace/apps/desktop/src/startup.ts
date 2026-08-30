@@ -19,7 +19,7 @@
  * platform this ships on. The secret goes in the child's environment, and the
  * Host binds loopback on a port the OS chooses.
  *
- * @module @watchskill/watch-desktop/startup
+ * @module @deepwatch/desktop/startup
  */
 
 import { randomBytes } from 'node:crypto'

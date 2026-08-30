@@ -11,8 +11,8 @@ import { test, describe } from 'node:test'
 import assert from 'node:assert/strict'
 
 import { Context } from '@deepseek-ai/cordis'
-import WatchCoreService from '@watchskill/dsh-core-bridge'
-import { apply as applyWatchTools, Config as WatchToolsConfig } from '@watchskill/dsh-tools'
+import WatchCoreService from '@deepwatch/dsh-core-bridge'
+import { apply as applyWatchTools, Config as WatchToolsConfig } from '@deepwatch/dsh-tools'
 
 /** The execution context the DSH tool runner passes to `execute`. */
 const EXEC = { signal: undefined }
@@ -134,7 +134,7 @@ describe('a turn survives a profile with no identity service', () => {
     const mounted = await mountTools()
     const directory = mkdtempSync(join(tmpdir(), 'watch-no-identity-'))
     try {
-      const WatchMemoryService = (await import('@watchskill/dsh-memory')).default
+      const WatchMemoryService = (await import('@deepwatch/dsh-memory')).default
       const memory = await mounted.ctx.plugin(WatchMemoryService, {
         mode: 'local_personal',
         directory,
@@ -188,7 +188,7 @@ describe('memory is optional', () => {
     const { mkdtempSync, rmSync } = await import('node:fs')
     const { tmpdir } = await import('node:os')
     const { join } = await import('node:path')
-    const WatchMemoryService = (await import('@watchskill/dsh-memory')).default
+    const WatchMemoryService = (await import('@deepwatch/dsh-memory')).default
 
     const directory = mkdtempSync(join(tmpdir(), 'watch-opt-memory-'))
     const mounted = await mountTools()

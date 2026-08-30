@@ -8,7 +8,7 @@
  * owns request correlation, abort signals and structured failure. The client
  * calls `ctx.remote.watchQuery.librarySearch(request, signal)` or
  * `.libraryGet(request, signal)` and awaits a `RemoteResult` carrying one of
- * the concrete outcomes in `@watchskill/dsh-contracts/query/wire`.
+ * the concrete outcomes in `@deepwatch/dsh-contracts/query/wire`.
  *
  * One method per read, rather than one `read` over a discriminated union. DSH
  * already routes by method, so a union inside a single entry point would be a
@@ -41,21 +41,21 @@
  * quietly returns less than it should is worse than one that says it is
  * behind.
  *
- * @module @watchskill/dsh-tools/read-plane
+ * @module @deepwatch/dsh-tools/read-plane
  */
 
 import { type Context } from '@deepseek-ai/cordis'
 import { Remote, TypertRemoteService } from '@deepseek-ai/dsh-typert-protocol'
-import { WATCH_QUERY_PROTOCOL_VERSION } from '@watchskill/dsh-contracts/query'
-import type { IndexableRecord, LibraryIndex, SearchResult } from '@watchskill/dsh-library'
+import { WATCH_QUERY_PROTOCOL_VERSION } from '@deepwatch/dsh-contracts/query'
+import type { IndexableRecord, LibraryIndex, SearchResult } from '@deepwatch/dsh-library'
 import type {
   LibraryGetRequest, LibraryGetResponse, LibraryIndexGeneration,
   LibraryRecord, LibraryRefreshRequest, LibraryRefreshResponse,
   LibrarySearchRequest, LibrarySearchResponse,
-} from '@watchskill/dsh-contracts/query/wire'
+} from '@deepwatch/dsh-contracts/query/wire'
 import {
   parseLibraryGetRequest, parseLibraryRefreshRequest, parseLibrarySearchRequest,
-} from '@watchskill/dsh-contracts/query/validate'
+} from '@deepwatch/dsh-contracts/query/validate'
 import type { LibraryGenerations } from './library-generations.js'
 
 

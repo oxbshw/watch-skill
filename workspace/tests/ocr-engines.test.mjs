@@ -55,7 +55,7 @@ import {
   untestedHealth,
   wordAccuracy,
   wordErrorRate,
-} from '@watchskill/dsh-technology'
+} from '@deepwatch/dsh-technology'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const STUB = join(HERE, 'fixtures', 'ocr-worker-stub.mjs')

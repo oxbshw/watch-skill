@@ -15,14 +15,14 @@
  * - a consequential action requires an approval reference, and the Bridge
  *   refuses without one before the page is touched.
  *
- * @module @watchskill/dsh-tools/browser
+ * @module @deepwatch/dsh-tools/browser
  */
 
 import { createHash, randomUUID } from 'node:crypto'
 import type { Context } from '@deepseek-ai/cordis'
 import { defineTool } from '@deepseek-ai/dsh-tools'
 import type { GenericCallView, JsonValue } from '@deepseek-ai/dsh-tools'
-import type {} from '@watchskill/dsh-core-bridge'
+import type {} from '@deepwatch/dsh-core-bridge'
 
 /** Deployment policy for the browser tools. */
 export interface BrowserConfig {

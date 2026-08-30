@@ -7,11 +7,11 @@
  * be identical everywhere it appears, because it is a legal statement rather
  * than a design element.
  *
- * @module @watchskill/dsh-client-brand/identity
+ * @module @deepwatch/dsh-client-brand/identity
  */
 
 /** What the product is called. Never "DeepSeek" anything. */
-export const PRODUCT_NAME = 'Watch Workspace'
+export const PRODUCT_NAME = 'DeepWatch'
 
 /** The short form, for a tab title or a cramped header. */
 export const PRODUCT_SHORT_NAME = 'Watch'
@@ -23,7 +23,7 @@ export const PRODUCT_SHORT_NAME = 'Watch'
  * says so; the alternative — quietly shipping someone else's foundation — is
  * both wrong and against the MIT notice this distribution inherits.
  */
-export const ATTRIBUTION = 'Built on DeepSeek Harness · Extended by Watch Skill'
+export const ATTRIBUTION = 'Built on DeepSeek Harness · Powered by Watch Skill'
 
 /**
  * The independence disclosure.
@@ -32,7 +32,7 @@ export const ATTRIBUTION = 'Built on DeepSeek Harness · Extended by Watch Skill
  * read as endorsement, and no such endorsement exists.
  */
 export const INDEPENDENCE =
-  'Watch Skill is an independent project and is not affiliated with or endorsed by DeepSeek.'
+  'DeepWatch and Watch Skill are independent projects and are not affiliated with or endorsed by DeepSeek.'
 
 /** One line for a tooltip or an empty state. */
 export const TAGLINE =

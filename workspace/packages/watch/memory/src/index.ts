@@ -17,7 +17,7 @@
  * - **Nothing high-impact activates itself.** Whatever the confidence, and
  *   whatever it appears the person asked for.
  *
- * @module @watchskill/dsh-memory
+ * @module @deepwatch/dsh-memory
  */
 
 import { randomUUID } from 'node:crypto'
