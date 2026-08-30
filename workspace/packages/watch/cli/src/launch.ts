@@ -17,7 +17,7 @@ import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 
 import type { Invocation } from './bin.js'
-import { harness } from './lib/harness.js'
+import { ensureHarness } from './lib/harness.js'
 import { supervise } from './lib/exec.js'
 import { dshHome, profileName } from './lib/paths.js'
 
@@ -46,11 +46,14 @@ export async function runWeb(invocation: Invocation): Promise<number> {
   const port = invocation.port ?? '0'
   const host = env['DEEPWATCH_HOST'] ?? '127.0.0.1'
 
-  const dsh = harness(env)
+  // `consent: false, offline: true` — starting the app is never a reason to
+  // fetch anything. Setup is the one command allowed to touch the network.
+  const provisioned = await ensureHarness({ env, consent: false, offline: true })
+  const dsh = provisioned.harness
   if (dsh === null) {
     process.stderr.write(
-      'deepwatch: the DeepSeek Harness that ships with this CLI could not be found.\n'
-      + '           Reinstall @deepwatch/cli, or run `deepwatch doctor`.\n')
+      `deepwatch: ${provisioned.detail}.\n`
+      + '           Run `deepwatch setup` first.\n')
     return 1
   }
 

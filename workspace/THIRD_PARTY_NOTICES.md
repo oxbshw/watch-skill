@@ -44,6 +44,38 @@ the dependency and SBOM diff.
 Vendored by DeepSeek Harness and consumed here as `@deepseek-ai/cordis` 4.0.1.
 Licensed MIT; see the package's own LICENSE in the installed tree.
 
+## The Harness runtime closure, and one LGPL component
+
+`@deepwatch/cli` declares `@deepseek-ai/dsh` as an **exact optional peer
+dependency**. It is bundled into no DeepWatch package. `deepwatch setup`
+describes the download, asks, and then installs exactly
+`@deepseek-ai/dsh@0.1.1-rc.2` from `https://registry.npmjs.org` into DeepWatch's
+own home directory. The user's package manager fetches it, from its publishers,
+under their terms.
+
+That closure reaches `sharp`, by way of `@deepseek-ai/dsh-base` and
+`@deepseek-ai/dsh-attachment-local`. sharp's per-platform packages declare
+**`Apache-2.0 AND LGPL-3.0-or-later`**, and reading one shows why:
+`@img/sharp-win32-x64` contains `libvips-42.dll` and `libvips-cpp-8.18.6.dll`
+beside sharp's `.node` addon, while its own `LICENSE` file carries only the
+Apache-2.0 text. The Apache half is sharp's glue code; the LGPL half is libvips.
+
+Thirty-one packages in that closure carry a licence outside this distribution's
+allowlist — sharp's platform binaries, the `@img/sharp-libvips-*` payloads,
+`@emnapi/*`, DeepSeek's Linux landlock addon, and koffi's OpenBSD binaries.
+Each is reviewed individually in `inventory/licence-review.json`: what it is,
+how it arrives, and whether DeepWatch redistributes it. `scripts/gen-sbom.mjs`
+fails on any package that is neither allowed nor reviewed, and on any reviewed
+package whose declared licence later changes. The allowlist itself was not
+widened to make that gate pass.
+
+**One decision remains open, and it is the project owner's to make.** DeepWatch
+redistributes no libvips binary today, so no LGPL obligation attaches to
+anything published from this repository. A future Desktop installer that
+*bundled* the Harness rather than fetching it would be redistributing those
+binaries, and would take on the LGPL-3.0-or-later relinking obligation. That is
+a packaging decision to settle before such an installer ships.
+
 ## Naming
 
 The DeepSeek name is not part of this product's name, and DeepSeek marks are

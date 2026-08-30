@@ -145,8 +145,225 @@
   ],
   "thirdParty": [
     {
+      "name": "@anthropic-ai/sdk",
+      "version": "0.91.1",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@aws-crypto/sha256-browser",
+      "version": "5.2.0",
+      "license": "Apache-2.0",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@aws-crypto/sha256-js",
+      "version": "5.2.0",
+      "license": "Apache-2.0",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@aws-crypto/supports-web-crypto",
+      "version": "5.2.0",
+      "license": "Apache-2.0",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@aws-crypto/util",
+      "version": "5.2.0",
+      "license": "Apache-2.0",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@aws-sdk/client-bedrock-runtime",
+      "version": "3.1048.0",
+      "license": "Apache-2.0",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@aws-sdk/core",
+      "version": "3.977.9",
+      "license": "Apache-2.0",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@aws-sdk/credential-provider-env",
+      "version": "3.972.70",
+      "license": "Apache-2.0",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@aws-sdk/credential-provider-http",
+      "version": "3.972.72",
+      "license": "Apache-2.0",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@aws-sdk/credential-provider-ini",
+      "version": "3.973.15",
+      "license": "Apache-2.0",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@aws-sdk/credential-provider-login",
+      "version": "3.972.77",
+      "license": "Apache-2.0",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@aws-sdk/credential-provider-node",
+      "version": "3.972.81",
+      "license": "Apache-2.0",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@aws-sdk/credential-provider-process",
+      "version": "3.972.70",
+      "license": "Apache-2.0",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@aws-sdk/credential-provider-sso",
+      "version": "3.973.14",
+      "license": "Apache-2.0",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@aws-sdk/credential-provider-web-identity",
+      "version": "3.972.76",
+      "license": "Apache-2.0",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@aws-sdk/eventstream-handler-node",
+      "version": "3.972.34",
+      "license": "Apache-2.0",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@aws-sdk/middleware-eventstream",
+      "version": "3.972.29",
+      "license": "Apache-2.0",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@aws-sdk/middleware-websocket",
+      "version": "3.972.52",
+      "license": "Apache-2.0",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@aws-sdk/nested-clients",
+      "version": "3.997.44",
+      "license": "Apache-2.0",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@aws-sdk/signature-v4-multi-region",
+      "version": "3.996.46",
+      "license": "Apache-2.0",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@aws-sdk/token-providers",
+      "version": "3.1048.0",
+      "license": "Apache-2.0",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@aws-sdk/token-providers",
+      "version": "3.1116.0",
+      "license": "Apache-2.0",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@aws-sdk/types",
+      "version": "3.974.5",
+      "license": "Apache-2.0",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@aws-sdk/util-locate-window",
+      "version": "3.965.10",
+      "license": "Apache-2.0",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@aws-sdk/xml-builder",
+      "version": "3.972.40",
+      "license": "Apache-2.0",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@aws/lambda-invoke-store",
+      "version": "0.3.0",
+      "license": "Apache-2.0",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@babel/code-frame",
+      "version": "7.29.7",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@babel/helper-validator-identifier",
+      "version": "7.29.7",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@babel/runtime",
+      "version": "7.29.7",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
       "name": "@deepseek-ai/cordis",
       "version": "4.0.1",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/cordis-plugin-group",
+      "version": "1.0.1",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/cordis-plugin-hmr",
+      "version": "1.0.16",
       "license": "MIT",
       "path": null,
       "kind": "third_party"
@@ -166,8 +383,22 @@
       "kind": "third_party"
     },
     {
+      "name": "@deepseek-ai/cordis-plugin-timer",
+      "version": "1.1.3",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
       "name": "@deepseek-ai/cosmokit",
       "version": "1.8.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh",
+      "version": "0.1.1-rc.2",
       "license": "MIT",
       "path": null,
       "kind": "third_party"
@@ -187,7 +418,35 @@
       "kind": "third_party"
     },
     {
+      "name": "@deepseek-ai/dsh-agent-instructions",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-agent-loop",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
       "name": "@deepseek-ai/dsh-agent-presets",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-agent-tool-presentation",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-anonymous-user-id",
       "version": "0.1.1-rc.2",
       "license": "MIT",
       "path": null,
@@ -208,6 +467,13 @@
       "kind": "third_party"
     },
     {
+      "name": "@deepseek-ai/dsh-app-boot",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
       "name": "@deepseek-ai/dsh-atomic-write",
       "version": "0.1.1-rc.2",
       "license": "MIT",
@@ -216,6 +482,41 @@
     },
     {
       "name": "@deepseek-ai/dsh-attachment",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-attachment-local",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-authorization",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-base",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-bash-local",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-bash-sandbox",
       "version": "0.1.1-rc.2",
       "license": "MIT",
       "path": null,
@@ -236,7 +537,217 @@
       "kind": "third_party"
     },
     {
+      "name": "@deepseek-ai/dsh-client-hmr",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-client-locale",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-client-modules",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-client-runtime",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-client-ui-agent-preset",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-client-ui-attachment",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-client-ui-brand-official",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-client-ui-commands",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-client-ui-conversation",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-client-ui-cordis",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-client-ui-deliverables",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-client-ui-directory-picker-browse",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-client-ui-directory-picker-native",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-client-ui-goal",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-client-ui-input-trigger",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-client-ui-jobs",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-client-ui-layout",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-client-ui-message-feedback",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-client-ui-model-selection",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-client-ui-permission-presets",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-client-ui-plan",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
       "name": "@deepseek-ai/dsh-client-ui-primitives",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-client-ui-reference",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-client-ui-renderer",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-client-ui-settings",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-client-ui-settings-general",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-client-ui-settings-models",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-client-ui-settings-plugin-inventory",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-client-ui-settings-plugins",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-client-ui-sidebar",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-client-ui-skill",
       "version": "0.1.1-rc.2",
       "license": "MIT",
       "path": null,
@@ -250,7 +761,91 @@
       "kind": "third_party"
     },
     {
+      "name": "@deepseek-ai/dsh-client-ui-subagent",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-client-ui-theme",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-client-ui-tool",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-client-ui-trajectory",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-client-ui-user-questions",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-client-ui-workflow-run",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-client-ui-workspace",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-cmdline",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
       "name": "@deepseek-ai/dsh-code-runtime",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-code-runtime-worker-thread",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-command-compact",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-command-feedback",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-command-goal",
       "version": "0.1.1-rc.2",
       "license": "MIT",
       "path": null,
@@ -271,6 +866,27 @@
       "kind": "third_party"
     },
     {
+      "name": "@deepseek-ai/dsh-compaction-basic",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-compaction-tool-result-pruner",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-cordis-client-runner",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
       "name": "@deepseek-ai/dsh-cordis-host-runner",
       "version": "0.1.1-rc.2",
       "license": "MIT",
@@ -285,6 +901,13 @@
       "kind": "third_party"
     },
     {
+      "name": "@deepseek-ai/dsh-credentials-local",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
       "name": "@deepseek-ai/dsh-file-reference",
       "version": "0.1.1-rc.2",
       "license": "MIT",
@@ -292,7 +915,56 @@
       "kind": "third_party"
     },
     {
+      "name": "@deepseek-ai/dsh-file-reference-local",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-fs",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-fs-local",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-fs-observation-policy",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-fs-sandbox",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
       "name": "@deepseek-ai/dsh-goal",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-goal-round-driver",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-headless",
       "version": "0.1.1-rc.2",
       "license": "MIT",
       "path": null,
@@ -314,6 +986,34 @@
     },
     {
       "name": "@deepseek-ai/dsh-host-directory-picker",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-host-directory-picker-auto",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-host-directory-picker-browse",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-host-directory-picker-native",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-host-frontend-static",
       "version": "0.1.1-rc.2",
       "license": "MIT",
       "path": null,
@@ -348,7 +1048,49 @@
       "kind": "third_party"
     },
     {
+      "name": "@deepseek-ai/dsh-jobs-local",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-launch-environment",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
       "name": "@deepseek-ai/dsh-llm",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-llm-deepseek",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-llm-pi-ai",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-llm-retry",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-mcp-client",
       "version": "0.1.1-rc.2",
       "license": "MIT",
       "path": null,
@@ -376,6 +1118,48 @@
       "kind": "third_party"
     },
     {
+      "name": "@deepseek-ai/dsh-permission-presets",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-persona",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-plan-mode",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-pwsh-local",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-pwsh-sandbox",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-repeat-tool-reminder",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
       "name": "@deepseek-ai/dsh-sandbox",
       "version": "0.1.1-rc.2",
       "license": "MIT",
@@ -383,7 +1167,28 @@
       "kind": "third_party"
     },
     {
+      "name": "@deepseek-ai/dsh-sandbox-local",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
       "name": "@deepseek-ai/dsh-sandbox-policy",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-sandbox-windows-acl",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-schedule",
       "version": "0.1.1-rc.2",
       "license": "MIT",
       "path": null,
@@ -404,7 +1209,28 @@
       "kind": "third_party"
     },
     {
+      "name": "@deepseek-ai/dsh-session-checkpoint-policy",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-session-log-export",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
       "name": "@deepseek-ai/dsh-session-persistence",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-session-persistence-jsonl",
       "version": "0.1.1-rc.2",
       "license": "MIT",
       "path": null,
@@ -432,7 +1258,35 @@
       "kind": "third_party"
     },
     {
+      "name": "@deepseek-ai/dsh-session-query-sqlite",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
       "name": "@deepseek-ai/dsh-session-reference",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-session-stats",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-session-telemetry",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-session-telemetry-otel",
       "version": "0.1.1-rc.2",
       "license": "MIT",
       "path": null,
@@ -446,6 +1300,20 @@
       "kind": "third_party"
     },
     {
+      "name": "@deepseek-ai/dsh-session-title-first-prompt-llm",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-session-title-llm",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
       "name": "@deepseek-ai/dsh-settings",
       "version": "0.1.1-rc.2",
       "license": "MIT",
@@ -453,7 +1321,63 @@
       "kind": "third_party"
     },
     {
+      "name": "@deepseek-ai/dsh-settings-file",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-shell",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-shell-env",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
       "name": "@deepseek-ai/dsh-skill",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-skill-badge",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-skill-filesystem",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-spill",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-spill-local",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-spill-policy",
       "version": "0.1.1-rc.2",
       "license": "MIT",
       "path": null,
@@ -474,7 +1398,49 @@
       "kind": "third_party"
     },
     {
+      "name": "@deepseek-ai/dsh-storage-json",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
       "name": "@deepseek-ai/dsh-subagent",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-subagent-fork-in-process",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-subagent-in-process-driver",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-subagent-spawn-in-process",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-subprocess",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-subprocess-local",
       "version": "0.1.1-rc.2",
       "license": "MIT",
       "path": null,
@@ -488,7 +1454,182 @@
       "kind": "third_party"
     },
     {
+      "name": "@deepseek-ai/dsh-terminal",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-terminal-bash",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-time-context",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
       "name": "@deepseek-ai/dsh-timeout",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-tmux-context",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-token-meter",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-tool-ask-user",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-tool-bash",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-tool-bash-persistent",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-tool-call-timeout-policy",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-tool-cordis",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-tool-fs",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-tool-fs-search",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-tool-goal",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-tool-jobs",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-tool-pwsh",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-tool-pwsh-persistent",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-tool-ralph",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-tool-skill",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-tool-str-replace-editor",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-tool-subagent",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-tool-subagent-control",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-tool-subagent-report",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-tool-todo",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-tool-web",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-tool-workflow",
       "version": "0.1.1-rc.2",
       "license": "MIT",
       "path": null,
@@ -503,6 +1644,13 @@
     },
     {
       "name": "@deepseek-ai/dsh-typert-generator",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-typert-loader",
       "version": "0.1.1-rc.2",
       "license": "MIT",
       "path": null,
@@ -537,9 +1685,72 @@
       "kind": "third_party"
     },
     {
+      "name": "@deepseek-ai/dsh-web",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-web-app",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-web-frontend",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-web-search-deepseek",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-workflow",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-workflow-worker-thread",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
       "name": "@deepseek-ai/dsh-workspace",
       "version": "0.1.1-rc.2",
       "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/node-addon-landlock-run",
+      "version": "0.1.1",
+      "license": "BSD-3-Clause",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/node-addon-landlock-run-linux-arm64",
+      "version": "0.1.1",
+      "license": "UNKNOWN",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/node-addon-landlock-run-linux-x64",
+      "version": "0.1.1",
+      "license": "UNKNOWN",
       "path": null,
       "kind": "third_party"
     },
@@ -551,9 +1762,23 @@
       "kind": "third_party"
     },
     {
+      "name": "@earendil-works/pi-ai",
+      "version": "0.82.1",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
       "name": "@electron/get",
       "version": "2.0.3",
       "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@emnapi/runtime",
+      "version": "1.11.3",
+      "license": "UNKNOWN",
       "path": null,
       "kind": "third_party"
     },
@@ -621,6 +1846,20 @@
       "kind": "third_party"
     },
     {
+      "name": "@google/genai",
+      "version": "1.52.0",
+      "license": "Apache-2.0",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@hono/node-server",
+      "version": "2.1.1",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
       "name": "@humanfs/core",
       "version": "0.19.2",
       "license": "Apache-2.0",
@@ -656,6 +1895,202 @@
       "kind": "third_party"
     },
     {
+      "name": "@img/colour",
+      "version": "1.1.0",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@img/sharp-darwin-arm64",
+      "version": "0.35.4",
+      "license": "Apache-2.0 AND LGPL-3.0-or-later",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@img/sharp-darwin-x64",
+      "version": "0.35.4",
+      "license": "Apache-2.0 AND LGPL-3.0-or-later",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@img/sharp-freebsd-wasm32",
+      "version": "0.35.4",
+      "license": "Apache-2.0 AND LGPL-3.0-or-later",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@img/sharp-libvips-darwin-arm64",
+      "version": "1.3.3",
+      "license": "UNKNOWN",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@img/sharp-libvips-darwin-x64",
+      "version": "1.3.3",
+      "license": "UNKNOWN",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@img/sharp-libvips-linux-arm",
+      "version": "1.3.3",
+      "license": "UNKNOWN",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@img/sharp-libvips-linux-arm64",
+      "version": "1.3.3",
+      "license": "UNKNOWN",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@img/sharp-libvips-linux-ppc64",
+      "version": "1.3.3",
+      "license": "UNKNOWN",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@img/sharp-libvips-linux-riscv64",
+      "version": "1.3.3",
+      "license": "UNKNOWN",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@img/sharp-libvips-linux-s390x",
+      "version": "1.3.3",
+      "license": "UNKNOWN",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@img/sharp-libvips-linux-x64",
+      "version": "1.3.3",
+      "license": "UNKNOWN",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@img/sharp-libvips-linuxmusl-arm64",
+      "version": "1.3.3",
+      "license": "UNKNOWN",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@img/sharp-libvips-linuxmusl-x64",
+      "version": "1.3.3",
+      "license": "UNKNOWN",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@img/sharp-linux-arm",
+      "version": "0.35.4",
+      "license": "Apache-2.0 AND LGPL-3.0-or-later",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@img/sharp-linux-arm64",
+      "version": "0.35.4",
+      "license": "Apache-2.0 AND LGPL-3.0-or-later",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@img/sharp-linux-ppc64",
+      "version": "0.35.4",
+      "license": "Apache-2.0 AND LGPL-3.0-or-later",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@img/sharp-linux-riscv64",
+      "version": "0.35.4",
+      "license": "Apache-2.0 AND LGPL-3.0-or-later",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@img/sharp-linux-s390x",
+      "version": "0.35.4",
+      "license": "Apache-2.0 AND LGPL-3.0-or-later",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@img/sharp-linux-x64",
+      "version": "0.35.4",
+      "license": "Apache-2.0 AND LGPL-3.0-or-later",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@img/sharp-linuxmusl-arm64",
+      "version": "0.35.4",
+      "license": "UNKNOWN",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@img/sharp-linuxmusl-x64",
+      "version": "0.35.4",
+      "license": "UNKNOWN",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@img/sharp-wasm32",
+      "version": "0.35.4",
+      "license": "UNKNOWN",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@img/sharp-webcontainers-wasm32",
+      "version": "0.35.4",
+      "license": "UNKNOWN",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@img/sharp-win32-arm64",
+      "version": "0.35.4",
+      "license": "Apache-2.0 AND LGPL-3.0-or-later",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@img/sharp-win32-ia32",
+      "version": "0.35.4",
+      "license": "Apache-2.0 AND LGPL-3.0-or-later",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@img/sharp-win32-x64",
+      "version": "0.35.4",
+      "license": "Apache-2.0 AND LGPL-3.0-or-later",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@joplin/turndown-plugin-gfm",
+      "version": "1.0.67",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
       "name": "@jridgewell/gen-mapping",
       "version": "0.3.13",
       "license": "MIT",
@@ -684,9 +2119,296 @@
       "kind": "third_party"
     },
     {
+      "name": "@koromix/koffi-darwin-arm64",
+      "version": "3.1.6",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@koromix/koffi-darwin-x64",
+      "version": "3.1.6",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@koromix/koffi-freebsd-arm64",
+      "version": "3.1.6",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@koromix/koffi-freebsd-ia32",
+      "version": "3.1.6",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@koromix/koffi-freebsd-x64",
+      "version": "3.1.6",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@koromix/koffi-linux-arm64",
+      "version": "3.1.6",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@koromix/koffi-linux-ia32",
+      "version": "3.1.6",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@koromix/koffi-linux-loong64",
+      "version": "3.1.6",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@koromix/koffi-linux-riscv64",
+      "version": "3.1.6",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@koromix/koffi-linux-x64",
+      "version": "3.1.6",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@koromix/koffi-openbsd-ia32",
+      "version": "3.1.6",
+      "license": "UNKNOWN",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@koromix/koffi-openbsd-x64",
+      "version": "3.1.6",
+      "license": "UNKNOWN",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@koromix/koffi-win32-arm64",
+      "version": "3.1.6",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@koromix/koffi-win32-ia32",
+      "version": "3.1.6",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@koromix/koffi-win32-x64",
+      "version": "3.1.6",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@mistralai/mistralai",
+      "version": "2.2.6",
+      "license": "Apache-2.0",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@mixmark-io/domino",
+      "version": "2.2.0",
+      "license": "BSD-2-Clause",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@modelcontextprotocol/sdk",
+      "version": "1.30.0",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@opentelemetry/api",
+      "version": "1.9.0",
+      "license": "Apache-2.0",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@opentelemetry/api",
+      "version": "1.9.1",
+      "license": "Apache-2.0",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@opentelemetry/api-logs",
+      "version": "0.220.0",
+      "license": "Apache-2.0",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@opentelemetry/core",
+      "version": "2.10.0",
+      "license": "Apache-2.0",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@opentelemetry/core",
+      "version": "2.9.0",
+      "license": "Apache-2.0",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@opentelemetry/exporter-logs-otlp-http",
+      "version": "0.220.0",
+      "license": "Apache-2.0",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@opentelemetry/otlp-exporter-base",
+      "version": "0.220.0",
+      "license": "Apache-2.0",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@opentelemetry/otlp-transformer",
+      "version": "0.220.0",
+      "license": "Apache-2.0",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@opentelemetry/resources",
+      "version": "2.10.0",
+      "license": "Apache-2.0",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@opentelemetry/resources",
+      "version": "2.9.0",
+      "license": "Apache-2.0",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@opentelemetry/sdk-logs",
+      "version": "0.220.0",
+      "license": "Apache-2.0",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@opentelemetry/sdk-metrics",
+      "version": "2.9.0",
+      "license": "Apache-2.0",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@opentelemetry/sdk-trace",
+      "version": "2.9.0",
+      "license": "Apache-2.0",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@opentelemetry/semantic-conventions",
+      "version": "1.43.0",
+      "license": "Apache-2.0",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
       "name": "@oxc-project/types",
       "version": "0.147.0",
       "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@protobufjs/aspromise",
+      "version": "1.1.2",
+      "license": "BSD-3-Clause",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@protobufjs/base64",
+      "version": "1.1.2",
+      "license": "BSD-3-Clause",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@protobufjs/codegen",
+      "version": "2.0.5",
+      "license": "BSD-3-Clause",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@protobufjs/eventemitter",
+      "version": "1.1.1",
+      "license": "BSD-3-Clause",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@protobufjs/fetch",
+      "version": "1.1.1",
+      "license": "BSD-3-Clause",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@protobufjs/float",
+      "version": "1.0.2",
+      "license": "BSD-3-Clause",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@protobufjs/path",
+      "version": "1.1.2",
+      "license": "BSD-3-Clause",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@protobufjs/pool",
+      "version": "1.1.0",
+      "license": "BSD-3-Clause",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@protobufjs/utf8",
+      "version": "1.1.2",
+      "license": "BSD-3-Clause",
       "path": null,
       "kind": "third_party"
     },
@@ -873,6 +2595,76 @@
       "kind": "third_party"
     },
     {
+      "name": "@smithy/core",
+      "version": "3.33.3",
+      "license": "Apache-2.0",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@smithy/credential-provider-imds",
+      "version": "4.5.2",
+      "license": "Apache-2.0",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@smithy/fetch-http-handler",
+      "version": "5.7.2",
+      "license": "Apache-2.0",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@smithy/is-array-buffer",
+      "version": "2.2.0",
+      "license": "Apache-2.0",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@smithy/node-http-handler",
+      "version": "4.11.3",
+      "license": "Apache-2.0",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@smithy/node-http-handler",
+      "version": "4.7.3",
+      "license": "Apache-2.0",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@smithy/signature-v4",
+      "version": "5.7.3",
+      "license": "Apache-2.0",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@smithy/types",
+      "version": "4.17.2",
+      "license": "Apache-2.0",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@smithy/util-buffer-from",
+      "version": "2.2.0",
+      "license": "Apache-2.0",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@smithy/util-utf8",
+      "version": "2.3.0",
+      "license": "Apache-2.0",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
       "name": "@standard-schema/spec",
       "version": "1.1.0",
       "license": "MIT",
@@ -882,6 +2674,20 @@
     {
       "name": "@szmarczak/http-timer",
       "version": "4.0.6",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@tanstack/react-virtual",
+      "version": "3.14.10",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@tanstack/virtual-core",
+      "version": "3.17.8",
       "license": "MIT",
       "path": null,
       "kind": "third_party"
@@ -992,6 +2798,13 @@
       "kind": "third_party"
     },
     {
+      "name": "@types/retry",
+      "version": "0.12.0",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
       "name": "@types/unist",
       "version": "3.0.3",
       "license": "MIT",
@@ -1079,6 +2892,97 @@
       "name": "@ungap/structured-clone",
       "version": "1.3.4",
       "license": "ISC",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@vscode/ripgrep",
+      "version": "1.18.0",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@vscode/ripgrep-darwin-arm64",
+      "version": "1.18.0",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@vscode/ripgrep-darwin-x64",
+      "version": "1.18.0",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@vscode/ripgrep-linux-arm",
+      "version": "1.18.0",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@vscode/ripgrep-linux-arm64",
+      "version": "1.18.0",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@vscode/ripgrep-linux-ia32",
+      "version": "1.18.0",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@vscode/ripgrep-linux-ppc64",
+      "version": "1.18.0",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@vscode/ripgrep-linux-riscv64",
+      "version": "1.18.0",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@vscode/ripgrep-linux-s390x",
+      "version": "1.18.0",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@vscode/ripgrep-linux-x64",
+      "version": "1.18.0",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@vscode/ripgrep-win32-arm64",
+      "version": "1.18.0",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@vscode/ripgrep-win32-ia32",
+      "version": "1.18.0",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@vscode/ripgrep-win32-x64",
+      "version": "1.18.0",
+      "license": "MIT",
       "path": null,
       "kind": "third_party"
     },
@@ -1258,6 +3162,13 @@
       "kind": "third_party"
     },
     {
+      "name": "accepts",
+      "version": "2.0.0",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
       "name": "acorn",
       "version": "8.18.0",
       "license": "MIT",
@@ -1272,8 +3183,29 @@
       "kind": "third_party"
     },
     {
+      "name": "agent-base",
+      "version": "7.1.4",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
       "name": "ajv",
       "version": "6.15.0",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "ajv",
+      "version": "8.20.0",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "ajv-formats",
+      "version": "3.0.1",
       "license": "MIT",
       "path": null,
       "kind": "third_party"
@@ -1321,8 +3253,36 @@
       "kind": "third_party"
     },
     {
+      "name": "base64-js",
+      "version": "1.5.1",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "bignumber.js",
+      "version": "9.3.1",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "body-parser",
+      "version": "2.3.0",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
       "name": "boolean",
       "version": "3.2.0",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "bowser",
+      "version": "2.14.1",
       "license": "MIT",
       "path": null,
       "kind": "third_party"
@@ -1349,6 +3309,27 @@
       "kind": "third_party"
     },
     {
+      "name": "buffer-equal-constant-time",
+      "version": "1.0.1",
+      "license": "BSD-3-Clause",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "bundle-name",
+      "version": "4.1.0",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "bytes",
+      "version": "3.1.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
       "name": "cac",
       "version": "7.0.0",
       "license": "MIT",
@@ -1365,6 +3346,20 @@
     {
       "name": "cacheable-request",
       "version": "7.0.4",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "call-bind-apply-helpers",
+      "version": "1.0.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "call-bound",
+      "version": "1.0.4",
       "license": "MIT",
       "path": null,
       "kind": "third_party"
@@ -1412,6 +3407,20 @@
       "kind": "third_party"
     },
     {
+      "name": "chokidar",
+      "version": "4.0.3",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "chokidar",
+      "version": "5.0.0",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
       "name": "clone-response",
       "version": "1.0.3",
       "license": "MIT",
@@ -1448,6 +3457,13 @@
     },
     {
       "name": "commander",
+      "version": "15.0.0",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "commander",
       "version": "8.3.0",
       "license": "MIT",
       "path": null,
@@ -1456,6 +3472,48 @@
     {
       "name": "concat-map",
       "version": "0.0.1",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "content-disposition",
+      "version": "1.1.0",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "content-type",
+      "version": "1.0.5",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "content-type",
+      "version": "2.1.0",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "cookie",
+      "version": "0.7.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "cookie-signature",
+      "version": "1.2.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "cors",
+      "version": "2.8.6",
       "license": "MIT",
       "path": null,
       "kind": "third_party"
@@ -1470,6 +3528,13 @@
     {
       "name": "csstype",
       "version": "3.2.3",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "data-uri-to-buffer",
+      "version": "4.0.1",
       "license": "MIT",
       "path": null,
       "kind": "third_party"
@@ -1503,6 +3568,20 @@
       "kind": "third_party"
     },
     {
+      "name": "default-browser",
+      "version": "5.5.1",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "default-browser-id",
+      "version": "5.0.1",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
       "name": "defer-to-connect",
       "version": "2.0.1",
       "license": "MIT",
@@ -1517,6 +3596,13 @@
       "kind": "third_party"
     },
     {
+      "name": "define-lazy-prop",
+      "version": "3.0.0",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
       "name": "define-properties",
       "version": "1.2.1",
       "license": "MIT",
@@ -1526,6 +3612,13 @@
     {
       "name": "defu",
       "version": "6.1.7",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "depd",
+      "version": "2.0.0",
       "license": "MIT",
       "path": null,
       "kind": "third_party"
@@ -1559,8 +3652,36 @@
       "kind": "third_party"
     },
     {
+      "name": "diff",
+      "version": "9.0.0",
+      "license": "BSD-3-Clause",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
       "name": "dts-resolver",
       "version": "3.0.0",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "dunder-proto",
+      "version": "1.0.1",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "ecdsa-sig-formatter",
+      "version": "1.0.11",
+      "license": "Apache-2.0",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "ee-first",
+      "version": "1.1.1",
       "license": "MIT",
       "path": null,
       "kind": "third_party"
@@ -1575,6 +3696,13 @@
     {
       "name": "empathic",
       "version": "2.0.1",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "encodeurl",
+      "version": "2.0.0",
       "license": "MIT",
       "path": null,
       "kind": "third_party"
@@ -1608,8 +3736,22 @@
       "kind": "third_party"
     },
     {
+      "name": "es-object-atoms",
+      "version": "1.1.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
       "name": "es6-error",
       "version": "4.1.1",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "escape-html",
+      "version": "1.0.3",
       "license": "MIT",
       "path": null,
       "kind": "third_party"
@@ -1699,6 +3841,48 @@
       "kind": "third_party"
     },
     {
+      "name": "etag",
+      "version": "1.8.1",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "eventsource",
+      "version": "3.0.7",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "eventsource-parser",
+      "version": "3.1.1",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "express",
+      "version": "5.2.1",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "express-rate-limit",
+      "version": "8.7.0",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "extend",
+      "version": "3.0.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
       "name": "extract-zip",
       "version": "2.0.1",
       "license": "BSD-2-Clause",
@@ -1727,6 +3911,13 @@
       "kind": "third_party"
     },
     {
+      "name": "fast-uri",
+      "version": "3.1.6",
+      "license": "BSD-3-Clause",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
       "name": "fd-slicer",
       "version": "1.1.0",
       "license": "MIT",
@@ -1741,6 +3932,13 @@
       "kind": "third_party"
     },
     {
+      "name": "fetch-blob",
+      "version": "3.2.0",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
       "name": "fflate",
       "version": "0.8.3",
       "license": "MIT",
@@ -1750,6 +3948,13 @@
     {
       "name": "file-entry-cache",
       "version": "8.0.0",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "finalhandler",
+      "version": "2.1.1",
       "license": "MIT",
       "path": null,
       "kind": "third_party"
@@ -1776,8 +3981,64 @@
       "kind": "third_party"
     },
     {
+      "name": "formdata-polyfill",
+      "version": "4.0.10",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "forwarded",
+      "version": "0.2.0",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "fresh",
+      "version": "2.0.0",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
       "name": "fs-extra",
       "version": "8.1.0",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "function-bind",
+      "version": "1.1.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "gaxios",
+      "version": "7.3.1",
+      "license": "Apache-2.0",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "gcp-metadata",
+      "version": "8.1.2",
+      "license": "Apache-2.0",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "get-intrinsic",
+      "version": "1.3.0",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "get-proto",
+      "version": "1.0.1",
       "license": "MIT",
       "path": null,
       "kind": "third_party"
@@ -1825,6 +4086,20 @@
       "kind": "third_party"
     },
     {
+      "name": "google-auth-library",
+      "version": "10.9.1",
+      "license": "Apache-2.0",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "google-logging-utils",
+      "version": "1.1.3",
+      "license": "Apache-2.0",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
       "name": "gopd",
       "version": "1.2.0",
       "license": "MIT",
@@ -1860,6 +4135,20 @@
       "kind": "third_party"
     },
     {
+      "name": "has-symbols",
+      "version": "1.1.0",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "hasown",
+      "version": "2.0.4",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
       "name": "hast-util-to-html",
       "version": "9.0.5",
       "license": "MIT",
@@ -1869,6 +4158,13 @@
     {
       "name": "hast-util-whitespace",
       "version": "3.0.0",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "hono",
+      "version": "4.13.5",
       "license": "MIT",
       "path": null,
       "kind": "third_party"
@@ -1895,8 +4191,36 @@
       "kind": "third_party"
     },
     {
+      "name": "http-errors",
+      "version": "2.0.1",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "http-proxy-agent",
+      "version": "7.0.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
       "name": "http2-wrapper",
       "version": "1.0.3",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "https-proxy-agent",
+      "version": "7.0.6",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "iconv-lite",
+      "version": "0.7.3",
       "license": "MIT",
       "path": null,
       "kind": "third_party"
@@ -1911,6 +4235,13 @@
     {
       "name": "ignore",
       "version": "7.0.6",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "immer",
+      "version": "10.2.0",
       "license": "MIT",
       "path": null,
       "kind": "third_party"
@@ -1937,6 +4268,34 @@
       "kind": "third_party"
     },
     {
+      "name": "inherits",
+      "version": "2.0.4",
+      "license": "ISC",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "ip-address",
+      "version": "10.7.0",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "ipaddr.js",
+      "version": "1.9.1",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "is-docker",
+      "version": "3.0.0",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
       "name": "is-extglob",
       "version": "2.1.1",
       "license": "MIT",
@@ -1951,9 +4310,44 @@
       "kind": "third_party"
     },
     {
+      "name": "is-in-ssh",
+      "version": "1.0.0",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "is-inside-container",
+      "version": "1.0.0",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "is-promise",
+      "version": "4.0.0",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "is-wsl",
+      "version": "3.1.1",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
       "name": "isexe",
       "version": "2.0.0",
       "license": "ISC",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "jose",
+      "version": "6.2.10",
+      "license": "MIT",
       "path": null,
       "kind": "third_party"
     },
@@ -1972,8 +4366,22 @@
       "kind": "third_party"
     },
     {
+      "name": "json-bigint",
+      "version": "1.0.0",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
       "name": "json-buffer",
       "version": "3.0.1",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "json-schema-to-ts",
+      "version": "3.1.1",
       "license": "MIT",
       "path": null,
       "kind": "third_party"
@@ -1982,6 +4390,20 @@
       "name": "json-schema-traverse",
       "version": "0.4.1",
       "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "json-schema-traverse",
+      "version": "1.0.0",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "json-schema-typed",
+      "version": "8.0.2",
+      "license": "BSD-2-Clause",
       "path": null,
       "kind": "third_party"
     },
@@ -2007,6 +4429,20 @@
       "kind": "third_party"
     },
     {
+      "name": "jwa",
+      "version": "2.0.1",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "jws",
+      "version": "4.0.1",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
       "name": "katex",
       "version": "0.16.47",
       "license": "MIT",
@@ -2016,6 +4452,13 @@
     {
       "name": "keyv",
       "version": "4.5.4",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "koffi",
+      "version": "3.1.6",
       "license": "MIT",
       "path": null,
       "kind": "third_party"
@@ -2126,6 +4569,13 @@
       "kind": "third_party"
     },
     {
+      "name": "long",
+      "version": "5.3.2",
+      "license": "Apache-2.0",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
       "name": "longest-streak",
       "version": "3.1.0",
       "license": "MIT",
@@ -2156,6 +4606,13 @@
     {
       "name": "matcher",
       "version": "3.0.0",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "math-intrinsics",
+      "version": "1.1.0",
       "license": "MIT",
       "path": null,
       "kind": "third_party"
@@ -2247,6 +4704,20 @@
     {
       "name": "mdast-util-to-string",
       "version": "4.0.0",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "media-typer",
+      "version": "1.1.1",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "merge-descriptors",
+      "version": "2.0.0",
       "license": "MIT",
       "path": null,
       "kind": "third_party"
@@ -2455,6 +4926,20 @@
       "kind": "third_party"
     },
     {
+      "name": "mime-db",
+      "version": "1.54.0",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "mime-types",
+      "version": "3.0.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
       "name": "mimic-response",
       "version": "1.0.1",
       "license": "MIT",
@@ -2492,6 +4977,20 @@
     {
       "name": "natural-compare",
       "version": "1.4.0",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "negotiator",
+      "version": "1.1.0",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "node-addon-api",
+      "version": "7.1.1",
       "license": "MIT",
       "path": null,
       "kind": "third_party"
@@ -2560,8 +5059,43 @@
       "kind": "third_party"
     },
     {
+      "name": "node-domexception",
+      "version": "1.0.0",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "node-fetch",
+      "version": "3.3.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "node-pty",
+      "version": "1.2.0-beta.15",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
       "name": "normalize-url",
       "version": "6.1.0",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "object-assign",
+      "version": "4.1.1",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "object-inspect",
+      "version": "1.13.4",
       "license": "MIT",
       "path": null,
       "kind": "third_party"
@@ -2576,6 +5110,13 @@
     {
       "name": "obug",
       "version": "2.1.4",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "on-finished",
+      "version": "2.4.1",
       "license": "MIT",
       "path": null,
       "kind": "third_party"
@@ -2598,6 +5139,20 @@
       "name": "oniguruma-to-es",
       "version": "4.3.6",
       "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "open",
+      "version": "11.0.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "openai",
+      "version": "6.26.0",
+      "license": "Apache-2.0",
       "path": null,
       "kind": "third_party"
     },
@@ -2630,8 +5185,29 @@
       "kind": "third_party"
     },
     {
+      "name": "p-retry",
+      "version": "4.6.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
       "name": "parent-module",
       "version": "1.0.1",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "parseurl",
+      "version": "1.3.3",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "partial-json",
+      "version": "0.1.7",
       "license": "MIT",
       "path": null,
       "kind": "third_party"
@@ -2651,6 +5227,13 @@
       "kind": "third_party"
     },
     {
+      "name": "path-to-regexp",
+      "version": "8.4.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
       "name": "pend",
       "version": "1.2.0",
       "license": "MIT",
@@ -2658,8 +5241,36 @@
       "kind": "third_party"
     },
     {
+      "name": "picocolors",
+      "version": "1.1.1",
+      "license": "ISC",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
       "name": "picomatch",
       "version": "4.0.7",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "pkce-challenge",
+      "version": "5.0.1",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "powershell-utils",
+      "version": "0.1.0",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "powershell-utils",
+      "version": "0.2.1",
       "license": "MIT",
       "path": null,
       "kind": "third_party"
@@ -2686,6 +5297,20 @@
       "kind": "third_party"
     },
     {
+      "name": "protobufjs",
+      "version": "7.6.6",
+      "license": "BSD-3-Clause",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "proxy-addr",
+      "version": "2.0.7",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
       "name": "pump",
       "version": "3.0.4",
       "license": "MIT",
@@ -2696,6 +5321,13 @@
       "name": "punycode",
       "version": "2.3.1",
       "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "qs",
+      "version": "6.16.0",
+      "license": "BSD-3-Clause",
       "path": null,
       "kind": "third_party"
     },
@@ -2714,6 +5346,20 @@
       "kind": "third_party"
     },
     {
+      "name": "range-parser",
+      "version": "1.3.0",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "raw-body",
+      "version": "3.0.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
       "name": "react",
       "version": "18.3.1",
       "license": "MIT",
@@ -2723,6 +5369,20 @@
     {
       "name": "react-dom",
       "version": "18.3.1",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "readdirp",
+      "version": "4.1.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "readdirp",
+      "version": "5.1.1",
       "license": "MIT",
       "path": null,
       "kind": "third_party"
@@ -2744,6 +5404,13 @@
     {
       "name": "regex-utilities",
       "version": "2.3.0",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "require-from-string",
+      "version": "2.0.2",
       "license": "MIT",
       "path": null,
       "kind": "third_party"
@@ -2777,6 +5444,13 @@
       "kind": "third_party"
     },
     {
+      "name": "retry",
+      "version": "0.13.1",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
       "name": "roarr",
       "version": "2.15.4",
       "license": "BSD-3-Clause",
@@ -2793,6 +5467,34 @@
     {
       "name": "rolldown-plugin-dts",
       "version": "0.27.14",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "router",
+      "version": "2.2.0",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "run-applescript",
+      "version": "7.1.0",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "safe-buffer",
+      "version": "5.2.1",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "safer-buffer",
+      "version": "2.1.2",
       "license": "MIT",
       "path": null,
       "kind": "third_party"
@@ -2826,9 +5528,37 @@
       "kind": "third_party"
     },
     {
+      "name": "send",
+      "version": "1.2.1",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
       "name": "serialize-error",
       "version": "7.0.1",
       "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "serve-static",
+      "version": "2.2.1",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "setprototypeof",
+      "version": "1.2.0",
+      "license": "ISC",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "sharp",
+      "version": "0.35.4",
+      "license": "Apache-2.0",
       "path": null,
       "kind": "third_party"
     },
@@ -2854,6 +5584,34 @@
       "kind": "third_party"
     },
     {
+      "name": "side-channel",
+      "version": "1.1.1",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "side-channel-list",
+      "version": "1.0.1",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "side-channel-map",
+      "version": "1.0.1",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "side-channel-weakmap",
+      "version": "1.0.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
       "name": "space-separated-tokens",
       "version": "2.0.2",
       "license": "MIT",
@@ -2864,6 +5622,13 @@
       "name": "sprintf-js",
       "version": "1.1.3",
       "license": "BSD-3-Clause",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "statuses",
+      "version": "2.0.2",
+      "license": "MIT",
       "path": null,
       "kind": "third_party"
     },
@@ -2910,6 +5675,13 @@
       "kind": "third_party"
     },
     {
+      "name": "toidentifier",
+      "version": "1.0.1",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
       "name": "tree-kill",
       "version": "1.2.2",
       "license": "MIT",
@@ -2919,6 +5691,13 @@
     {
       "name": "trim-lines",
       "version": "3.0.1",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "ts-algebra",
+      "version": "2.0.0",
       "license": "MIT",
       "path": null,
       "kind": "third_party"
@@ -2938,6 +5717,20 @@
       "kind": "third_party"
     },
     {
+      "name": "tslib",
+      "version": "2.8.1",
+      "license": "0BSD",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "turndown",
+      "version": "7.2.4",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
       "name": "type-check",
       "version": "0.4.0",
       "license": "MIT",
@@ -2948,6 +5741,20 @@
       "name": "type-fest",
       "version": "0.13.1",
       "license": "(MIT OR CC0-1.0)",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "type-is",
+      "version": "2.1.0",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "typebox",
+      "version": "1.1.38",
+      "license": "MIT",
       "path": null,
       "kind": "third_party"
     },
@@ -3036,9 +5843,30 @@
       "kind": "third_party"
     },
     {
+      "name": "unpipe",
+      "version": "1.0.0",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
       "name": "uri-js",
       "version": "4.4.1",
       "license": "BSD-2-Clause",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "use-sync-external-store",
+      "version": "1.2.0",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "vary",
+      "version": "1.1.2",
+      "license": "MIT",
       "path": null,
       "kind": "third_party"
     },
@@ -3059,6 +5887,13 @@
     {
       "name": "vfile-message",
       "version": "4.0.3",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "web-streams-polyfill",
+      "version": "3.3.3",
       "license": "MIT",
       "path": null,
       "kind": "third_party"
@@ -3088,6 +5923,20 @@
       "name": "ws",
       "version": "8.21.3",
       "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "wsl-utils",
+      "version": "1.0.0",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "yaml",
+      "version": "2.9.0",
+      "license": "ISC",
       "path": null,
       "kind": "third_party"
     },
@@ -3129,6 +5978,20 @@
     {
       "name": "zod",
       "version": "4.5.4",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "zod-to-json-schema",
+      "version": "3.25.2",
+      "license": "ISC",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "zustand",
+      "version": "4.4.7",
       "license": "MIT",
       "path": null,
       "kind": "third_party"
@@ -3206,7 +6069,7 @@
   ],
   "counts": {
     "firstParty": 20,
-    "thirdParty": 428,
+    "thirdParty": 837,
     "modelWeights": 5,
     "distributableWeights": 3
   }

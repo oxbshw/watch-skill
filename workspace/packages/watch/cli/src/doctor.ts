@@ -25,7 +25,8 @@ import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 
 import { probe, run } from './lib/exec.js'
-import { harness } from './lib/harness.js'
+import { harness, harnessVersion } from './lib/harness.js'
+import { HARNESS_PACKAGE, HARNESS_VERSION } from './version.js'
 import { deepwatchHome, dshHome, profileName, watchCoreBin } from './lib/paths.js'
 
 /** How much is known about one thing this product needs. */
@@ -103,30 +104,45 @@ async function harnessFinding(env: NodeJS.ProcessEnv): Promise<Finding> {
     return {
       name: 'DeepSeek Harness',
       state: 'missing',
-      detail: 'not installed yet',
-      fix: 'Run `deepwatch setup`, which installs the pinned Harness into the '
-        + 'DeepWatch home. It is not bundled with this package: its dependency '
-        + 'tree carries licences this distribution has not reviewed.',
+      detail: 'not installed',
+      fix: `Run \`deepwatch setup\`. It describes the download first and asks: `
+        + `${HARNESS_PACKAGE}@${HARNESS_VERSION}, an exact version, into the `
+        + 'DeepWatch home. It is an optional peer dependency, so nothing was '
+        + 'fetched by installing this CLI.',
       required: true,
     }
   }
-  const version = await probe(found.command, [...found.prefix, '--version'])
-  return version === null
-    ? {
-        name: 'DeepSeek Harness',
-        state: 'installed',
-        detail: `resolved (${found.source}) but did not answer --version`,
-        fix: 'The Harness is present and did not run. Check that this Node can '
-          + 'execute it, then run `deepwatch doctor` again.',
-        required: true,
-      }
-    : {
-        name: 'DeepSeek Harness',
-        state: 'reachable',
-        detail: `${version} (${found.source})`,
-        fix: '',
-        required: true,
-      }
+  const version = await harnessVersion(found)
+  if (version === null) {
+    return {
+      name: 'DeepSeek Harness',
+      state: 'installed',
+      detail: `resolved (${found.source}) but did not answer --version`,
+      fix: 'The Harness is present and did not run. Check that this Node can '
+        + 'execute it, then run `deepwatch doctor` again.',
+      required: true,
+    }
+  }
+  if (found.source !== 'override' && version !== HARNESS_VERSION) {
+    // Not "reachable". It runs, and it is not the one this build was measured
+    // against, which is a different fact and the one a person has to act on.
+    return {
+      name: 'DeepSeek Harness',
+      state: 'installed',
+      detail: `${version} (${found.source}), built against ${HARNESS_VERSION}`,
+      fix: `DeepWatch is only tested against ${HARNESS_VERSION}. Point `
+        + 'DEEPWATCH_DSH_BIN at that version, or give this install its own '
+        + 'DEEPWATCH_HOME.',
+      required: true,
+    }
+  }
+  return {
+    name: 'DeepSeek Harness',
+    state: 'reachable',
+    detail: `${version} (${found.source})`,
+    fix: '',
+    required: true,
+  }
 }
 
 /** Whether a profile has been composed, and whether it names DeepWatch. */
@@ -164,7 +180,10 @@ export async function doctor(env: NodeJS.ProcessEnv = process.env): Promise<Doct
   ])
   const findings = [nodeFinding(), harness, profileFinding(env), watchSkill]
   return {
-    ok: findings.every(finding => !finding.required || finding.state !== 'missing'),
+    // A required thing that is present but unusable is not ok either: a
+    // Harness of the wrong version runs and composes a product nobody tested.
+    ok: findings.every(finding =>
+      !finding.required || (finding.state !== 'missing' && finding.fix === '')),
     findings,
   }
 }

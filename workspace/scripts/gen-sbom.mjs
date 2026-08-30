@@ -43,6 +43,25 @@ const ALLOWED_LICENSES = new Set([
   '(MIT OR CC0-1.0)', 'MPL-2.0',
 ])
 
+/**
+ * Licences reviewed one package at a time, with the reason each is acceptable.
+ *
+ * Deliberately not an addition to `ALLOWED_LICENSES`. That set is what this
+ * distribution ships under; this file is a record of specific packages that
+ * carry something else, what they are, how they reach the repository, and
+ * whether DeepWatch redistributes them. A package with no entry still fails,
+ * and an entry stops covering a package the moment its licence changes.
+ */
+function licenceReview() {
+  const path = join(ROOT, 'inventory', 'licence-review.json')
+  if (!existsSync(path)) return []
+  const parsed = JSON.parse(readFileSync(path, 'utf8'))
+  return (parsed.packages ?? []).map(entry => ({
+    ...entry,
+    pattern: new RegExp(entry.match),
+  }))
+}
+
 /** Read a manifest, or null when it is unreadable. */
 function manifest(path) {
   if (!existsSync(path)) return null
@@ -285,11 +304,24 @@ function main() {
       problems.push(`${pkg.name}: first-party packages must be MIT, found ${pkg.license}`)
     }
   }
+  const reviewed = licenceReview()
   for (const pkg of third) {
-    if (!ALLOWED_LICENSES.has(pkg.license)) {
+    if (ALLOWED_LICENSES.has(pkg.license)) continue
+    const entry = reviewed.find(rule => rule.pattern.test(pkg.name))
+    if (entry === undefined) {
       problems.push(
         `${pkg.name}@${pkg.version}: licence ${pkg.license} is not on the allowed list. `
-        + 'Review it and add it deliberately, or remove the dependency.',
+        + 'Review it deliberately in inventory/licence-review.json, or remove the dependency.',
+      )
+      continue
+    }
+    // A reviewed entry still has to describe the licence it was reviewed for.
+    // A package that changed licence under a matching rule is not covered by
+    // that review and is a finding again.
+    if (!entry.licenses.includes(pkg.license)) {
+      problems.push(
+        `${pkg.name}@${pkg.version}: reviewed for ${entry.licenses.join(' / ')} `
+        + `and now declares ${pkg.license}. Re-review it in inventory/licence-review.json.`,
       )
     }
   }

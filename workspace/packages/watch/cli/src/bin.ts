@@ -30,11 +30,14 @@ const USAGE = `DeepWatch — an agent workspace that sees, remembers, and can pr
   deepwatch                 what to do next, from what this machine has
   deepwatch doctor          what is installed, what is missing, and how to fix it
   deepwatch setup           compose the DeepWatch profile (safe to re-run)
+                            asks before downloading anything
   deepwatch web             run DeepWatch in your browser
   deepwatch desktop         run the DeepWatch desktop app
 
 Options
   --json                    machine-readable output, where a command has any
+  --yes, -y                 agree to the download \`setup\` describes first
+  --offline                 never reach the network; refuse instead
   --profile <name>          which profile to use (default: deepwatch)
   --port <n>                port for \`web\` (default: an OS-chosen one)
   --version, -v
@@ -52,6 +55,10 @@ export interface Invocation {
   readonly version: boolean
   readonly profile: string | null
   readonly port: string | null
+  /** Consent for the one command that may touch the network. */
+  readonly yes: boolean
+  /** Refuse the network outright, whatever else is asked. */
+  readonly offline: boolean
 }
 
 /**
@@ -74,6 +81,8 @@ export function parse(argv: readonly string[]): Invocation {
     version: argv.includes('--version') || argv.includes('-v'),
     profile: flag('--profile'),
     port: flag('--port'),
+    yes: argv.includes('--yes') || argv.includes('-y'),
+    offline: argv.includes('--offline'),
   }
 }
 

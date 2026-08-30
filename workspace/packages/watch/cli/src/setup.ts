@@ -1,34 +1,40 @@
 /**
- * Compose the DeepWatch profile, without destroying anything already there.
+ * Compose the DeepWatch profile, without destroying anything already there and
+ * without fetching anything nobody agreed to.
  *
  * A DeepSeek Harness profile is a directory of installed layers. DeepWatch adds
- * one: `@deepwatch/dsh-bundle`, which is a patch overlay rather than a tree, so
- * every upstream row stays exactly as it was and removing the bundle leaves the
- * host profile untouched.
+ * one: `@deepwatch/dsh-bundle`, a patch overlay rather than a tree, so every
+ * upstream row stays as it was and removing the bundle leaves the host profile
+ * untouched.
  *
- * Three properties this holds, each because the alternative is destructive.
+ * Four properties, each because the alternative is destructive or dishonest.
  *
- * **Idempotent.** Running it twice is running it once. The second run
- * re-composes the same layer over the same profile and reports what it found
- * rather than reinstalling anything.
+ * **Nothing is downloaded without consent.** The Harness is an optional peer
+ * dependency; where the environment does not already provide one, setup prints
+ * exactly what it would fetch — registry, package, exact version, destination,
+ * licence note — and stops. Interactive runs are asked; non-interactive runs
+ * need `--yes`. `--offline` refuses outright.
  *
- * **Never a silent overwrite.** A profile that exists and was not made by
- * DeepWatch is refused, with the name of the profile and the flag that would
- * use a different one. Somebody's configured Harness profile is not this
- * command's to reorganise.
+ * **Never a silent overwrite.** A profile that exists and was not composed by
+ * DeepWatch is left byte-identical, and the person is told which flag composes
+ * a different one.
+ *
+ * **Idempotent.** Running it twice is running it once: an existing Harness of
+ * the supported version is reused, and the same layer is re-composed rather
+ * than reinstalled.
  *
  * **Backups are reported, never removed.** Where the Harness writes one, the
- * path is printed. A cleanup step that quietly deletes what it replaced is how
- * an "idempotent" setup loses a week of somebody's configuration.
+ * path is printed.
  *
  * @module @deepwatch/cli/setup
  */
 
 import { existsSync, mkdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
+import { createInterface } from 'node:readline/promises'
 
 import type { Invocation } from './bin.js'
-import { ensureHarness } from './lib/harness.js'
+import { ensureHarness, installPlan, receiptPath, renderPlan } from './lib/harness.js'
 import { run } from './lib/exec.js'
 import { deepwatchHome, dshHome, profileName } from './lib/paths.js'
 
@@ -50,6 +56,26 @@ function composedByDeepWatch(manifestPath: string): boolean {
   }
 }
 
+/**
+ * Ask, where there is somebody to ask.
+ *
+ * A non-interactive run has nobody at the keyboard, so it is not prompted and
+ * not assumed to agree — it needs `--yes`, which is a decision somebody made
+ * when they wrote the command.
+ */
+async function agreed(invocation: Invocation): Promise<boolean> {
+  if (invocation.yes) return true
+  if (!process.stdin.isTTY) return false
+
+  const rl = createInterface({ input: process.stdin, output: process.stdout })
+  try {
+    const answer = await rl.question('Download it now? [y/N] ')
+    return /^y(es)?$/i.test(answer.trim())
+  } finally {
+    rl.close()
+  }
+}
+
 /** `deepwatch setup`. */
 export async function runSetup(invocation: Invocation): Promise<number> {
   const env = { ...process.env }
@@ -67,27 +93,41 @@ export async function runSetup(invocation: Invocation): Promise<number> {
     return 2
   }
 
+  // The Harness first, because there is nothing to compose without one — and
+  // because this is the step that might touch the network.
+  const dry = await ensureHarness({ env, consent: false, offline: invocation.offline })
+  let provisioned = dry
+
+  if (dry.harness === null && dry.failure === 'no-consent') {
+    process.stdout.write(renderPlan(installPlan(env)))
+    if (!await agreed(invocation)) {
+      process.stderr.write(
+        'deepwatch: nothing was downloaded and nothing was changed.\n'
+        + '           Re-run with --yes to accept, or install\n'
+        + `           ${installPlan(env).package}@${installPlan(env).version} yourself and\n`
+        + '           set DEEPWATCH_DSH_BIN to it.\n')
+      return 2
+    }
+    provisioned = await ensureHarness({ env, consent: true, offline: invocation.offline })
+  }
+
+  const dsh = provisioned.harness
+  if (dsh === null) {
+    process.stderr.write(refusal(provisioned.failure, provisioned.detail, env))
+    return provisioned.failure === 'version-mismatch' ? 2 : 1
+  }
+  if (provisioned.installed) {
+    process.stdout.write(
+      `  installed DeepSeek Harness ${provisioned.detail}\n`
+      + `  receipt: ${receiptPath(env)}\n`)
+  }
+
   const already = existsSync(manifest)
   mkdirSync(home, { recursive: true })
   process.stdout.write(already
     ? `Re-composing the DeepWatch profile "${profile}".\n`
     : `Composing the DeepWatch profile "${profile}".\n`)
 
-  // The Harness, installed once into DeepWatch's own home. See the note in
-  // `lib/harness.ts` for why it is not a dependency of this package.
-  const provisioned = await ensureHarness(env)
-  if (provisioned.installed) {
-    process.stdout.write(`  installed DeepSeek Harness ${provisioned.detail}\n`)
-  }
-  const dsh = provisioned.harness
-  if (dsh === null) {
-    process.stderr.write(
-      'deepwatch: the DeepSeek Harness could not be installed.\n'
-      + `           ${provisioned.detail}\n`
-      + '           DeepWatch needs it to compose a profile. Check the network, or\n'
-      + '           set DEEPWATCH_DSH_BIN to a Harness you already have.\n')
-    return 1
-  }
   const withHome = { ...env, DSH_HOME: home }
 
   const initialised = await run(
@@ -118,12 +158,36 @@ export async function runSetup(invocation: Invocation): Promise<number> {
   }
 
   process.stdout.write(
-    `\nDeepWatch is composed.\n`
+    '\nDeepWatch is composed.\n'
     + `  profile: ${profile}\n`
     + `  home:    ${deepwatchHome(env)}\n\n`
     + 'Run `deepwatch web` to open it, or `deepwatch doctor` to see what else\n'
     + 'this machine has. No provider is configured and none is required to start.\n')
   return 0
+}
+
+/** Why setup stopped, in words naming the way out. */
+function refusal(
+  failure: string | undefined, detail: string, env: NodeJS.ProcessEnv,
+): string {
+  const plan = installPlan(env)
+  switch (failure) {
+    case 'offline':
+      return 'deepwatch: --offline was given and no DeepSeek Harness is installed.\n'
+        + `           Install ${plan.package}@${plan.version} yourself and set\n`
+        + '           DEEPWATCH_DSH_BIN to it, or re-run without --offline.\n'
+    case 'version-mismatch':
+      return `deepwatch: ${detail}.\n`
+        + '           Nothing has been changed. DeepWatch is only tested against the\n'
+        + '           version above; set DEEPWATCH_DSH_BIN to point at that one, or\n'
+        + '           use a DEEPWATCH_HOME of its own for this install.\n'
+    case 'not-runnable':
+      return `deepwatch: ${detail}.\n`
+        + '           Check that this Node can execute it, then run `deepwatch doctor`.\n'
+    default:
+      return `deepwatch: the DeepSeek Harness could not be installed.\n           ${detail}\n`
+        + '           Nothing was left half-installed; re-run to try again.\n'
+  }
 }
 
 /** The first line of a child's output, for a message a person will read. */
