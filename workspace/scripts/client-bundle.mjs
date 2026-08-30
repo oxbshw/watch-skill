@@ -76,6 +76,34 @@ function withoutBuildPaths() {
       }
       return out === code ? null : { code: out, map: null }
     },
+
+    /**
+     * Keep our own source in the map, and nobody else's.
+     *
+     * A bundle inlines its dependencies, so its map arrives carrying the full
+     * text of every third-party module it pulled in — zod, cordis, whatever
+     * else. That is somebody else's code redistributed inside a DeepWatch
+     * package, under a licence this distribution's notices never mentioned,
+     * and it is no use for debugging DeepWatch either.
+     *
+     * The entries stay, so a stack frame still resolves to a name and a line.
+     * Only the embedded text goes.
+     */
+    generateBundle(_options, bundle) {
+      for (const asset of Object.values(bundle)) {
+        if (asset.type !== 'asset' || !asset.fileName.endsWith('.map')) continue
+        const map = JSON.parse(String(asset.source))
+        if (!Array.isArray(map.sourcesContent)) continue
+        let dropped = 0
+        map.sourcesContent = map.sourcesContent.map((content, at) => {
+          const source = map.sources[at] ?? ''
+          if (!source.includes('node_modules')) return content
+          dropped += 1
+          return null
+        })
+        if (dropped > 0) asset.source = JSON.stringify(map)
+      }
+    },
   }
 }
 
