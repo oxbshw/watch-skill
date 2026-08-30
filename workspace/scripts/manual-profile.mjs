@@ -240,6 +240,38 @@ function clearStaleInstalls() {
   return false
 }
 
+/**
+ * Use the tarballs a release run already produced, rather than packing again.
+ *
+ * `--from-artifacts` is what makes a QA pass a statement about the *release*
+ * rather than about the working tree: the profile is built from the exact
+ * files `inventory/packed-artifacts.json` records, hashes and all, so a
+ * screenshot taken afterwards is a picture of the artifact and not of whatever
+ * happened to be on disk that afternoon.
+ */
+function fromArtifacts() {
+  const source = join(ROOT, '.release-artifacts')
+  if (!existsSync(source)) {
+    fail('there are no packed artifacts to build from', 'run npm run pack first')
+  }
+  const wanted = new Set(bundlePackages().map(
+    relative => JSON.parse(readFileSync(join(ROOT, relative, 'package.json'), 'utf8')).name))
+
+  mkdirSync(PACKED, { recursive: true })
+  const tarballs = []
+  for (const entry of readdirSync(source)) {
+    if (!entry.endsWith('.tgz')) continue
+    const destination = join(PACKED, entry)
+    copyFileSync(join(source, entry), destination)
+    if (wanted.has(packageNameOf(destination))) tarballs.push(destination)
+  }
+  if (tarballs.length !== wanted.size) {
+    fail('the packed artifacts do not cover the bundle',
+      `${tarballs.length} of ${wanted.size} packages found in .release-artifacts`)
+  }
+  return tarballs
+}
+
 function packAll() {
   mkdirSync(PACKED, { recursive: true })
   const tarballs = []
@@ -380,8 +412,11 @@ function main() {
   }
 
   process.stdout.write(`dsh ${cli.version}\n`)
-  process.stdout.write('packing workspace packages\n')
-  const tarballs = packAll()
+  const released = process.argv.includes('--from-artifacts')
+  process.stdout.write(released
+    ? 'using the tarballs in .release-artifacts\n'
+    : 'packing workspace packages\n')
+  const tarballs = released ? fromArtifacts() : packAll()
 
   process.stdout.write(`initializing profile "${PROFILE}"\n`)
   // The overrides have to exist before pnpm resolves anything.

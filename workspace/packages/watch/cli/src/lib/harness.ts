@@ -288,7 +288,7 @@ export async function ensureHarness(options: {
       harness: null,
       installed: true,
       failure: 'version-mismatch',
-      detail: `installed ${String(version ?? 'nothing runnable')}, expected ${HARNESS_VERSION}`,
+      detail: `installed ${version ?? 'nothing runnable'}, expected ${HARNESS_VERSION}`,
     }
   }
 

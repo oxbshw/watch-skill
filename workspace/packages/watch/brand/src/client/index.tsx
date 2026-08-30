@@ -15,7 +15,9 @@
 
 import type { Context } from '@deepseek-ai/cordis'
 import type { ReactNode } from 'react'
-import { ATTRIBUTION, INDEPENDENCE, PRODUCT_NAME, PRODUCT_SHORT_NAME } from '../identity.js'
+import {
+  ATTRIBUTION, INDEPENDENCE, PRODUCT_NAME, PRODUCT_SHORT_NAME, productTitle,
+} from '../identity.js'
 import { WATCH_MARK_PNG } from '../mark.js'
 import './theme.css'
 
@@ -161,11 +163,8 @@ function claimDocumentIdentity(): () => void {
 
   const restoreTitle = document.title
   const apply = (): void => {
-    if (document.title !== PRODUCT_NAME && !document.title.endsWith(` · ${PRODUCT_NAME}`)) {
-      document.title = document.title === '' || document.title === restoreTitle
-        ? PRODUCT_NAME
-        : `${document.title} · ${PRODUCT_NAME}`
-    }
+    const wanted = productTitle(document.title, restoreTitle)
+    if (document.title !== wanted) document.title = wanted
   }
   apply()
 
