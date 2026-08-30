@@ -36,6 +36,7 @@ import { basename, dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { audit } from './verify-publishable.mjs'
+import { byCodeUnit } from './lib/order.mjs'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 
@@ -235,7 +236,7 @@ function main() {
 
   const records = []
   const problems = []
-  for (const entry of entries.sort((a, b) => a.manifest.name.localeCompare(b.manifest.name))) {
+  for (const entry of entries.sort((a, b) => byCodeUnit(a.manifest.name, b.manifest.name))) {
     process.stdout.write(`  packing ${entry.manifest.name}\n`)
     const packed = packOne(entry, out)
     records.push(packed.record)

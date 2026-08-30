@@ -24,6 +24,7 @@
 import { existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { byCodeUnit } from './lib/order.mjs'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const REPO = 'https://github.com/oxbshw/watch-skill'
@@ -79,7 +80,7 @@ function publishable() {
       found.push({ dir: join(at, name), manifest })
     }
   }
-  return found.sort((a, b) => a.manifest.name.localeCompare(b.manifest.name))
+  return found.sort((a, b) => byCodeUnit(a.manifest.name, b.manifest.name))
 }
 
 /** The page for one package, from what its manifest already says. */
@@ -107,7 +108,7 @@ function page(manifest) {
   if (peers.length > 0) {
     const optional = manifest.peerDependenciesMeta ?? {}
     lines.push('## Peers', '', 'Provided by the host rather than installed here:', '')
-    for (const [name, declared] of peers.sort(([a], [b]) => a.localeCompare(b))) {
+    for (const [name, declared] of peers.sort(([a], [b]) => byCodeUnit(a, b))) {
       const note = optional[name]?.optional === true ? ' — optional' : ''
       lines.push(`- \`${name}@${range(name, declared)}\`${note}`)
     }

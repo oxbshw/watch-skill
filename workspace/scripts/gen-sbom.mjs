@@ -25,6 +25,7 @@ import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { parseLockfilePackages, platformFamily } from './lib/pnpm-lockfile.mjs'
+import { byCodeUnit } from './lib/order.mjs'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const OUTPUT = join(ROOT, 'docs', 'sbom.json')
@@ -182,7 +183,7 @@ function thirdPartyPackages() {
         kind: 'third_party',
       }
     })
-    .sort((a, b) => a.name.localeCompare(b.name) || a.version.localeCompare(b.version))
+    .sort((a, b) => byCodeUnit(a.name, b.name) || byCodeUnit(a.version, b.version))
 }
 
 /** Reduce the shapes a `license` field takes to one string. */

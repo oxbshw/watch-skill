@@ -51,6 +51,7 @@ import { readFileSync, writeFileSync, existsSync, readdirSync, statSync } from '
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { manualRoot } from './lib/manual-paths.mjs'
+import { byCodeUnit } from './lib/order.mjs'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const OUT = join(ROOT, 'inventory', 'dsh-slots.json')
@@ -225,7 +226,7 @@ function main() {
       + 'treats unknown exactly as strictly as single.',
     bundlesScanned: bundles,
     slots: Object.fromEntries(
-      [...slots.entries()].sort(([a], [b]) => a.localeCompare(b))
+      [...slots.entries()].sort(([a], [b]) => byCodeUnit(a, b))
         .map(([name, entry]) => [name, {
           kind: entry.kind,
           scope: entry.scope,

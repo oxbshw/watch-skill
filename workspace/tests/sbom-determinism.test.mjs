@@ -15,7 +15,7 @@
  */
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { readFileSync } from 'node:fs'
+import { readFileSync, readdirSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -122,4 +122,26 @@ test('a package with no licence is reviewed deliberately, not merely tolerated',
   const unreviewed = unknown.filter(pkg => !REVIEWED.some(
     rule => rule.pattern.test(pkg.name) && rule.licenses.includes('UNKNOWN')))
   assert.deepEqual(unreviewed.map(pkg => pkg.name), [])
+})
+
+test('no generator orders a committed artifact by the machine’s locale', () => {
+  // `localeCompare` sorts the way the host's collation says to, and collation
+  // weights punctuation differently — sometimes ignores it — depending on the
+  // ICU data a runtime was built with. `inventory/dsh-slots.json` was stable
+  // on Windows and different on Linux with an identical slot set, because
+  // `conversation.composer.bar` and `conversation.composer.dock` collate
+  // differently either side of the dot. The gate could only say "stale": a
+  // per-entry diff showed nothing, since nothing had changed but the order.
+  const dir = join(ROOT, 'scripts')
+  const offenders = []
+  for (const name of readdirSync(dir)) {
+    if (!name.endsWith('.mjs')) continue
+    const source = readFileSync(join(dir, name), 'utf8')
+    // Only the scripts that write something committed. A gate that prints a
+    // sorted list for a person to read may order it however reads best.
+    if (!/writeFileSync\(/.test(source)) continue
+    if (/localeCompare/.test(source)) offenders.push(`scripts/${name}`)
+  }
+  assert.deepEqual(offenders, [],
+    'use byCodeUnit from scripts/lib/order.mjs for anything that gets committed')
 })
