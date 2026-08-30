@@ -41,9 +41,14 @@ import { Context, Service } from '@deepseek-ai/cordis'
 import TypertRegistryPlugin from '@deepseek-ai/dsh-typert-registry'
 import GatewayPlugin from '@deepseek-ai/dsh-api-gateway'
 
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { sep } from 'node:path'
+
 import { LibraryIndex } from '../packages/watch/library/lib/index.js'
+import { LibraryGenerations } from '../packages/watch/tools/lib/library-generations.js'
 import { WatchQueryService } from '../packages/watch/tools/lib/read-plane.js'
-import { readLibraryPage } from '../packages/watch/library/lib/client/read-plane.js'
+import { readLibraryPage, refreshLibrary } from '../packages/watch/library/lib/client/read-plane.js'
 import * as LIBRARY_CLIENT from '../packages/watch/library/lib/client/index.js'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
@@ -218,13 +223,15 @@ test('$mount installs the namespace and its generated methods', async () => {
     'the namespace is a service, which is what a surface can inject on')
   assert.equal(typeof ctx.remote.watchQuery.librarySearch, 'function')
   assert.equal(typeof ctx.remote.watchQuery.libraryGet, 'function')
+  assert.equal(typeof ctx.remote.watchQuery.libraryRefresh, 'function')
 })
 
 test('what the client mounted is the strict generated descriptor', async () => {
   const { ctx } = await mounted()
 
   const endpoints = ctx.typert.remotes.list().map(entry => `${entry.namespace}/${entry.method}`)
-  assert.deepEqual(endpoints.sort(), ['watchQuery/libraryGet', 'watchQuery/librarySearch'],
+  assert.deepEqual(endpoints.sort(),
+    ['watchQuery/libraryGet', 'watchQuery/libraryRefresh', 'watchQuery/librarySearch'],
     'the client registry holds exactly the endpoints the bundle carried')
 
   // Typert can also dispatch from an SRC claim collected at runtime, and a
@@ -409,4 +416,75 @@ test('disposing the plugin removes the namespace it mounted', async () => {
     'a namespace that outlives its plugin points at a fiber that has gone')
   assert.equal(ctx.typert.remotes.list().length, 0,
     'and the contribution is deregistered with it')
+})
+
+// ── refresh, all the way through ────────────────────────────────────────────
+
+/** Both ends over a real directory, so a refresh has something to find. */
+async function mountedOverDisk(initial) {
+  const dir = mkdtempSync(join(tmpdir(), 'rcm-'))
+  const write = (name, text) => {
+    writeFileSync(join(dir, name), JSON.stringify({ kind: 'document', text }))
+  }
+  for (const [name, text] of Object.entries(initial)) write(name, text)
+
+  const hostCtx = new Context()
+  hostCtx.plugin(TypertRegistryPlugin)
+  hostCtx.plugin(GatewayPlugin)
+  await settle()
+  hostCtx.typert.register(TYPERT)
+  const generations = new LibraryGenerations({ roots: [dir.split(sep).join('/')] })
+  new WatchQueryService(hostCtx, {
+    index: () => generations.index(), scope: 'workspace-1', generations,
+  })
+  await settle()
+
+  const { ctx, wire } = await client(hostCtx.typertGateway)
+  const fiber = ctx.plugin(WATCH_REMOTES)
+  await fiber
+  await settle()
+  return { ctx, wire, write, dispose: () => { rmSync(dir, { recursive: true, force: true }) } }
+}
+
+test('the Library’s own refresh reaches the Host and changes what it finds', async () => {
+  const app = await mountedOverDisk({ 'one.json': 'the kettle boiled' })
+  try {
+    const query = { text: '', modality: '', limit: 20, deadlineMs: 5000 }
+    const signal = new AbortController().signal
+
+    const before = await readLibraryPage(app.ctx.remote.watchQuery, query, signal)
+    assert.equal(before.rows.length, 1)
+
+    // Written after the host started, and invisible to a search on purpose.
+    app.write('two.json', 'the toaster popped')
+    const stale = await readLibraryPage(app.ctx.remote.watchQuery, query, signal)
+    assert.equal(stale.rows.length, 1, 'a search must not re-read the corpus on its own')
+
+    const refreshed = await refreshLibrary(app.ctx.remote.watchQuery, 5000, signal)
+    assert.equal(refreshed.failed, false, refreshed.note)
+    assert.equal(refreshed.refreshed, true)
+    assert.equal(refreshed.recordCount, 2)
+    assert.ok(refreshed.generation > before.generation)
+
+    const after = await readLibraryPage(app.ctx.remote.watchQuery, query, signal)
+    assert.equal(after.rows.length, 2, 'the browser sees the new record without a restart')
+    assert.equal(after.generation, refreshed.generation)
+
+    // It went over the carrier as its own endpoint, not folded into a search.
+    assert.equal(app.wire.filter(frame => frame.endpoint === 'watchQuery/libraryRefresh').length, 1)
+  } finally {
+    app.dispose()
+  }
+})
+
+test('a refresh against a Host that cannot rebuild is rendered, not hidden', async () => {
+  // The capability-absent path, as the surface sees it: a note a person can
+  // read, `failed` set, and no claim that anything was refreshed.
+  const { ctx } = await mounted()
+  const state = await refreshLibrary(
+    ctx.remote.watchQuery, 5000, new AbortController().signal)
+
+  assert.equal(state.refreshed, false)
+  assert.equal(state.failed, true)
+  assert.match(state.note, /previous index is still searchable/)
 })

@@ -35,6 +35,7 @@ import { basename, join } from 'node:path'
 import type { Context } from '@deepseek-ai/cordis'
 import { defineTool } from '@deepseek-ai/dsh-tools'
 import type { JsonValue } from '@deepseek-ai/dsh-tools'
+import { contentIdFor, revisionIdFor } from '@watchskill/dsh-contracts/identity'
 import { LibraryIndex, MAX_LIMIT, isWithinRoots } from '@watchskill/dsh-library'
 import type { IndexableRecord } from '@watchskill/dsh-library'
 
@@ -48,6 +49,29 @@ export interface LibrarySearchConfig {
    * to somewhere convenient.
    */
   readonly roots: readonly string[]
+  /**
+   * Who owns the index, when somebody does.
+   *
+   * The tool used to hold its own, which was fine while it was the only
+   * reader. It is not: the read plane answers the same corpus for the Library
+   * surface, and a refresh asked for by either has to be the same refresh.
+   * Two caches would drift inside one release and disagree about what the
+   * library contains — a person searching the UI and the agent searching the
+   * tool getting different answers to the same question.
+   */
+  readonly generations?: LibraryGenerationsLike
+}
+
+/**
+ * The part of `LibraryGenerations` this module needs.
+ *
+ * Structural rather than an import of the class, because the class imports the
+ * builders from here and a direct edge would close a cycle between two modules
+ * that are one concern.
+ */
+export interface LibraryGenerationsLike {
+  index(): LibraryIndex
+  refresh(requestId: string, signal: AbortSignal): Promise<unknown>
 }
 
 /**
@@ -91,26 +115,33 @@ export function gatherText(value: unknown, depth = 0, seen = new Set<unknown>())
   return out
 }
 
+/** Correlates one tool-initiated rebuild, so a retried tool call is idempotent. */
+let toolRequest = 1
+
+/** `sha256` hex, the one primitive both identity functions are built on. */
+const sha256hex = (material: string): string =>
+  createHash('sha256').update(material, 'utf8').digest('hex')
+
 /**
- * A record identifier for a file that names none of its own.
+ * The digest of a file's bytes.
  *
- * Derived from the full path so two files never collide, digested so nothing
- * of that path survives into the answer, and shaped to the identifier grammar
- * `@watchskill/dsh-contracts` enforces — `[A-Za-z0-9][A-Za-z0-9._-]*` — so the
- * id a search returns is one `libraryGet` will accept.
- *
- * Sixteen hex characters. A collision needs two paths agreeing in 64 bits of
- * SHA-256, which is not a thing a directory of evidence records does by
- * accident, and the alternative is an identifier nobody can read at all.
+ * Bytes, not the decoded string. A file is what is on disk, and a record whose
+ * identity depended on how it happened to be decoded would change identity for
+ * a byte-order mark nobody typed.
  */
-function identifierForFile(path: string): string {
-  return `file-${createHash('sha256').update(path, 'utf8').digest('hex').slice(0, 16)}`
+export function contentDigest(bytes: Uint8Array | string): string {
+  return createHash('sha256')
+    .update(typeof bytes === 'string' ? Buffer.from(bytes, 'utf8') : bytes)
+    .digest('hex')
 }
 
-export function recordFromFile(path: string, raw: string): IndexableRecord | null {
+export function recordFromFile(
+  path: string, raw: string | Uint8Array,
+): IndexableRecord | null {
+  const text = typeof raw === 'string' ? raw : Buffer.from(raw).toString('utf8')
   let parsed: unknown
   try {
-    parsed = JSON.parse(raw)
+    parsed = JSON.parse(text)
   } catch {
     return null
   }
@@ -119,25 +150,29 @@ export function recordFromFile(path: string, raw: string): IndexableRecord | nul
 
   const optional = (candidate: unknown): string | null => (typeof candidate === 'string' && candidate !== '' ? candidate : null)
 
-  // The id comes from the file when it has one, and from a digest of the path
-  // when it does not.
+  // The id comes from the file when it names one, and from the file's *content*
+  // when it does not. Identity follows bytes.
   //
-  // It used to be the path itself, and that was wrong twice over. It put an
-  // absolute host path on the wire and into the browser, where a Library row
-  // rendered `D:/watch-manual/dsh-home/watch-fixtures/05-unverified.json` as
-  // both the identifier and the title — the read plane's own rule is that a
-  // record never carries a filesystem location. And it was not addressable, in
-  // contradiction of the comment that used to stand here: `libraryGet`
-  // validates `recordId` against the identifier grammar, which has no slash and
-  // no colon, so every record whose file named no id came back from a search
-  // and was then refused with `identifier_invalid` when fetched by it.
+  // Two earlier answers were both wrong, in opposite directions. The path
+  // itself put an absolute host location on the wire and into the browser, and
+  // was not even addressable — `libraryGet` validates `recordId` against the
+  // identifier grammar, which has no slash and no colon, so a search returned
+  // ids that its sibling method refused. A digest of the path fixed the
+  // disclosure and kept the deeper error: move byte-identical content and it
+  // became a different record; overwrite the bytes and it stayed the same one.
+  // That is the exact defect `src/watch_skill/identity.py` was written to end,
+  // where a video's id used to be `sha256(source_string)` and overwriting
+  // `demo.mp4` returned yesterday's answers for today's file.
   //
-  // A digest of the path keeps both properties the path was chosen for — one
-  // id per file, stable across runs — and satisfies the grammar.
+  // So the fallback is Core's own content identity, mirrored in
+  // `@watchskill/dsh-contracts/identity` and tested against the Python. The
+  // same bytes are one record wherever they are read from, and different bytes
+  // are two.
+  const digest = contentDigest(raw)
   const recordId = optional(value['evidenceId'])
     ?? optional(value['sourceId'])
     ?? optional(value['verificationId'])
-    ?? identifierForFile(path)
+    ?? contentIdFor(digest, sha256hex)
 
   // Body text is every string the record carries, at any depth.
   //
@@ -154,7 +189,11 @@ export function recordFromFile(path: string, raw: string): IndexableRecord | nul
 
   return {
     recordId,
-    revisionId: optional(value['sourceRevisionId']) ?? `${recordId}@1`,
+    // The revision names the version of the content, so it comes from the
+    // content too. `identity.revision_id_for`, mirrored: changing the bytes at
+    // one path produces a new revision, which is the fact a surface renders as
+    // "this is not what you saw before".
+    revisionId: optional(value['sourceRevisionId']) ?? revisionIdFor(digest, sha256hex),
     // A digest is an identifier, not something to read. Where the file names
     // no title, the file's own name is what a person can recognise — and it is
     // a name rather than a location, so it carries no directory with it.
@@ -185,43 +224,81 @@ export function collectRecords(roots: readonly string[]): {
   readonly skipped: readonly string[]
 } {
   const records: IndexableRecord[] = []
+  const listed = recordFiles(roots)
+
+  for (const file of listed.files) {
+    const read = readRecord(file, roots)
+    if (read.record === null) listed.skipped.push(read.skipped)
+    else records.push(read.record)
+  }
+  return { records, skipped: listed.skipped }
+}
+
+/** One candidate file: where it is, and the only part of that a caller may see. */
+interface RecordFile {
+  readonly path: string
+  readonly name: string
+}
+
+/**
+ * The files worth trying, and the roots that could not be listed.
+ *
+ * Every skip reason here is a fixed sentence. Interpolating the error, which
+ * this used to do, puts the absolute root into a string that reaches the wire
+ * through a refresh answer — the one thing the read plane promises it never
+ * carries. The host knows where it read; the caller learns only that it could
+ * not.
+ */
+function recordFiles(roots: readonly string[]): {
+  readonly files: readonly RecordFile[]
+  readonly skipped: string[]
+} {
+  const files: RecordFile[] = []
   const skipped: string[] = []
 
   for (const root of roots) {
     if (!existsSync(root)) {
-      skipped.push(`${root}: does not exist`)
+      skipped.push('a configured library root does not exist')
       continue
     }
     let entries: readonly string[]
     try {
       entries = readdirSync(root)
-    } catch (error) {
-      skipped.push(`${root}: ${String(error)}`)
+    } catch {
+      skipped.push('a configured library root could not be listed')
       continue
     }
     for (const entry of entries) {
       if (!entry.endsWith('.json')) continue
-      const path = join(root, entry).replace(/\\/g, '/')
-      // The boundary check runs on the resolved path, not on the name, so a
-      // symlink or a crafted entry cannot walk out of the root.
-      if (!isWithinRoots(path, roots)) {
-        skipped.push(`${entry}: outside the configured roots`)
-        continue
-      }
-      try {
-        if (!statSync(path).isFile()) continue
-        const record = recordFromFile(path, readFileSync(path, 'utf8'))
-        if (record === null) {
-          skipped.push(`${entry}: not a readable record`)
-          continue
-        }
-        records.push(record)
-      } catch (error) {
-        skipped.push(`${entry}: ${String(error)}`)
-      }
+      files.push({ path: join(root, entry).replace(/\\/g, '/'), name: entry })
     }
   }
-  return { records, skipped }
+  return { files, skipped }
+}
+
+/** Read one candidate, or say — by name, never by path — why it was skipped. */
+function readRecord(file: RecordFile, roots: readonly string[]): {
+  readonly record: IndexableRecord | null
+  readonly skipped: string
+} {
+  // The boundary check runs on the resolved path, not on the name, so a
+  // symlink or a crafted entry cannot walk out of the root.
+  if (!isWithinRoots(file.path, roots)) {
+    return { record: null, skipped: `${file.name}: outside the configured roots` }
+  }
+  try {
+    if (!statSync(file.path).isFile()) {
+      return { record: null, skipped: `${file.name}: not a regular file` }
+    }
+    const record = recordFromFile(file.path, readFileSync(file.path))
+    return record === null
+      ? { record: null, skipped: `${file.name}: not a readable record` }
+      : { record, skipped: '' }
+  } catch {
+    // The error message would name the path. The filename is what a person
+    // needs to go and look at it.
+    return { record: null, skipped: `${file.name}: could not be read` }
+  }
 }
 
 /** Build a fresh index over the roots. Cheap enough to do on demand. */
@@ -233,6 +310,46 @@ export function buildIndex(roots: readonly string[]): {
   const index = new LibraryIndex()
   index.addAll(records)
   return { index, skipped }
+}
+
+/**
+ * Build an index, yielding often enough that a caller can stop it.
+ *
+ * The synchronous builder above is what a tool call uses: it is one pass over
+ * a directory and returning a promise would buy nothing. A refresh is
+ * different — it is a person waiting, it has a deadline, and it has to be
+ * abandonable — so this one checks the signal between files and hands the
+ * event loop back so the check can actually fire.
+ *
+ * It builds into a *new* index. Nothing in service is touched until the caller
+ * decides to swap, which is what makes a failed or abandoned rebuild leave the
+ * previous generation exactly as it was.
+ */
+export async function buildIndexCancellable(
+  roots: readonly string[], signal: AbortSignal,
+): Promise<{
+  readonly index: LibraryIndex | null
+  readonly skipped: readonly string[]
+  readonly sourceCount: number
+}> {
+  const listed = recordFiles(roots)
+  const records: IndexableRecord[] = []
+
+  for (const file of listed.files) {
+    if (signal.aborted) return { index: null, skipped: listed.skipped, sourceCount: roots.length }
+    // One turn of the loop per file. A directory of evidence records is not
+    // large enough for the yield to cost anything measurable, and without it
+    // an abort raised during the walk is not observed until the walk is over.
+    await Promise.resolve()
+    const read = readRecord(file, roots)
+    if (read.record === null) listed.skipped.push(read.skipped)
+    else records.push(read.record)
+  }
+  if (signal.aborted) return { index: null, skipped: listed.skipped, sourceCount: roots.length }
+
+  const index = new LibraryIndex()
+  index.addAll(records)
+  return { index, skipped: listed.skipped, sourceCount: roots.length }
 }
 
 /** The same output shape the rest of the Watch tools use. */
@@ -264,19 +381,36 @@ function asJson(value: unknown): JsonValue {
 export function applyLibrarySearch(
   ctx: Context, config: LibrarySearchConfig,
 ): { readonly index: () => LibraryIndex } {
-  // Built once and rebuilt on request. Holding it means a search does not
-  // re-read the corpus on every keystroke; rebuilding on request means a
-  // person is never stuck with an index that has fallen behind.
-  let cached: LibraryIndex | null = null
+  // Held rather than rebuilt per query: a search must not re-read the corpus on
+  // every keystroke. Where an owner was supplied the index is its index, so a
+  // refresh asked for through the surface is visible here immediately and the
+  // agent never searches a different corpus from the person.
+  let fallback: LibraryIndex | null = null
   let skippedFiles: readonly string[] = []
 
-  const indexNow = (rebuild: boolean): LibraryIndex => {
-    if (cached === null || rebuild) {
+  const indexNow = (): LibraryIndex => {
+    if (config.generations !== undefined) return config.generations.index()
+    if (fallback === null) {
       const built = buildIndex(config.roots)
-      cached = built.index
+      fallback = built.index
       skippedFiles = built.skipped
     }
-    return cached
+    return fallback
+  }
+
+  /** The tool's own `rebuild` argument, routed to the one owner of the index. */
+  const rebuildNow = async (): Promise<void> => {
+    if (config.generations === undefined) {
+      const built = buildIndex(config.roots)
+      fallback = built.index
+      skippedFiles = built.skipped
+      return
+    }
+    // A tool call is its own request. The id is what makes a retried tool call
+    // idempotent rather than a second read of the corpus.
+    await config.generations.refresh(
+      `tool-${String(toolRequest++)}`, new AbortController().signal,
+    )
   }
 
   ;(ctx as unknown as { tools: { register(tool: unknown): void } }).tools.register(defineTool({
@@ -301,9 +435,6 @@ export function applyLibrarySearch(
       rebuild: { type: 'boolean', description: 'Rebuild the index before searching. The index is derived and safe to discard.' },
     },
     output: JSON_OUTPUT,
-    // Async because the tool runner expects a promise. The work itself is
-    // synchronous: an in-memory index over files already read.
-    // eslint-disable-next-line @typescript-eslint/require-await
     async execute(rawArgs: unknown): Promise<JsonValue> {
       const args = (rawArgs ?? {}) as Record<string, unknown>
       if (config.roots.length === 0) {
@@ -316,7 +447,8 @@ export function applyLibrarySearch(
         })
       }
 
-      const index = indexNow(args['rebuild'] === true)
+      if (args['rebuild'] === true) await rebuildNow()
+      const index = indexNow()
       const page = index.search({
         text: typeof args['query'] === 'string' ? args['query'] : '',
         ...(typeof args['verdict'] === 'string' ? { verdicts: [args['verdict']] } : {}),
@@ -351,5 +483,5 @@ export function applyLibrarySearch(
   }))
 
   // The tool and the read plane share this. See the note on the signature.
-  return { index: () => indexNow(false) }
+  return { index: () => indexNow() }
 }

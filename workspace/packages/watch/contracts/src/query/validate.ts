@@ -30,6 +30,7 @@
 import { QUERY_LIMITS, isIdentifier, isSafeCount } from '../query.js'
 import type {
   LibraryGetRequest,
+  LibraryRefreshRequest,
   LibraryRequestRejected,
   LibrarySearchRequest,
 } from './wire.js'
@@ -218,6 +219,31 @@ export function parseLibraryGetRequest(value: unknown): Validated<LibraryGetRequ
       requestId: head.value.requestId,
       deadlineMs: head.value.deadlineMs,
       recordId: raw.recordId,
+    },
+  }
+}
+
+/**
+ * Accept a Library refresh, or say why not.
+ *
+ * The envelope and nothing else. A refresh names no record, no query and no
+ * location — it asks the host to read the roots it was configured with, which
+ * is the only reason it can be a safe operation to expose at all. There is no
+ * field here a caller could point somewhere.
+ */
+export function parseLibraryRefreshRequest(value: unknown): Validated<LibraryRefreshRequest> {
+  const open = opened(value)
+  if (!open.ok) return open
+
+  const head = envelope(open.value)
+  if (!head.ok) return head
+
+  return {
+    ok: true,
+    value: {
+      protocol: head.value.protocol,
+      requestId: head.value.requestId,
+      deadlineMs: head.value.deadlineMs,
     },
   }
 }

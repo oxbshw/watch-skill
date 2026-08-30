@@ -92,8 +92,8 @@
       {
         "name": "@watchskill/dsh-contracts",
         "version": "0.1.0-preview.0",
-        "integrity": "sha256:ef8ed253696a797424e9cad97258983b5e0c65e003919179375c3fc0366531ba",
-        "sourceFiles": 10
+        "integrity": "sha256:c5b053b48d841a39347650378a9a8484a4277a0c6c285c7bcf5ef36f1ee36792",
+        "sourceFiles": 11
       },
       {
         "name": "@watchskill/dsh-core-bridge",
@@ -104,7 +104,7 @@
       {
         "name": "@watchskill/dsh-library",
         "version": "0.1.0-preview.0",
-        "integrity": "sha256:84b5a74ea1fb2440a474772540fdfd0975cc34e9bad278a549446936d33d594f",
+        "integrity": "sha256:9d305b2b2823f2fabdf15bfe495b6e33c5e55daed8b2edd7d48f3bd07a0b06f6",
         "sourceFiles": 14
       },
       {
@@ -140,8 +140,8 @@
       {
         "name": "@watchskill/dsh-tools",
         "version": "0.1.0-preview.0",
-        "integrity": "sha256:e32bd3bbbd967363d148cefb86c45e9e5e03eef854d245bd28b0b110eda42191",
-        "sourceFiles": 8
+        "integrity": "sha256:8146ab36acdd9cf272e93a632448872b93ee9862ce30be7c36b2ce4ec30166cc",
+        "sourceFiles": 9
       },
       {
         "name": "@watchskill/dsh-trajectory",
@@ -179,7 +179,7 @@
       "creators": [
         "Tool: watch-gen-release-manifest"
       ],
-      "created": "2026-08-30T02:36:04Z"
+      "created": "2026-08-30T03:35:34Z"
     },
     "packages": [
       {
@@ -306,7 +306,7 @@
         "checksums": [
           {
             "algorithm": "SHA256",
-            "checksumValue": "ef8ed253696a797424e9cad97258983b5e0c65e003919179375c3fc0366531ba"
+            "checksumValue": "c5b053b48d841a39347650378a9a8484a4277a0c6c285c7bcf5ef36f1ee36792"
           }
         ]
       },
@@ -338,7 +338,7 @@
         "checksums": [
           {
             "algorithm": "SHA256",
-            "checksumValue": "84b5a74ea1fb2440a474772540fdfd0975cc34e9bad278a549446936d33d594f"
+            "checksumValue": "9d305b2b2823f2fabdf15bfe495b6e33c5e55daed8b2edd7d48f3bd07a0b06f6"
           }
         ]
       },
@@ -434,7 +434,7 @@
         "checksums": [
           {
             "algorithm": "SHA256",
-            "checksumValue": "e32bd3bbbd967363d148cefb86c45e9e5e03eef854d245bd28b0b110eda42191"
+            "checksumValue": "8146ab36acdd9cf272e93a632448872b93ee9862ce30be7c36b2ce4ec30166cc"
           }
         ]
       },

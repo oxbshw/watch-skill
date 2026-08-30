@@ -24,6 +24,7 @@ import s from '@deepseek-ai/schemastery'
 import { defineTool } from '@deepseek-ai/dsh-tools'
 import { applyLibrarySearch } from './library-search.js'
 import { applyReadPlane } from './read-plane.js'
+import { LibraryGenerations } from './library-generations.js'
 import type { GenericCallView, JsonValue } from '@deepseek-ai/dsh-tools'
 import type {} from '@deepseek-ai/dsh-system-prompt'
 import type {} from '@watchskill/dsh-core-bridge'
@@ -34,6 +35,8 @@ import { BROWSER_GUIDANCE, applyBrowserTools } from './browser.js'
 
 export { SENSORY_GUIDANCE, applySensoryTools } from './sensory.js'
 export { applyMemory } from './memory.js'
+export { LibraryGenerations } from './library-generations.js'
+export type { IndexGeneration, RefreshOutcome } from './library-generations.js'
 export { BROWSER_GUIDANCE, applyBrowserTools } from './browser.js'
 export type { BrowserConfig } from './browser.js'
 export type { SensoryConfig } from './sensory.js'
@@ -326,7 +329,12 @@ export function apply(ctx: Context, config: Config): void {
   // Library search runs on the host because that is the only place that can
   // read the evidence store: a client plugin gets no config, and ctx.remote
   // is an event bus rather than a query client.
-  const library = applyLibrarySearch(ctx, { roots: config.libraryRoots ?? [] })
+  const roots = config.libraryRoots ?? []
+  // One owner for the index, and it is the thing that can replace it. The
+  // tool and the read plane both read through it, so a refresh either side
+  // asks for is the same refresh and there is never a second index to drift.
+  const generations = new LibraryGenerations({ roots })
+  const library = applyLibrarySearch(ctx, { roots, generations })
 
   // The same index, reachable by the surfaces as well as by the agent. A
   // `conversation.view` entry is handed `{ inspect, onInspectDone }` and
@@ -335,6 +343,7 @@ export function apply(ctx: Context, config: Config): void {
   applyReadPlane(ctx, {
     index: library.index,
     scope: config.workspaceScope ?? 'default',
+    generations,
   })
 
   ctx.tools.register(defineTool({

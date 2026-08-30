@@ -120,6 +120,15 @@ export interface LibrarySearchPage {
   readonly requestId: string
   /** The host revision this page was produced from. */
   readonly revision: number
+  /**
+   * Which index generation answered.
+   *
+   * Explicit rather than left implicit inside `revision`. A surface that has
+   * just asked for a refresh needs to know whether the page in front of it
+   * came from the new index or the old one, and recovering that by arithmetic
+   * on a packed number is the kind of thing a caller gets wrong once.
+   */
+  readonly generation: number
   readonly records: readonly LibraryRecord[]
   /** Non-null when more remains; pass it back as `cursor`. */
   readonly nextCursor: string | null
@@ -201,5 +210,95 @@ export type LibrarySearchResponse =
 export type LibraryGetResponse =
   | LibraryRecordFound
   | LibraryRecordAbsent
+  | LibraryRequestRejected
+  | LibraryDeadlineExceeded
+
+// ── refresh ─────────────────────────────────────────────────────────────────
+
+/**
+ * Ask the host to read its roots again and build a new index generation.
+ *
+ * An explicit operation rather than a flag on a search, because rebuilding is
+ * a side effect and a search is not. Folding it into `librarySearch` would
+ * make every keystroke a potential re-read of the corpus, and would leave a
+ * caller with no way to say "answer from what you have" — which is what a
+ * search means.
+ */
+export interface LibraryRefreshRequest {
+  readonly protocol: number
+  readonly requestId: string
+  /**
+   * How long the caller will wait.
+   *
+   * A caller that stops waiting does not stop the rebuild on its own: the work
+   * belongs to the host and other callers may be waiting on the same one. What
+   * ends it early is every waiter withdrawing, which the host tracks.
+   */
+  readonly deadlineMs: number
+}
+
+/**
+ * One index generation, described.
+ *
+ * `generation` increments only when a rebuild produced a healthy index that
+ * was swapped into service, so a caller comparing it across two answers learns
+ * whether what it is reading changed underneath it.
+ */
+export interface LibraryIndexGeneration {
+  readonly generation: number
+  /** ISO-8601. When the rebuild that produced this generation began. */
+  readonly startedAt: string
+  /** ISO-8601, or null while a rebuild is still running. */
+  readonly completedAt: string | null
+  /** Roots read. */
+  readonly sourceCount: number
+  /** Records indexed. */
+  readonly recordCount: number
+  readonly indexState: LibraryIndexState
+}
+
+/** The rebuild finished and its result is now what searches answer from. */
+export interface LibraryRefreshed {
+  readonly outcome: 'refreshed'
+  readonly protocol: number
+  readonly requestId: string
+  readonly index: LibraryIndexGeneration
+  /** Files the host declined to read, by name. Never a path. */
+  readonly skipped: readonly string[]
+}
+
+/**
+ * Every waiter withdrew before the rebuild finished, so it was abandoned.
+ *
+ * The generation named here is the one still in service — a cancelled rebuild
+ * never replaces a healthy index.
+ */
+export interface LibraryRefreshCancelled {
+  readonly outcome: 'refresh_cancelled'
+  readonly protocol: number
+  readonly requestId: string
+  readonly index: LibraryIndexGeneration
+}
+
+/**
+ * The rebuild failed, and the previous generation is still in service.
+ *
+ * Reported rather than thrown: a failed refresh leaves a working Library, and
+ * a surface has to be able to say both things at once.
+ */
+export interface LibraryRefreshFailed {
+  readonly outcome: 'refresh_failed'
+  readonly protocol: number
+  readonly requestId: string
+  /** What went wrong, in words. Never a path and never a stack. */
+  readonly reason: string
+  readonly index: LibraryIndexGeneration
+}
+
+/** What `libraryRefresh` answers. */
+export type LibraryRefreshResponse =
+  | LibraryRefreshed
+  | LibraryRefreshCancelled
+  | LibraryRefreshFailed
   | LibraryRequestRejected
   | LibraryDeadlineExceeded

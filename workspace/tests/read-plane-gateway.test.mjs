@@ -86,11 +86,13 @@ test('the generated contribution registers and the service mounts', async () => 
   assert.equal(mine.face, 'host')
 })
 
-test('both Library methods are strict descriptors, not SRC claims', async () => {
+test('every Library method is a strict descriptor, not an SRC claim', async () => {
   const { ctx, gateway } = await host()
 
   const invocations = TYPERT.invocations.filter(entry => entry.service === 'watchQuery')
-  assert.deepEqual(invocations.map(entry => entry.method).sort(), ['libraryGet', 'librarySearch'])
+  assert.deepEqual(invocations.map(entry => entry.method).sort(),
+    ['libraryGet', 'libraryRefresh', 'librarySearch'],
+    'the generated Host protocol carries exactly the read plane methods')
 
   for (const invocation of invocations) {
     assert.equal(invocation.result.mode, 'strict', `${invocation.method} result`)
@@ -110,6 +112,7 @@ test('both Library methods are strict descriptors, not SRC claims', async () => 
     'no SRC claim may stand in for a generated descriptor')
   assert.equal(typeof ctx.watchQuery.librarySearch, 'function')
   assert.equal(typeof ctx.watchQuery.libraryGet, 'function')
+  assert.equal(typeof ctx.watchQuery.libraryRefresh, 'function')
 })
 
 // ── requests cross the boundary as wire values ──────────────────────────────
@@ -268,10 +271,3 @@ test('a record whose file names no id is still addressable, and names no path', 
   assert.equal(fetched.record.title, '05-unverified')
 })
 
-test('the same file always digests to the same id, and two files differ', () => {
-  const one = recordFromFile('/evidence/a.json', '{"text":"a"}')
-  const again = recordFromFile('/evidence/a.json', '{"text":"a"}')
-  const other = recordFromFile('/evidence/b.json', '{"text":"a"}')
-  assert.equal(one.recordId, again.recordId, 'an id that moves between runs is not an id')
-  assert.notEqual(one.recordId, other.recordId, 'two files must not collide')
-})

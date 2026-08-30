@@ -49,12 +49,14 @@ import { Remote, TypertRemoteService } from '@deepseek-ai/dsh-typert-protocol'
 import { WATCH_QUERY_PROTOCOL_VERSION } from '@watchskill/dsh-contracts/query'
 import type { IndexableRecord, LibraryIndex, SearchResult } from '@watchskill/dsh-library'
 import type {
-  LibraryGetRequest, LibraryGetResponse,
-  LibraryRecord, LibrarySearchRequest, LibrarySearchResponse,
+  LibraryGetRequest, LibraryGetResponse, LibraryIndexGeneration,
+  LibraryRecord, LibraryRefreshRequest, LibraryRefreshResponse,
+  LibrarySearchRequest, LibrarySearchResponse,
 } from '@watchskill/dsh-contracts/query/wire'
 import {
-  parseLibraryGetRequest, parseLibrarySearchRequest,
+  parseLibraryGetRequest, parseLibraryRefreshRequest, parseLibrarySearchRequest,
 } from '@watchskill/dsh-contracts/query/validate'
+import type { LibraryGenerations } from './library-generations.js'
 
 
 /** What the read plane needs from its host. */
@@ -73,6 +75,15 @@ export interface ReadPlaneConfig {
    * another workspace's snapshot.
    */
   readonly scope: string
+  /**
+   * The one thing allowed to replace the index, when the host has one.
+   *
+   * Optional because a deployment may compose the read plane over an index it
+   * owns by other means. Where it is absent, `libraryRefresh` still exists and
+   * answers `refresh_failed` with a reason — which is what a surface should
+   * render, rather than a refresh that appears to work and changes nothing.
+   */
+  readonly generations?: LibraryGenerations
 }
 
 /**
@@ -178,6 +189,25 @@ export class WatchQueryService extends TypertRemoteService {
   ): Promise<LibraryGetResponse> {
     return Promise.resolve(getLibraryRecord(request, this.config, signal))
   }
+
+  /**
+   * Read the roots again, and put the result into service if it is healthy.
+   *
+   * The only method here with a side effect, and the only one that is not a
+   * question. It is a separate method for exactly that reason: a `rebuild`
+   * flag on `librarySearch` would make every search a potential re-read of the
+   * corpus, and would leave a caller no way to ask for an answer from what the
+   * host already has.
+   *
+   * Genuinely async, unlike its siblings: the rebuild yields between files so
+   * a caller that stops waiting can be observed doing so.
+   */
+  @Remote('libraryRefresh')
+  libraryRefresh(
+    request: LibraryRefreshRequest, signal: AbortSignal,
+  ): Promise<LibraryRefreshResponse> {
+    return refreshLibrary(request, this.config, signal)
+  }
 }
 
 
@@ -230,6 +260,10 @@ export function searchLibrary(
     protocol: WATCH_QUERY_PROTOCOL_VERSION,
     requestId: checked.requestId,
     revision: revisionOf(index),
+    // Which index answered, said out loud. A surface that has just refreshed
+    // compares this against the generation the refresh reported and knows
+    // whether the page in front of it is the new one.
+    generation: config.generations?.generation().generation ?? 0,
     records: found.results.map(result => toWireRecord(result, index)),
     nextCursor: null,
     total: found.total,
@@ -329,3 +363,76 @@ function fromIndexRecord(record: IndexableRecord): LibraryRecord {
     current: true,
   }
 }
+
+/**
+ * Rebuild the index, and say what happened to the one already in service.
+ *
+ * Every outcome leaves a searchable Library, which is why none of them is an
+ * exception. A refusal, an elapsed deadline, an abandoned rebuild and a failed
+ * one are four different facts, and a surface renders each differently.
+ *
+ * Separate from the Service for the same reason the reads are: the Service
+ * stays a Typert adapter with no decisions in it, and the whole path is
+ * testable without a DSH runtime.
+ */
+export async function refreshLibrary(
+  request: LibraryRefreshRequest,
+  config: ReadPlaneConfig,
+  signal: AbortSignal,
+): Promise<LibraryRefreshResponse> {
+  const accepted = parseLibraryRefreshRequest(request)
+  if (!accepted.ok) return accepted.refusal
+  const checked = accepted.value
+
+  const base = { protocol: WATCH_QUERY_PROTOCOL_VERSION, requestId: checked.requestId }
+  if (signal.aborted) {
+    return { outcome: 'deadline_exceeded', ...base, deadlineMs: checked.deadlineMs }
+  }
+
+  const generations = config.generations
+  if (generations === undefined) {
+    // Not an error to hide. A deployment that composed the read plane over an
+    // index it owns by other means has no refresh, and the surface has to be
+    // able to say so rather than offering a control that does nothing.
+    return {
+      outcome: 'refresh_failed',
+      ...base,
+      reason: 'this host does not own the Library index, so it cannot rebuild it',
+      index: describeIndex(config.index()),
+    }
+  }
+
+  const outcome = await generations.refresh(checked.requestId, signal)
+  if (outcome.kind === 'refreshed') {
+    return { outcome: 'refreshed', ...base, index: outcome.index, skipped: outcome.index.skipped }
+  }
+  if (outcome.kind === 'cancelled') {
+    return { outcome: 'refresh_cancelled', ...base, index: outcome.index }
+  }
+  return { outcome: 'refresh_failed', ...base, reason: outcome.reason, index: outcome.index }
+}
+
+/**
+ * Describe an index the host holds without a generation record for it.
+ *
+ * Only reachable where no `LibraryGenerations` is configured, so the numbers
+ * that belong to a rebuild are reported as absent rather than invented.
+ */
+function describeIndex(index: LibraryIndex): LibraryIndexGeneration {
+  return {
+    generation: 0,
+    startedAt: EPOCH,
+    completedAt: null,
+    sourceCount: 0,
+    recordCount: index.size,
+    indexState: index.size === 0 ? 'empty' : (index.health === 'ready' ? 'ready' : 'stale'),
+  }
+}
+
+/**
+ * The timestamp for "there was never a rebuild".
+ *
+ * A fixed instant rather than `now`, because `now` would read as a rebuild
+ * that happened this second and did nothing.
+ */
+const EPOCH = '1970-01-01T00:00:00.000Z'

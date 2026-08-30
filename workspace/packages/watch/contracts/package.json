@@ -11,6 +11,10 @@
       "types": "./lib/index.d.ts",
       "default": "./lib/index.js"
     },
+    "./identity": {
+      "types": "./lib/identity.d.ts",
+      "default": "./lib/identity.js"
+    },
     "./query": {
       "types": "./lib/query.d.ts",
       "default": "./lib/query.js"

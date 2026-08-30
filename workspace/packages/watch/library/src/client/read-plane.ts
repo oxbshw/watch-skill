@@ -30,6 +30,8 @@ import type {
   LibraryGetRequest,
   LibraryGetResponse,
   LibraryRecord,
+  LibraryRefreshRequest,
+  LibraryRefreshResponse,
   LibrarySearchPage,
   LibrarySearchRequest,
   LibrarySearchResponse,
@@ -51,6 +53,16 @@ export interface WatchQueryRemote {
   readonly libraryGet: (
     request: LibraryGetRequest, signal?: AbortSignal,
   ) => Promise<RemoteResult<LibraryGetResponse>>
+  /**
+   * The only method here with a side effect.
+   *
+   * A separate operation rather than a flag on a search: a search that might
+   * re-read the corpus has a cost nobody can predict, and leaves a caller no
+   * way to ask for an answer from what the host already holds.
+   */
+  readonly libraryRefresh: (
+    request: LibraryRefreshRequest, signal?: AbortSignal,
+  ) => Promise<RemoteResult<LibraryRefreshResponse>>
 }
 
 /** One row of results, however the surface obtained it. */
@@ -73,6 +85,8 @@ export interface SearchState {
   /** Matches in total, not merely on this page. */
   readonly total: number
   readonly health: IndexHealth
+  /** Which index generation answered. Zero when the host tracks none. */
+  readonly generation: number
   /** Non-fatal facts about this answer: truncation, staleness, refusal. */
   readonly notes: readonly string[]
   /** Whether the caller may ask for another page of the same answer. */
@@ -105,7 +119,7 @@ export function nextRequestId(): string {
 
 /** An answer that produced no rows, and says why. */
 function nothing(note: string, health: IndexHealth = 'stale'): SearchState {
-  return { rows: [], total: 0, health, notes: [note], pageable: false }
+  return { rows: [], total: 0, health, generation: 0, notes: [note], pageable: false }
 }
 
 /** The host's own vocabulary for index condition, in the surface's terms. */
@@ -168,6 +182,7 @@ export async function readLibraryPage(
         rows: value.records.map(rowOf),
         total: value.total,
         health: healthOf(value.indexState),
+        generation: value.generation,
         notes,
         // `nextCursor` is the host's own statement about whether more remains.
         // Deriving it from `total` instead would offer a Next control the host
@@ -203,7 +218,87 @@ export function fromIndex(result: IndexQueryResult): SearchState {
     })),
     total: result.total,
     health: result.health,
+    // The local index is not a host generation and does not pretend to be one.
+    generation: 0,
     notes: result.notes,
     pageable: true,
   }
+}
+
+/** What a completed refresh left for the surface to say. */
+export interface RefreshState {
+  /** True only where the host swapped a new generation into service. */
+  readonly refreshed: boolean
+  /** The generation now answering searches. */
+  readonly generation: number
+  readonly recordCount: number
+  /** One sentence a person can act on. Empty where there is nothing to say. */
+  readonly note: string
+  /** Whether the note describes a failure rather than a result. */
+  readonly failed: boolean
+}
+
+/**
+ * Ask the host to read its roots again.
+ *
+ * Every outcome is rendered, and none of them is an exception. A refusal, an
+ * elapsed deadline, an abandoned rebuild and a failed one are four different
+ * facts; so is a rebuild that succeeded and found nothing new. Reporting any
+ * of them as "refreshed" would be a control that lies about what it did.
+ */
+export async function refreshLibrary(
+  reads: WatchQueryRemote, deadlineMs: number, signal: AbortSignal,
+): Promise<RefreshState> {
+  const answer = await reads.libraryRefresh({
+    protocol: WATCH_QUERY_WIRE_VERSION,
+    requestId: nextRequestId(),
+    deadlineMs,
+  }, signal)
+
+  if (!answer.ok) {
+    return failedRefresh(`The Library host did not answer: ${answer.error.message}`)
+  }
+
+  const value = answer.value
+  switch (value.outcome) {
+    case 'refreshed':
+      return {
+        refreshed: true,
+        generation: value.index.generation,
+        recordCount: value.index.recordCount,
+        note: value.skipped.length === 0
+          ? ''
+          : `${String(value.skipped.length)} file(s) were not readable: `
+            + value.skipped.slice(0, 3).join('; '),
+        failed: false,
+      }
+    case 'refresh_cancelled':
+      return {
+        refreshed: false,
+        generation: value.index.generation,
+        recordCount: value.index.recordCount,
+        note: 'The refresh was abandoned. The Library is unchanged.',
+        failed: false,
+      }
+    case 'refresh_failed':
+      return {
+        refreshed: false,
+        generation: value.index.generation,
+        recordCount: value.index.recordCount,
+        note: `The refresh failed: ${value.reason}. The previous index is still searchable.`,
+        failed: true,
+      }
+    case 'rejected':
+      return failedRefresh(`The host refused the refresh (${value.reason}).`)
+    case 'deadline_exceeded':
+      return failedRefresh(
+        `The refresh did not finish within ${String(value.deadlineMs)}ms. `
+        + 'It may still be running on the host.',
+      )
+  }
+}
+
+/** A refresh that produced no generation, and why. */
+function failedRefresh(note: string): RefreshState {
+  return { refreshed: false, generation: 0, recordCount: 0, note, failed: true }
 }

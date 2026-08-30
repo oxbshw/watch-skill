@@ -25,8 +25,8 @@ import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { LibraryIndex, MAX_LIMIT, tokenize } from '../index-store.js'
 import type { IndexQuery, IndexableRecord } from '../index-store.js'
 import type { SourceKind } from '../sources.js'
-import { fromIndex, readLibraryPage } from './read-plane.js'
-import type { SearchState, WatchQueryRemote } from './read-plane.js'
+import { fromIndex, readLibraryPage, refreshLibrary } from './read-plane.js'
+import type { RefreshState, SearchState, WatchQueryRemote } from './read-plane.js'
 
 const PAGE = 10
 
@@ -40,6 +40,16 @@ const PAGE = 10
  * than as a request nobody ever cancelled.
  */
 const DEADLINE_MS = 10_000
+
+/**
+ * How long the surface will wait for a rebuild.
+ *
+ * Longer than a search, because it is one: reading a corpus is work a person
+ * has asked for and expects to take a moment. Still bounded, and still the
+ * number the host is told, so an overrun comes back as an answer rather than
+ * as a control that never settles.
+ */
+const REFRESH_DEADLINE_MS = 60_000
 
 const S = {
   root: {
@@ -152,6 +162,10 @@ export function LibrarySearch(
   const [offset, setOffset] = useState(0)
   const [generation, setGeneration] = useState(0)
   const [state, setState] = useState<SearchState | null>(null)
+  // Bounded progress. `true` only while a rebuild the host accepted is
+  // outstanding, so the control cannot appear busy after the answer arrived.
+  const [refreshing, setRefreshing] = useState(false)
+  const [refreshed, setRefreshed] = useState<RefreshState | null>(null)
 
   const index = useMemo(() => {
     if (injected !== undefined) return injected
@@ -199,6 +213,36 @@ export function LibrarySearch(
 
   useEffect(() => { run(0) }, [run])
   useEffect(() => () => { inFlight.current?.abort() }, [])
+
+  /**
+   * Ask the host to read its roots again, then search the result.
+   *
+   * Two steps rather than one, and deliberately in that order: the refresh
+   * reports what the host now holds, and the search that follows is what puts
+   * it on the screen. Collapsing them would leave the count and the rows
+   * describing two different generations.
+   */
+  const refresh = useCallback(() => {
+    if (reads === undefined) {
+      // No host to ask. The local index is derived, so discarding it and
+      // building it again is the whole refresh.
+      setGeneration(value => value + 1)
+      return
+    }
+    if (refreshing) return
+    setRefreshing(true)
+    setRefreshed(null)
+    const controller = new AbortController()
+    void refreshLibrary(reads, REFRESH_DEADLINE_MS, controller.signal)
+      .then(next => {
+        setRefreshed(next)
+        setRefreshing(false)
+        // Re-read only where the host actually swapped something in. A failed
+        // refresh leaves the previous index searchable and the rows on screen
+        // are still correct for it.
+        if (next.refreshed) setGeneration(value => value + 1)
+      })
+  }, [reads, refreshing])
 
   const terms = useMemo(() => tokenize(text), [text])
   // `noUncheckedIndexedAccess` is on, so an index lookup is optional even
@@ -281,17 +325,20 @@ export function LibrarySearch(
         <button
           type="button"
           style={S.button}
+          disabled={refreshing}
           // Rebuilding is safe precisely because the index is derived: it can
           // be thrown away and reconstructed from the records at any time.
           //
           // It says what it does in each mode rather than one word for two
-          // actions. Locally it discards the index and builds it again. When
-          // the host answers, the index is the host's and this control cannot
-          // reach it -- what it does is ask again, and calling that "Rebuild
-          // index" would be a button claiming a power it does not have.
-          onClick={() => { setGeneration(value => value + 1) }}
+          // actions. Locally it discards the index and builds it again. Against
+          // a host it asks the host to read its roots again — a real operation
+          // with a real answer, which is why the label is the same verb and the
+          // subject is the Library rather than a local structure.
+          onClick={refresh}
         >
-          {reads === undefined ? 'Rebuild index' : 'Search again'}
+          {refreshing
+            ? 'Refreshing…'
+            : (reads === undefined ? 'Rebuild index' : 'Refresh library')}
         </button>
       </form>
 
@@ -311,6 +358,35 @@ export function LibrarySearch(
           ? (terms.length === 0 ? 'No records to list.' : `No matches for “${text}”.`)
           : `${String(total)} match${total === 1 ? '' : 'es'}, showing ${String(shown)} (page ${String(page)} of ${String(pages)}).`}
       </p>
+
+      {/* What the last refresh did, kept separate from what the search found.
+          They are different questions and a person acts differently on each. */}
+      {refreshing
+        ? (
+            <p style={S.status} role="status" aria-live="polite">
+              Reading the library again. The results below are the previous
+              index until it finishes.
+            </p>
+          )
+        : null}
+      {refreshed === null || refreshing
+        ? null
+        : (
+            <p
+              style={{
+                ...S.status,
+                color: refreshed.failed ? 'var(--watch-tone-error)' : 'var(--dsw-alias-label-tertiary)',
+              }}
+              role="status"
+              aria-live="polite"
+            >
+              {refreshed.refreshed
+                ? `Library refreshed: ${String(refreshed.recordCount)} record(s), `
+                  + `generation ${String(refreshed.generation)}.`
+                : refreshed.note}
+              {refreshed.refreshed && refreshed.note !== '' ? ` ${refreshed.note}` : ''}
+            </p>
+          )}
 
       {(state?.notes ?? []).map(note => (
         <p key={note} style={S.status}>{note}</p>
