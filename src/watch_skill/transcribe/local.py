@@ -88,6 +88,26 @@ def pick_model_size() -> str:
     return "tiny"
 
 
+def pick_device() -> str:
+    """Choose where whisper runs: what was asked for, else what is present.
+
+    ``WATCHSKILL_WHISPER_DEVICE`` wins over the probe, and it exists because
+    "an NVIDIA GPU is present" and "CTranslate2's CUDA path works on this
+    machine" are different claims. A mismatched CUDA or cuDNN runtime does not
+    raise — the first kernel launch simply never returns, and a transcription
+    that hangs looks exactly like one that is slow. Before this there was no
+    way to say "use the processor" short of hiding the GPU.
+
+    It is also what makes the offline suite independent of the hardware under
+    it: CI has no GPU and took the CPU path, while a developer machine with one
+    took a path CI had never exercised.
+    """
+    requested = os.environ.get("WATCHSKILL_WHISPER_DEVICE", "").strip().lower()
+    if requested in {"cpu", "cuda"}:
+        return requested
+    return "cuda" if has_cuda_gpu() else "cpu"
+
+
 def transcribe_local(
     audio_path: Path,
     model_size: str = "auto",
@@ -109,7 +129,7 @@ def transcribe_local(
         ) from exc
 
     size = pick_model_size() if model_size == "auto" else model_size
-    device = "cuda" if has_cuda_gpu() else "cpu"
+    device = pick_device()
     compute = "float16" if device == "cuda" else "int8"
     print(
         f"[watch-skill] local whisper: model={size} device={device} ({compute})…",
@@ -144,7 +164,8 @@ def transcribe_local(
         raise TranscriptionError(
             f"local whisper failed: {exc}",
             code="transcribe.local_failed",
-            fix="try a smaller model (WATCHSKILL_WHISPER_MODEL=tiny) or enable cloud STT",
+            fix="try a smaller model (WATCHSKILL_WHISPER_MODEL=tiny), the "
+                "processor (WATCHSKILL_WHISPER_DEVICE=cpu), or enable cloud STT",
             details={"model": size, "device": device},
         ) from exc
     return Transcript(segments=segments, source=f"whisper-local ({size})")

@@ -57,11 +57,45 @@ def test_the_advice_names_a_variable_that_actually_works(
     import re
 
     advice = inspect.getsource(local.transcribe_local)
-    named = re.search(r"\(([A-Z_]+)=(\w+)\)", advice)
-    assert named is not None, "the local-whisper failure no longer suggests a variable"
-    variable, value = named.group(1), named.group(2)
+    named = re.findall(r"\((WATCHSKILL_[A-Z_]+)=(\w+)\)", advice)
+    assert named, "the local-whisper failure no longer suggests a variable"
 
+    readers = {
+        "WATCHSKILL_WHISPER_MODEL": local.pick_model_size,
+        "WATCHSKILL_WHISPER_DEVICE": local.pick_device,
+    }
     monkeypatch.setattr(local, "has_cuda_gpu", lambda: True)
-    monkeypatch.setenv(variable, value)
+    for variable, value in named:
+        reader = readers.get(variable)
+        assert reader is not None, f"{variable} is advertised and nothing reads it"
+        monkeypatch.setenv(variable, value)
+        assert reader() == value, f"{variable} is advertised and not honoured"
 
-    assert local.pick_model_size() == value, f"{variable} is advertised and not read"
+
+def test_the_device_override_wins_over_the_probe(monkeypatch: pytest.MonkeyPatch) -> None:
+    # An NVIDIA card being present is not the same claim as CTranslate2's CUDA
+    # path working on this machine, and when it does not, nothing raises — the
+    # first kernel launch simply never returns.
+    monkeypatch.setattr(local, "has_cuda_gpu", lambda: True)
+    monkeypatch.setenv("WATCHSKILL_WHISPER_DEVICE", "cpu")
+
+    assert local.pick_device() == "cpu"
+
+
+def test_a_device_nobody_supports_falls_back_to_the_probe(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # `WATCHSKILL_WHISPER_DEVICE=metal` is a reasonable thing for somebody to
+    # try. Passing it through would reach CTranslate2 as an unsupported device
+    # and fail somewhere much less legible than here.
+    monkeypatch.setattr(local, "has_cuda_gpu", lambda: False)
+    monkeypatch.setenv("WATCHSKILL_WHISPER_DEVICE", "metal")
+
+    assert local.pick_device() == "cpu"
+
+
+def test_the_device_is_case_insensitive(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(local, "has_cuda_gpu", lambda: False)
+    monkeypatch.setenv("WATCHSKILL_WHISPER_DEVICE", "CUDA")
+
+    assert local.pick_device() == "cuda"

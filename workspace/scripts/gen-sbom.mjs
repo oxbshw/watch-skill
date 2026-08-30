@@ -159,16 +159,25 @@ function thirdPartyPackages() {
     }
   }
 
+  const reviewed = licenceReview()
+
   return locked
     .map(pkg => {
       const family = platformFamily(pkg.name)
       const inherited = family === null
         ? undefined
         : [...(families.get(`${family}@${pkg.version}`) ?? [])][0]
+      // A reviewed family is recorded from its review, on every machine.
+      // pnpm installs only this platform's optional packages, so a licence
+      // read off disk is the Windows answer on Windows and UNKNOWN on Linux —
+      // and the committed document would then depend on who generated it.
+      // What the installed copy declares is still read, in the gate below,
+      // wherever the package is actually present.
+      const decided = reviewed.find(rule => rule.pattern.test(pkg.name))?.sbomLicense
       return {
         name: pkg.name,
         version: pkg.version,
-        license: onDisk.get(`${pkg.name}@${pkg.version}`) ?? inherited ?? 'UNKNOWN',
+        license: decided ?? onDisk.get(`${pkg.name}@${pkg.version}`) ?? inherited ?? 'UNKNOWN',
         path: null,
         kind: 'third_party',
       }
@@ -304,6 +313,7 @@ function main() {
       problems.push(`${pkg.name}: first-party packages must be MIT, found ${pkg.license}`)
     }
   }
+  const declared = installedLicenses()
   const reviewed = licenceReview()
   for (const pkg of third) {
     if (ALLOWED_LICENSES.has(pkg.license)) continue
@@ -316,12 +326,15 @@ function main() {
       continue
     }
     // A reviewed entry still has to describe the licence it was reviewed for.
-    // A package that changed licence under a matching rule is not covered by
-    // that review and is a finding again.
-    if (!entry.licenses.includes(pkg.license)) {
+    // Checked against what the *installed* copy declares rather than against
+    // the value recorded above, which came from the review and would make
+    // this tautological. A package absent from this platform says nothing
+    // either way; the platform that has it is the one that catches drift.
+    const onDisk = declared.get(`${pkg.name}@${pkg.version}`)
+    if (onDisk !== undefined && !entry.licenses.includes(onDisk)) {
       problems.push(
         `${pkg.name}@${pkg.version}: reviewed for ${entry.licenses.join(' / ')} `
-        + `and now declares ${pkg.license}. Re-review it in inventory/licence-review.json.`,
+        + `and now declares ${onDisk}. Re-review it in inventory/licence-review.json.`,
       )
     }
   }

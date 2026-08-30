@@ -55,18 +55,24 @@ import { manualRoot } from './lib/manual-paths.mjs'
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const OUT = join(ROOT, 'inventory', 'dsh-slots.json')
 
-/** Trees that may hold a real DSH install, in preference order. */
+/**
+ * Trees that may hold a real DSH install, in preference order.
+ *
+ * The workspace's own `node_modules` comes first now, and the reason is the
+ * whole point of this inventory being committed: it is the tree the lockfile
+ * defines, so every machine and every CI runner reads the same one. The
+ * manual-QA trees are a fallback for a checkout that has not installed yet,
+ * and preferring them made the answer depend on whether somebody had built a
+ * profile on this machine — the same defect as reading the SBOM off disk.
+ *
+ * It used to be second, because the workspace did not carry
+ * `@deepseek-ai/dsh` and so could not report a version. It carries it now:
+ * `@deepwatch/cli` declares it as an exact optional peer.
+ */
 const CANDIDATES = [
   process.env.WATCH_DSH_TREE,
-  // The CLI the smoke gates provision is a complete install of the pinned
-  // DSH, and it carries `@deepseek-ai/dsh` itself -- which is what makes the
-  // version knowable. The manual profile is listed after the workspace on
-  // purpose: it holds the runtime packages but not the CLI, so a scan of it
-  // reports `unknown` and a fraction of the bundles. Preferring whichever tree
-  // merely exists made the inventory depend on whether anyone had built a
-  // profile on this machine.
-  join(manualRoot(), 'dsh-cli', 'node_modules'),
   join(ROOT, 'node_modules'),
+  join(manualRoot(), 'dsh-cli', 'node_modules'),
   join(manualRoot(), 'dsh-home', 'profiles', 'web', 'node_modules'),
 ].filter(path => path !== undefined)
 
@@ -219,6 +225,26 @@ function main() {
     const committed = existsSync(OUT) ? JSON.parse(readFileSync(OUT, 'utf8')) : null
     if (committed === null || contract(committed) !== contract(document)) {
       process.stderr.write('watch: inventory/dsh-slots.json is stale — run `node scripts/gen-dsh-slots.mjs`\n')
+      // Say *what* is stale. "Stale" alone is a serviceable message on the
+      // machine that can re-run the generator and read the diff, and a
+      // useless one on a CI runner whose tree nobody can inspect afterwards.
+      if (committed !== null) {
+        if (committed.dshVersion !== document.dshVersion) {
+          process.stderr.write(
+            `       DSH version: committed ${String(committed.dshVersion)}, `
+            + `scanned ${String(document.dshVersion)}\n`)
+        }
+        const names = [...new Set([
+          ...Object.keys(committed.slots ?? {}),
+          ...Object.keys(document.slots ?? {}),
+        ])].sort()
+        for (const name of names) {
+          const before = JSON.stringify(committed.slots?.[name] ?? null)
+          const after = JSON.stringify(document.slots?.[name] ?? null)
+          if (before === after) continue
+          process.stderr.write(`       ${name}\n         committed ${before}\n         scanned   ${after}\n`)
+        }
+      }
       process.exit(1)
     }
     process.stdout.write(`dsh-slots: current — ${String(slots.size)} slot(s)\n`)

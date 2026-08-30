@@ -2121,70 +2121,70 @@
     {
       "name": "@koromix/koffi-darwin-arm64",
       "version": "3.1.6",
-      "license": "MIT",
+      "license": "UNKNOWN",
       "path": null,
       "kind": "third_party"
     },
     {
       "name": "@koromix/koffi-darwin-x64",
       "version": "3.1.6",
-      "license": "MIT",
+      "license": "UNKNOWN",
       "path": null,
       "kind": "third_party"
     },
     {
       "name": "@koromix/koffi-freebsd-arm64",
       "version": "3.1.6",
-      "license": "MIT",
+      "license": "UNKNOWN",
       "path": null,
       "kind": "third_party"
     },
     {
       "name": "@koromix/koffi-freebsd-ia32",
       "version": "3.1.6",
-      "license": "MIT",
+      "license": "UNKNOWN",
       "path": null,
       "kind": "third_party"
     },
     {
       "name": "@koromix/koffi-freebsd-x64",
       "version": "3.1.6",
-      "license": "MIT",
+      "license": "UNKNOWN",
       "path": null,
       "kind": "third_party"
     },
     {
       "name": "@koromix/koffi-linux-arm64",
       "version": "3.1.6",
-      "license": "MIT",
+      "license": "UNKNOWN",
       "path": null,
       "kind": "third_party"
     },
     {
       "name": "@koromix/koffi-linux-ia32",
       "version": "3.1.6",
-      "license": "MIT",
+      "license": "UNKNOWN",
       "path": null,
       "kind": "third_party"
     },
     {
       "name": "@koromix/koffi-linux-loong64",
       "version": "3.1.6",
-      "license": "MIT",
+      "license": "UNKNOWN",
       "path": null,
       "kind": "third_party"
     },
     {
       "name": "@koromix/koffi-linux-riscv64",
       "version": "3.1.6",
-      "license": "MIT",
+      "license": "UNKNOWN",
       "path": null,
       "kind": "third_party"
     },
     {
       "name": "@koromix/koffi-linux-x64",
       "version": "3.1.6",
-      "license": "MIT",
+      "license": "UNKNOWN",
       "path": null,
       "kind": "third_party"
     },
@@ -2205,21 +2205,21 @@
     {
       "name": "@koromix/koffi-win32-arm64",
       "version": "3.1.6",
-      "license": "MIT",
+      "license": "UNKNOWN",
       "path": null,
       "kind": "third_party"
     },
     {
       "name": "@koromix/koffi-win32-ia32",
       "version": "3.1.6",
-      "license": "MIT",
+      "license": "UNKNOWN",
       "path": null,
       "kind": "third_party"
     },
     {
       "name": "@koromix/koffi-win32-x64",
       "version": "3.1.6",
-      "license": "MIT",
+      "license": "UNKNOWN",
       "path": null,
       "kind": "third_party"
     },

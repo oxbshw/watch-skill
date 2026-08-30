@@ -40,15 +40,16 @@ def isolated_settings(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     monkeypatch.setenv("WATCHSKILL_VISION_BATCH_SIZE", "8")
     monkeypatch.setenv("WATCHSKILL_OLLAMA_NUM_CTX", "2048")
     monkeypatch.setenv("WATCHSKILL_OLLAMA_BASE_URL", "http://127.0.0.1:11434")
-    # And pin the transcription model, for the same reason and a sharper one.
-    # Left to the probe, `pick_model_size()` loads `large-v3` on a machine with
-    # a CUDA GPU and `tiny` on one without, so the offline suite ran a
-    # full-size GPU transcription on some machines and a tiny CPU one on
-    # others. On the GPU machine `test_watch_then_ask_roundtrip` spent longer
-    # loading weights than the 300-second timeout allows, and the same suite
-    # passed on CI, which has no GPU. A suite whose result depends on the
-    # hardware under it is not an offline suite.
+    # And pin where transcription runs, for the same reason and a sharper one.
+    # Both of these auto-select from the machine, so the offline suite ran
+    # `large-v3` on CUDA where a GPU was present and `tiny` on the processor
+    # where none was. CI has no GPU and only ever exercised the second path;
+    # on a machine with one, `test_watch_then_ask_roundtrip` never returned
+    # from CTranslate2's first CUDA kernel and hit the 300-second timeout.
+    # A suite whose result depends on the hardware under it is not an offline
+    # suite, so it names both.
     monkeypatch.setenv("WATCHSKILL_WHISPER_MODEL", "tiny")
+    monkeypatch.setenv("WATCHSKILL_WHISPER_DEVICE", "cpu")
     reset_settings()
     _reset_process_globals()
     yield data_dir
