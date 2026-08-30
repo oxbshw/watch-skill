@@ -2,7 +2,7 @@ name: Release
 
 on:
   push:
-    tags: ["v*"]
+    tags: ["core-v*"]
 
 permissions:
   contents: write
@@ -11,34 +11,36 @@ jobs:
   release:
     runs-on: ubuntu-latest
     outputs:
-      prerelease: ${{ steps.tag.outputs.prerelease }}
+      prerelease: ${{ steps.version.outputs.prerelease }}
     steps:
       - uses: actions/checkout@v4
 
-      # This workflow triggers on `v*` and publishes Watch Core to PyPI. Both
-      # products live here now, so a Workspace release tagged `v0.1.0` would
-      # publish Core -- built from whatever the root happened to contain, under
-      # a version nobody chose. The `workspace-v*` namespace keeps that from
-      # matching, and this step is what makes the namespace a mechanism rather
-      # than a convention: the tag has to name the version pyproject declares.
+      # Two products live in this repository and each has its own train:
+      # `core-v*` publishes Watch Core to PyPI here, and `deepwatch-v*`
+      # publishes the DeepWatch packages to npm in release-deepwatch.yml. They
+      # shared a `v*` trigger once, which meant a tag intended for one product
+      # built and published the other from whatever the tree contained.
+      #
+      # The namespace is a mechanism rather than a convention because of this
+      # step: the tag has to name the version pyproject declares.
       - name: The tag must name the Core version
+        id: version
         run: |
-          tag="${GITHUB_REF_NAME#v}"
+          version="${GITHUB_REF_NAME#core-v}"
           declared=$(grep -m1 "^version = " pyproject.toml | cut -d'"' -f2)
-          echo "tag=${tag} pyproject=${declared}"
-          if [ "$tag" != "$declared" ]; then
+          echo "tag=${version} pyproject=${declared}"
+          if [ "$version" != "$declared" ]; then
             echo "::error::${GITHUB_REF_NAME} does not name Core version ${declared}."
-            echo "::error::A Workspace release must be tagged workspace-v<version>."
+            echo "::error::A DeepWatch release must be tagged deepwatch-v<version>."
             exit 1
           fi
 
-      # PEP 440 pre-release markers. Without this an rc tag produced a release
-      # GitHub labels "Latest", so anyone landing on the repository was shown a
-      # release candidate as the current version.
-      - name: Classify the tag
-        id: tag
-        run: |
-          case "${GITHUB_REF_NAME}" in
+          # PEP 440 pre-release markers, read off the *version* and not the
+          # tag: `core-v0.1.0` contains a hyphen, and classifying on the tag
+          # made every stable release look like a prerelease. Without this an
+          # rc produced a release GitHub labels "Latest", so anyone landing on
+          # the repository was shown a release candidate as the current one.
+          case "$version" in
             *rc*|*alpha*|*beta*|*a[0-9]*|*b[0-9]*|*dev*|*-*)
               echo "prerelease=true" >> "$GITHUB_OUTPUT" ;;
             *) echo "prerelease=false" >> "$GITHUB_OUTPUT" ;;
@@ -76,7 +78,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           body_path: release-notes.md
-          prerelease: ${{ steps.tag.outputs.prerelease == 'true' }}
+          prerelease: ${{ steps.version.outputs.prerelease == 'true' }}
           files: |
             dist/*.whl
             dist/*.tar.gz

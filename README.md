@@ -63,6 +63,25 @@ Four things it will not do, because each one is a way of being confidently wrong
 - **Claim a capability it has not checked.** `watch-skill capture-capabilities` says what this
   machine can actually record, and whether each answer was machine-tested or merely probed.
 
+## Watch Skill and DeepWatch
+
+This repository holds two products, and it is worth knowing which one you want.
+
+**Watch Skill** is the engine — the Python package, the CLI, the MCP server and
+the Claude Code skills. That is what the rest of this README is about, and what
+`pip install watch-skill` gives you.
+
+**DeepWatch** is the Web and Desktop agent product built on the official
+DeepSeek Harness packages and powered by Watch Skill for perception, evidence,
+memory and independent verification. It lives in [`workspace/`](workspace/) and
+installs separately: Node and pnpm, no Python.
+
+The two are independent to install and independent to release. `pip install
+watch-skill` reads `pyproject.toml` at the root and never descends into
+`workspace/`, and DeepWatch treats Watch Skill as an optional engine — present,
+it powers every Watch capability; absent, DeepWatch reports each one as
+unavailable rather than pretending.
+
 ## Install
 
 Two pieces, and you want both. The **engine** does the work; the **skills** teach your
@@ -76,11 +95,12 @@ uvx --from "watch-skill[standard]" watch-skill setup
 npx skills add oxbshw/watch-skill -g
 ```
 
-Watch Skill ships on PyPI, not npm. The second command runs
+The Watch Skill engine ships on PyPI, not npm. The second command runs
 [Vercel's `skills` CLI](https://www.skills.sh), which reads the ten `SKILL.md`
 files out of this repository and installs them into whichever agents you have —
 there is no `watch-skill` npm package to install, and the engine is Python
-either way.
+either way. (DeepWatch, the workspace application, is the part of this
+repository that publishes to npm. It has not been published yet.)
 
 Neither needs a clone, and the engine command works the same on macOS, Linux, and
 Windows — [CI runs it on all three](https://github.com/oxbshw/watch-skill/actions/workflows/install.yml)
@@ -475,23 +495,23 @@ flowchart LR
 Read [Architecture](docs/architecture.md) for the data model, provider boundaries, and
 extension points.
 
-### The Workspace
+### DeepWatch
 
-This repository holds both halves of the product. The Python engine above is
-the root; `workspace/` is the agent workspace built on
-[DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) — the Watch
-DSH plugins, the Memory service, and the Web and Desktop applications.
+The other half of this repository. `workspace/` holds the DeepWatch Web and
+Desktop applications, built on
+[DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) — twenty
+`@deepwatch/*` packages: the Harness plugins, the Memory service, the browser
+halves of every mode, and the `deepwatch` CLI.
 
-The two are independent to install. `pip install watch-skill` reads
-`pyproject.toml` at the root and never descends into `workspace/`, and the
-workspace needs Node and pnpm but no Python.
+Nothing is published to npm yet, so there is no `npx @deepwatch/cli` to run.
+From a clone:
 
 ```bash
 cd workspace && node scripts/bootstrap.mjs
 ```
 
-Start at [workspace/docs/setup.md](workspace/docs/setup.md); the workspace has
-its own [README](workspace/README.md), ADRs and gate suite.
+Start at [workspace/docs/setup.md](workspace/docs/setup.md). DeepWatch has its
+own [README](workspace/README.md), ADRs, gate suite and release train.
 
 ## Documentation
 

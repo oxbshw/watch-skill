@@ -60,7 +60,7 @@ are DSH's own web-profile defaults plus the one replacement above.
 | | Web | Desktop |
 | --- | --- | --- |
 | Started from | cold clone at `71300c0` | cold clone at `71300c0` |
-| Application data | `G:/watch-rc-appdata/dsh-home` | `G:/watch-rc-appdata/desktop` |
+| Application data | `<rc root>/dsh-home` | `<rc root>/desktop` |
 | HTTP | 200 | 200 (own host) |
 | Served build digest | `5bbd2c3e529bee45` | `5bbd2c3e529bee45` |
 | Byte-identical | — | yes |

@@ -225,6 +225,43 @@ jobs:
       - name: Cold build
         run: npm run verify:clean-build
 
+  # What a publish would actually upload.
+  #
+  # `npm run check` measures the workspace from inside it, where a workspace
+  # link or a path alias can make a broken package look whole. This packs the
+  # twenty tarballs, installs them into a project that has never seen this
+  # repository, and runs the CLI through every runner. Nothing is published:
+  # the release workflow is the only thing that publishes, and it has never
+  # run.
+  packed-artifacts:
+    needs: changes
+    if: needs.changes.outputs.workspace == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: workspace
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+          cache-dependency-path: workspace/pnpm-lock.yaml
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        run: npm run build
+
+      - name: Pack, install from the tarballs, and run every runner
+        run: npm run release:artifacts
+
   # The parts only the operating system itself can answer.
   platform:
     needs: changes
@@ -319,7 +356,7 @@ jobs:
   # in this workflow, not a change that needed no testing.
   workspace-required:
     if: always()
-    needs: [changes, check, cold-build, commit-metadata, platform]
+    needs: [changes, check, cold-build, commit-metadata, packed-artifacts, platform]
     runs-on: ubuntu-latest
     steps:
       - name: Gather the results

@@ -30,6 +30,11 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const LOCKFILE = readFileSync(join(ROOT, 'pnpm-lock.yaml'), 'utf8')
 const SBOM = JSON.parse(readFileSync(join(ROOT, 'docs', 'sbom.json'), 'utf8'))
 
+/** The deliberate per-package licence decisions, as matchers. */
+const REVIEWED = JSON.parse(
+  readFileSync(join(ROOT, 'inventory', 'licence-review.json'), 'utf8'))
+  .packages.map(entry => ({ ...entry, pattern: new RegExp(entry.match) }))
+
 test('a scoped spec splits on the last @, not the first', () => {
   assert.deepEqual(splitSpec('@scope/name@1.2.3'), { name: '@scope/name', version: '1.2.3' })
   assert.deepEqual(splitSpec('plain@0.1.0'), { name: 'plain', version: '0.1.0' })
@@ -81,7 +86,7 @@ test('every platform-specific package is present for every platform', () => {
   assert.ok(platforms.size > 1, `only ${[...platforms].join(', ')} survived`)
 })
 
-test('the builds of one package agree on a licence, so either may be quoted', () => {
+test('the builds of one package agree on a licence, or a review says why not', () => {
   const byFamily = new Map()
   for (const pkg of SBOM.thirdParty) {
     const family = platformFamily(pkg.name)
@@ -91,12 +96,30 @@ test('the builds of one package agree on a licence, so either may be quoted', ()
     byFamily.get(key).add(pkg.license)
   }
   for (const [family, licenses] of byFamily) {
-    assert.equal(licenses.size, 1,
-      `${family} states ${[...licenses].join(' and ')}; the SBOM cannot pick one`)
+    if (licenses.size === 1) continue
+    // sharp is the real case: its glibc builds declare
+    // `Apache-2.0 AND LGPL-3.0-or-later` while its musl and wasm builds
+    // declare nothing at all, shipping the same libvips payload either way.
+    // The disagreement is upstream's, and quoting one half would be picking at
+    // random — so a family that disagrees is quoted from its review instead.
+    const entry = REVIEWED.find(rule => rule.pattern.test(family))
+    assert.ok(entry !== undefined,
+      `${family} states ${[...licenses].join(' and ')}, and no review says which`)
+    for (const license of licenses) {
+      assert.ok(entry.licenses.includes(license),
+        `${family} now states ${license}, which its review does not cover`)
+    }
   }
 })
 
-test('no package reached the document without a licence', () => {
+test('a package with no licence is reviewed deliberately, not merely tolerated', () => {
+  // Nineteen packages in the Harness closure ship no `license` field. That is
+  // upstream's omission and cannot be fixed from here, so what this holds is
+  // the next best thing: each is named in `inventory/licence-review.json` with
+  // what it is, how it arrives, and whether DeepWatch redistributes it. A new
+  // one appears and this fails, which is the point.
   const unknown = SBOM.thirdParty.filter(pkg => pkg.license === 'UNKNOWN')
-  assert.deepEqual(unknown.map(pkg => pkg.name), [])
+  const unreviewed = unknown.filter(pkg => !REVIEWED.some(
+    rule => rule.pattern.test(pkg.name) && rule.licenses.includes('UNKNOWN')))
+  assert.deepEqual(unreviewed.map(pkg => pkg.name), [])
 })

@@ -42,8 +42,9 @@ Reasons, not proof.
 drive letters, absolute POSIX paths, hardcoded `.exe`, kill-by-name, hardcoded
 shells, backslash separators, and unguarded `HOME`/`USERPROFILE`. It runs clean
 over 149 files. It found a real Windows-only defect in the Desktop main process,
-where application data, DSH home and the log directory were hardcoded to
-`G:/watch-manual`; those now come from `app.getPath()`.
+where application data, DSH home and the log directory were hardcoded to a
+drive letter on the machine they were written on; those now come from
+`app.getPath()`.
 
 Every runtime path is built with `join()` from `node:path`, every application
 directory comes from Electron's `app.getPath()`, nothing in the shipped tree

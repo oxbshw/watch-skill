@@ -1,8 +1,11 @@
-# Watch for DSH
+# @deepwatch/dsh-bundle
 
-The installable Watch capability bundle for an existing DeepSeek Harness
-profile. It gives an agent you already run senses, and an independent answer to
-*did that actually work?* — without asking you to move to a different product.
+DeepWatch's capabilities, installable into a DeepSeek Harness profile you
+already run. It gives that agent senses, and an independent answer to *did that
+actually work?* — without asking you to move to a different product.
+
+The full application is [DeepWatch](https://github.com/oxbshw/watch-skill/tree/main/workspace#readme);
+this package is the part of it that composes into somebody else's Harness.
 
 ## Install
 

@@ -28,8 +28,12 @@ running means two `watch-skill` processes, and that is correct.
 ## Web
 
 ```bash
-DSH_HOME="G:/watch-manual/dsh-home" node "G:/watch-smoke/node_modules/@deepseek-ai/dsh/lib/bin.js" --profile web --patch "G:/watch-manual/dsh-home/watch-manual.patch.yml" --no-open --host 127.0.0.1 --port 8931
+DSH_HOME="<manual root>/dsh-home" node "<harness>/lib/bin.js" --profile web --patch "<manual root>/dsh-home/watch-manual.patch.yml" --no-open --host 127.0.0.1 --port 8931
 ```
+
+`scripts/manual-profile.mjs` prints that line with this machine's own paths
+filled in when it finishes, and writes them to `<manual root>/manual-profile.json`
+so it can be read back later.
 
 Then open http://127.0.0.1:8931.
 
@@ -43,7 +47,7 @@ Ready when the log prints `dsh web: http://127.0.0.1:8931`.
 ## Desktop
 
 ```bash
-cd "G:/watch-workspace/apps/desktop" && npx electron .
+cd apps/desktop && npx electron .
 ```
 
 Ready when the log prints a `WATCH_DESKTOP_READY` line with `"step":"ready"`.
@@ -58,13 +62,17 @@ plainly present on disk.
 ## Rebuilding the profile from nothing
 
 ```bash
-cd "G:/watch-workspace" && node scripts/manual-profile.mjs && node scripts/seed-manual-fixtures.mjs
+node scripts/manual-profile.mjs && node scripts/seed-manual-fixtures.mjs
 ```
 
-The first builds `G:/watch-manual/dsh-home` — a stock DSH `web` profile with the
+The first builds `<manual root>/dsh-home` — a stock DSH `web` profile with the
 Watch bundle installed and the overlay written. The second seeds the demo data:
 memory records through the real service at real origins, and the fixture files
 the checklist refers to. Both are idempotent.
+
+`<manual root>` is the platform's own state directory plus `watch-manual`, and
+`WATCH_MANUAL_ROOT` moves all of it somewhere else — a scratch directory, a
+different disk, wherever this machine has room. Nothing here writes outside it.
 
 ## Visual QA evidence
 
@@ -73,7 +81,7 @@ already a dependency, so nothing new is installed and nothing leaves the
 machine:
 
 ```bash
-WATCH_QA_URL=http://127.0.0.1:8931 WATCH_QA_OUT=G:/watch-manual/qa/screenshots WATCH_QA_SESSION=<session-id> electron scripts/qa-screenshots.mjs
+WATCH_QA_URL=http://127.0.0.1:8931 WATCH_QA_SESSION=<session-id> electron scripts/qa-screenshots.mjs
 ```
 
 Two details that cost a while to find, both worth knowing before you run it:
@@ -91,7 +99,7 @@ failed.
 
 ## When something is wrong
 
-Logs are in `G:/watch-manual/logs`. `web.log`, `desktop-main.log` (the Electron
+Logs are in `<manual root>/logs`. `web.log`, `desktop-main.log` (the Electron
 process), `desktop-host.log` (its supervised Host).
 
 Work down the tree, because the symptom is usually one level below where it
