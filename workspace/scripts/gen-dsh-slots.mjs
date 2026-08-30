@@ -88,6 +88,31 @@ const CATALOGUE
 /** A call site, for the slots the catalogue leaves out. */
 const RENDER_SLOT = /renderSlot\(\s*["']([a-z][a-zA-Z0-9]*(?:\.[a-zA-Z0-9]+)+)["']/g
 
+/**
+ * Where `@deepseek-ai/dsh` states its version in a tree, hoisted or not.
+ *
+ * npm puts it at `@deepseek-ai/dsh/package.json`. pnpm does not hoist a
+ * package nothing imports directly, so in a pnpm tree it lives inside
+ * `.pnpm/@deepseek-ai+dsh@<version>_<hash>/node_modules/`. Looking only at
+ * the hoisted path meant a pnpm workspace could never name its own baseline:
+ * this inventory said `0.1.1-rc.2` on a machine that happened to have an npm
+ * install of the CLI lying around and `unknown` on CI, and a committed
+ * artifact that reads differently depending on the machine is not evidence.
+ */
+function dshManifest(tree) {
+  const hoisted = join(tree, '@deepseek-ai', 'dsh', 'package.json')
+  if (existsSync(hoisted)) return hoisted
+
+  const store = join(tree, '.pnpm')
+  if (!existsSync(store)) return null
+  for (const entry of readdirSync(store).sort()) {
+    if (!entry.startsWith('@deepseek-ai+dsh@')) continue
+    const nested = join(store, entry, 'node_modules', '@deepseek-ai', 'dsh', 'package.json')
+    if (existsSync(nested)) return nested
+  }
+  return null
+}
+
 function* clientBundles(dir, depth = 0) {
   if (depth > 8) return
   let entries
@@ -152,8 +177,7 @@ function main() {
   // is, and an inventory that cannot name its version is not one anybody can
   // check a bump against -- so those are preferred outright, and a tree
   // without it is used only when nothing better exists.
-  const identifiable = candidate =>
-    existsSync(join(candidate, '@deepseek-ai', 'dsh', 'package.json'))
+  const identifiable = candidate => dshManifest(candidate) !== null
   for (const pass of [identifiable, () => true]) {
     for (const candidate of CANDIDATES) {
       if (!existsSync(candidate) || !pass(candidate)) continue
@@ -181,9 +205,10 @@ function main() {
   }
 
   // The DSH version these came from, so a bump that moves a slot is visible.
-  let version = 'unknown'
-  const manifest = join(tree, '@deepseek-ai', 'dsh', 'package.json')
-  if (existsSync(manifest)) version = JSON.parse(readFileSync(manifest, 'utf8')).version
+  const manifest = dshManifest(tree)
+  const version = manifest === null
+    ? 'unknown'
+    : JSON.parse(readFileSync(manifest, 'utf8')).version
 
   const document = {
     generatedBy: 'scripts/gen-dsh-slots.mjs',
