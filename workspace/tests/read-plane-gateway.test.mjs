@@ -30,6 +30,7 @@ import GatewayPlugin from '@deepseek-ai/dsh-api-gateway'
 
 import { LibraryIndex } from '../packages/watch/library/lib/index.js'
 import { WatchQueryService } from '../packages/watch/tools/lib/read-plane.js'
+import { recordFromFile } from '../packages/watch/tools/lib/library-search.js'
 
 const { TYPERT } = await import('../packages/watch/tools/lib/typert.host.js')
 
@@ -225,4 +226,52 @@ test('an empty index answers, and says it is empty', async () => {
   assert.deepEqual(answer.records, [])
   assert.notEqual(answer.indexState, 'ready',
     'an index nobody has built is not a complete answer to anything')
+})
+
+// ── a search returns ids a get will accept ──────────────────────────────────
+
+test('a record whose file names no id is still addressable, and names no path', async () => {
+  // Found by running the real profile. `recordFromFile` used the absolute path
+  // as the identifier when a file carried none, so a search answered with
+  //
+  //   recordId: "D:/watch-manual/dsh-home/watch-fixtures/05-unverified.json"
+  //
+  // which the browser rendered as both the id and the title -- a host
+  // filesystem path on the wire, in a plane whose stated rule is that a record
+  // never carries a location. And `libraryGet` refused that same id with
+  // `identifier_invalid`, because the identifier grammar has no slash and no
+  // colon: every such record could be found and never fetched.
+  const { index, gateway } = await host([])
+  const anonymous = recordFromFile(
+    'D:/evidence/store/05-unverified.json',
+    JSON.stringify({ kind: 'document', text: 'the deploy was not verified' }),
+  )
+  index.addAll([anonymous])
+
+  assert.match(anonymous.recordId, /^[A-Za-z0-9][A-Za-z0-9._-]*$/,
+    'the id must satisfy the grammar libraryGet validates against')
+  assert.doesNotMatch(anonymous.recordId, /[/\:]/, 'no separator, so no path')
+  assert.equal(anonymous.title, '05-unverified',
+    'a person reads the file’s name, not a digest and not a directory')
+
+  const found = await invoke(gateway, 'librarySearch',
+    searchRequest({ requestId: 'req-path', query: 'deploy' }))
+  assert.equal(found.outcome, 'page')
+  const [row] = found.records
+  assert.equal(row.recordId, anonymous.recordId)
+
+  // The claim that matters: what search returns, get accepts.
+  const fetched = await invoke(gateway, 'libraryGet',
+    { protocol: 1, requestId: 'req-path-2', recordId: row.recordId, deadlineMs: 5000 })
+  assert.equal(fetched.outcome, 'record',
+    'a search must not return an identifier its sibling method refuses')
+  assert.equal(fetched.record.title, '05-unverified')
+})
+
+test('the same file always digests to the same id, and two files differ', () => {
+  const one = recordFromFile('/evidence/a.json', '{"text":"a"}')
+  const again = recordFromFile('/evidence/a.json', '{"text":"a"}')
+  const other = recordFromFile('/evidence/b.json', '{"text":"a"}')
+  assert.equal(one.recordId, again.recordId, 'an id that moves between runs is not an id')
+  assert.notEqual(one.recordId, other.recordId, 'two files must not collide')
 })

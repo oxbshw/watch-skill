@@ -282,11 +282,16 @@ export function LibrarySearch(
           type="button"
           style={S.button}
           // Rebuilding is safe precisely because the index is derived: it can
-          // be thrown away and reconstructed from the records at any time. It
-          // rebuilds the local one; the host owns its own and re-reads it.
+          // be thrown away and reconstructed from the records at any time.
+          //
+          // It says what it does in each mode rather than one word for two
+          // actions. Locally it discards the index and builds it again. When
+          // the host answers, the index is the host's and this control cannot
+          // reach it -- what it does is ask again, and calling that "Rebuild
+          // index" would be a button claiming a power it does not have.
           onClick={() => { setGeneration(value => value + 1) }}
         >
-          Rebuild index
+          {reads === undefined ? 'Rebuild index' : 'Search again'}
         </button>
       </form>
 

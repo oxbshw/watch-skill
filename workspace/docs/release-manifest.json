@@ -104,7 +104,7 @@
       {
         "name": "@watchskill/dsh-library",
         "version": "0.1.0-preview.0",
-        "integrity": "sha256:e9273d97a20613f6c2701896a3ee0ffafe16aa7f7d321c9a0e6b789d5244be26",
+        "integrity": "sha256:84b5a74ea1fb2440a474772540fdfd0975cc34e9bad278a549446936d33d594f",
         "sourceFiles": 14
       },
       {
@@ -140,7 +140,7 @@
       {
         "name": "@watchskill/dsh-tools",
         "version": "0.1.0-preview.0",
-        "integrity": "sha256:8c2f2b5d882fd56dce220a73372ef46a3a7cd1d6233843696c446bd61c6897df",
+        "integrity": "sha256:e32bd3bbbd967363d148cefb86c45e9e5e03eef854d245bd28b0b110eda42191",
         "sourceFiles": 8
       },
       {
@@ -179,7 +179,7 @@
       "creators": [
         "Tool: watch-gen-release-manifest"
       ],
-      "created": "2026-08-29T22:37:06Z"
+      "created": "2026-08-30T02:05:27Z"
     },
     "packages": [
       {
@@ -338,7 +338,7 @@
         "checksums": [
           {
             "algorithm": "SHA256",
-            "checksumValue": "e9273d97a20613f6c2701896a3ee0ffafe16aa7f7d321c9a0e6b789d5244be26"
+            "checksumValue": "84b5a74ea1fb2440a474772540fdfd0975cc34e9bad278a549446936d33d594f"
           }
         ]
       },
@@ -434,7 +434,7 @@
         "checksums": [
           {
             "algorithm": "SHA256",
-            "checksumValue": "8c2f2b5d882fd56dce220a73372ef46a3a7cd1d6233843696c446bd61c6897df"
+            "checksumValue": "e32bd3bbbd967363d148cefb86c45e9e5e03eef854d245bd28b0b110eda42191"
           }
         ]
       },

@@ -29,8 +29,9 @@
  * @module @watchskill/dsh-tools/library-search
  */
 
+import { createHash } from 'node:crypto'
 import { readFileSync, readdirSync, existsSync, statSync } from 'node:fs'
-import { join } from 'node:path'
+import { basename, join } from 'node:path'
 import type { Context } from '@deepseek-ai/cordis'
 import { defineTool } from '@deepseek-ai/dsh-tools'
 import type { JsonValue } from '@deepseek-ai/dsh-tools'
@@ -90,6 +91,22 @@ export function gatherText(value: unknown, depth = 0, seen = new Set<unknown>())
   return out
 }
 
+/**
+ * A record identifier for a file that names none of its own.
+ *
+ * Derived from the full path so two files never collide, digested so nothing
+ * of that path survives into the answer, and shaped to the identifier grammar
+ * `@watchskill/dsh-contracts` enforces — `[A-Za-z0-9][A-Za-z0-9._-]*` — so the
+ * id a search returns is one `libraryGet` will accept.
+ *
+ * Sixteen hex characters. A collision needs two paths agreeing in 64 bits of
+ * SHA-256, which is not a thing a directory of evidence records does by
+ * accident, and the alternative is an identifier nobody can read at all.
+ */
+function identifierForFile(path: string): string {
+  return `file-${createHash('sha256').update(path, 'utf8').digest('hex').slice(0, 16)}`
+}
+
 export function recordFromFile(path: string, raw: string): IndexableRecord | null {
   let parsed: unknown
   try {
@@ -102,12 +119,25 @@ export function recordFromFile(path: string, raw: string): IndexableRecord | nul
 
   const optional = (candidate: unknown): string | null => (typeof candidate === 'string' && candidate !== '' ? candidate : null)
 
-  // The id comes from the file when it has one and from the path when it does
-  // not, so a record is always addressable and two files never collide.
+  // The id comes from the file when it has one, and from a digest of the path
+  // when it does not.
+  //
+  // It used to be the path itself, and that was wrong twice over. It put an
+  // absolute host path on the wire and into the browser, where a Library row
+  // rendered `D:/watch-manual/dsh-home/watch-fixtures/05-unverified.json` as
+  // both the identifier and the title — the read plane's own rule is that a
+  // record never carries a filesystem location. And it was not addressable, in
+  // contradiction of the comment that used to stand here: `libraryGet`
+  // validates `recordId` against the identifier grammar, which has no slash and
+  // no colon, so every record whose file named no id came back from a search
+  // and was then refused with `identifier_invalid` when fetched by it.
+  //
+  // A digest of the path keeps both properties the path was chosen for — one
+  // id per file, stable across runs — and satisfies the grammar.
   const recordId = optional(value['evidenceId'])
     ?? optional(value['sourceId'])
     ?? optional(value['verificationId'])
-    ?? path
+    ?? identifierForFile(path)
 
   // Body text is every string the record carries, at any depth.
   //
@@ -125,7 +155,11 @@ export function recordFromFile(path: string, raw: string): IndexableRecord | nul
   return {
     recordId,
     revisionId: optional(value['sourceRevisionId']) ?? `${recordId}@1`,
-    title: optional(value['title']) ?? optional(value['expectation']) ?? recordId,
+    // A digest is an identifier, not something to read. Where the file names
+    // no title, the file's own name is what a person can recognise — and it is
+    // a name rather than a location, so it carries no directory with it.
+    title: optional(value['title']) ?? optional(value['expectation'])
+      ?? basename(path).replace(/\.json$/i, ''),
     kind: (optional(value['kind']) ?? 'document') as IndexableRecord['kind'],
     text: body,
     source: optional(value['locator']) ?? optional(value['source']),
