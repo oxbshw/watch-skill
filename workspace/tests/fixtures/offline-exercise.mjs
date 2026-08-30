@@ -257,7 +257,15 @@ try {
         cwd: process.cwd(), encoding: 'utf8', timeout: 120_000,
       })
       if (result.status !== 0) {
-        throw new Error(`${script} --check exited ${String(result.status)}`)
+        // Carry what the child said. "exited 1" alone is readable on the
+        // machine that can simply re-run it, and useless on a CI runner whose
+        // tree is gone by the time anyone reads the log — which is exactly
+        // where a host-dependent generator fails and nowhere else.
+        const said = `${result.stderr ?? ''}${result.stdout ?? ''}`
+          .split('\n').map(line => line.trim()).filter(line => line !== '')
+          .slice(0, 6).join(' | ')
+        throw new Error(
+          `${script} --check exited ${String(result.status)}${said === '' ? '' : `: ${said}`}`)
       }
     }
   })

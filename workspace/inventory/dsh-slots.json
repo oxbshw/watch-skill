@@ -230,6 +230,7 @@
       "scope": "root",
       "source": "contract",
       "declaredBy": [
+        "dsh-client-ui-settings-general",
         "dsh-cordis-client-runner"
       ]
     },
@@ -238,6 +239,7 @@
       "scope": "root",
       "source": "contract",
       "declaredBy": [
+        "dsh-client-ui-settings-general",
         "dsh-cordis-client-runner"
       ]
     },
@@ -246,6 +248,7 @@
       "scope": "root",
       "source": "contract",
       "declaredBy": [
+        "dsh-client-ui-settings-general",
         "dsh-cordis-client-runner"
       ]
     },
@@ -254,6 +257,7 @@
       "scope": "root",
       "source": "contract",
       "declaredBy": [
+        "dsh-client-ui-settings-general",
         "dsh-cordis-client-runner"
       ]
     },
@@ -262,6 +266,7 @@
       "scope": "root",
       "source": "contract",
       "declaredBy": [
+        "dsh-client-ui-settings-general",
         "dsh-cordis-client-runner"
       ]
     },
@@ -270,6 +275,7 @@
       "scope": "root",
       "source": "contract",
       "declaredBy": [
+        "dsh-client-ui-settings-plugins",
         "dsh-cordis-client-runner"
       ]
     },
@@ -278,6 +284,7 @@
       "scope": "root",
       "source": "contract",
       "declaredBy": [
+        "dsh-client-ui-settings-plugins",
         "dsh-cordis-client-runner"
       ]
     },
@@ -286,6 +293,7 @@
       "scope": "root",
       "source": "contract",
       "declaredBy": [
+        "dsh-client-ui-settings-general",
         "dsh-cordis-client-runner"
       ]
     },
@@ -294,6 +302,7 @@
       "scope": "root",
       "source": "contract",
       "declaredBy": [
+        "dsh-client-ui-settings-general",
         "dsh-cordis-client-runner"
       ]
     },
@@ -302,6 +311,7 @@
       "scope": "root",
       "source": "contract",
       "declaredBy": [
+        "dsh-client-ui-layout",
         "dsh-cordis-client-runner"
       ]
     },

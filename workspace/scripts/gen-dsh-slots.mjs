@@ -136,7 +136,11 @@ function* clientBundles(dir, depth = 0) {
 function scanTree(tree) {
   const slots = new Map()
   let bundles = 0
-  for (const path of clientBundles(tree)) {
+  // Sorted, because `readdirSync` returns whatever order the filesystem
+  // enumerates in — sorted on NTFS, hash order on ext4 — and this loop used
+  // to let the first file to mention a slot decide who is credited with it.
+  // See the call-site branch below for the other half of that defect.
+  for (const path of [...clientBundles(tree)].sort(byCodeUnit)) {
     bundles += 1
     const source = readFileSync(path, 'utf8')
     const owner = /@deepseek-ai[\\/]([^\\/]+)/.exec(path)?.[1] ?? 'unknown'
@@ -154,10 +158,20 @@ function scanTree(tree) {
     }
     for (const match of source.matchAll(RENDER_SLOT)) {
       const name = match[1]
-      if (slots.has(name)) continue
-      slots.set(name, {
-        kind: 'unknown', scope: 'unknown', declaredBy: new Set([owner]), source: 'call-site',
-      })
+      const existing = slots.get(name)
+      if (existing === undefined) {
+        slots.set(name, {
+          kind: 'unknown', scope: 'unknown', declaredBy: new Set([owner]), source: 'call-site',
+        })
+        continue
+      }
+      // A bundle that renders a slot the catalogue already described is still
+      // a bundle that uses it, and `declaredBy` is the list of who does.
+      // Skipping it entirely made the answer depend on read order: whichever
+      // file the filesystem handed over first was credited and the rest were
+      // not, so `shell.overlay` named the layout package on one machine and
+      // not on another with the identical tree.
+      existing.declaredBy.add(owner)
     }
   }
 
