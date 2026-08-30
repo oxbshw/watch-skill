@@ -111,19 +111,21 @@ describe('doctor reports what it measured', () => {
     }
   })
 
-  test('the Harness is missing until setup installs it, and says so', () => {
-    // Deliberately not a dependency of this package: its transitive tree
-    // carries native addons under licences this distribution has not reviewed,
-    // and the SBOM gate refuses them. `setup` installs the pinned version into
-    // DeepWatch's own home instead, so this is the normal state of a machine
-    // that has not been set up.
+  test('the Harness is the declared peer, at the version this was built against', () => {
+    // Read from inside the workspace, where the optional peer *is* installed —
+    // so what this asserts is that doctor reports the thing it actually found,
+    // named as a peer, rather than a guess or a directory listing. The other
+    // half, a machine with no Harness at all, cannot be observed from in here:
+    // `tests/harness-provisioning.test.mjs` runs that in a clean room.
     const box = sandbox()
     try {
       const report = JSON.parse(deepwatch(['doctor', '--json'], { DEEPWATCH_HOME: box.dir }).stdout)
       const harness = report.findings.find(finding => finding.name === 'DeepSeek Harness')
-      assert.equal(harness.state, 'missing')
-      assert.match(harness.fix, /deepwatch setup/)
-      assert.match(harness.fix, /not bundled/)
+      assert.equal(harness.state, 'reachable', 'the optional peer is installed in this workspace')
+      assert.match(harness.detail, /peer/)
+      assert.ok(harness.detail.includes(MANIFEST.peerDependencies['@deepseek-ai/dsh']),
+        'doctor reported a version other than the one the manifest pins')
+      assert.equal(harness.fix, '', 'nothing is wrong, so nothing needs fixing')
     } finally {
       box.dispose()
     }

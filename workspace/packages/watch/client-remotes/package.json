@@ -4,6 +4,31 @@
   "description": "Client composition: mounts Watch's generated Typert Remote into ctx.remote",
   "type": "module",
   "license": "MIT",
+  "author": "Sayed Allam",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/oxbshw/watch-skill.git",
+    "directory": "workspace/packages/watch/client-remotes"
+  },
+  "homepage": "https://github.com/oxbshw/watch-skill/tree/main/workspace#readme",
+  "bugs": {
+    "url": "https://github.com/oxbshw/watch-skill/issues"
+  },
+  "keywords": [
+    "deepwatch",
+    "deepseek-harness",
+    "watch-skill",
+    "typert",
+    "remote"
+  ],
+  "dsh": {
+    "client": {
+      "inject": [
+        "@deepseek-ai/dsh-api-remotes"
+      ],
+      "platform": "web"
+    }
+  },
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
   "exports": {
@@ -17,21 +42,24 @@
     },
     "./package.json": "./package.json"
   },
-  "dsh": {
-    "client": {
-      "inject": [
-        "@deepseek-ai/dsh-api-remotes"
-      ],
-      "platform": "web"
-    }
-  },
   "files": [
     "lib/**/*.js",
     "lib/**/*.js.map",
     "lib/**/*.d.ts"
   ],
+  "sideEffects": false,
+  "engines": {
+    "node": "^22.19.0 || >=24.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "bundle": "tsdown"
+  },
+  "dependencies": {
+    "@deepwatch/dsh-library": "workspace:^",
+    "@deepwatch/dsh-tools": "workspace:^"
   },
   "peerDependencies": {
     "@deepseek-ai/cordis": "catalog:"
@@ -42,9 +70,5 @@
     "@deepseek-ai/dsh-typert-protocol": "catalog:",
     "@types/react": "~18.3.1",
     "react": "^18.2.0"
-  },
-  "dependencies": {
-    "@deepwatch/dsh-library": "workspace:^",
-    "@deepwatch/dsh-tools": "workspace:^"
   }
 }

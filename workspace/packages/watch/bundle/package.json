@@ -1,9 +1,26 @@
 {
   "name": "@deepwatch/dsh-bundle",
   "version": "0.1.0-preview.0",
-  "description": "Watch for DSH \u2014 the installable Watch capability bundle for a DeepSeek Harness profile",
+  "description": "Watch for DSH — the installable Watch capability bundle for a DeepSeek Harness profile",
   "type": "module",
   "license": "MIT",
+  "author": "Sayed Allam",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/oxbshw/watch-skill.git",
+    "directory": "workspace/packages/watch/bundle"
+  },
+  "homepage": "https://github.com/oxbshw/watch-skill/tree/main/workspace#readme",
+  "bugs": {
+    "url": "https://github.com/oxbshw/watch-skill/issues"
+  },
+  "keywords": [
+    "deepwatch",
+    "deepseek-harness",
+    "watch-skill",
+    "bundle",
+    "plugin"
+  ],
   "dsh": {
     "bundle": {
       "patch": "./cordis.patch.yml",
@@ -21,6 +38,13 @@
     "variants/*.yml",
     "README.md"
   ],
+  "sideEffects": false,
+  "engines": {
+    "node": "^22.19.0 || >=24.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "dependencies": {
     "@deepwatch/dsh-client-brand": "workspace:^",
     "@deepwatch/dsh-client-evidence": "workspace:^",

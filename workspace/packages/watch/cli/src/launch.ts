@@ -16,7 +16,7 @@
 import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 
-import type { Invocation } from './bin.js'
+import type { Invocation } from './args.js'
 import { ensureHarness } from './lib/harness.js'
 import { supervise } from './lib/exec.js'
 import { dshHome, profileName } from './lib/paths.js'

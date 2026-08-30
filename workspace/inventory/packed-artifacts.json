@@ -1,0 +1,857 @@
+{
+  "generatedBy": "scripts/pack-release.mjs",
+  "note": "Packed with pnpm, which rewrites workspace: ranges. Nothing here has been published; these are local artifacts used for install testing.",
+  "packedAt": "2026-08-30",
+  "directory": ".release-artifacts",
+  "counts": {
+    "packages": 20,
+    "bytes": 1812934,
+    "files": 340
+  },
+  "packages": [
+    {
+      "file": "deepwatch-cli-0.1.0-preview.0.tgz",
+      "name": "@deepwatch/cli",
+      "version": "0.1.0-preview.0",
+      "bytes": 21341,
+      "sha256": "be557da89760f4280b9f89ca5683ae65e80c44ae7cb294eedbf40c847127d24c",
+      "fileCount": 22,
+      "unpackedTextBytes": 66296,
+      "dependencies": {
+        "@deepwatch/dsh-bundle": "^0.1.0-preview.0"
+      },
+      "peerDependencies": {
+        "@deepseek-ai/dsh": "0.1.1-rc.2"
+      },
+      "exports": [
+        ".",
+        "./package.json"
+      ],
+      "bin": [
+        "deepwatch"
+      ],
+      "files": [
+        "LICENSE",
+        "lib/args.d.ts",
+        "lib/args.js",
+        "lib/bin.d.ts",
+        "lib/bin.js",
+        "lib/doctor.d.ts",
+        "lib/doctor.js",
+        "lib/index.d.ts",
+        "lib/index.js",
+        "lib/launch.d.ts",
+        "lib/launch.js",
+        "lib/lib/exec.d.ts",
+        "lib/lib/exec.js",
+        "lib/lib/harness.d.ts",
+        "lib/lib/harness.js",
+        "lib/lib/paths.d.ts",
+        "lib/lib/paths.js",
+        "lib/setup.d.ts",
+        "lib/setup.js",
+        "lib/version.d.ts",
+        "lib/version.js",
+        "package.json"
+      ]
+    },
+    {
+      "file": "deepwatch-dsh-adapters-0.1.0-preview.0.tgz",
+      "name": "@deepwatch/dsh-adapters",
+      "version": "0.1.0-preview.0",
+      "bytes": 9251,
+      "sha256": "7355ca87e06dfb8684598edc725d96b14e4f1f3eb86e0219be24c31e69d3d9bb",
+      "fileCount": 8,
+      "unpackedTextBytes": 31215,
+      "dependencies": {
+        "@deepwatch/dsh-memory": "^0.1.0-preview.0",
+        "@deepwatch/dsh-wiki": "^0.1.0-preview.0"
+      },
+      "peerDependencies": {},
+      "exports": [
+        ".",
+        "./package.json"
+      ],
+      "bin": [],
+      "files": [
+        "LICENSE",
+        "lib/index.d.ts",
+        "lib/index.js",
+        "lib/llmwiki.d.ts",
+        "lib/llmwiki.js",
+        "lib/obsidian.d.ts",
+        "lib/obsidian.js",
+        "package.json"
+      ]
+    },
+    {
+      "file": "deepwatch-dsh-bundle-0.1.0-preview.0.tgz",
+      "name": "@deepwatch/dsh-bundle",
+      "version": "0.1.0-preview.0",
+      "bytes": 6763,
+      "sha256": "03a0fb1529a37d1b91f3dbfefd4a3e94aef65d285e75ec3b7afab8db021f82c8",
+      "fileCount": 8,
+      "unpackedTextBytes": 17391,
+      "dependencies": {
+        "@deepwatch/dsh-client-brand": "^0.1.0-preview.0",
+        "@deepwatch/dsh-client-memory": "^0.1.0-preview.0",
+        "@deepwatch/dsh-client-evidence": "^0.1.0-preview.0",
+        "@deepwatch/dsh-client-settings": "^0.1.0-preview.0",
+        "@deepwatch/dsh-client-remotes": "^0.1.0-preview.0",
+        "@deepwatch/dsh-library": "^0.1.0-preview.0",
+        "@deepwatch/dsh-live": "^0.1.0-preview.0",
+        "@deepwatch/dsh-memory": "^0.1.0-preview.0",
+        "@deepwatch/dsh-core-bridge": "^0.1.0-preview.0",
+        "@deepwatch/dsh-workspace": "^0.1.0-preview.0",
+        "@deepwatch/dsh-technology": "^0.1.0-preview.0",
+        "@deepwatch/dsh-tools": "^0.1.0-preview.0",
+        "@deepwatch/dsh-trajectory": "^0.1.0-preview.0"
+      },
+      "peerDependencies": {},
+      "exports": [],
+      "bin": [],
+      "files": [
+        "LICENSE",
+        "README.md",
+        "cordis.patch.yml",
+        "package.json",
+        "variants/browser.patch.yml",
+        "variants/document.patch.yml",
+        "variants/media.patch.yml",
+        "variants/memory.patch.yml"
+      ]
+    },
+    {
+      "file": "deepwatch-dsh-client-brand-0.1.0-preview.0.tgz",
+      "name": "@deepwatch/dsh-client-brand",
+      "version": "0.1.0-preview.0",
+      "bytes": 981630,
+      "sha256": "1764cef1e3dbf9713272782aec923f3991d32bf6ed540bfec3c8d52a1f3a15e9",
+      "fileCount": 25,
+      "unpackedTextBytes": 61918,
+      "dependencies": {},
+      "peerDependencies": {
+        "@deepseek-ai/cordis": "4.0.1",
+        "react": "^18.2.0"
+      },
+      "exports": [
+        ".",
+        "./client",
+        "./package.json"
+      ],
+      "bin": [],
+      "files": [
+        "LICENSE",
+        "assets/watch-orca-128.png",
+        "assets/watch-orca-16.png",
+        "assets/watch-orca-256.png",
+        "assets/watch-orca-32.png",
+        "assets/watch-orca-48.png",
+        "assets/watch-orca-512.png",
+        "assets/watch-orca-64.png",
+        "assets/watch-orca-master.png",
+        "assets/watch-orca.ico",
+        "lib/client.js",
+        "lib/client.js.map",
+        "lib/client/index.d.ts",
+        "lib/client/index.js",
+        "lib/client/index.js.map",
+        "lib/identity.d.ts",
+        "lib/identity.js",
+        "lib/identity.js.map",
+        "lib/index.d.ts",
+        "lib/index.js",
+        "lib/index.js.map",
+        "lib/mark.d.ts",
+        "lib/mark.js",
+        "lib/mark.js.map",
+        "package.json"
+      ]
+    },
+    {
+      "file": "deepwatch-dsh-client-evidence-0.1.0-preview.0.tgz",
+      "name": "@deepwatch/dsh-client-evidence",
+      "version": "0.1.0-preview.0",
+      "bytes": 76563,
+      "sha256": "fbf8d82128b660f6cf55536a5b6a47f97319624275323e6a0bfea39573753d50",
+      "fileCount": 28,
+      "unpackedTextBytes": 294077,
+      "dependencies": {
+        "@deepwatch/dsh-client-brand": "^0.1.0-preview.0",
+        "@deepwatch/dsh-trajectory": "^0.1.0-preview.0",
+        "@deepwatch/dsh-workspace": "^0.1.0-preview.0",
+        "@deepwatch/dsh-contracts": "^0.1.0-preview.0"
+      },
+      "peerDependencies": {
+        "@deepseek-ai/cordis": "4.0.1",
+        "react": "^18.2.0"
+      },
+      "exports": [
+        ".",
+        "./client",
+        "./compare",
+        "./compare-engine",
+        "./compare-mode",
+        "./package.json"
+      ],
+      "bin": [],
+      "files": [
+        "LICENSE",
+        "lib/client.js",
+        "lib/client.js.map",
+        "lib/client/CompareView.d.ts",
+        "lib/client/CompareView.js",
+        "lib/client/CompareView.js.map",
+        "lib/client/EvidenceInspector.d.ts",
+        "lib/client/EvidenceInspector.js",
+        "lib/client/EvidenceInspector.js.map",
+        "lib/client/SourceAnswerRow.d.ts",
+        "lib/client/SourceAnswerRow.js",
+        "lib/client/SourceAnswerRow.js.map",
+        "lib/client/VerdictRow.d.ts",
+        "lib/client/VerdictRow.js",
+        "lib/client/VerdictRow.js.map",
+        "lib/client/compare-mode.d.ts",
+        "lib/client/compare-mode.js",
+        "lib/client/compare-mode.js.map",
+        "lib/client/index.d.ts",
+        "lib/client/index.js",
+        "lib/client/index.js.map",
+        "lib/compare-engine.d.ts",
+        "lib/compare-engine.js",
+        "lib/compare-engine.js.map",
+        "lib/index.d.ts",
+        "lib/index.js",
+        "lib/index.js.map",
+        "package.json"
+      ]
+    },
+    {
+      "file": "deepwatch-dsh-client-memory-0.1.0-preview.0.tgz",
+      "name": "@deepwatch/dsh-client-memory",
+      "version": "0.1.0-preview.0",
+      "bytes": 32510,
+      "sha256": "006d2b5b92b0587063ec5dfe03ac57b973d4bdcd68abbaae7a9e4d8e84aab053",
+      "fileCount": 19,
+      "unpackedTextBytes": 115519,
+      "dependencies": {
+        "@deepwatch/dsh-client-brand": "^0.1.0-preview.0",
+        "@deepwatch/dsh-memory": "^0.1.0-preview.0"
+      },
+      "peerDependencies": {
+        "@deepseek-ai/cordis": "4.0.1",
+        "react": "^18.2.0"
+      },
+      "exports": [
+        ".",
+        "./client",
+        "./components",
+        "./memory-mode",
+        "./package.json"
+      ],
+      "bin": [],
+      "files": [
+        "LICENSE",
+        "lib/client.js",
+        "lib/client.js.map",
+        "lib/client/components.d.ts",
+        "lib/client/components.js",
+        "lib/client/components.js.map",
+        "lib/client/index.d.ts",
+        "lib/client/index.js",
+        "lib/client/index.js.map",
+        "lib/client/memory-mode.d.ts",
+        "lib/client/memory-mode.js",
+        "lib/client/memory-mode.js.map",
+        "lib/index.d.ts",
+        "lib/index.js",
+        "lib/index.js.map",
+        "lib/views.d.ts",
+        "lib/views.js",
+        "lib/views.js.map",
+        "package.json"
+      ]
+    },
+    {
+      "file": "deepwatch-dsh-client-remotes-0.1.0-preview.0.tgz",
+      "name": "@deepwatch/dsh-client-remotes",
+      "version": "0.1.0-preview.0",
+      "bytes": 139265,
+      "sha256": "11f8b604ea0041b09823b6d0b5301ddfff0da86ee1ecebd5508355b8d9099061",
+      "fileCount": 10,
+      "unpackedTextBytes": 690196,
+      "dependencies": {
+        "@deepwatch/dsh-library": "^0.1.0-preview.0",
+        "@deepwatch/dsh-tools": "^0.1.0-preview.0"
+      },
+      "peerDependencies": {
+        "@deepseek-ai/cordis": "4.0.1"
+      },
+      "exports": [
+        ".",
+        "./client",
+        "./package.json"
+      ],
+      "bin": [],
+      "files": [
+        "LICENSE",
+        "lib/client.js",
+        "lib/client.js.map",
+        "lib/client/index.d.ts",
+        "lib/client/index.js",
+        "lib/client/index.js.map",
+        "lib/index.d.ts",
+        "lib/index.js",
+        "lib/index.js.map",
+        "package.json"
+      ]
+    },
+    {
+      "file": "deepwatch-dsh-client-settings-0.1.0-preview.0.tgz",
+      "name": "@deepwatch/dsh-client-settings",
+      "version": "0.1.0-preview.0",
+      "bytes": 65952,
+      "sha256": "c31667ad2d485ad2575cc8e80ad5d5b15af1feb8f6475fb5ac49696e44fb8f4a",
+      "fileCount": 25,
+      "unpackedTextBytes": 239309,
+      "dependencies": {
+        "@deepwatch/dsh-client-brand": "^0.1.0-preview.0",
+        "@deepwatch/dsh-technology": "^0.1.0-preview.0"
+      },
+      "peerDependencies": {
+        "@deepseek-ai/cordis": "4.0.1",
+        "@deepseek-ai/dsh-client-ui-primitives": "0.1.1-rc.2",
+        "react": "^18.2.0"
+      },
+      "exports": [
+        ".",
+        "./client",
+        "./components",
+        "./package.json"
+      ],
+      "bin": [],
+      "files": [
+        "LICENSE",
+        "lib/client.js",
+        "lib/client.js.map",
+        "lib/client/components.d.ts",
+        "lib/client/components.js",
+        "lib/client/components.js.map",
+        "lib/client/index.d.ts",
+        "lib/client/index.js",
+        "lib/client/index.js.map",
+        "lib/client/onboarding.d.ts",
+        "lib/client/onboarding.js",
+        "lib/client/onboarding.js.map",
+        "lib/client/readiness.d.ts",
+        "lib/client/readiness.js",
+        "lib/client/readiness.js.map",
+        "lib/index.d.ts",
+        "lib/index.js",
+        "lib/index.js.map",
+        "lib/ocr-measured.d.ts",
+        "lib/ocr-measured.js",
+        "lib/ocr-measured.js.map",
+        "lib/providers.d.ts",
+        "lib/providers.js",
+        "lib/providers.js.map",
+        "package.json"
+      ]
+    },
+    {
+      "file": "deepwatch-dsh-contracts-0.1.0-preview.0.tgz",
+      "name": "@deepwatch/dsh-contracts",
+      "version": "0.1.0-preview.0",
+      "bytes": 39805,
+      "sha256": "1caae636c0e13a5e0c7c99bf6160ffac3080dd0747db890dface48782c2b1ebf",
+      "fileCount": 20,
+      "unpackedTextBytes": 128622,
+      "dependencies": {},
+      "peerDependencies": {},
+      "exports": [
+        ".",
+        "./identity",
+        "./package.json",
+        "./query",
+        "./query/validate",
+        "./query/wire"
+      ],
+      "bin": [],
+      "files": [
+        "LICENSE",
+        "lib/approval.d.ts",
+        "lib/approval.js",
+        "lib/digests.d.ts",
+        "lib/digests.js",
+        "lib/identity.d.ts",
+        "lib/identity.js",
+        "lib/index.d.ts",
+        "lib/index.js",
+        "lib/language.d.ts",
+        "lib/language.js",
+        "lib/presentation.d.ts",
+        "lib/presentation.js",
+        "lib/query.d.ts",
+        "lib/query.js",
+        "lib/query/validate.d.ts",
+        "lib/query/validate.js",
+        "lib/query/wire.d.ts",
+        "lib/query/wire.js",
+        "package.json"
+      ]
+    },
+    {
+      "file": "deepwatch-dsh-core-bridge-0.1.0-preview.0.tgz",
+      "name": "@deepwatch/dsh-core-bridge",
+      "version": "0.1.0-preview.0",
+      "bytes": 19199,
+      "sha256": "53038c81aed5e7c9e180cf8a6de3d90095a126abc81135c2e8c46b648b5d6be0",
+      "fileCount": 10,
+      "unpackedTextBytes": 63779,
+      "dependencies": {
+        "@deepwatch/dsh-contracts": "^0.1.0-preview.0"
+      },
+      "peerDependencies": {
+        "@deepseek-ai/cordis": "4.0.1",
+        "@deepseek-ai/schemastery": "^3.18.1"
+      },
+      "exports": [
+        ".",
+        "./package.json"
+      ],
+      "bin": [],
+      "files": [
+        "LICENSE",
+        "lib/index.d.ts",
+        "lib/index.js",
+        "lib/transport.d.ts",
+        "lib/transport.js",
+        "lib/transport/mock.d.ts",
+        "lib/transport/mock.js",
+        "lib/transport/stdio.d.ts",
+        "lib/transport/stdio.js",
+        "package.json"
+      ]
+    },
+    {
+      "file": "deepwatch-dsh-library-0.1.0-preview.0.tgz",
+      "name": "@deepwatch/dsh-library",
+      "version": "0.1.0-preview.0",
+      "bytes": 94882,
+      "sha256": "41a866bd9e8a118f8f89d7e8e5c72e26dd9f021784fcbd69523c06c7b2cbca46",
+      "fileCount": 22,
+      "unpackedTextBytes": 324289,
+      "dependencies": {
+        "@deepwatch/dsh-client-brand": "^0.1.0-preview.0",
+        "@deepwatch/dsh-technology": "^0.1.0-preview.0",
+        "@deepwatch/dsh-workspace": "^0.1.0-preview.0",
+        "@deepwatch/dsh-contracts": "^0.1.0-preview.0"
+      },
+      "peerDependencies": {
+        "@deepseek-ai/cordis": "4.0.1",
+        "@deepseek-ai/dsh-typert-protocol": "0.1.1-rc.2",
+        "react": "^18.2.0"
+      },
+      "exports": [
+        ".",
+        "./client",
+        "./components",
+        "./index-store",
+        "./library-mode",
+        "./package.json",
+        "./read-plane",
+        "./search-view"
+      ],
+      "bin": [],
+      "files": [
+        "LICENSE",
+        "lib/client.js",
+        "lib/client.js.map",
+        "lib/client/components.d.ts",
+        "lib/client/components.js",
+        "lib/client/index.d.ts",
+        "lib/client/index.js",
+        "lib/client/library-mode.d.ts",
+        "lib/client/library-mode.js",
+        "lib/client/read-plane.d.ts",
+        "lib/client/read-plane.js",
+        "lib/client/search-view.d.ts",
+        "lib/client/search-view.js",
+        "lib/index-store.d.ts",
+        "lib/index-store.js",
+        "lib/index.d.ts",
+        "lib/index.js",
+        "lib/search.d.ts",
+        "lib/search.js",
+        "lib/sources.d.ts",
+        "lib/sources.js",
+        "package.json"
+      ]
+    },
+    {
+      "file": "deepwatch-dsh-live-0.1.0-preview.0.tgz",
+      "name": "@deepwatch/dsh-live",
+      "version": "0.1.0-preview.0",
+      "bytes": 52000,
+      "sha256": "2742f2864bac6a21f836814ba808641488ed9b4a3c2dc8d6152cc2d94ee92ba7",
+      "fileCount": 22,
+      "unpackedTextBytes": 181524,
+      "dependencies": {
+        "@deepwatch/dsh-client-brand": "^0.1.0-preview.0",
+        "@deepwatch/dsh-contracts": "^0.1.0-preview.0",
+        "@deepwatch/dsh-workspace": "^0.1.0-preview.0"
+      },
+      "peerDependencies": {
+        "@deepseek-ai/cordis": "4.0.1",
+        "react": "^18.2.0"
+      },
+      "exports": [
+        ".",
+        "./capture",
+        "./client",
+        "./components",
+        "./live-mode",
+        "./package.json",
+        "./sources-catalogue",
+        "./synthetic-source"
+      ],
+      "bin": [],
+      "files": [
+        "LICENSE",
+        "lib/capture.d.ts",
+        "lib/capture.js",
+        "lib/client.js",
+        "lib/client.js.map",
+        "lib/client/components.d.ts",
+        "lib/client/components.js",
+        "lib/client/index.d.ts",
+        "lib/client/index.js",
+        "lib/client/live-mode.d.ts",
+        "lib/client/live-mode.js",
+        "lib/index.d.ts",
+        "lib/index.js",
+        "lib/session.d.ts",
+        "lib/session.js",
+        "lib/sources-catalogue.d.ts",
+        "lib/sources-catalogue.js",
+        "lib/synthetic-source.d.ts",
+        "lib/synthetic-source.js",
+        "lib/triggers.d.ts",
+        "lib/triggers.js",
+        "package.json"
+      ]
+    },
+    {
+      "file": "deepwatch-dsh-memory-0.1.0-preview.0.tgz",
+      "name": "@deepwatch/dsh-memory",
+      "version": "0.1.0-preview.0",
+      "bytes": 40477,
+      "sha256": "8ed6bc51cbc61af578882c3d53d3c56800d92e7cbe9ede56d30dc16715a8c772",
+      "fileCount": 18,
+      "unpackedTextBytes": 131445,
+      "dependencies": {},
+      "peerDependencies": {
+        "@deepseek-ai/cordis": "4.0.1",
+        "@deepseek-ai/schemastery": "^3.18.1"
+      },
+      "exports": [
+        ".",
+        "./package.json",
+        "./records",
+        "./tools"
+      ],
+      "bin": [],
+      "files": [
+        "LICENSE",
+        "lib/compiler.d.ts",
+        "lib/compiler.js",
+        "lib/index.d.ts",
+        "lib/index.js",
+        "lib/learning.d.ts",
+        "lib/learning.js",
+        "lib/ledger.d.ts",
+        "lib/ledger.js",
+        "lib/projector.d.ts",
+        "lib/projector.js",
+        "lib/records.d.ts",
+        "lib/records.js",
+        "lib/replay.d.ts",
+        "lib/replay.js",
+        "lib/tools.d.ts",
+        "lib/tools.js",
+        "package.json"
+      ]
+    },
+    {
+      "file": "deepwatch-dsh-sdk-0.1.0-preview.0.tgz",
+      "name": "@deepwatch/dsh-sdk",
+      "version": "0.1.0-preview.0",
+      "bytes": 10615,
+      "sha256": "6ee3258bc5a3e31b4d3607e52dc99db752d4153b06cdd0a5914c8db877a3ae54",
+      "fileCount": 10,
+      "unpackedTextBytes": 35377,
+      "dependencies": {
+        "@deepwatch/dsh-contracts": "^0.1.0-preview.0",
+        "@deepwatch/dsh-trajectory": "^0.1.0-preview.0",
+        "@deepwatch/dsh-technology": "^0.1.0-preview.0"
+      },
+      "peerDependencies": {
+        "react": "^18.2.0"
+      },
+      "exports": [
+        ".",
+        "./client-example",
+        "./package.json"
+      ],
+      "bin": [],
+      "files": [
+        "LICENSE",
+        "lib/capability.d.ts",
+        "lib/capability.js",
+        "lib/client/example.d.ts",
+        "lib/client/example.js",
+        "lib/example.d.ts",
+        "lib/example.js",
+        "lib/index.d.ts",
+        "lib/index.js",
+        "package.json"
+      ]
+    },
+    {
+      "file": "deepwatch-dsh-technology-0.1.0-preview.0.tgz",
+      "name": "@deepwatch/dsh-technology",
+      "version": "0.1.0-preview.0",
+      "bytes": 31641,
+      "sha256": "731b34b73f0b01d4b5bca523b4055cef532e8f9022ec1caecfe9e9e70137cfe4",
+      "fileCount": 14,
+      "unpackedTextBytes": 102628,
+      "dependencies": {},
+      "peerDependencies": {
+        "@deepseek-ai/cordis": "4.0.1",
+        "@deepseek-ai/schemastery": "^3.18.1"
+      },
+      "exports": [
+        ".",
+        "./descriptors",
+        "./package.json"
+      ],
+      "bin": [],
+      "files": [
+        "LICENSE",
+        "lib/descriptor.d.ts",
+        "lib/descriptor.js",
+        "lib/descriptors.d.ts",
+        "lib/descriptors.js",
+        "lib/index.d.ts",
+        "lib/index.js",
+        "lib/ocr-qualification.d.ts",
+        "lib/ocr-qualification.js",
+        "lib/ocr-worker.d.ts",
+        "lib/ocr-worker.js",
+        "lib/ocr.d.ts",
+        "lib/ocr.js",
+        "package.json"
+      ]
+    },
+    {
+      "file": "deepwatch-dsh-tenancy-0.1.0-preview.0.tgz",
+      "name": "@deepwatch/dsh-tenancy",
+      "version": "0.1.0-preview.0",
+      "bytes": 22348,
+      "sha256": "6753a163493104d27b91da4b0f41f3a5814e0ce7c4ec05d5b7cc9db911780122",
+      "fileCount": 14,
+      "unpackedTextBytes": 68967,
+      "dependencies": {
+        "@deepwatch/dsh-contracts": "^0.1.0-preview.0"
+      },
+      "peerDependencies": {},
+      "exports": [
+        ".",
+        "./package.json"
+      ],
+      "bin": [],
+      "files": [
+        "LICENSE",
+        "lib/audit.d.ts",
+        "lib/audit.js",
+        "lib/collaboration.d.ts",
+        "lib/collaboration.js",
+        "lib/identity.d.ts",
+        "lib/identity.js",
+        "lib/index.d.ts",
+        "lib/index.js",
+        "lib/rbac.d.ts",
+        "lib/rbac.js",
+        "lib/workers.d.ts",
+        "lib/workers.js",
+        "package.json"
+      ]
+    },
+    {
+      "file": "deepwatch-dsh-tools-0.1.0-preview.0.tgz",
+      "name": "@deepwatch/dsh-tools",
+      "version": "0.1.0-preview.0",
+      "bytes": 42556,
+      "sha256": "96856e47b81cfdadd05a8e71c8c7bc11bc724295e4a3df76731cf634d5a66160",
+      "fileCount": 21,
+      "unpackedTextBytes": 161596,
+      "dependencies": {
+        "@deepwatch/dsh-core-bridge": "^0.1.0-preview.0",
+        "@deepwatch/dsh-contracts": "^0.1.0-preview.0",
+        "@deepwatch/dsh-memory": "^0.1.0-preview.0",
+        "@deepwatch/dsh-library": "^0.1.0-preview.0"
+      },
+      "peerDependencies": {
+        "@deepseek-ai/cordis": "4.0.1",
+        "@deepseek-ai/dsh-system-prompt": "0.1.1-rc.2",
+        "@deepseek-ai/dsh-tools": "0.1.1-rc.2",
+        "@deepseek-ai/dsh-typert-protocol": "0.1.1-rc.2",
+        "@deepseek-ai/schemastery": "^3.18.1",
+        "zod": "^4.5.2"
+      },
+      "exports": [
+        ".",
+        "./package.json",
+        "./remote",
+        "./typert"
+      ],
+      "bin": [],
+      "files": [
+        "LICENSE",
+        "lib/browser.d.ts",
+        "lib/browser.js",
+        "lib/index.d.ts",
+        "lib/index.js",
+        "lib/library-generations.d.ts",
+        "lib/library-generations.js",
+        "lib/library-search.d.ts",
+        "lib/library-search.js",
+        "lib/memory.d.ts",
+        "lib/memory.js",
+        "lib/read-plane.d.ts",
+        "lib/read-plane.js",
+        "lib/sensory.d.ts",
+        "lib/sensory.js",
+        "lib/typert.host.d.ts",
+        "lib/typert.host.js",
+        "lib/typert.remote-client.d.ts",
+        "lib/typert.remote-client.d.ts.map",
+        "lib/typert.remote-client.js",
+        "package.json"
+      ]
+    },
+    {
+      "file": "deepwatch-dsh-trajectory-0.1.0-preview.0.tgz",
+      "name": "@deepwatch/dsh-trajectory",
+      "version": "0.1.0-preview.0",
+      "bytes": 24092,
+      "sha256": "f1cd40bf69107227c870e135c030b7560d4738b8b965759130a8dd82be2efb83",
+      "fileCount": 16,
+      "unpackedTextBytes": 81772,
+      "dependencies": {
+        "@deepwatch/dsh-contracts": "^0.1.0-preview.0"
+      },
+      "peerDependencies": {},
+      "exports": [
+        ".",
+        "./package.json"
+      ],
+      "bin": [],
+      "files": [
+        "LICENSE",
+        "lib/compare.d.ts",
+        "lib/compare.js",
+        "lib/definition.d.ts",
+        "lib/definition.js",
+        "lib/events.d.ts",
+        "lib/events.js",
+        "lib/index.d.ts",
+        "lib/index.js",
+        "lib/projection.d.ts",
+        "lib/projection.js",
+        "lib/selection-store.d.ts",
+        "lib/selection-store.js",
+        "lib/selection.d.ts",
+        "lib/selection.js",
+        "package.json"
+      ]
+    },
+    {
+      "file": "deepwatch-dsh-wiki-0.1.0-preview.0.tgz",
+      "name": "@deepwatch/dsh-wiki",
+      "version": "0.1.0-preview.0",
+      "bytes": 7372,
+      "sha256": "26c23339e6bdf4d46a4edc03b00a0b20d3ef5457fc166a564bb2a3a13c7d7aa1",
+      "fileCount": 6,
+      "unpackedTextBytes": 23870,
+      "dependencies": {
+        "@deepwatch/dsh-memory": "^0.1.0-preview.0"
+      },
+      "peerDependencies": {},
+      "exports": [
+        ".",
+        "./package.json"
+      ],
+      "bin": [],
+      "files": [
+        "LICENSE",
+        "lib/index.d.ts",
+        "lib/index.js",
+        "lib/projection.d.ts",
+        "lib/projection.js",
+        "package.json"
+      ]
+    },
+    {
+      "file": "deepwatch-dsh-workspace-0.1.0-preview.0.tgz",
+      "name": "@deepwatch/dsh-workspace",
+      "version": "0.1.0-preview.0",
+      "bytes": 94672,
+      "sha256": "f4eafa7c8b557725d4c420835cf7c84ae2e0b793460c39a96bc0e5461cbfbba6",
+      "fileCount": 22,
+      "unpackedTextBytes": 332064,
+      "dependencies": {
+        "@deepwatch/dsh-client-brand": "^0.1.0-preview.0",
+        "@deepwatch/dsh-trajectory": "^0.1.0-preview.0",
+        "@deepwatch/dsh-contracts": "^0.1.0-preview.0"
+      },
+      "peerDependencies": {
+        "@deepseek-ai/cordis": "4.0.1",
+        "react": "^18.2.0"
+      },
+      "exports": [
+        ".",
+        "./client",
+        "./components",
+        "./mode-views",
+        "./package.json",
+        "./surface"
+      ],
+      "bin": [],
+      "files": [
+        "LICENSE",
+        "lib/client.js",
+        "lib/client.js.map",
+        "lib/client/components.d.ts",
+        "lib/client/components.js",
+        "lib/client/index.d.ts",
+        "lib/client/index.js",
+        "lib/client/mode-views.d.ts",
+        "lib/client/mode-views.js",
+        "lib/client/surface.d.ts",
+        "lib/client/surface.js",
+        "lib/composer.d.ts",
+        "lib/composer.js",
+        "lib/index.d.ts",
+        "lib/index.js",
+        "lib/modes.d.ts",
+        "lib/modes.js",
+        "lib/shell.d.ts",
+        "lib/shell.js",
+        "lib/timeline.d.ts",
+        "lib/timeline.js",
+        "package.json"
+      ]
+    }
+  ]
+}

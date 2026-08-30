@@ -19,3 +19,6 @@ upstream/deepseek-harness/
 
 # Local visual-QA evidence. Captured from a running app, not a build input.
 qa/
+
+# Local pack output. Artifacts, not sources; the inventory is the record.
+.release-artifacts/

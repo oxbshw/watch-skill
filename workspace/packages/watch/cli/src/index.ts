@@ -10,7 +10,7 @@
 
 export { doctor, renderDoctor } from './doctor.js'
 export type { Availability, DoctorReport, Finding } from './doctor.js'
-export { parse } from './bin.js'
-export type { Invocation } from './bin.js'
+export { parse, USAGE } from './args.js'
+export type { Invocation } from './args.js'
 export { deepwatchHome, dshHome, profileName, stateRoot, watchCoreBin } from './lib/paths.js'
 export { VERSION } from './version.js'

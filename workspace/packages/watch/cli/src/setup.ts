@@ -33,7 +33,7 @@ import { existsSync, mkdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { createInterface } from 'node:readline/promises'
 
-import type { Invocation } from './bin.js'
+import type { Invocation } from './args.js'
 import { ensureHarness, installPlan, receiptPath, renderPlan } from './lib/harness.js'
 import { run } from './lib/exec.js'
 import { deepwatchHome, dshHome, profileName } from './lib/paths.js'

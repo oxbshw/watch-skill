@@ -4,6 +4,23 @@
   "description": "Host plugin: Watch capabilities registered as DeepSeek Harness agent tools",
   "type": "module",
   "license": "MIT",
+  "author": "Sayed Allam",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/oxbshw/watch-skill.git",
+    "directory": "workspace/packages/watch/tools"
+  },
+  "homepage": "https://github.com/oxbshw/watch-skill/tree/main/workspace#readme",
+  "bugs": {
+    "url": "https://github.com/oxbshw/watch-skill/issues"
+  },
+  "keywords": [
+    "deepwatch",
+    "deepseek-harness",
+    "watch-skill",
+    "tools",
+    "agent"
+  ],
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
   "exports": {
@@ -30,6 +47,13 @@
     "lib/typert.remote-client.d.ts",
     "lib/typert.remote-client.d.ts.map"
   ],
+  "sideEffects": false,
+  "engines": {
+    "node": "^22.19.0 || >=24.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "dependencies": {
     "@deepwatch/dsh-contracts": "workspace:^",
     "@deepwatch/dsh-core-bridge": "workspace:^",

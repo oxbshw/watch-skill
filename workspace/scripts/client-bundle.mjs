@@ -35,7 +35,49 @@
 import { readFile } from 'node:fs/promises'
 import { readFileSync } from 'node:fs'
 import { basename, dirname, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { transform } from 'lightningcss'
+
+/** This workspace, absolutely — the one thing in a build that must not ship. */
+const WORKSPACE = resolve(dirname(fileURLToPath(import.meta.url)), '..')
+
+/**
+ * Rewrite the build machine's absolute paths out of the emitted bundle.
+ *
+ * Rolldown labels each inlined module with a `//#region <id>` comment, and an
+ * id is an absolute path. The comments are worth keeping — they are how a
+ * person reads a bundle that has been through a build — but the half of them
+ * that names somebody's home directory is not, and a published artifact is a
+ * poor place to find out it was there.
+ *
+ * Both spellings, because a path that reaches a JSON string arrives with its
+ * separators doubled.
+ */
+function withoutBuildPaths() {
+  const prefixes = [
+    `${WORKSPACE}\\`,
+    `${WORKSPACE}/`,
+    `${WORKSPACE.replaceAll('\\', '\\\\')}\\\\`,
+  ]
+  /** The path that follows a prefix, with its separators made portable. */
+  const head = segment => {
+    const stop = /[\s"'`,;)]/.exec(segment)
+    const at = stop === null ? segment.length : stop.index
+    return segment.slice(0, at).replaceAll('\\\\', '/').replaceAll('\\', '/') + segment.slice(at)
+  }
+  return {
+    name: 'watch-client-bundle-paths',
+    renderChunk(code) {
+      let out = code
+      for (const prefix of prefixes) {
+        if (!out.includes(prefix)) continue
+        const [first, ...rest] = out.split(prefix)
+        out = first + rest.map(head).join('')
+      }
+      return out === code ? null : { code: out, map: null }
+    },
+  }
+}
 
 /**
  * Specifiers the shell seeds into the module table for every bundle.
@@ -193,6 +235,7 @@ export function watchClientBundle(packageDir) {
           return styleModule(id, file, code.toString())
         },
       },
+      withoutBuildPaths(),
     ],
     outputOptions: {
       entryFileNames: 'client.js',

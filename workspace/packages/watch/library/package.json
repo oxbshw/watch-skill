@@ -1,9 +1,35 @@
 {
   "name": "@deepwatch/dsh-library",
   "version": "0.1.0-preview.0",
-  "description": "Library \u2014 sources, revisions, index state, search, facets and collections",
+  "description": "Library — sources, revisions, index state, search, facets and collections",
   "type": "module",
   "license": "MIT",
+  "author": "Sayed Allam",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/oxbshw/watch-skill.git",
+    "directory": "workspace/packages/watch/library"
+  },
+  "homepage": "https://github.com/oxbshw/watch-skill/tree/main/workspace#readme",
+  "bugs": {
+    "url": "https://github.com/oxbshw/watch-skill/issues"
+  },
+  "keywords": [
+    "deepwatch",
+    "deepseek-harness",
+    "watch-skill",
+    "library",
+    "index"
+  ],
+  "dsh": {
+    "client": {
+      "inject": [
+        "@deepwatch/dsh-client-remotes",
+        "@deepseek-ai/dsh-client-ui-slots"
+      ],
+      "platform": "web"
+    }
+  },
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
   "exports": {
@@ -37,15 +63,6 @@
       "default": "./lib/client/search-view.js"
     }
   },
-  "dsh": {
-    "client": {
-      "inject": [
-        "@deepwatch/dsh-client-remotes",
-        "@deepseek-ai/dsh-client-ui-slots"
-      ],
-      "platform": "web"
-    }
-  },
   "files": [
     "lib/index.js",
     "lib/client.js",
@@ -53,8 +70,21 @@
     "lib/**/*.js",
     "lib/**/*.d.ts"
   ],
+  "sideEffects": false,
+  "engines": {
+    "node": "^22.19.0 || >=24.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "bundle": "tsdown"
+  },
+  "dependencies": {
+    "@deepwatch/dsh-client-brand": "workspace:^",
+    "@deepwatch/dsh-contracts": "workspace:^",
+    "@deepwatch/dsh-technology": "workspace:^",
+    "@deepwatch/dsh-workspace": "workspace:^"
   },
   "peerDependencies": {
     "@deepseek-ai/cordis": "catalog:",
@@ -67,11 +97,5 @@
     "@deepseek-ai/dsh-typert-protocol": "catalog:",
     "@types/react": "~18.3.1",
     "react": "^18.2.0"
-  },
-  "dependencies": {
-    "@deepwatch/dsh-client-brand": "workspace:^",
-    "@deepwatch/dsh-contracts": "workspace:^",
-    "@deepwatch/dsh-technology": "workspace:^",
-    "@deepwatch/dsh-workspace": "workspace:^"
   }
 }

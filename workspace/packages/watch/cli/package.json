@@ -4,6 +4,7 @@
   "description": "DeepWatch — set up and run the agent workspace built on DeepSeek Harness and powered by Watch Skill",
   "type": "module",
   "license": "MIT",
+  "author": "Sayed Allam",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/oxbshw/watch-skill.git",
@@ -15,11 +16,10 @@
   },
   "keywords": [
     "deepwatch",
-    "watch-skill",
     "deepseek-harness",
-    "agent",
-    "evidence",
-    "verification"
+    "watch-skill",
+    "cli",
+    "agent"
   ],
   "bin": {
     "deepwatch": "./lib/bin.js"

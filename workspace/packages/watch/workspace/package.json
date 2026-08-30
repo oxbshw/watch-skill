@@ -1,9 +1,34 @@
 {
   "name": "@deepwatch/dsh-workspace",
   "version": "0.1.0-preview.0",
-  "description": "Browser half: the DeepWatch product shell \u2014 modes, header, inspector and sensory timeline",
+  "description": "Browser half: the DeepWatch product shell — modes, header, inspector and sensory timeline",
   "type": "module",
   "license": "MIT",
+  "author": "Sayed Allam",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/oxbshw/watch-skill.git",
+    "directory": "workspace/packages/watch/workspace"
+  },
+  "homepage": "https://github.com/oxbshw/watch-skill/tree/main/workspace#readme",
+  "bugs": {
+    "url": "https://github.com/oxbshw/watch-skill/issues"
+  },
+  "keywords": [
+    "deepwatch",
+    "deepseek-harness",
+    "watch-skill",
+    "workspace",
+    "modes"
+  ],
+  "dsh": {
+    "client": {
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-slots"
+      ],
+      "platform": "web"
+    }
+  },
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
   "exports": {
@@ -29,14 +54,6 @@
       "default": "./lib/client/surface.js"
     }
   },
-  "dsh": {
-    "client": {
-      "inject": [
-        "@deepseek-ai/dsh-client-ui-slots"
-      ],
-      "platform": "web"
-    }
-  },
   "files": [
     "lib/index.js",
     "lib/client.js",
@@ -44,8 +61,20 @@
     "lib/**/*.js",
     "lib/**/*.d.ts"
   ],
+  "sideEffects": false,
+  "engines": {
+    "node": "^22.19.0 || >=24.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "bundle": "tsdown"
+  },
+  "dependencies": {
+    "@deepwatch/dsh-client-brand": "workspace:^",
+    "@deepwatch/dsh-contracts": "workspace:^",
+    "@deepwatch/dsh-trajectory": "workspace:^"
   },
   "peerDependencies": {
     "@deepseek-ai/cordis": "catalog:",
@@ -56,10 +85,5 @@
     "@deepseek-ai/dsh-client-ui-slots": "catalog:",
     "@types/react": "~18.3.1",
     "react": "^18.2.0"
-  },
-  "dependencies": {
-    "@deepwatch/dsh-client-brand": "workspace:^",
-    "@deepwatch/dsh-contracts": "workspace:^",
-    "@deepwatch/dsh-trajectory": "workspace:^"
   }
 }
