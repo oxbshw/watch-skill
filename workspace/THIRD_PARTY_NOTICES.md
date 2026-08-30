@@ -60,14 +60,23 @@ That closure reaches `sharp`, by way of `@deepseek-ai/dsh-base` and
 beside sharp's `.node` addon, while its own `LICENSE` file carries only the
 Apache-2.0 text. The Apache half is sharp's glue code; the LGPL half is libvips.
 
-Thirty-one packages in that closure carry a licence outside this distribution's
-allowlist — sharp's platform binaries, the `@img/sharp-libvips-*` payloads,
-`@emnapi/*`, DeepSeek's Linux landlock addon, and koffi's OpenBSD binaries.
-Each is reviewed individually in `inventory/licence-review.json`: what it is,
-how it arrives, and whether DeepWatch redistributes it. `scripts/gen-sbom.mjs`
-fails on any package that is neither allowed nor reviewed, and on any reviewed
-package whose declared licence later changes. The allowlist itself was not
-widened to make that gate pass.
+Twenty-six packages in that closure carry a licence outside this distribution's
+allowlist: sharp's platform binaries and the `@img/sharp-libvips-*` payloads,
+all of them LGPL by way of libvips. Each is reviewed individually in
+`inventory/licence-review.json`: what it is, how it arrives, and whether
+DeepWatch redistributes it. `scripts/gen-sbom.mjs` fails on any package that is
+neither allowed nor reviewed, and on any reviewed package that declares a
+licence the review does not list. The allowlist itself was not widened to make
+that gate pass.
+
+The review had to be written from more than one machine. A package manager
+installs only the current platform's optional packages, so a licence is
+readable only where the package is installed: `@img/sharp-libvips-linux-x64`
+declares `LGPL-3.0-or-later` on Linux and nothing at all on Windows, and
+`@deepseek-ai/node-addon-landlock-run-linux-x64` declares `BSD-3-Clause` where
+it exists at all. Every value recorded is one some platform actually reports,
+and the SBOM records the same one on every machine rather than whichever the
+generator's host happened to see.
 
 **One decision remains open, and it is the project owner's to make.** DeepWatch
 redistributes no libvips binary today, so no LGPL obligation attaches to

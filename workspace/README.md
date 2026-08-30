@@ -146,7 +146,7 @@ leaves a receipt saying what was written and how to remove it.
 That closure includes prebuilt native binaries, one of them under
 `Apache-2.0 AND LGPL-3.0-or-later`. DeepWatch redistributes none of them: the
 user's own package manager fetches them under their publishers' terms. The
-thirty-one packages whose licences fall outside this distribution's allowlist
+twenty-six packages whose licences fall outside this distribution's allowlist
 are reviewed individually in
 [`inventory/licence-review.json`](inventory/licence-review.json), and
 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) names the LGPL component and
