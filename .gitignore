@@ -61,3 +61,4 @@ t.xml
 
 # Local pytest transcript, written when diagnosing a slow run.
 .pytest-run.log
+.clean-build.log

@@ -5,6 +5,7 @@ functional gap). Model size auto-selects from available RAM/VRAM.
 """
 from __future__ import annotations
 
+import os
 import shutil
 import subprocess
 import sys
@@ -63,7 +64,21 @@ def has_cuda_gpu() -> bool:
 
 
 def pick_model_size() -> str:
-    """Auto-select a faster-whisper model for this machine."""
+    """Choose a faster-whisper model: what was asked for, else what fits.
+
+    ``WATCHSKILL_WHISPER_MODEL`` wins over the probe. That variable was already
+    named in the out-of-memory advice below — "try a smaller model
+    (WATCHSKILL_WHISPER_MODEL=tiny)" — and nothing read it, so the one piece of
+    advice that failure path offered did nothing at all.
+
+    It is also what makes a run reproducible. Left to the probe, a machine with
+    a CUDA GPU loads ``large-v3`` and one without loads ``tiny`` — a sensible
+    default for a person, and a poor one for a test suite, which is why the
+    offline suite pins it.
+    """
+    requested = os.environ.get("WATCHSKILL_WHISPER_MODEL", "").strip()
+    if requested:
+        return requested
     if has_cuda_gpu():
         return _GPU_MODEL
     ram = _available_ram_gib()
