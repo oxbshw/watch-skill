@@ -271,12 +271,12 @@ describe('failure is reported as what it was, and never retried', () => {
     // `Error: write EPIPE` out of `OcrWorker.stop`, and failed an otherwise
     // green pipeline.
     //
-    // What this asserts is the property, not the race. Whether a write to a
-    // dead child's stdin raises EPIPE depends on the platform and on how
-    // quickly the pipe tears down — it does not raise here on Windows, with or
-    // without the guard in `send`. So this pins the contract that stopping
-    // something already stopped must not reject, and it is a Linux run that
-    // exercises the path where that contract was actually broken.
+    // This asserts the property against a real process. It cannot fail on a
+    // platform where a write to a dead child's stdin does not raise, which is
+    // why it is not the regression: `ocr-worker-stdin.test.mjs` injects the
+    // stream boundary and reproduces every state deterministically, on every
+    // platform. Both are worth having — that one proves the guard, this one
+    // proves the guard is reached by the real lifecycle.
     const engine = worker('crash')
     await engine.start()
     const result = await engine.recognize({})

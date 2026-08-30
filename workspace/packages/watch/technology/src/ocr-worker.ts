@@ -37,7 +37,7 @@
  * @module @watchskill/dsh-technology/ocr-worker
  */
 
-import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process'
+import { spawn } from 'node:child_process'
 import type { TechnologyDescriptor } from './descriptor.js'
 
 /**
@@ -154,6 +154,39 @@ export interface WorkerOptions {
   readonly cancelGraceMs: number
   /** Clock, injectable so tests are not timing-dependent. */
   readonly now?: () => string
+  /**
+   * How the child is started, injectable so the stream boundary is testable.
+   *
+   * The defect this exists for is not reproducible by running a real worker:
+   * whether writing to a dead child's stdin raises EPIPE depends on the
+   * platform and on how quickly the pipe tears down, so a test that starts a
+   * process and kills it passes on Windows with the guard removed. Injecting
+   * the boundary makes "the pipe is gone" a state a test can simply be in.
+   */
+  readonly spawnProcess?: (spawn: WorkerSpawn) => WorkerProcess
+}
+
+/**
+ * The part of a child process this supervisor uses.
+ *
+ * Narrower than `ChildProcessWithoutNullStreams` on purpose: it is the
+ * contract a test has to satisfy, and every member here is one this module
+ * actually calls.
+ */
+export interface WorkerProcess {
+  readonly stdin: {
+    write(chunk: string): unknown
+    on(event: 'error', listener: (error: Error) => void): unknown
+    readonly destroyed: boolean
+    readonly writableEnded: boolean
+  }
+  readonly stdout: { setEncoding(encoding: string): unknown, on(event: 'data', listener: (chunk: string) => void): unknown }
+  readonly stderr: { setEncoding(encoding: string): unknown, on(event: 'data', listener: (chunk: string) => void): unknown }
+  on(event: 'exit', listener: (code: number | null, signal: string | null) => void): unknown
+  on(event: 'error', listener: (error: Error) => void): unknown
+  once(event: 'exit', listener: () => void): unknown
+  kill(signal?: NodeJS.Signals): unknown
+  readonly pid?: number | undefined
 }
 
 /** Why a worker call failed. */
@@ -200,7 +233,7 @@ function isOomExit(code: number | null, signal: string | null): boolean {
  * request killed it" answerable.
  */
 export class OcrWorker {
-  private child: ChildProcessWithoutNullStreams | null = null
+  private child: WorkerProcess | null = null
   private hello: WorkerHello | null = null
   private buffer = ''
   private health: EngineHealth
@@ -242,14 +275,15 @@ export class OcrWorker {
         : { ok: true, value: this.hello }
     }
 
-    const child = spawn(this.options.spawn.command, [...this.options.spawn.args], {
-      // Isolation is the point of this module: a separate process, its own
-      // environment, and no shell to interpret anything.
-      shell: false,
-      stdio: ['pipe', 'pipe', 'pipe'],
-      ...this.options.spawn.cwd === undefined ? {} : { cwd: this.options.spawn.cwd },
-      env: { ...process.env, ...this.options.spawn.env },
-    })
+    const child: WorkerProcess = this.options.spawnProcess?.(this.options.spawn)
+      ?? spawn(this.options.spawn.command, [...this.options.spawn.args], {
+        // Isolation is the point of this module: a separate process, its own
+        // environment, and no shell to interpret anything.
+        shell: false,
+        stdio: ['pipe', 'pipe', 'pipe'],
+        ...this.options.spawn.cwd === undefined ? {} : { cwd: this.options.spawn.cwd },
+        env: { ...process.env, ...this.options.spawn.env },
+      })
     this.child = child
 
     child.stdout.setEncoding('utf8')
