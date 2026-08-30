@@ -19,9 +19,10 @@
 
 import { spawnSync } from 'node:child_process'
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync, rmSync } from 'node:fs'
-import { join, dirname, basename } from 'node:path'
+import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { ensureCli } from './lib/dsh-cli.mjs'
+import { packageNameOf } from './lib/packed.mjs'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const HOME = join(ROOT, '.dsh-home')
@@ -182,8 +183,9 @@ function linkLocalTarballs(tarballs) {
   const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'))
   const overrides = {}
   for (const tarball of tarballs) {
-    const name = basename(tarball).replace(/-\d.*$/, '').replace(/^watchskill-/, '@deepwatch/')
-    overrides[name] = `file:${tarball.split('\\').join('/')}`
+    // The name comes out of the tarball, not out of its filename. See
+    // `scripts/lib/packed.mjs` for what a packed filename loses.
+    overrides[packageNameOf(tarball)] = `file:${tarball.split('\\').join('/')}`
   }
   manifest.pnpm = { ...manifest.pnpm, overrides }
   writeFileSync(manifestPath, `${JSON.stringify(manifest, undefined, 2)}\n`)

@@ -40,6 +40,7 @@ import {
 import { join, dirname, basename } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { ensureCli } from './lib/dsh-cli.mjs'
+import { packageNameOf } from './lib/packed.mjs'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const HOME = process.env.WATCH_UPGRADE_HOME ?? join(ROOT, '.dsh-upgrade')
@@ -160,9 +161,9 @@ function linkTarballs(tarballs) {
   const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'))
   const overrides = {}
   for (const tarball of tarballs) {
-    const name = basename(tarball).replace(/-\d+\.\d+\.\d+.*\.tgz$/, '')
-    const scoped = `@${name.replace(/^watchskill-/, 'watchskill/')}`
-    overrides[scoped] = `file:${tarball.replace(/\\/g, '/')}`
+    // The name comes out of the tarball, not out of its filename. See
+    // `scripts/lib/packed.mjs` for what a packed filename loses.
+    overrides[packageNameOf(tarball)] = `file:${tarball.replace(/\\/g, '/')}`
   }
   manifest.pnpm = { ...manifest.pnpm, overrides: { ...manifest.pnpm?.overrides, ...overrides } }
   writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, 'utf8')

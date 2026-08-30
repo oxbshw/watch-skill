@@ -37,6 +37,7 @@ import { join, dirname, basename, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { manualPath } from './lib/manual-paths.mjs'
 import { ensureCli } from './lib/dsh-cli.mjs'
+import { packageNameOf } from './lib/packed.mjs'
 import { withPinnedPnpm } from './lib/pnpm-shim.mjs'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
@@ -256,16 +257,31 @@ function packAll() {
   return tarballs
 }
 
+/**
+ * Point the profile at the tarballs this run packed.
+ *
+ * Overrides that point into the packed directory are *replaced*, not merged.
+ * Merging kept every key any previous run had written, and a key naming a
+ * package that no longer exists is not inert — pnpm refuses the whole install
+ * with `ERR_PNPM_INVALID_SELECTOR` and names only the stale key. After a scope
+ * rename every old key is stale at once, which is how this was found.
+ *
+ * Anything else in `pnpm.overrides` is somebody's own and is left alone.
+ */
 function linkTarballs(tarballs) {
   const manifestPath = join(HOME, 'profiles', PROFILE, 'package.json')
   const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'))
-  const overrides = {}
+  const packedPrefix = `file:${PACKED.replace(/\\/g, '/')}`
+
+  const kept = Object.fromEntries(
+    Object.entries(manifest.pnpm?.overrides ?? {})
+      .filter(([, target]) => !String(target).startsWith(packedPrefix)))
+
+  const overrides = { ...kept }
   for (const tarball of tarballs) {
-    const name = basename(tarball).replace(/-\d+\.\d+\.\d+.*\.tgz$/, '')
-    overrides[`@${name.replace(/^watchskill-/, 'watchskill/')}`] =
-      `file:${tarball.replace(/\\/g, '/')}`
+    overrides[packageNameOf(tarball)] = `file:${tarball.replace(/\\/g, '/')}`
   }
-  manifest.pnpm = { ...manifest.pnpm, overrides: { ...manifest.pnpm?.overrides, ...overrides } }
+  manifest.pnpm = { ...manifest.pnpm, overrides }
   writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, 'utf8')
 }
 
