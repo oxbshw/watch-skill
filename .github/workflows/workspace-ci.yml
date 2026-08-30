@@ -135,6 +135,34 @@ jobs:
             workspace/**/*.log
           retention-days: 7
 
+  # Who a commit says it is from.
+  #
+  # Its own job because it needs the branch's history, and the other jobs
+  # deliberately take a shallow checkout — a gate that needed `fetch-depth: 0`
+  # everywhere would slow every one of them down to check a property of the
+  # commits rather than of the code.
+  #
+  # It reads commit metadata only. The repository's documentation discusses
+  # Claude Code as a supported integration, which is a product fact; this is
+  # about who a commit claims to be from.
+  commit-metadata:
+    needs: changes
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: workspace
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: No assistant attribution in commit metadata
+        run: node scripts/verify-commits.mjs
+
   # The build, from a checkout that has never been built.
   #
   # `check` and `platform` both start on a fresh runner, which sounds like this
@@ -276,7 +304,7 @@ jobs:
   # in this workflow, not a change that needed no testing.
   workspace-required:
     if: always()
-    needs: [changes, check, cold-build, platform]
+    needs: [changes, check, cold-build, commit-metadata, platform]
     runs-on: ubuntu-latest
     steps:
       - name: Gather the results

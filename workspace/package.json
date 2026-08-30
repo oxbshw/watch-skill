@@ -1,7 +1,7 @@
 {
   "name": "@deepwatch/monorepo",
   "version": "0.1.0-preview.0",
-  "description": "DeepWatch \u2014 an evidence-native agent distribution built on DeepSeek Harness",
+  "description": "DeepWatch — an evidence-native agent distribution built on DeepSeek Harness",
   "private": true,
   "type": "module",
   "license": "MIT",
@@ -49,6 +49,7 @@
     "verify:bundle": "node scripts/verify-bundle.mjs",
     "verify:clean-build": "node scripts/verify-clean-build.mjs",
     "verify:client": "node scripts/verify-client-bundles.mjs",
+    "verify:commits": "node scripts/verify-commits.mjs",
     "verify:desktop": "node scripts/verify-desktop-security.mjs",
     "verify:graph": "node scripts/verify-package-graph.mjs",
     "verify:parity": "node scripts/verify-parity.mjs",

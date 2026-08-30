@@ -86,6 +86,25 @@ gate. Do not add network calls to the offline suite.
   `description` is a trigger surface — write the phrasings a user would
   actually type, not a summary.
 
+## Commits
+
+Write them as the repository owner, because that is who they are from. A
+conventional prefix, then a plain declarative subject saying what changed and
+why — not what you did to find out.
+
+Never add any of these:
+
+- `Co-Authored-By` naming Claude, Anthropic, Copilot, Cursor or any other tool
+- a "Generated with …" line
+- any mention of AI assistance in the subject, the body or a trailer
+
+`npm run verify:commits` (in `workspace/`) checks the metadata of the commits
+on a branch and fails on any of the above. It reads authorship and message
+text only; prose about Claude Code as a supported integration is a product fact
+and is not what this rule is about. A real human co-author keeps their trailer.
+
+Do not rewrite shared history unless the maintainer has asked you to.
+
 ## Style
 
 Match the file you are editing. Comments explain *why*, never *what*. If a
