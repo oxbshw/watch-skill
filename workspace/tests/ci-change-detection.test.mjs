@@ -18,8 +18,13 @@
  */
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 
 import { classifyChanges, outputLines } from '../../.github/changed-half.mjs'
+
+const WORKFLOWS = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '.github', 'workflows')
 
 test('a Core-only change runs Core and skips the Workspace', () => {
   const result = classifyChanges([
@@ -97,4 +102,26 @@ test('the step output is the exact shape a workflow reads', () => {
     ['core=true', 'workspace=false'])
   assert.deepEqual(outputLines(classifyChanges(['workspace/x.ts'])),
     ['core=false', 'workspace=true'])
+})
+
+// ── the workflow's own guard, not just the classifier it calls ──────────────
+
+test('a base that is no longer in the repository runs everything', () => {
+  // Found by force-pushing. `github.event.before` names the commit the branch
+  // used to point at, and after history is rewritten that object is not in the
+  // fresh clone the runner made — so `git diff` exits 128 with "bad object" and
+  // the required status goes red for a reason unrelated to the change.
+  //
+  // Both workflows classify, so both need the guard. The classifier module
+  // cannot cover this: the failure happens before it is ever called.
+  for (const workflow of ['ci.yml', 'workspace-ci.yml']) {
+    const source = readFileSync(join(WORKFLOWS, workflow), 'utf8')
+    assert.match(source, /git cat-file -e "\$\{BASE\}\^\{commit\}"/,
+      `${workflow} does not check that its base is reachable`)
+    assert.match(source, /rewritten history/,
+      `${workflow} does not say why an unreachable base is not an error`)
+    // And it must land in the same place an all-zero base does: run everything.
+    assert.match(source, /unclassifiable[\s\S]{0,400}core=true[\s\S]{0,80}workspace=true/,
+      `${workflow} does not run everything when it cannot classify`)
+  }
 })

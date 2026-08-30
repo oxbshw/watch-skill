@@ -423,8 +423,18 @@ export class OcrWorker {
     if (this.child === null) return
     this.send({ id: 's0', method: 'shutdown', params: {} })
     await new Promise<void>(resolve => {
+      // Deliberately not `unref`'d, unlike every other timer in this module.
+      //
+      // This one is the escalation: it is what turns "asked the worker to
+      // stop" into "killed the worker that would not". An unref'd timer does
+      // not hold the event loop open, so on a quiet process it can simply never
+      // fire — and `stop()` then waits forever on a worker that was never going
+      // to exit. A Linux runner reported exactly that, as "Promise resolution
+      // is still pending but the event loop has already resolved".
+      //
+      // Holding the loop open costs nothing here: the caller is awaiting this
+      // promise, so the process was already staying alive for it.
       const timer = setTimeout(() => { this.terminate(); resolve() }, this.options.cancelGraceMs)
-      timer.unref?.()
       this.child?.once('exit', () => { clearTimeout(timer); resolve() })
     })
     this.child = null

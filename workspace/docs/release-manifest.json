@@ -134,7 +134,7 @@
       {
         "name": "@deepwatch/dsh-technology",
         "version": "0.1.0-preview.0",
-        "integrity": "sha256:221c6c9a8d3ff351174a22cd46758c847c36343dbd7d5db2c8818ca31e5e61be",
+        "integrity": "sha256:0a0e6c583ee71ef8d86d0809970a6b2eb0b7783d8d9c7f7d8e2231e539ff371f",
         "sourceFiles": 8
       },
       {
@@ -185,7 +185,7 @@
       "creators": [
         "Tool: watch-gen-release-manifest"
       ],
-      "created": "2026-08-30T04:35:19Z"
+      "created": "2026-08-30T04:55:06Z"
     },
     "packages": [
       {
@@ -424,7 +424,7 @@
         "checksums": [
           {
             "algorithm": "SHA256",
-            "checksumValue": "221c6c9a8d3ff351174a22cd46758c847c36343dbd7d5db2c8818ca31e5e61be"
+            "checksumValue": "0a0e6c583ee71ef8d86d0809970a6b2eb0b7783d8d9c7f7d8e2231e539ff371f"
           }
         ]
       },

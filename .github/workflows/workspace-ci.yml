@@ -68,12 +68,27 @@ jobs:
           HEAD: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
         run: |
           set -euo pipefail
-          # A first push to a branch reports an all-zero "before", and a manual
-          # dispatch has no diff at all. Neither can be classified, so both run
+          # Three ways there is nothing to compare against, and all three run
           # everything: an unnecessary matrix costs minutes, a wrongly skipped
           # one costs a defect reaching main.
-          if [ "$EVENT" = "workflow_dispatch" ] || [ -z "${BASE:-}" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ]; then
-            echo "no comparable base; running everything"
+          #
+          #   - a manual dispatch has no diff at all;
+          #   - a first push to a branch reports an all-zero "before";
+          #   - a force-push reports a "before" that is no longer in the
+          #     repository, because the commit it names was rewritten. That one
+          #     used to be fatal: `git diff` exited 128 with "bad object" and
+          #     the required status went red for a reason that had nothing to
+          #     do with the change. An unreachable base is an unknown base, not
+          #     an error.
+          unclassifiable=''
+          if [ "$EVENT" = "workflow_dispatch" ] || [ -z "${BASE:-}" ] \
+            || [ "$BASE" = "0000000000000000000000000000000000000000" ]; then
+            unclassifiable='no comparable base'
+          elif ! git cat-file -e "${BASE}^{commit}" 2>/dev/null; then
+            unclassifiable="the base $BASE is not in this repository (rewritten history)"
+          fi
+          if [ -n "$unclassifiable" ]; then
+            echo "$unclassifiable; running everything"
             {
               echo "core=true"
               echo "workspace=true"
