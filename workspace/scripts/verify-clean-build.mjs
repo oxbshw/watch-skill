@@ -75,6 +75,23 @@ const GENERATED = [
   { label: 'bundler cache', test: path => /(^|\/)(\.turbo|dist|out)(\/|$)/.test(path) },
 ]
 
+/**
+ * Gates in `npm run check` that cannot run before `npm run build`.
+ *
+ * Each reads something the build emits, and each fails on a cold tree with a
+ * message about its own subject rather than about the ordering:
+ *
+ *   - `lint` is type-aware. eslint resolves a cross-package type through the
+ *     emitted declaration, exactly as `tsc` does, so a missing generated
+ *     `.d.ts` becomes `Unsafe argument of type error typed` — a rule violation
+ *     naming neither the module nor the build. This is not hypothetical: it is
+ *     what CI reported at 224a206 while the same command passed locally.
+ *   - `typert:check` compares generated artifacts against the disk.
+ *   - `verify:client` reads each browser half's bundle.
+ *   - `test` imports `lib/`.
+ */
+const AFTER_BUILD = ['lint', 'typert:check', 'verify:client', 'test']
+
 /** The generated protocol, by the names `gen-typert.mjs` writes. */
 const TYPERT_ARTIFACTS = [
   'packages/watch/tools/lib/typert.host.js',
@@ -167,6 +184,29 @@ function main() {
     return report({})
   }
 
+  // ── the gate suite orders itself around the build ────────────────────────
+  // Read before anything is copied, because it is a statement about the suite
+  // rather than about a tree, and because a wrong order here makes the cold
+  // run below fail for a reason that has nothing to do with the build.
+  const chain = JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8')).scripts?.check ?? ''
+  const position = name => chain.indexOf(`npm run ${name} `) === -1
+    ? chain.indexOf(`npm run ${name}`)
+    : chain.indexOf(`npm run ${name} `)
+  const buildAt = position('build')
+  if (buildAt === -1) {
+    fail('`npm run check` does not run the build',
+      'Every gate below it reads what the build emits.')
+  } else {
+    for (const name of AFTER_BUILD) {
+      const at = position(name)
+      if (at !== -1 && at < buildAt) {
+        fail(`\`npm run check\` runs ${name} before build`,
+          `${name} reads what the build emits, so on a checkout that has never `
+          + 'been built it fails about its own subject instead of about the build.')
+      }
+    }
+  }
+
   // ── the checkout is cold ─────────────────────────────────────────────────
   for (const file of carried) {
     const path = slash(file)
@@ -233,6 +273,19 @@ function main() {
         fail(`the build did not bundle packages/watch/${entry}`,
           'A browser half with no bundle boots with the plugin silently absent.')
       }
+    }
+
+    // ── the type-aware gates read what the build emitted ────────────────────
+    // eslint's type information comes from the same project graph `tsc` uses,
+    // so it resolves a cross-package type through the *emitted* declaration and
+    // is exactly as cold-sensitive as the compiler. Running it here, after the
+    // build and never before it, is what makes that concrete rather than a
+    // claim about the ordering in package.json.
+    const lint = run('pnpm run lint', 'pnpm', ['run', 'lint'], dir, env)
+    if (!lint.ok) {
+      fail('type-aware lint fails on a clean checkout that has been built',
+        'eslint resolves cross-package types through emitted declarations. If it '
+        + 'fails here, the build did not emit something it reads.')
     }
 
     // ── the freshness gate agrees with what the build produced ──────────────
