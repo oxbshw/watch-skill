@@ -62,7 +62,11 @@ test('the product identity', async t => {
     // artifact this distribution does not fork. The product takes its name
     // when the brand plugin loads, and re-asserts it on mutation because DSH's
     // session layer writes the title too.
-    assert.match(BRAND_CLIENT, /document\.title = .*PRODUCT_NAME/s)
+    // *What* the title should be is `productTitle`, which is pure and is
+    // asserted behaviourally in tests/brand.test.mjs. What this holds is that
+    // the client actually uses it, on load and on every mutation after.
+    assert.match(BRAND_CLIENT, /productTitle\(document\.title, restoreTitle\)/)
+    assert.match(BRAND_CLIENT, /document\.title = wanted/)
     assert.match(BRAND_CLIENT, /MutationObserver/)
     assert.match(BRAND_CLIENT, /rel~="icon"/)
   })

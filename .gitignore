@@ -58,3 +58,6 @@ t.xml
 # 241MB of downloaded weights, and a broader rule would be able to hide
 # source or fixtures.
 /ci-model-cache/
+
+# Local pytest transcript, written when diagnosing a slow run.
+.pytest-run.log
