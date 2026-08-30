@@ -66,6 +66,12 @@
         "sourceFiles": 7
       },
       {
+        "name": "@deepwatch/cli",
+        "version": "0.1.0-preview.0",
+        "integrity": "sha256:469ad6b270767627ecd56b405d6b966cc812fb8ba663277412de9699b2e0137e",
+        "sourceFiles": 8
+      },
+      {
         "name": "@deepwatch/dsh-client-evidence",
         "version": "0.1.0-preview.0",
         "integrity": "sha256:bf3087d92dfba1b26c93d9c830d486b61d4df41ef40f5dd300d6f3e40b8f1a12",
@@ -179,7 +185,7 @@
       "creators": [
         "Tool: watch-gen-release-manifest"
       ],
-      "created": "2026-08-30T04:07:03Z"
+      "created": "2026-08-30T04:35:19Z"
     },
     "packages": [
       {
@@ -227,6 +233,22 @@
           {
             "algorithm": "SHA256",
             "checksumValue": "b8d77d12d9d1d85bb74f6ec7848fc4e2b83da99c46c08e8c8eb48f6d7cde3a01"
+          }
+        ]
+      },
+      {
+        "SPDXID": "SPDXRef-Package--deepwatch-cli",
+        "name": "@deepwatch/cli",
+        "versionInfo": "0.1.0-preview.0",
+        "licenseDeclared": "MIT",
+        "licenseConcluded": "NOASSERTION",
+        "downloadLocation": "NOASSERTION",
+        "filesAnalyzed": false,
+        "copyrightText": "NOASSERTION",
+        "checksums": [
+          {
+            "algorithm": "SHA256",
+            "checksumValue": "469ad6b270767627ecd56b405d6b966cc812fb8ba663277412de9699b2e0137e"
           }
         ]
       },
@@ -518,6 +540,11 @@
         "spdxElementId": "SPDXRef-DOCUMENT",
         "relationshipType": "DESCRIBES",
         "relatedSpdxElement": "SPDXRef-Package--deepwatch-dsh-bundle"
+      },
+      {
+        "spdxElementId": "SPDXRef-DOCUMENT",
+        "relationshipType": "DESCRIBES",
+        "relatedSpdxElement": "SPDXRef-Package--deepwatch-cli"
       },
       {
         "spdxElementId": "SPDXRef-DOCUMENT",

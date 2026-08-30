@@ -24,6 +24,13 @@
       "kind": "first_party"
     },
     {
+      "name": "@deepwatch/cli",
+      "version": "0.1.0-preview.0",
+      "license": "MIT",
+      "path": "packages/watch/cli",
+      "kind": "first_party"
+    },
+    {
       "name": "@deepwatch/dsh-client-evidence",
       "version": "0.1.0-preview.0",
       "license": "MIT",
@@ -363,6 +370,20 @@
     },
     {
       "name": "@deepseek-ai/dsh-output-retention",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-sandbox",
+      "version": "0.1.1-rc.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/dsh-sandbox-policy",
       "version": "0.1.1-rc.2",
       "license": "MIT",
       "path": null,
@@ -2476,6 +2497,69 @@
       "kind": "third_party"
     },
     {
+      "name": "node-addon-native-custom-loader",
+      "version": "0.1.5",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "node-addon-require-builtin",
+      "version": "0.1.5",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "node-addon-require-builtin-darwin-arm64",
+      "version": "0.1.5",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "node-addon-require-builtin-darwin-x64",
+      "version": "0.1.5",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "node-addon-require-builtin-linux-arm64-gnu",
+      "version": "0.1.5",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "node-addon-require-builtin-linux-x64-gnu",
+      "version": "0.1.5",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "node-addon-require-builtin-win32-arm64-msvc",
+      "version": "0.1.5",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "node-addon-require-builtin-win32-ia32-msvc",
+      "version": "0.1.5",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "node-addon-require-builtin-win32-x64-msvc",
+      "version": "0.1.5",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
       "name": "normalize-url",
       "version": "6.1.0",
       "license": "MIT",
@@ -3121,8 +3205,8 @@
     }
   ],
   "counts": {
-    "firstParty": 19,
-    "thirdParty": 417,
+    "firstParty": 20,
+    "thirdParty": 428,
     "modelWeights": 5,
     "distributableWeights": 3
   }

@@ -38,6 +38,9 @@
       "path": "packages/watch/client-remotes"
     },
     {
+      "path": "packages/watch/cli"
+    },
+    {
       "path": "packages/watch/wiki"
     },
     {
