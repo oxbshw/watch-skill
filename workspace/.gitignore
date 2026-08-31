@@ -24,8 +24,9 @@ qa/
 .release-artifacts/
 
 # Packed npm tarballs. These were tracked once, as `dist-artifacts/`, and the
-# copies that ended up in the history carried the pre-rename `@watchskill/*`
-# scope and the absolute paths of the machine that built them. An artifact is
+# copies that ended up in the history carried the package scope this
+# project has since retired, and the absolute paths of the machine that
+# built them. An artifact is
 # a build output: it belongs in the ignored release directory above, and its
 # record is the release manifest, not the repository.
 *.tgz

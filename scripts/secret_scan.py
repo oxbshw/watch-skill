@@ -78,15 +78,6 @@ ALLOW: tuple[bytes, ...] = (
     b"secret_scan.py",
 )
 
-# Paths whose whole purpose is to carry one of these shapes: the scanners
-# themselves, which cannot state a rule without containing it.
-ALLOW_PATHS: tuple[str, ...] = (
-    "scripts/secret_scan.py",
-    "workspace/scripts/pack-release.mjs",
-    "workspace/scripts/verify-publishable.mjs",
-    "workspace/tests/release-workflow.test.mjs",
-)
-
 # One reviewed exemption per file and rule, with the reason it is deliberate.
 #
 # Never a pattern and never a directory: a blanket suppression is how a real
@@ -113,6 +104,84 @@ DELIBERATE: dict[tuple[str, str], str] = {
         "a module comment recording the default this file exists to have removed",
     ("workspace/scripts/ocr-corpus.py", "maintainer drive"):
         "a module comment recording the argument this script no longer requires",
+    # The scanners themselves, which cannot state a rule without containing
+    # the shape it matches. Per rule, so a file that legitimately holds a
+    # certificate header is not thereby allowed to hold a live API key --
+    # which is exactly what the file-wide allowlist these replaced permitted.
+    ("scripts/secret_scan.py", "private key block"):
+        "this scanner's own rule for a private key header",
+    ("scripts/secret_scan.py", "encrypted private key"):
+        "this scanner's own rule for an encrypted private key header",
+    ("scripts/secret_scan.py", "stale npm scope"):
+        "this scanner's own rule for the scope this project stopped publishing under",
+    ("workspace/scripts/verify-publishable.mjs", "stale npm scope"):
+        "the publishable gate refuses the old scope by name",
+    ("workspace/scripts/verify-tracked-artifacts.mjs", "maintainer home"):
+        "the tracked-artifacts gate matches this path shape, so it contains one",
+    ("workspace/scripts/verify-tracked-artifacts.mjs", "posix home path"):
+        "the tracked-artifacts gate matches this path shape, so it contains one",
+    ("workspace/scripts/verify-tracked-artifacts.mjs", "maintainer drive"):
+        "the tracked-artifacts gate matches this path shape, so it contains one",
+    ("workspace/scripts/verify-tracked-artifacts.mjs", "stale npm scope"):
+        "the tracked-artifacts gate refuses the old scope by name",
+    ("workspace/tests/tracked-artifacts.test.mjs", "maintainer home"):
+        "synthetic paths in the positive controls that prove that gate fires",
+    ("workspace/tests/tracked-artifacts.test.mjs", "stale npm scope"):
+        "a synthetic package name in the positive control for the scope rule",
+    ("workspace/tests/path-privacy.test.mjs", "maintainer home"):
+        "synthetic roots the redaction tests redact; the user is `someone`",
+    ("workspace/tests/path-privacy.test.mjs", "posix home path"):
+        "synthetic roots the redaction tests redact; the user is `someone`",
+    ("workspace/tests/process-boundary.test.mjs", "npm token"):
+        "a synthetic npm token (all `a`s) proving the env filter drops it",
+    ("workspace/tests/process-boundary.test.mjs", "maintainer home"):
+        "a synthetic profile path asserted never to reach a provider",
+    ("workspace/tests/process-boundary.test.mjs", "posix home path"):
+        "a synthetic profile path asserted never to reach a provider",
+    ("tests/surfaces/test_bridge.py", "maintainer home"):
+        "synthetic paths proving the Bridge redacts before framing",
+    ("tests/surfaces/test_bridge.py", "posix home path"):
+        "synthetic paths proving the Bridge redacts before framing",
+    # The positive-control file: one synthetic value per rule, which is
+    # what makes it trip every rule. Listed per rule rather than as one
+    # file-wide entry, because this is precisely the file where giving
+    # that up would be most tempting -- and a real credential pasted in
+    # here would then have to trip a rule already named below, or the
+    # scan still fails.
+    ("tests/test_secret_scan.py", "anthropic key"):
+        "one synthetic positive control per rule; every value is fabricated",
+    ("tests/test_secret_scan.py", "aws access key"):
+        "one synthetic positive control per rule; every value is fabricated",
+    ("tests/test_secret_scan.py", "bearer authorization header"):
+        "one synthetic positive control per rule; every value is fabricated",
+    ("tests/test_secret_scan.py", "encrypted private key"):
+        "one synthetic positive control per rule; every value is fabricated",
+    ("tests/test_secret_scan.py", "github token"):
+        "one synthetic positive control per rule; every value is fabricated",
+    ("tests/test_secret_scan.py", "google api key"):
+        "one synthetic positive control per rule; every value is fabricated",
+    ("tests/test_secret_scan.py", "hf token"):
+        "one synthetic positive control per rule; every value is fabricated",
+    ("tests/test_secret_scan.py", "maintainer drive"):
+        "one synthetic positive control per rule; every value is fabricated",
+    ("tests/test_secret_scan.py", "maintainer home"):
+        "one synthetic positive control per rule; every value is fabricated",
+    ("tests/test_secret_scan.py", "npm token"):
+        "one synthetic positive control per rule; every value is fabricated",
+    ("tests/test_secret_scan.py", "openai key"):
+        "one synthetic positive control per rule; every value is fabricated",
+    ("tests/test_secret_scan.py", "openrouter key"):
+        "one synthetic positive control per rule; every value is fabricated",
+    ("tests/test_secret_scan.py", "posix home path"):
+        "one synthetic positive control per rule; every value is fabricated",
+    ("tests/test_secret_scan.py", "private key block"):
+        "one synthetic positive control per rule; every value is fabricated",
+    ("tests/test_secret_scan.py", "pypi token"):
+        "one synthetic positive control per rule; every value is fabricated",
+    ("tests/test_secret_scan.py", "slack token"):
+        "one synthetic positive control per rule; every value is fabricated",
+    ("tests/test_secret_scan.py", "stale npm scope"):
+        "one synthetic positive control per rule; every value is fabricated",
 }
 
 BINARY_SUFFIXES = {".pyc", ".png", ".jpg", ".jpeg", ".gif", ".webm", ".mp4",
@@ -135,8 +204,6 @@ def redact(hit: bytes) -> str:
 
 
 def scan(label: str, data: bytes, packed: bool = False) -> list[tuple[str, str, str]]:
-    if any(label.startswith(allowed) or allowed in label for allowed in ALLOW_PATHS):
-        return []
     found = []
     for name, pattern in PATTERNS:
         if name in PACKED_ONLY and not packed:
