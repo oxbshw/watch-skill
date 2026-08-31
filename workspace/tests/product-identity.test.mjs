@@ -26,6 +26,18 @@ const read = relative => readFileSync(join(ROOT, relative), 'utf8')
 const BRAND = read('packages/watch/brand/src/identity.ts')
 const BRAND_CLIENT = read('packages/watch/brand/src/client/index.tsx')
 const BUNDLE = read('packages/watch/bundle/cordis.patch.yml')
+/**
+ * The bundle patch with its commentary removed.
+ *
+ * The rows are what compose a profile; the comments are what explain them to
+ * the next reader, and this file's assertions are about the former. Scanning
+ * the whole document made the two indistinguishable — a comment saying "the
+ * DeepSeek route stays selectable" read as though the patch selected it — so
+ * a paragraph could not be written about the very thing it was ensuring.
+ */
+const BUNDLE_ROWS = BUNDLE.split(/\r?\n/)
+  .filter(line => !line.trimStart().startsWith('#'))
+  .join('\n')
 const DESKTOP = read('apps/desktop/main.mjs')
 const SETTINGS = read('packages/watch/client-settings/src/client/index.tsx')
 const SLOTS = JSON.parse(read('inventory/dsh-slots.json'))
@@ -410,8 +422,12 @@ test('the first run does not require DeepSeek', async t => {
 
   await t.test('upstream’s onboarding step is not removed', () => {
     // DeepSeek stays a good provider choice. What changed is that it is no
-    // longer the price of entry.
-    assert.doesNotMatch(BUNDLE, /deepseek-official/)
+    // longer the price of entry. So the row is not switched off, and no row
+    // names a DeepSeek route as a value this distribution writes into a
+    // profile. `tests/default-model.test.mjs` holds the other half: the
+    // inherited default that *did* name one is emptied.
+    assert.doesNotMatch(BUNDLE_ROWS, /deepseek-official/)
+    assert.doesNotMatch(BUNDLE_ROWS, /id:\s*deepseek-official/)
   })
 
   await t.test('there is a way into the workspace without configuring anything', () => {

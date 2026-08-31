@@ -157,6 +157,40 @@
         tokenBudget: 600
         writeProjections: true
 
+# The inherited default model selection, emptied.
+#
+# The base layer composes `agent-default-model` with `deepseek-official` /
+# `deepseek-v4-flash`, which is the right default for the Harness and the wrong
+# one for this distribution. A person who had installed DeepWatch, saved an
+# OpenRouter credential and never chosen a model still had that pair sitting in
+# their composer as though they had picked it -- and their first prompt was
+# routed to DeepSeek, which failed on a credential they had never been asked
+# for and left a failed turn behind.
+#
+# Emptying it is a *configuration* change, not a removal. The row stays
+# mounted, because `@deepseek-ai/dsh-host-apiproxy` hard-injects
+# `agentDefaultModel` and disabling it would park the whole API gateway. What
+# changes is that the default names no route, and upstream's own admission
+# boundary refuses a turn whose provider no adapter serves -- so an
+# unconfigured Chat is refused before a durable turn, a trajectory or a
+# provider request exists, by the Harness's own enforcement rather than by
+# anything this distribution has to intercept.
+#
+# DeepSeek is not removed and is not disfavoured. `llm-deepseek` stays
+# composed, `deepseek-official` stays in the picker, and choosing it is one
+# click. What it stops being is *chosen for you*.
+#
+# `name:` is deliberately absent. A patch that carries one is compared for
+# equality against the target row and SKIPPED with a warning when it differs
+# (vendor/include: "patch: name mismatch for %C ... skipping"), so an upstream
+# rename would silently restore the DeepSeek default. Targeting the id alone
+# cannot be skipped, and `tests/default-model.test.mjs` pins this row to the
+# pinned baseline so a bump that changes its shape fails loudly instead.
+- id: agent-default-model
+  config:
+    provider: ''
+    model: ''
+
 # The official brand row, switched off.
 #
 # This is the single entry in the parity register marked

@@ -40,7 +40,7 @@ function readPatchRows(file) {
     const id = /^\s*-?\s*id:\s*(.+?)\s*$/.exec(line)
     if (id) {
       if (current) rows.push(current)
-      current = { id: id[1].replace(/^["']|["']$/g, ''), module: null, disabled: false }
+      current = { id: id[1].replace(/^["']|["']$/g, ''), module: null, disabled: false, reconfigures: false }
       continue
     }
     if (!current) continue
@@ -50,9 +50,47 @@ function readPatchRows(file) {
     // targets a baseline id on purpose, so the two checks below skip it —
     // and a third one, that it hits something real, applies instead.
     if (/^\s*disabled:\s*true\s*$/.test(line)) current.disabled = true
+    // A row that only reconfigures an existing one. Like a disable row it
+    // names no module and targets a baseline id on purpose; unlike one, it
+    // leaves the row mounted and replaces its config wholesale.
+    if (/^\s*config:\s*$/.test(line)) current.reconfigures = true
   }
   if (current) rows.push(current)
   return rows
+}
+
+/**
+ * Baseline rows this distribution deliberately reconfigures, and why.
+ *
+ * A patch row that targets a baseline id replaces that row's whole config.
+ * Almost always that is an accident — the id was meant to be new and collided
+ * — and the check below is what catches it. Occasionally it is the point: the
+ * Loader offers no other way to change a composed default, and changing one
+ * through the mechanism upstream provides is the opposite of a fork.
+ *
+ * So the rule is not "never collide" but "collide only on purpose, in
+ * writing". An id here is a decision somebody made and can be asked about; an
+ * id not here is a bug. A stale entry is a problem too — see the check for a
+ * declaration that matches no baseline row — because a reconfiguration that
+ * lands on nothing silently restores the upstream default it was written to
+ * remove.
+ */
+const INTENTIONAL_RECONFIGURATIONS = new Map([
+  ['agent-default-model', 'empties the inherited DeepSeek default so a fresh profile names no route'],
+])
+
+/**
+ * Whether a row is a reconfiguration this distribution has declared.
+ *
+ * All three conditions matter. The id must be declared, so the change is one
+ * somebody wrote down. The row must actually carry a `config:`, so a bare id
+ * cannot borrow the declaration and disable or re-point something else. And it
+ * must name no module, because naming one is how a row stops being a
+ * reconfiguration and starts being a replacement — which is a fork by another
+ * spelling, and not what this allowance is for.
+ */
+function declaredReconfiguration(row) {
+  return INTENTIONAL_RECONFIGURATIONS.has(row.id) && row.reconfigures && row.module === null
 }
 
 /** Every workspace package name, for resolving what the bundle references. */
@@ -97,6 +135,7 @@ function checkPatch(label, patchFile, manifest, baseline, packages) {
       continue
     }
     if (baseline.has(row.id)) {
+      if (declaredReconfiguration(row)) continue
       problems.push(
         `${label}: row id "${row.id}" collides with a DSH baseline row — an overlay would replace `
         + "that row's config instead of inserting a new one, silently changing upstream behavior",
@@ -112,7 +151,7 @@ function checkPatch(label, patchFile, manifest, baseline, packages) {
 
   const dependencies = new Set(Object.keys(manifest.dependencies ?? {}))
   for (const row of rows) {
-    if (row.disabled) continue
+    if (row.disabled || declaredReconfiguration(row)) continue
     if (row.module === null) {
       problems.push(`${label}: row "${row.id}" names no module, so the Loader has nothing to import`)
       continue
@@ -172,9 +211,30 @@ function main() {
       continue
     }
     if (baseline.has(row.id)) {
+      if (declaredReconfiguration(row)) continue
       problems.push(
         `row id "${row.id}" collides with a DSH baseline row — an overlay would replace that row's `
         + 'config instead of inserting a new one, silently changing upstream behavior',
+      )
+    }
+  }
+
+  // The other direction. A declaration that lands on nothing is worse than an
+  // undeclared collision: the row it was written to change is gone, so the
+  // upstream default it removed is quietly back, and the gate that was
+  // supposed to notice is the thing saying nothing.
+  for (const [id, why] of INTENTIONAL_RECONFIGURATIONS) {
+    if (!baseline.has(id)) {
+      problems.push(
+        `"${id}" is declared as an intentional reconfiguration (${why}), but no DSH baseline row `
+        + 'carries that id, so the patch changes nothing and the upstream default stands',
+      )
+      continue
+    }
+    if (!rows.some(row => row.id === id && row.reconfigures)) {
+      problems.push(
+        `"${id}" is declared as an intentional reconfiguration (${why}), and the bundle patch `
+        + 'does not reconfigure it',
       )
     }
   }
@@ -187,7 +247,7 @@ function main() {
 
   const packages = workspacePackages()
   for (const row of rows) {
-    if (row.disabled) continue
+    if (row.disabled || declaredReconfiguration(row)) continue
     if (row.module === null) {
       problems.push(`row "${row.id}" names no module, so the Loader has nothing to import`)
       continue
@@ -236,9 +296,19 @@ function main() {
     process.exit(1)
   }
 
+  // Reported by kind rather than as one count: "13 additive rows" beside a
+  // list containing two rows that add nothing is the sort of summary a reader
+  // stops trusting, and this output is the evidence that the distribution
+  // touches upstream exactly where it says it does.
+  const kindOf = (row) => row.disabled
+    ? 'disables'
+    : declaredReconfiguration(row) ? 'reconfigures' : 'adds'
+  const added = rows.filter(row => kindOf(row) === 'adds')
+  const touched = rows.filter(row => kindOf(row) !== 'adds')
+
   process.stdout.write(
-    `bundle: ${rows.length} additive row(s), no collision with ${baseline.size} DSH baseline rows\n`
-    + rows.map(row => `  ${row.id.padEnd(20)} ${row.module}\n`).join('')
+    `bundle: ${added.length} additive row(s), ${touched.length} declared change(s) to ${baseline.size} DSH baseline rows\n`
+    + rows.map(row => `  ${kindOf(row).padEnd(12)} ${row.id.padEnd(21)} ${row.module ?? ''}\n`).join('')
     + `bundle variants:\n`
     + variantSummaries.map(line => `${line}\n`).join(''),
   )
