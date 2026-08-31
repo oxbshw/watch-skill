@@ -67,7 +67,7 @@ function credentialTone(status: string): ChipTone {
   return 'neutral'
 }
 
-const CONTROL = {
+export const CONTROL = {
   select: {
     font: 'inherit', fontSize: '13px', padding: '5px 8px', borderRadius: '7px',
     border: '1px solid var(--dsw-alias-border-l2)',
@@ -107,8 +107,13 @@ const CONTROL = {
  * differently. A provider with no credential is a different problem from a
  * provider whose catalogue is empty, and a single flattened list would report
  * both as "nothing to choose".
+ *
+ * Exported because the blocked composer offers the same choice in place. A
+ * person who is stopped from sending should be able to fix it where they are
+ * standing, and offering them a *second* picker written separately is how two
+ * screens end up disagreeing about what a provider offers.
  */
-function BindingEditor(
+export function BindingEditor(
   { row, providers, saving, onBind, onCancel }: {
     readonly row: RoleRow
     readonly providers: readonly ProviderRow[]

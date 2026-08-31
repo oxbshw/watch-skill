@@ -27,6 +27,8 @@ import {
 import { WatchOnboarding } from './onboarding.js'
 import { BindingStore } from './binding-state.js'
 import { RoleBindings } from './role-bindings.js'
+import { ChatGate } from './chat-gate.js'
+import type { ComposerBlocks } from './chat-gate.js'
 import type { HostApi } from './binding-state.js'
 
 export * from './components.js'
@@ -34,6 +36,7 @@ export * from './onboarding.js'
 export * from './readiness.js'
 export * from './binding-state.js'
 export * from './role-bindings.js'
+export * from './chat-gate.js'
 
 /**
  * Services this half needs before it can register anything.
@@ -50,6 +53,11 @@ export const inject = ['slots', 'connection']
 interface SlotService {
   inject(name: string, register: () => void): void
   register(entry: Record<string, unknown>, component: unknown): void
+}
+
+/** The half of the conversation service a composer block needs. */
+interface ConversationService {
+  readonly blocks: ComposerBlocks
 }
 
 /** Add the Watch sections to DSH's settings panel. */
@@ -96,6 +104,33 @@ export function apply(ctx: Context): void {
   // SYSTEM — what this installation actually is.
   section('watch-diagnostics', 'Diagnostics', 70, DiagnosticsSection)
   section('watch-about', 'About', 80, AboutSection)
+
+  // The composer's own preflight, in the seat beside it.
+  //
+  // Registered through `ctx.inject` rather than by adding `conversation` to
+  // this module's own inject list, and the difference matters: a missing
+  // conversation service must cost the gate, not the whole Technology &
+  // Capability Center. A settings panel that disappears because a composer
+  // could not be reached is a worse failure than an unblocked composer.
+  //
+  // It lives here rather than in the shell because this is the package that
+  // knows. Upstream's own note on composer blocks says the model-selection
+  // plugin is what raises one -- "the composer cannot read the plugins that
+  // would know" -- and in this distribution that is this package: it holds the
+  // store, the readiness and the picker. Putting the gate anywhere else would
+  // mean a second store, and two answers to "can Chat run?".
+  ctx.inject(['conversation'], (scoped: Context) => {
+    const blocks = (scoped as unknown as { conversation: ConversationService }).conversation.blocks
+    slots.inject('conversation.input.dock', () => {
+      slots.register(
+        // Order 5, ahead of the Watch composer panel at 10: a person who
+        // cannot send yet should meet the reason before the turn controls.
+        { name: 'conversation.input.dock', id: 'watch-chat-gate', order: 5 },
+        ({ sessionId }: { readonly sessionId: string }): ReactNode =>
+          ChatGate({ sessionId, store, blocks }),
+      )
+    })
+  })
 
   // The first-run screen, ahead of upstream's.
   //
