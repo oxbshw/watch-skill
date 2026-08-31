@@ -95,10 +95,16 @@ function WatchName(): ReactNode {
  * words of legal text reflowed into a 40px column is unreadable, and
  * unreadable attribution is not attribution.
  *
- * So the collapsed rail carries the mark with the full text as its accessible
- * name and tooltip, and the expanded sidebar carries both lines in full. The
- * second line is never dropped — it is what keeps the first from reading as an
- * endorsement that was never given.
+ * So the collapsed rail carries the mark, and the expanded sidebar carries one
+ * line. Both carry the full text — attribution and independence — as their
+ * accessible name and tooltip, so the disclosure is never dropped.
+ *
+ * It used to render both lines here, resident, on every screen. Required is
+ * not the same as resident: a sentence of legal prose permanently occupying a
+ * 256-pixel rail is read once and then becomes furniture, and it pushed the
+ * navigation a person actually uses further up the column. The full statement
+ * lives in About, where there is width for it and where somebody goes to read
+ * it, and `tests/brand.test.mjs` holds both surfaces to carrying it.
  */
 function WatchAttribution({ wide }: { readonly wide?: boolean }): ReactNode {
   const full = `${ATTRIBUTION}. ${INDEPENDENCE}`
@@ -117,19 +123,21 @@ function WatchAttribution({ wide }: { readonly wide?: boolean }): ReactNode {
     )
   }
   return (
-    <div style={{
-      fontSize: '11px',
-      lineHeight: 1.45,
-      color: 'var(--dsw-alias-label-tertiary)',
-      padding: '8px 10px',
-      // The sidebar is a flex column; without this the text can force the
-      // whole rail wider than the layout intends.
-      maxWidth: '100%',
-      overflowWrap: 'break-word',
-    }}
+    <div
+      title={full}
+      aria-label={full}
+      style={{
+        fontSize: '11px',
+        lineHeight: 1.45,
+        color: 'var(--dsw-alias-label-tertiary)',
+        padding: '8px 10px',
+        // The sidebar is a flex column; without this the text can force the
+        // whole rail wider than the layout intends.
+        maxWidth: '100%',
+        overflowWrap: 'break-word',
+      }}
     >
-      <div>{ATTRIBUTION}</div>
-      <div style={{ marginTop: '2px', opacity: 0.85 }}>{INDEPENDENCE}</div>
+      {ATTRIBUTION}
     </div>
   )
 }
