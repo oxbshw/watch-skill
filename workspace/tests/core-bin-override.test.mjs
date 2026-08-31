@@ -67,13 +67,16 @@ describe('the Bridge is pointed at the executable a person named', () => {
     assert.equal(read(dir).includes('\\'), false)
   })
 
-  test('it pins stdio, so a named engine that will not start is a fault', () => {
-    // `auto` falls back to the mock, which is right when nobody has said where
-    // the engine is. Somebody who sets WATCH_CORE_BIN has said exactly that.
+  test('it keeps `auto`, so a Core that cannot speak Bridge is reported honestly', () => {
+    // Pinning `stdio` looked right and was wrong. Naming the binary is not the
+    // same as asserting it speaks the Bridge protocol -- Watch Skill 1.3.0rc2
+    // ships `serve` and no `bridge` subcommand -- and pinning it turned an
+    // honest "running on the mock backend" into a spawn that fails every time,
+    // which the health panel then reported as a connection.
     const dir = profile()
     writeCoreBinOverride(dir, '/usr/local/bin/watch-skill')
-    assert.match(read(dir), /transport: stdio/)
-    assert.doesNotMatch(read(dir), /transport: auto/)
+    assert.match(read(dir), /transport: auto/)
+    assert.doesNotMatch(read(dir), /transport: stdio/)
   })
 
   test('the row’s whole config is restated', () => {

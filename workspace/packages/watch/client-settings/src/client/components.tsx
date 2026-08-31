@@ -499,10 +499,25 @@ export function DiagnosticsSection(
       <h2 style={T.h2}>Health</h2>
       <div style={T.card}>
         <div style={T.meta}>
+          {/* Not "Connected over stdio". That was a literal, on the one screen
+              whose own opening sentence promises the opposite — and it was
+              wrong: the Bridge was running its mock backend, because the Core
+              it names ships no `bridge` surface at all. A green chip asserting
+              a connection nobody had checked is the exact failure this panel
+              exists to catch, and it was in the panel.
+
+              The browser cannot read the Bridge's live state: no read-plane
+              namespace carries it. So this says that, rather than guessing.
+              The agent-facing `watch_capabilities` tool does report the real
+              transport and version, and Session Log records what it said. */}
           <Row label="Watch Core">
-            <StatusChip tone="active">Connected over stdio</StatusChip>
+            <StatusChip tone="neutral">Not read from here</StatusChip>
           </Row>
-          <Row label="Bridge transport">A child process of the Host; it holds no socket</Row>
+          <Row label="Bridge transport">
+            A child process of the Host; it holds no socket. Whether it is the
+            real engine or the mock backend is a Host fact this screen has no
+            channel for — ask the agent for a capability report, which reads it.
+          </Row>
           <Row label="Offline">
             <StatusChip tone="active">Offline only</StatusChip>
           </Row>
@@ -550,7 +565,10 @@ export function AboutSection(): ReactNode {
       <div style={T.card}>
         <div style={T.meta}>
           <Row label="DeepWatch">0.1.0-preview.0</Row>
-          <Row label="Watch Core">1.3.0rc2</Row>
+          {/* The version the Bridge negotiates, not one this screen can read;
+              a build number typed into a component is a claim about somebody
+              else's machine. */}
+          <Row label="Watch Core">Reported by the Bridge, not read from here</Row>
           <Row label="Built on">DeepSeek Harness 0.1.1-rc.2</Row>
           <Row label="DSH commit">b150a551b8d465e31e418e1b2eaf5e79bbb7d28e</Row>
         </div>

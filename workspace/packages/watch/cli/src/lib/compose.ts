@@ -187,12 +187,18 @@ const CORE_BIN_END = '# deepwatch: end of Watch Core binary override'
  * than appending one, and so anything a person put in that file by hand
  * survives.
  *
- * **`stdio`, not `auto`.** `auto` falls back to the mock when the command is
- * missing, which is right when nobody has said where the engine is. Somebody
- * who sets `WATCH_CORE_BIN` has said exactly that, so a failure to start it is
- * a fault to report rather than a fallback to accept -- the same reasoning the
- * bundle already gives for pinning `stdio` in a deployment that requires the
- * engine.
+ * **`auto`, not `stdio`, and that was a correction.** Pinning `stdio` looked
+ * right -- somebody who names the engine has said it is there, so a failure to
+ * start it should be a fault rather than a fallback. But naming the *binary* is
+ * not the same as asserting it speaks the Bridge protocol, and that difference
+ * is not hypothetical: Watch Skill 1.3.0rc2 ships `serve`, `api` and a CLI, and
+ * no `bridge` subcommand at all. Pinning `stdio` against it turned an honest
+ * "running on the mock backend" into a spawn that fails every time, which the
+ * health panel then reported as a connection. `auto` keeps the fallback, and
+ * the fallback keeps telling the truth.
+ *
+ * A deployment that genuinely requires the engine still pins `stdio` itself, in
+ * this same file, which is the mechanism the bundle already documents.
  *
  * Every key of the row's config is restated, because a Loader patch replaces
  * the targeted row's whole `config` and an overlay that named only `command`
@@ -224,12 +230,13 @@ export function writeCoreBinOverride(profileDir: string, coreBin: string): strin
     '',
     CORE_BIN_MARK,
     '#',
-    '# `WATCH_CORE_BIN` named this executable. `stdio` rather than `auto`: a',
-    '# person who says where the engine is has said it is there, so failing to',
-    '# start it is a fault to report rather than a mock to fall back to.',
+    '# `WATCH_CORE_BIN` named this executable. The transport stays `auto`:',
+    '# naming the binary is not the same as asserting it speaks the Bridge',
+    '# protocol, and a Core that does not is honestly reported as a mock',
+    '# rather than as a connection that failed.',
     '- id: watch-core-bridge',
     '  config:',
-    '    transport: stdio',
+    '    transport: auto',
     `    command: '${command}'`,
     '    args: [bridge]',
     "    cwd: ''",
