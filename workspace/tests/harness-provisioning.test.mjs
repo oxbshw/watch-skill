@@ -18,10 +18,11 @@
  * workspace's own auto-installed peer would answer every lookup and none of
  * the interesting paths would ever be reached.
  *
- * Nothing here installs anything. `ensureHarness` is called with consent only
- * where a Harness is already present, so the install branch is never entered —
- * a suite that downloaded four hundred packages to prove it asks first would
- * have missed the point.
+ * Nothing here installs anything, and `ensureHarness` could not if it wanted
+ * to: it detects and reports, and building a runtime belongs to
+ * `lib/provision.ts`, which `tests/managed-runtime.test.mjs` exercises. A
+ * suite that downloaded five hundred packages to prove the product asks first
+ * would have missed the point.
  */
 
 import { test, describe } from 'node:test'
@@ -34,6 +35,8 @@ import {
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
+
+import { writeArtifactSet } from './fixtures/artifact-set.mjs'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const ROOT = join(HERE, '..')
@@ -96,6 +99,20 @@ function plantHarness(room, version, { runnable = true } = {}) {
   const marker = join(room.home, 'harness', 'do-not-delete.txt')
   writeFileSync(marker, 'a user installation this command does not own\n')
   return marker
+}
+
+/**
+ * A verified artifact directory, for the paths that need one to get as far as
+ * printing a plan.
+ *
+ * Fixture tarballs: everything asserted here happens before a package manager
+ * is started, and the reader's job at that point is to check bytes against an
+ * inventory. What is inside them is the packed-install gate's question.
+ */
+function artifactDirectory() {
+  const { directory } = writeArtifactSet(MANIFEST.version)
+  rooms.push(directory)
+  return directory
 }
 
 /** Run the CLI as a child, the way a person does. */
@@ -161,11 +178,28 @@ describe('nothing reaches the network unless setup was told to', () => {
     }
   })
 
+  test('setup with no artifact directory refuses, and never asks a registry', () => {
+    const room = cleanRoom()
+    // Nothing under `@deepwatch` is published, so there is no registry answer
+    // to fall back to. A product that tried anyway would get a 404 for a scope
+    // that does not exist and report it as a network problem.
+    const ran = underSentinel(room, ['setup', '--yes'])
+
+    assert.notEqual(ran.code, 0)
+    assert.deepEqual(ran.violations, [], 'a refusal reached the network')
+    const said = ran.stdout + ran.stderr
+    assert.match(said, /--artifacts/, 'the refusal did not say what is missing')
+    assert.match(said, /not published/, 'the refusal did not say why')
+    assert.ok(!existsSync(join(room.home, 'harness')),
+      'a refusal wrote where the runtime goes')
+  })
+
   test('setup without consent prints the plan and downloads nothing', () => {
     const room = cleanRoom()
+    const artifacts = artifactDirectory()
     // No TTY here, and no `--yes`: the non-interactive path, which is the one
-    // that would otherwise install four hundred packages inside somebody's CI.
-    const ran = deepwatch(room, ['setup'])
+    // that would otherwise install five hundred packages inside somebody's CI.
+    const ran = deepwatch(room, ['setup', '--artifacts', artifacts])
 
     assert.notEqual(ran.code, 0, 'setup that installed nothing must not report success')
     const said = ran.stdout + ran.stderr
@@ -173,8 +207,10 @@ describe('nothing reaches the network unless setup was told to', () => {
     assert.match(said, /@deepseek-ai\/dsh/, 'the package was not named before asking')
     assert.ok(said.includes(VERSION.HARNESS_VERSION), 'the exact version was not shown')
     assert.ok(said.includes(room.home), 'where it would be written was not shown')
+    assert.ok(said.includes(artifacts), 'where the local packages come from was not shown')
     assert.match(said, /LGPL/, 'the licence notice was not shown before asking')
     assert.match(said, /--yes/, 'the refusal did not say how to agree')
+    assert.match(said, /\b19\b|\bpeer/, 'the generated peer count was not shown')
 
     assert.ok(!existsSync(join(room.home, 'harness', 'node_modules')),
       'setup wrote an installation nobody agreed to')
@@ -247,8 +283,8 @@ describe('an existing installation is inspected, never overwritten', () => {
     const { harness, ensureHarness } = await harnessModule(room)
 
     assert.equal(harness(env(room)), null, 'a directory was mistaken for a program')
-    const result = await ensureHarness({ env: env(room), consent: false })
-    assert.equal(result.failure, 'no-consent', 'a partial install was treated as present')
+    const result = await ensureHarness({ env: env(room) })
+    assert.equal(result.failure, 'absent', 'a partial install was treated as present')
 
     const report = JSON.parse(deepwatch(room, ['doctor', '--json']).stdout)
     const finding = report.findings.find(entry => /harness/i.test(entry.name))
@@ -285,20 +321,36 @@ describe('an existing installation is inspected, never overwritten', () => {
     assert.deepEqual(census(join(room.home, 'harness')), after, 'the second run wrote something')
   })
 
-  test('the install plan is exact, and is what the refusal shows', async () => {
+  test('the plan is exact, and is what the refusal shows', async () => {
     const room = cleanRoom()
-    const { installPlan, renderPlan } = await harnessModule(room)
-    const plan = installPlan(env(room))
+    const artifacts = artifactDirectory()
+    const provision = await import(
+      pathToFileURL(join(room.dir, 'lib', 'lib', 'provision.js')).href)
+    const setup = await import(pathToFileURL(join(room.dir, 'lib', 'setup.js')).href)
+    const read = provision.readArtifacts(artifacts)
+    assert.ok(!('failure' in read), read.detail ?? '')
+
+    const destination = join(room.home, 'harness')
+    const plan = provision.managedPlan(destination, 'local-artifacts', artifacts, read.packages)
 
     assert.equal(plan.registry, 'https://registry.npmjs.org')
-    assert.equal(plan.package, '@deepseek-ai/dsh')
-    assert.equal(plan.version, VERSION.HARNESS_VERSION)
+    assert.equal(plan.harness.package, '@deepseek-ai/dsh')
+    assert.equal(plan.harness.version, VERSION.HARNESS_VERSION)
+    assert.ok(plan.peers > 0, 'the plan must say how many peers it will install')
+    assert.equal(plan.deepwatch.length, 19, 'the CLI is not part of the runtime it built')
     assert.ok(plan.destination.startsWith(room.home), 'setup would write outside its own home')
-    const rendered = renderPlan(plan)
-    for (const part of [plan.registry, plan.package, plan.version, plan.destination]) {
+    assert.match(plan.manifestDigest, /^sha256:[0-9a-f]{64}$/)
+
+    const rendered = setup.renderManagedPlan(plan)
+    for (const part of [
+      plan.registry, plan.harness.package, plan.harness.version, plan.destination,
+      artifacts, String(plan.peers), String(plan.deepwatch.length),
+    ]) {
       assert.ok(rendered.includes(part), `the plan did not show ${part}`)
     }
     assert.match(rendered, /LGPL/, 'the plan did not mention the licence it should')
+    assert.match(rendered, /never requested from a registry/,
+      'the plan did not say the DeepWatch packages are not fetched')
   })
 
   test('provisioning reads no provider credential, and leaves a receipt', async () => {
