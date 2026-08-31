@@ -16,7 +16,7 @@
 
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process'
 import { Buffer } from 'node:buffer'
-import type { JsonRpcResponse, WatchError, WatchResult } from '@deepwatch/dsh-contracts'
+import type { JsonRpcResponse, WatchError, WatchFailure, WatchResult } from '@deepwatch/dsh-contracts'
 import { JSON_RPC, watchError } from '@deepwatch/dsh-contracts'
 import type { Transport, TransportEvent, TransportRequest } from '../transport.js'
 
@@ -139,9 +139,24 @@ export class StdioTransport implements Transport {
 
       child.once('spawn', () => { finish({ ok: true, value: undefined }) })
       child.once('error', (cause) => { finish(this.spawnFailure(describe(cause), isNotInstalled(cause))) })
-      child.once('exit', (code, signal) => { this.handleExit(code, signal); finish(this.spawnFailure(
-        `Watch Core exited during startup (${signal ?? `code ${String(code)}`}).`,
-      )) })
+      // 'close' rather than 'exit', and the difference is load-bearing.
+      // 'exit' fires as soon as the process is gone, while its stdio may still
+      // have buffered bytes in flight — so an engine that printed
+      // "No such command 'bridge'" and quit was diagnosed against an empty
+      // stderr and reported as a crash. 'close' waits for the streams, which
+      // is the only point at which the engine's own last words are readable.
+      child.once('close', (code, signal) => {
+        this.handleExit(code, signal)
+        // An immediate exit with a CLI usage error is not a crash, it is an
+        // older Watch Core that has no `bridge` command. Those need opposite
+        // answers — "check the log" versus "upgrade the engine" — and the
+        // only place they can be told apart is here, while the exit code and
+        // the argument parser's own words are still in hand.
+        finish(this.surfaceMissing()
+          ?? this.spawnFailure(
+            `Watch Core exited during startup (${signal ?? `code ${String(code)}`}).`,
+          ))
+      })
     })
   }
 
@@ -411,21 +426,58 @@ export class StdioTransport implements Transport {
     for (const listener of this.failureListeners) listener(error)
   }
 
-  /** Handle child exit: fail every in-flight request, then report the loss. */
+  /**
+   * Handle child exit: fail every in-flight request, then report the loss.
+   *
+   * The surface-missing check comes first because this is where the *failure
+   * listeners* learn what happened, and they publish health. Diagnosing it
+   * only in `connect`'s resolution left the listeners publishing
+   * `core_crashed` for an engine that had merely rejected an unknown
+   * subcommand — a correct-sounding blocker that sends someone to read crash
+   * logs for a version mismatch.
+   */
   private handleExit(code: number | null, signal: NodeJS.Signals | null): void {
     this.child = null
     const detail = signal ?? `exit code ${String(code)}`
     const trailer = this.lastStderr.trim()
-    const error = watchError(
-      'bridge.core_exited',
-      `Watch Core stopped (${detail}).${trailer === '' ? '' : ` Last output: ${trailer}`}`,
-      'Check the Watch Core installation with `watch-skill doctor`, then reconnect.',
-      { details: { code, signal }, retryable: true },
-    ).error
+    const missing = this.surfaceMissing()
+    const error = missing !== null
+      ? missing.error
+      : watchError(
+        'bridge.core_exited',
+        `Watch Core stopped (${detail}).${trailer === '' ? '' : ` Last output: ${trailer}`}`,
+        'Check the Watch Core installation with `watch-skill doctor`, then reconnect.',
+        { details: { code, signal }, retryable: true },
+      ).error
     for (const id of [...this.pending.keys()]) this.settle(id, { ok: false, error })
     this.fail(error)
   }
 
+
+  /**
+   * Whether the engine started and then rejected `bridge` as a command.
+   *
+   * Recognised from what an argument parser says when it is handed a
+   * subcommand it does not have. Matching on the engine's own words is
+   * unlovely and is the only signal available: the process is gone, and a
+   * usage error and a startup crash are both a non-zero exit.
+   *
+   * A false negative is the safe direction — it degrades to
+   * `bridge.start_failed`, which is a worse message and not a wrong one.
+   */
+  private surfaceMissing(): WatchFailure | null {
+    const text = this.lastStderr.toLowerCase()
+    const usage = /no such command|unrecognized arguments|invalid choice|unknown command/.test(text)
+    if (!usage || !text.includes('bridge')) return null
+    return watchError(
+      'bridge.bridge_surface_missing',
+      `"${this.options.command}" is installed but has no "bridge" command, so this `
+      + 'Workspace cannot reach it.',
+      'Update Watch Core to a version that ships the Bridge surface '
+      + '(`pip install --upgrade watch-skill`), then reconnect.',
+      { details: { command: this.options.command }, retryable: false },
+    )
+  }
   /**
    * Build the connect-time failure result, keeping the spawn detail intact.
    *
