@@ -14,8 +14,8 @@ export const USAGE = `DeepWatch — an agent workspace that sees, remembers, and
 
   deepwatch                 what to do next, from what this machine has
   deepwatch doctor          what is installed, what is missing, and how to fix it
-  deepwatch setup           compose the DeepWatch profile (safe to re-run)
-                            asks before downloading anything
+  deepwatch setup           build the DeepWatch runtime and compose its profile
+                            (safe to re-run) asks before downloading anything
   deepwatch web             run DeepWatch in your browser
   deepwatch desktop         run the DeepWatch desktop app
 
@@ -24,6 +24,10 @@ Options
   --yes, -y                 agree to the download \`setup\` describes first
   --offline                 never reach the network; refuse instead
   --profile <name>          which profile to use (default: deepwatch)
+  --artifacts <dir>         where the packed DeepWatch tarballs and their
+                            packed-artifacts.json inventory are. \`setup\` needs
+                            this until the packages are published; they are
+                            never fetched from a registry.
   --port <n>                port for \`web\` (default: an OS-chosen one)
   --version, -v
   --help, -h
@@ -39,6 +43,15 @@ export interface Invocation {
   readonly help: boolean
   readonly version: boolean
   readonly profile: string | null
+  /**
+   * Where the packed DeepWatch tarballs are.
+   *
+   * Explicit on purpose. The DeepWatch packages are unpublished, so setup has
+   * to be told where they are rather than guessing — and a product that
+   * silently fell back to a registry for an unpublished scope would be asking
+   * for a 404 and calling it a network problem.
+   */
+  readonly artifacts: string | null
   readonly port: string | null
   /** Consent for the one command that may touch the network. */
   readonly yes: boolean
@@ -65,6 +78,7 @@ export function parse(argv: readonly string[]): Invocation {
     help: argv.includes('--help') || argv.includes('-h'),
     version: argv.includes('--version') || argv.includes('-v'),
     profile: flag('--profile'),
+    artifacts: flag('--artifacts'),
     port: flag('--port'),
     yes: argv.includes('--yes') || argv.includes('-y'),
     offline: argv.includes('--offline'),

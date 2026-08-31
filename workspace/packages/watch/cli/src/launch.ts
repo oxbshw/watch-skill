@@ -46,9 +46,10 @@ export async function runWeb(invocation: Invocation): Promise<number> {
   const port = invocation.port ?? '0'
   const host = env['DEEPWATCH_HOST'] ?? '127.0.0.1'
 
-  // `consent: false, offline: true` — starting the app is never a reason to
-  // fetch anything. Setup is the one command allowed to touch the network.
-  const provisioned = await ensureHarness({ env, consent: false, offline: true })
+  // Detection only, which is all this module can do now: starting the app is
+  // never a reason to fetch anything, `setup` is the one command that builds a
+  // runtime, and there is no longer a flag here to get that wrong with.
+  const provisioned = await ensureHarness({ env })
   const dsh = provisioned.harness
   if (dsh === null) {
     process.stderr.write(

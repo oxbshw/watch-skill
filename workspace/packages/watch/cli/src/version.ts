@@ -28,3 +28,24 @@ export const HARNESS_VERSION = '0.1.1-rc.2'
 
 /** Where it is fetched from, named in the plan before anything is fetched. */
 export const HARNESS_REGISTRY = 'https://registry.npmjs.org'
+
+/**
+ * The DeepWatch profile layer `setup` composes.
+ *
+ * Never fetched from a registry — nobody published this scope. `setup`
+ * installs it from a verified local tarball into the managed runtime, beside
+ * the Harness, and `lib/bundle.ts` resolves it from the Harness's own anchor
+ * and proves it is inside that runtime. It is *not* resolved from this CLI's
+ * installation: that is a different directory, and assuming otherwise is the
+ * mistake `tests/resolution-model.test.mjs` exists to keep out.
+ */
+export const BUNDLE_PACKAGE = '@deepwatch/dsh-bundle'
+
+/**
+ * The bundle version this CLI composes, which is its own.
+ *
+ * The DeepWatch packages are released as one set at one version, and
+ * `tests/cli.test.mjs` holds this to the bundle's own manifest so the two
+ * cannot drift into a CLI that composes a bundle nobody measured against it.
+ */
+export const BUNDLE_VERSION = VERSION
