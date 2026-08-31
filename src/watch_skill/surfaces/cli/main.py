@@ -203,6 +203,26 @@ def serve(
 
 
 @app.command()
+def bridge(
+    max_in_flight: int = typer.Option(
+        4, "--max-in-flight", min=1, max=32,
+        help="Concurrent requests served before the Bridge refuses more.",
+    ),
+) -> None:
+    """Serve the Bridge protocol on stdin/stdout for an embedding Host.
+
+    Not an interactive command. A Host (DeepWatch) spawns it as a child process
+    and speaks Content-Length-framed JSON-RPC 2.0 to it. stdout carries
+    protocol frames and nothing else; diagnostics go to stderr.
+    """
+    from watch_skill.surfaces.bridge import serve as bridge_serve
+
+    code = bridge_serve(max_in_flight=max_in_flight)
+    if code != 0:
+        raise typer.Exit(code=code) from None
+
+
+@app.command()
 def api(
     host: str = typer.Option("127.0.0.1", "--host"),
     port: int = typer.Option(8748, "--port"),
