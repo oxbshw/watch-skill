@@ -14,24 +14,37 @@
  * @module @deepwatch/dsh-client-settings/client
  */
 
+import type { ReactNode } from 'react'
 import type { Context } from '@deepseek-ai/cordis'
 import {
   AboutSection,
   DiagnosticsSection,
   EnginesSection,
   MemorySection,
-  RoleBindingsSection,
   SourcesSection,
   VerificationSection,
 } from './components.js'
 import { WatchOnboarding } from './onboarding.js'
+import { BindingStore } from './binding-state.js'
+import { RoleBindings } from './role-bindings.js'
+import type { HostApi } from './binding-state.js'
 
 export * from './components.js'
 export * from './onboarding.js'
 export * from './readiness.js'
+export * from './binding-state.js'
+export * from './role-bindings.js'
 
-/** Services this half needs before it can register anything. */
-export const inject = ['slots']
+/**
+ * Services this half needs before it can register anything.
+ *
+ * `connection` is what makes Role Bindings a working screen rather than a
+ * description of one: it carries the RPC face this package asks for the
+ * provider directory, the model catalogue, credential state and the stored
+ * assignments. Registering the section without it would put a control on
+ * screen that fails when pressed.
+ */
+export const inject = ['slots', 'connection']
 
 /** The minimal shape of DSH's slot service this module uses. */
 interface SlotService {
@@ -42,6 +55,11 @@ interface SlotService {
 /** Add the Watch sections to DSH's settings panel. */
 export function apply(ctx: Context): void {
   const slots = (ctx as unknown as { slots: SlotService }).slots
+  // One store for the whole panel. Two would be two answers to "is Chat
+  // ready?", and the screen that showed a stale one would be the screen
+  // somebody trusted.
+  const store = new BindingStore((ctx.get('connection') as { api: HostApi }).api)
+  const RoleBindingsSection = (): ReactNode => RoleBindings({ store })
 
   const section = (id: string, label: string, order: number, component: unknown): void => {
     slots.inject('settings.section', () => {

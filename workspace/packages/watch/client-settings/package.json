@@ -64,6 +64,7 @@
   },
   "dependencies": {
     "@deepwatch/dsh-client-brand": "workspace:^",
+    "@deepwatch/dsh-contracts": "workspace:^",
     "@deepwatch/dsh-technology": "workspace:^"
   },
   "peerDependencies": {

@@ -21,13 +21,10 @@ import type { BrandTone } from '@deepwatch/dsh-client-brand'
 // The `/descriptors` subpath, not the package root: the root re-exports the
 // OCR worker, which imports `node:child_process` to supervise a real process.
 // Correct on the host, fatal in a browser bundle.
-import { OCR_ENGINES, ROLES } from '@deepwatch/dsh-technology/descriptors'
+import { OCR_ENGINES } from '@deepwatch/dsh-technology/descriptors'
 import { ReadinessList } from './readiness.js'
 import { OCR_BY_WORKLOAD, OCR_DEVICE, OCR_ENGINE, OCR_MEASURED } from '../ocr-measured.js'
-import {
-  DEEPSEEK_IS_OPTIONAL, HOSTED_COUNT, PROVIDER_COUNT, SAMPLE_PROVIDERS, SELF_HOSTED_COUNT,
-} from '../providers.js'
-import type { RoleId, TechnologyDescriptor } from '@deepwatch/dsh-technology/descriptors'
+import type { TechnologyDescriptor } from '@deepwatch/dsh-technology/descriptors'
 
 /** What a settings section is handed by DSH. */
 export interface SectionProps {
@@ -36,7 +33,14 @@ export interface SectionProps {
 
 /* ── shared presentation ────────────────────────────────────────────────── */
 
-const T = {
+/**
+ * The panel vocabulary every surface here shares.
+ *
+ * Exported because Role Bindings moved into its own file once it stopped being
+ * static copy, and two settings screens with independently-invented padding is
+ * how a panel starts looking like two products.
+ */
+export const T = {
   page: { padding: '4px 2px 24px', maxWidth: '860px' },
   lead: {
     fontSize: '13px', lineHeight: 1.6,
@@ -145,93 +149,6 @@ export function NotConfigured(
   )
 }
 
-/* ── 1. Role Bindings ───────────────────────────────────────────────────── */
-
-/** What each role is for, in the product's terms rather than the model's. */
-const ROLE_COPY: Record<RoleId, { readonly name: string, readonly purpose: string }> = {
-  agent_model: { name: 'Agent Model', purpose: 'Plans, reasons and writes. The only role a chat provider fills by default.' },
-  visual_perception: { name: 'Visual Perception', purpose: 'Reads what is on screen or in a frame.' },
-  verifier: { name: 'Verifier', purpose: 'Checks a claim against the world. Deterministic checks need no model at all.' },
-  asr: { name: 'ASR', purpose: 'Turns speech into text, with timings that a citation can point at.' },
-  audio_understanding: { name: 'Audio Understanding', purpose: 'Non-speech audio: events, tone, music.' },
-  speaker_diarization: { name: 'Speaker / Diarization', purpose: 'Who spoke, and when.' },
-  embeddings: { name: 'Embeddings', purpose: 'Retrieval over the library and over memory.' },
-  reranking: { name: 'Reranking', purpose: 'Orders retrieved passages before they reach the agent.' },
-  ocr_layout: { name: 'OCR / Layout', purpose: 'Text and structure out of an image or a page.' },
-}
-
-/**
- * Role Bindings.
- *
- * The screen exists because "configured a provider" and "can see" are
- * different facts, and a product that conflates them will confidently describe
- * an image it never looked at. Each role is bound separately, and a role with
- * nothing bound says so rather than quietly falling back to the agent model.
- */
-export function RoleBindingsSection(): ReactNode {
-  return (
-    <div style={T.page}>
-      <p style={T.lead}>
-        A capability is bound per role, not per provider. One provider may serve
-        several roles, and a role may bind to a local engine instead — perception
-        does not require a cloud. A role with nothing bound is shown as unbound;
-        it never falls back to the agent model silently.
-      </p>
-      {ROLES.map(role => {
-        const copy = ROLE_COPY[role]
-        return (
-          <div key={role} style={T.card}>
-            <div style={T.cardHead}>
-              <h3 style={T.title}>{copy.name}</h3>
-              <StatusChip tone="neutral">Not bound</StatusChip>
-            </div>
-            <p style={{ ...T.lead, margin: '6px 0 0' }}>{copy.purpose}</p>
-            <div style={T.meta}>
-              <Row label="Implementation">—</Row>
-              <Row label="Provider or engine">—</Row>
-              <Row label="Status">Nothing bound on this machine</Row>
-              <Row label="Last tested">Never</Row>
-            </div>
-          </div>
-        )
-      })}
-      <h2 style={T.h2}>Providers</h2>
-      <div style={T.card}>
-        <div style={T.cardHead}>
-          <h3 style={T.title}>{`${String(PROVIDER_COUNT)} routes are available`}</h3>
-          <StatusChip tone="neutral">None configured</StatusChip>
-        </div>
-        <p style={{ ...T.lead, margin: '8px 0 0' }}>
-          {`${String(HOSTED_COUNT)} hosted and ${String(SELF_HOSTED_COUNT)} where you supply the endpoint — `}
-          {SAMPLE_PROVIDERS.join(', ')}
-          {' and others. Watch adds none of these and removes none of them: the '}
-          {'catalogue is DSH’s, reached through its own Models & Providers screen.'}
-        </p>
-        <div style={T.meta}>
-          <Row label="A local model">
-            An OpenAI-compatible server you run — Ollama, vLLM, LM Studio,
-            llama.cpp — is a base URL you supply, not a separate feature.
-          </Row>
-          <Row label="DeepSeek">
-            {DEEPSEEK_IS_OPTIONAL
-              ? 'One route among many. Nothing here requires it.'
-              : 'The only route in this catalogue.'}
-          </Row>
-          <Row label="Checked">
-            Never. A route being in the catalogue is not a working connection,
-            and no provider has been contacted from this installation.
-          </Row>
-        </div>
-      </div>
-
-      <p style={T.note}>
-        Bindings are stored by DSH alongside its own model and provider
-        settings. Watch keeps no second credential store and never sees a key —
-        a binding references a credential, it does not hold one.
-      </p>
-    </div>
-  )
-}
 
 /* ── 2. Perception Engines ──────────────────────────────────────────────── */
 

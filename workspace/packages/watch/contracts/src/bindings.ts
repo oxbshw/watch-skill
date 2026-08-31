@@ -328,16 +328,24 @@ export function permittedRoutes(bindings: WatchBindings): readonly string[] {
  * Patterns that must never appear in a stored binding.
  *
  * Not an exhaustive secret detector — there is no such thing — but a guard on
- * the specific shapes a credential takes when somebody pastes one into the
- * wrong field, plus the environment-variable names whose presence would mean
- * this document had started carrying credential plumbing rather than choices.
+ * the shapes a credential takes when somebody pastes one into a field meant to
+ * hold a reference.
+ *
+ * `OPENROUTER_API_KEY` is deliberately *not* one of them, and that distinction
+ * is the design rather than an omission: it is a reference — the name of a
+ * place the Host looks — and naming a place is exactly what `credentialRef` is
+ * for. A guard that refused it would refuse every legitimate binding, be
+ * switched off within a day, and stop catching what it was written for. What
+ * is refused is a *value*: the shapes a key has when the key itself is pasted.
  */
 const SECRET_SHAPES: readonly RegExp[] = [
   /\bsk-[A-Za-z0-9_-]{8,}/,
   /\bsk_live_[A-Za-z0-9]{8,}/,
   /\bBearer\s+[A-Za-z0-9._-]{8,}/i,
-  /_API_KEY\b/,
-  /\bAPI_KEY\b/,
+  // A long run of mixed-case token characters. A reference is a name a person
+  // could read aloud; anything this long that is not one is a value somebody
+  // pasted where a name belongs.
+  /(?=[A-Za-z0-9+/_-]{32,})(?=[^\n]*[a-z])(?=[^\n]*[A-Z])(?=[^\n]*\d)[A-Za-z0-9+/_-]{32,}/,
 ]
 
 /**

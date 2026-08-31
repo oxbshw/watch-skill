@@ -222,9 +222,23 @@ describe('a binding is a reference, never a credential', () => {
     }
   })
 
-  test('an environment variable name is not a reference this document carries', () => {
-    const doc = withBinding(EMPTY_BINDINGS, 'agent_model', { ...CHAT, credentialRef: 'OPENROUTER_API_KEY' })
-    assert.throws(() => { assertNoSecretMaterial('settings write', doc) })
+  test('a reference is a name, and a name is allowed to look like one', () => {
+    // The Host resolves `OPENROUTER_API_KEY` against its own store. Refusing
+    // it would refuse every real binding, and a guard that fires on the normal
+    // case is a guard somebody removes.
+    for (const ref of ['OPENROUTER_API_KEY', 'openrouter', 'ANTHROPIC_API_KEY', null]) {
+      const doc = withBinding(EMPTY_BINDINGS, 'agent_model', { ...CHAT, credentialRef: ref })
+      assert.doesNotThrow(
+        () => { assertNoSecretMaterial('settings write', doc) },
+        `${String(ref)} was refused as a reference`)
+    }
+  })
+
+  test('a long opaque token pasted into the reference field is refused', () => {
+    const doc = withBinding(EMPTY_BINDINGS, 'agent_model', {
+      ...CHAT, credentialRef: 'v1AbCdEf0123456789GhIjKlMnOpQrStUvWx',
+    })
+    assert.throws(() => { assertNoSecretMaterial('settings write', doc) }, /credential material/)
   })
 
   test('no stored field records anything measured from a secret', () => {
