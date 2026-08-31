@@ -241,10 +241,21 @@ const POSIX_LOCAL_ROOTS = ['home', 'Users', 'var', 'tmp', 'root', 'mnt', 'media'
  * A path preceded by `//` in a URL is skipped: `https://host/home/x` names a
  * server's route, not this machine's disk, and reporting it would be a false
  * alarm in exactly the diagnostics a reader needs.
+ *
+ * The same false alarm reached the Windows branch by a subtler route, and cost
+ * more: a drive letter is one letter followed by a colon, and `https:` ends in
+ * exactly that shape. Every ordinary URL was therefore reported as a local
+ * path — `s://api.example.com` — so `assertNoLocalPath` threw on honest
+ * diagnostics like "failed to reach https://…", which is precisely the kind of
+ * guard somebody switches off. The lookbehind is what makes a drive letter a
+ * drive letter: nothing alphabetic before it, and no colon before a `//`.
+ *
+ * `file:///D:/Em/x` still matches, and should: a file URL carries a real local
+ * path, and the `D:` in it is preceded by `/` rather than by a scheme.
  */
 export function findAbsolutePaths(text: string): readonly string[] {
   const found: string[] = []
-  const windows = /(?:[A-Za-z]:[\\/]|[\\/]{2}[^\\/\s]+[\\/])[^\s"'`,;)\]]*/g
+  const windows = /(?<![A-Za-z:])(?:[A-Za-z]:[\\/]|[\\/]{2}[^\\/\s]+[\\/])[^\s"'`,;)\]]*/g
   for (const match of text.matchAll(windows)) found.push(match[0])
 
   // portability-ok: the escaped class is regex syntax, not a path separator.

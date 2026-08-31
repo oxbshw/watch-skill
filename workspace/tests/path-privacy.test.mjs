@@ -201,4 +201,33 @@ describe('the assertions a leaking surface fails on', () => {
     assert.ok(!payload.includes('D:\\Em'))
     assert.ok(!payload.includes('D:/Em'))
   })
+
+  test('an ordinary URL is not a local path', () => {
+    // A drive letter is one letter and a colon, and `https:` ends in exactly
+    // that shape -- so every URL in a diagnostic was reported as a local path
+    // and `assertNoLocalPath` threw on honest text like "failed to reach
+    // https://...". A guard that fires on the normal case is a guard somebody
+    // switches off, which would have cost the real leaks it was written for.
+    for (const url of [
+      'failed to reach https://api.example.com/v1/models',
+      'served at http://127.0.0.1:8930/api',
+      'see https://github.com/oxbshw/watch-skill/issues',
+      'ws://127.0.0.1:8930/socket',
+    ]) {
+      assert.deepEqual(findAbsolutePaths(url), [], `${url} was read as a local path`)
+      assert.doesNotThrow(() => { assertNoLocalPath('provider payload', url) })
+    }
+  })
+
+  test('a file URL still carries a local path, and is still caught', () => {
+    // The `D:` in `file:///D:/Em` is preceded by a separator rather than by a
+    // scheme, which is what separates it from `https:`.
+    assert.notDeepEqual(findAbsolutePaths('file:///D:/Em/node_modules/x'), [])
+    assert.throws(() => { assertNoLocalPath('export', 'file:///D:/Em/node_modules/x') })
+  })
+
+  test('a UNC path is still caught', () => {
+    const unc = 'copied from \\\\server\\share\\a'
+    assert.notDeepEqual(findAbsolutePaths(unc), [])
+  })
 })

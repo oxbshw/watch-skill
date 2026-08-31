@@ -98,7 +98,7 @@
       {
         "name": "@deepwatch/dsh-contracts",
         "version": "0.1.0-preview.0",
-        "integrity": "sha256:00165cd868387ec192cc4a25549530e2eb314e924c5e121cb7961eda34f370a5",
+        "integrity": "sha256:483c260696d2b3811532b45c93a4d2c46d4853a5f1bab3fb49f48c7c0798d25f",
         "sourceFiles": 16
       },
       {
@@ -185,7 +185,7 @@
       "creators": [
         "Tool: watch-gen-release-manifest"
       ],
-      "created": "2026-08-31T15:08:18Z"
+      "created": "2026-08-31T15:22:23Z"
     },
     "packages": [
       {
@@ -328,7 +328,7 @@
         "checksums": [
           {
             "algorithm": "SHA256",
-            "checksumValue": "00165cd868387ec192cc4a25549530e2eb314e924c5e121cb7961eda34f370a5"
+            "checksumValue": "483c260696d2b3811532b45c93a4d2c46d4853a5f1bab3fb49f48c7c0798d25f"
           }
         ]
       },
