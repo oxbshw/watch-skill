@@ -98,7 +98,7 @@
       {
         "name": "@deepwatch/dsh-contracts",
         "version": "0.1.0-preview.0",
-        "integrity": "sha256:acc76cd3178ad95737a8a4fe007c90015dad3d03b25ad694deb4329b96f21abd",
+        "integrity": "sha256:edbd5684792fad2a4d6b3cb33e24a737587aca745a9fc7fd30902249c5d70544",
         "sourceFiles": 16
       },
       {
@@ -110,7 +110,7 @@
       {
         "name": "@deepwatch/dsh-library",
         "version": "0.1.0-preview.0",
-        "integrity": "sha256:b58a495160aa08b59b2c0776d3a050f05b03d792dbd326b6c569a5ab75d81573",
+        "integrity": "sha256:02762afcb9aa7820a3e597d806ce62282f74feeeb492e979c7f33d5db2e0fc5e",
         "sourceFiles": 15
       },
       {
@@ -146,7 +146,7 @@
       {
         "name": "@deepwatch/dsh-tools",
         "version": "0.1.0-preview.0",
-        "integrity": "sha256:0fa211ad35821bd6f7c14fc582b4a8c2dc9f8911dc9f51a588e8e059d888a957",
+        "integrity": "sha256:67b9a2efbaf9d619a0c6d4db14475d5f5b14970dc7eb0bbec0d0e1ed2149b1ec",
         "sourceFiles": 10
       },
       {
@@ -185,7 +185,7 @@
       "creators": [
         "Tool: watch-gen-release-manifest"
       ],
-      "created": "2026-08-31T21:31:36Z"
+      "created": "2026-08-31T21:55:15Z"
     },
     "packages": [
       {
@@ -328,7 +328,7 @@
         "checksums": [
           {
             "algorithm": "SHA256",
-            "checksumValue": "acc76cd3178ad95737a8a4fe007c90015dad3d03b25ad694deb4329b96f21abd"
+            "checksumValue": "edbd5684792fad2a4d6b3cb33e24a737587aca745a9fc7fd30902249c5d70544"
           }
         ]
       },
@@ -360,7 +360,7 @@
         "checksums": [
           {
             "algorithm": "SHA256",
-            "checksumValue": "b58a495160aa08b59b2c0776d3a050f05b03d792dbd326b6c569a5ab75d81573"
+            "checksumValue": "02762afcb9aa7820a3e597d806ce62282f74feeeb492e979c7f33d5db2e0fc5e"
           }
         ]
       },
@@ -456,7 +456,7 @@
         "checksums": [
           {
             "algorithm": "SHA256",
-            "checksumValue": "0fa211ad35821bd6f7c14fc582b4a8c2dc9f8911dc9f51a588e8e059d888a957"
+            "checksumValue": "67b9a2efbaf9d619a0c6d4db14475d5f5b14970dc7eb0bbec0d0e1ed2149b1ec"
           }
         ]
       },

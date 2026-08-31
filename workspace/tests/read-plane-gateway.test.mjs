@@ -86,12 +86,16 @@ test('the generated contribution registers and the service mounts', async () => 
   assert.equal(mine.face, 'host')
 })
 
-test('every Library method is a strict descriptor, not an SRC claim', async () => {
+test('every namespace method is a strict descriptor, not an SRC claim', async () => {
   const { ctx, gateway } = await host()
 
   const invocations = TYPERT.invocations.filter(entry => entry.service === 'watchQuery')
+  // `coreHealth` is on this namespace and is not a Library read. It is here
+  // because this is the only channel the browser has to the Host, and
+  // Diagnostics needs one — a second namespace for a single method would be a
+  // second generated protocol to keep in step for no reader.
   assert.deepEqual(invocations.map(entry => entry.method).sort(),
-    ['libraryGet', 'libraryRefresh', 'librarySearch'],
+    ['coreHealth', 'libraryGet', 'libraryRefresh', 'librarySearch'],
     'the generated Host protocol carries exactly the read plane methods')
 
   for (const invocation of invocations) {
