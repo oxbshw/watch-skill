@@ -24,7 +24,8 @@
 import { test, describe } from 'node:test'
 import assert from 'node:assert/strict'
 import {
-  cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync,
+  cpSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, symlinkSync,
+  writeFileSync,
 } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
@@ -53,7 +54,10 @@ test.after(() => {
  * profile bundles from and therefore the only anchor worth testing against.
  */
 function managed(prefix = 'deepwatch-managed-') {
-  const dir = mkdtempSync(join(tmpdir(), prefix))
+  // `realpathSync` because macOS hands out a `/var/folders/...` TMPDIR that is
+  // a symlink, and `resolveBundle` reports the real path. Comparing the two
+  // spellings fails on exactly one platform.
+  const dir = realpathSync(mkdtempSync(join(tmpdir(), prefix)))
   rooms.push(dir)
   const harness = join(dir, 'node_modules', '@deepseek-ai', 'dsh')
   mkdirSync(harness, { recursive: true })
@@ -153,7 +157,7 @@ describe('refusing what must not be composed', () => {
     // answers this lookup. Resolving is not the same as being contained, and a
     // runtime that borrowed one would depend on a directory setup never wrote
     // and cannot vouch for.
-    const outer = mkdtempSync(join(tmpdir(), 'deepwatch-outer-'))
+    const outer = realpathSync(mkdtempSync(join(tmpdir(), 'deepwatch-outer-')))
     rooms.push(outer)
     const inner = join(outer, 'home', 'harness')
     mkdirSync(join(inner, 'node_modules', '@deepseek-ai', 'dsh'), { recursive: true })
@@ -189,7 +193,7 @@ describe('refusing what must not be composed', () => {
 
   test('a workspace symlink is refused', () => {
     const room = managed()
-    const checkout = mkdtempSync(join(tmpdir(), 'deepwatch-checkout-'))
+    const checkout = realpathSync(mkdtempSync(join(tmpdir(), 'deepwatch-checkout-')))
     rooms.push(checkout)
     writeFileSync(join(checkout, 'package.json'), `${JSON.stringify({
       name: '@deepwatch/dsh-bundle', version: VERSION,
@@ -293,7 +297,7 @@ describe('telling pnpm where the local packages are', () => {
     // pnpm 11 stopped reading `pnpm.overrides` from package.json and says so
     // in a warning that is easy to miss. A profile that relied on the old home
     // resolved nineteen packages straight to a 404.
-    const dir = mkdtempSync(join(tmpdir(), 'deepwatch-overrides-'))
+    const dir = realpathSync(mkdtempSync(join(tmpdir(), 'deepwatch-overrides-')))
     rooms.push(dir)
     writeFileSync(join(dir, 'pnpm-workspace.yaml'),
       ['packages:', '  - .', '', 'nodeLinker: hoisted', ''].join('\n'))
@@ -315,7 +319,7 @@ describe('telling pnpm where the local packages are', () => {
   })
 
   test('a second run replaces the block rather than appending another', () => {
-    const dir = mkdtempSync(join(tmpdir(), 'deepwatch-overrides-again-'))
+    const dir = realpathSync(mkdtempSync(join(tmpdir(), 'deepwatch-overrides-again-')))
     rooms.push(dir)
     const tarball = join(dir, '.artifacts', `deepwatch-dsh-bundle-${VERSION}.tgz`)
 

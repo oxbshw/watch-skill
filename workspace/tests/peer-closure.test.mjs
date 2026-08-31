@@ -24,7 +24,8 @@ import { test, describe } from 'node:test'
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
 import {
-  cpSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync,
+  cpSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync,
+  writeFileSync,
 } from 'node:fs'
 import { createHash } from 'node:crypto'
 import { tmpdir } from 'node:os'
@@ -51,7 +52,7 @@ test.after(() => {
  * a lockfile would no longer be reproducible from committed evidence.
  */
 function generatorRoot() {
-  const dir = mkdtempSync(join(tmpdir(), 'deepwatch-gen-'))
+  const dir = realpathSync(mkdtempSync(join(tmpdir(), 'deepwatch-gen-')))
   rooms.push(dir)
   cpSync(join(ROOT, 'scripts'), join(dir, 'scripts'), { recursive: true })
   mkdirSync(join(dir, 'inventory'), { recursive: true })

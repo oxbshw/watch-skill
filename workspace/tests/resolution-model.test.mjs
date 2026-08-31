@@ -22,7 +22,7 @@
 import { test, describe } from 'node:test'
 import assert from 'node:assert/strict'
 import { createRequire } from 'node:module'
-import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
@@ -41,8 +41,18 @@ test.after(() => {
   for (const dir of rooms) rmSync(dir, { recursive: true, force: true, maxRetries: 5 })
 })
 
+/**
+ * A scratch directory, by the path a resolver will report.
+ *
+ * `realpathSync` because macOS hands out `/var/folders/...` from `TMPDIR` and
+ * that is a symlink to `/private/var/folders/...`. Node's resolver returns the
+ * real path, so a test comparing what it got against what `mkdtemp` said
+ * compares two spellings of the same directory and fails on one platform only.
+ * The product has the same hazard and answers it the same way -- see
+ * `isInside` in `lib/bundle.ts`, which resolves both sides before comparing.
+ */
 function room(prefix) {
-  const dir = mkdtempSync(join(tmpdir(), prefix))
+  const dir = realpathSync(mkdtempSync(join(tmpdir(), prefix)))
   rooms.push(dir)
   return dir
 }

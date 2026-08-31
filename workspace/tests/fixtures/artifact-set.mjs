@@ -18,7 +18,7 @@
  */
 
 import { createHash } from 'node:crypto'
-import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, realpathSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
@@ -65,7 +65,7 @@ export function tarballName(name, version) {
  * @returns {{ directory: string, rows: object[] }} the directory and its rows.
  */
 export function writeArtifactSet(version, options = {}) {
-  const directory = options.dir ?? mkdtempSync(join(tmpdir(), 'deepwatch-artifacts-'))
+  const directory = options.dir ?? realpathSync(mkdtempSync(join(tmpdir(), 'deepwatch-artifacts-')))
   mkdirSync(directory, { recursive: true })
 
   const rows = []

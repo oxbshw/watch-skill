@@ -34,8 +34,8 @@ import { test, describe } from 'node:test'
 import assert from 'node:assert/strict'
 import { createHash } from 'node:crypto'
 import {
-  existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, symlinkSync,
-  writeFileSync,
+  existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync,
+  symlinkSync, writeFileSync,
 } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
@@ -63,7 +63,9 @@ test.after(() => {
 })
 
 function room(prefix) {
-  const dir = mkdtempSync(join(tmpdir(), prefix))
+  // See `tests/resolution-model.test.mjs`: macOS `TMPDIR` is a symlink, and
+  // anything that reports a resolved path reports the other spelling.
+  const dir = realpathSync(mkdtempSync(join(tmpdir(), prefix)))
   rooms.push(dir)
   return dir
 }

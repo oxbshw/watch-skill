@@ -22,7 +22,9 @@
 
 import { test, describe } from 'node:test'
 import assert from 'node:assert/strict'
-import { mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs'
+import {
+  mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync, statSync, writeFileSync,
+} from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join, relative, sep } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
@@ -39,7 +41,7 @@ test.after(() => {
 
 /** A scratch directory, optionally with a space in its name. */
 function room(prefix) {
-  const dir = mkdtempSync(join(tmpdir(), prefix))
+  const dir = realpathSync(mkdtempSync(join(tmpdir(), prefix)))
   rooms.push(dir)
   return dir
 }
