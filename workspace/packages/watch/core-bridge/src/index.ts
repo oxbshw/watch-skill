@@ -380,7 +380,11 @@ export class WatchCoreService extends Service {
     this.transport = null
     if (previous !== null) await previous.dispose()
 
-    let transport = this.createTransport()
+    // `const` because there is now exactly one backend per attempt. It was
+    // `let` so the fallback could swap a failed stdio transport for the mock
+    // partway through, and the compiler insisting on this is the tidiest
+    // confirmation that the swap is gone.
+    const transport = this.createTransport()
     this.transport = transport
     this.publish({ phase: 'connecting', transport: transport.kind, handshake: null, error: null })
 
