@@ -249,6 +249,21 @@ class TestRedaction:
         for raw in (r"C:\Users\someone\notes.txt", "/home/someone/notes.txt"):
             assert "someone" not in logical_path(raw)
 
+    def test_a_foreign_platform_path_is_hidden_whole(self) -> None:
+        """The case that leaked, and the reason the check is `isabs`.
+
+        A Bridge sees both spellings whatever it runs on: a Windows path in a
+        message read on Linux, a POSIX path read on Windows. The foreign one is
+        not absolute here, so `resolve()` used to anchor it to the working
+        directory — after which it matched the `<home>` root, whose prefix was
+        stripped while the username survived in the tail.
+        """
+        from watch_skill.surfaces.bridge.redact import logical_path
+
+        foreign = "/home/someone/notes.txt" if os.name == "nt" else r"C:\Users\someone\notes.txt"
+        assert logical_path(foreign) == "<path>"
+        assert "someone" not in logical_path(foreign)
+
     def test_a_url_scheme_is_not_a_drive_letter(self) -> None:
         """`https://x` has a colon and a slash where `C:/x` does."""
         from watch_skill.surfaces.bridge.redact import logical_path
@@ -289,31 +304,59 @@ class TestRedaction:
 
 class TestConcurrency:
     def test_a_slow_request_does_not_block_a_fast_one(self) -> None:
-        """Serialised handlers would make the concurrency contract a lie."""
+        """Serialised handlers would make the concurrency contract a lie.
+
+        Both sides are test handlers. The second request used to be a real
+        `watch.library.list`, which reads as a better test and is a worse one:
+        its first call pays a cold import of the index layer, and on a Windows
+        runner that import outlasted the slow handler's sleep. The failure was
+        real and it was not the server's — "this Core call is fast" was an
+        assumption about import cost, not about concurrency.
+
+        Ordering is now established by the handlers themselves rather than by
+        elapsed time: the quick one waits for the slow one to be *inside* its
+        handler before it returns, so overlap is what the assertion rests on.
+        """
         from watch_skill.surfaces.bridge import methods
 
-        started = threading.Event()
+        entered = threading.Event()
+        release = threading.Event()
 
         def slow(_params: dict[str, Any]) -> Any:
-            started.set()
-            time.sleep(0.6)
+            entered.set()
+            # Held until the quick request has been answered, so a server that
+            # ran them one after another cannot pass by being fast enough.
+            release.wait(10.0)
             return {"slow": True}
 
+        def quick(_params: dict[str, Any]) -> Any:
+            # Proof of overlap: this only returns once the slow handler is
+            # running, and it runs while that one is still held.
+            assert entered.wait(10.0), "the slow handler never started"
+            release.set()
+            return {"quick": True}
+
         methods.HANDLERS["watch.test.slow"] = slow
+        methods.HANDLERS["watch.test.quick"] = quick
         try:
             stdin = BytesIO(
                 frame(HANDSHAKE)
                 + frame({"jsonrpc": "2.0", "id": 2, "method": "watch.test.slow"})
-                + frame({"jsonrpc": "2.0", "id": 3, "method": "watch.library.list"})
+                + frame({"jsonrpc": "2.0", "id": 3, "method": "watch.test.quick"})
             )
             stdout = BytesIO()
             BridgeServer(stdin, stdout).run()
         finally:
+            release.set()
             del methods.HANDLERS["watch.test.slow"]
+            del methods.HANDLERS["watch.test.quick"]
 
-        order = [reply["id"] for reply in drain(stdout.getvalue())]
-        assert started.is_set()
-        assert order.index(3) < order.index(2), "the fast request must not wait"
+        replies = {reply["id"]: reply for reply in drain(stdout.getvalue())}
+        assert entered.is_set()
+        # Both completed, which on a serialised server is impossible: the slow
+        # handler would still be waiting for a release nobody could send.
+        assert replies[2]["result"] == {"slow": True}
+        assert replies[3]["result"] == {"quick": True}
 
     def test_beyond_the_ceiling_the_bridge_refuses_rather_than_queues(self) -> None:
         """Unbounded queueing is a memory bug wearing a feature's name."""
