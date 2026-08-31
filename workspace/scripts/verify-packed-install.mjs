@@ -34,6 +34,10 @@
  */
 
 import { spawnSync } from 'node:child_process'
+
+import { resolveNpm } from './lib/process.mjs'
+import { installInvocation } from './lib/install.mjs'
+import { catalog } from './lib/catalog.mjs'
 import {
   existsSync, lstatSync, mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync,
   writeFileSync,
@@ -48,15 +52,30 @@ const ARTIFACTS = join(ROOT, '.release-artifacts')
 /**
  * Peers a Node import needs, kept off the machine otherwise.
  *
- * Not `@deepseek-ai/dsh`: that is the four-hundred-package Harness, it is an
- * *optional* peer, and pulling it in here would turn a two-minute check into a
- * ten-minute one to prove something `tests/harness-provisioning.test.mjs`
- * already proves without the network.
+ * **What this check covers, stated exactly.** The install below passes
+ * `--legacy-peer-deps`, and that flag applies to the twenty DeepWatch tarballs
+ * and the four peers named here — nothing else. It does **not** install the
+ * Harness, and it therefore says nothing about whether the managed runtime's
+ * required-peer set closes. That is a different question, asked in a different
+ * place: `scripts/gen-managed-runtime.mjs` derives the peer set,
+ * `tests/managed-runtime.test.mjs` proves the transaction around it, and
+ * `deepwatch setup` performs the real install.
+ *
+ * The exclusion is deliberate rather than incidental. `@deepseek-ai/dsh` is a
+ * five-hundred-package closure and an *optional* peer of the CLI; installing
+ * it here would turn a two-minute check into a ten-minute one to answer a
+ * question this file is not asking. What this file asks is whether the packed
+ * first-party closure resolves and imports from outside the workspace.
  */
 const PEERS = [
   'react@^18.2.0',
   'zod@^4.5.2',
-  '@deepseek-ai/cordis@4.0.1',
+  // Read from the catalog rather than written down. The packed manifests
+  // resolve `catalog:` to whatever it pins, so a hard-coded version here goes
+  // stale the moment the baseline moves -- which it did, and this gate then
+  // failed with "does not satisfy the range that asked for it" six times over
+  // for a version nobody had changed on purpose.
+  `@deepseek-ai/cordis@${catalog(ROOT).get('@deepseek-ai/cordis') ?? ''}`,
   '@deepseek-ai/schemastery@^3.18.1',
 ]
 
@@ -71,13 +90,27 @@ const PEERS = [
 const BUNDLE = './lib/client.js'
 const BROWSER_SOURCE = './lib/client/'
 
+/**
+ * Run a command, through the boundary the product uses.
+ *
+ * This used to build a quoted command line and ask for a shell, because on
+ * Windows `npm` is a `.cmd` and Node will not spawn one otherwise. `resolveNpm`
+ * answers that properly — Node running npm's own `npm-cli.js` — so there is no
+ * shell here, no quoting, and no second opinion about how to start a package
+ * manager. Two opinions is what let `spawn EINVAL` reach a user's machine.
+ */
 function run(command, args, options = {}) {
-  const shell = process.platform === 'win32' && !command.endsWith('.exe')
-  const ran = shell
-    ? spawnSync(`${command} ${args.map(a => `"${a}"`).join(' ')}`, [],
-      { encoding: 'utf8', shell: true, ...options })
-    : spawnSync(command, args, { encoding: 'utf8', ...options })
+  const ran = spawnSync(command, args, { encoding: 'utf8', shell: false, ...options })
   return { code: ran.status ?? 1, stdout: ran.stdout ?? '', stderr: ran.stderr ?? '' }
+}
+
+/** npm, as the product resolves it, or a refusal that names the problem. */
+function npm() {
+  const found = resolveNpm()
+  if (found === null) {
+    throw new Error('verify-packed-install: no npm this tooling can run was found')
+  }
+  return found
 }
 
 /** Every file an `exports` map points at, however deeply it nests. */
@@ -118,7 +151,9 @@ async function main() {
     writeFileSync(join(room, '.npmrc'), 'audit=false\nfund=false\n')
 
     process.stdout.write(`  installing 20 tarballs into ${room}\n`)
-    const installed = run('npm', ['install', '--legacy-peer-deps', ...tarballs, ...PEERS],
+    const runner = npm()
+    const installed = run(runner.command,
+      [...runner.prefix, ...installInvocation([...tarballs, ...PEERS])],
       { cwd: room, timeout: 900_000 })
     if (installed.code !== 0) {
       say('install', installed.stderr.split('\n').filter(Boolean).slice(-4).join(' / '))
@@ -141,7 +176,8 @@ async function main() {
     }
 
     // 1. The closure resolves, by npm's own reckoning rather than ours.
-    const listed = run('npm', ['ls', '--all', '--json'], { cwd: room, timeout: 300_000 })
+    const listed = run(runner.command, [...runner.prefix, 'ls', '--all', '--json'],
+      { cwd: room, timeout: 300_000 })
     const tree = JSON.parse(listed.stdout || '{}')
     const walkTree = node => {
       for (const [name, child] of Object.entries(node.dependencies ?? {})) {
@@ -229,16 +265,16 @@ async function main() {
 
     // 4. The CLI runs, from the installed package.
     const cli = join(scope, 'cli', 'lib', 'bin.js')
-    const version = run('node', [cli, '--version'], { cwd: room, timeout: 120_000 })
+    const version = run(process.execPath, [cli, '--version'], { cwd: room, timeout: 120_000 })
     const expected = JSON.parse(readFileSync(join(scope, 'cli', 'package.json'), 'utf8')).version
     if (version.stdout.trim() !== expected) {
       say('cli', `--version said ${version.stdout.trim()}, package says ${expected}`)
     }
-    const help = run('node', [cli, '--help'], { cwd: room, timeout: 120_000 })
+    const help = run(process.execPath, [cli, '--help'], { cwd: room, timeout: 120_000 })
     if (help.code !== 0 || !help.stdout.includes('deepwatch setup')) {
       say('cli', '--help did not print usage')
     }
-    const doctor = run('node', [cli, 'doctor', '--json'],
+    const doctor = run(process.execPath, [cli, 'doctor', '--json'],
       { cwd: room, timeout: 300_000, env: { ...process.env, DEEPWATCH_HOME: join(room, 'home') } })
     try {
       const report = JSON.parse(doctor.stdout)

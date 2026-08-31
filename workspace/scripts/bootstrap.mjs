@@ -90,11 +90,15 @@ for (const [index, step] of STEPS.entries()) {
   const result = spawnSync(step.command, step.args ?? [], {
     cwd: ROOT,
     stdio: 'inherit',
-    // A shell step is one command string, so it needs a shell on every
-    // platform rather than only where the tool is a .cmd shim. Node steps
-    // pass an argv array and must not get one: `shell: true` re-parses the
-    // command, and `process.execPath` contains a space on Windows, so the
-    // path splits and the step fails with 'C:\Program' is not recognized.
+    // The one shell in this repository, and the only place one is defensible.
+    // Everything else resolves a tool's Node entry point and runs it directly
+    // -- see `scripts/lib/process.mjs` -- but that module imports the built
+    // CLI, and bootstrap is the script that runs *before* anything is built.
+    // Its two shell steps are fixed command strings this file writes itself,
+    // with no value from anywhere else in them. Node steps pass an argv array
+    // and must not get a shell: it re-parses the command, and
+    // `process.execPath` contains a space on Windows, so the path splits and
+    // the step fails with 'C:\Program' is not recognized.
     shell: step.shell === true,
     // A fresh machine has not used Corepack before. Without this it stops on
     // an interactive "do you want to download pnpm?" prompt, which turns an

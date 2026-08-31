@@ -27,6 +27,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 
 import { manualRoot } from './manual-paths.mjs'
+import { resolvePnpm } from './process.mjs'
 
 /** The DSH version `upstream/deepseek-harness.lock` pins. */
 export function pinnedVersion(root) {
@@ -113,18 +114,32 @@ export function ensureCli(root, env = process.env) {
   // rather than walking up and installing into the workspace.
   writeFileSync(
     join(dir, 'package.json'),
-    `${JSON.stringify({ name: 'watch-dsh-cli', private: true, version: '0.0.0' }, null, 2)}\n`,
+    `${JSON.stringify({
+      name: 'watch-dsh-cli',
+      private: true,
+      version: '0.0.0',
+      // The pinned package manager, so Corepack resolves the same pnpm the
+      // workspace uses without being handed a spec on a command line.
+      packageManager: pinnedPackageManager(root),
+    }, null, 2)}\n`,
     'utf8',
   )
   process.stdout.write(`watch: installing @deepseek-ai/dsh@${wanted} for the smoke gates\n`)
+  // pnpm, through the product's own launcher. Not a preference: npm spent
+  // thirty minutes resolving this tree and wrote nothing, where pnpm's
+  // content-addressed store finished in under two. And not through a shell:
+  // `resolvePnpm` finds the `.js` behind the shim -- a real pnpm install, or
+  // the Corepack one a Node distribution provides -- so Node runs it directly
+  // on every platform. Asking for a shell here was the last one left on the
+  // build path, and it printed a deprecation warning on every build to say so.
+  const pnpm = resolvePnpm(env)
+  if (pnpm === null) return found
   const result = spawnSync(
-    // pnpm, through the same pinned Corepack spec the bootstrap uses. Not a
-    // preference: npm spent thirty minutes resolving this tree and wrote
-    // nothing, where pnpm's content-addressed store finished in under two.
-    `corepack ${pinnedPackageManager(root)} add @deepseek-ai/dsh@${wanted}`,
+    pnpm.command,
+    [...pnpm.prefix, 'add', `@deepseek-ai/dsh@${wanted}`],
     { cwd: dir,
       stdio: 'inherit',
-      shell: true,
+      shell: false,
       env: {
         ...env,
         COREPACK_ENABLE_DOWNLOAD_PROMPT: '0',

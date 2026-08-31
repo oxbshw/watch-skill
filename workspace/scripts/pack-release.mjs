@@ -37,6 +37,7 @@ import { fileURLToPath } from 'node:url'
 
 import { audit } from './verify-publishable.mjs'
 import { byCodeUnit } from './lib/order.mjs'
+import { resolvePnpm } from './lib/process.mjs'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 
@@ -76,18 +77,23 @@ function run(command, args, options = {}) {
 }
 
 /**
- * Run pnpm, which on Windows is a `.cmd` shim.
+ * Run pnpm, through the boundary the product uses.
  *
- * Node refuses to spawn `.cmd` without a shell, so this asks for one and
- * quotes what it passes. Every argument here is built by this file — a package
- * directory and an output directory — so there is no input to smuggle
- * anything through, but the quoting is what makes that true of a path with a
- * space in it as well.
+ * This used to build a quoted command string and ask for a shell, because on
+ * Windows `pnpm` is a `.cmd` and Node will not spawn one otherwise. That
+ * worked — and it was a *second* answer to a question the shipped CLI answered
+ * differently and wrongly, which is how `spawn EINVAL` reached a user's
+ * machine. `resolvePnpm` is now the single answer: it finds the `.js` entry
+ * behind the shim (a real pnpm install, or the Corepack shim a Node
+ * distribution provides) so Node runs it directly, with no shell and no
+ * quoting, on every platform. A path with a space is then simply an argument.
  */
 function pnpmPack(args, cwd) {
-  if (process.platform !== 'win32') return run('pnpm', args, { cwd })
-  const quoted = args.map(argument => `"${argument.replaceAll('"', '""')}"`)
-  return run(`pnpm ${quoted.join(' ')}`, [], { cwd, shell: true })
+  const pnpm = resolvePnpm()
+  if (pnpm === null) {
+    return { code: 1, stdout: '', stderr: 'no pnpm this tooling can run was found' }
+  }
+  return run(pnpm.command, [...pnpm.prefix, ...args], { cwd })
 }
 
 /**
@@ -265,9 +271,13 @@ function main() {
     },
     packages: records,
   }
-  writeFileSync(
-    join(ROOT, 'inventory', 'packed-artifacts.json'),
-    `${JSON.stringify(inventory, null, 2)}\n`)
+  const serialised = `${JSON.stringify(inventory, null, 2)}\n`
+  writeFileSync(join(ROOT, 'inventory', 'packed-artifacts.json'), serialised)
+  // And beside the tarballs themselves, so the artifact directory describes
+  // what is in it. `deepwatch setup --artifacts <dir>` reads this to check
+  // every tarball's digest before installing one, and a directory of tarballs
+  // with no inventory is a directory nobody can verify.
+  writeFileSync(join(out, 'packed-artifacts.json'), serialised)
 
   if (problems.length > 0) {
     for (const problem of problems) {

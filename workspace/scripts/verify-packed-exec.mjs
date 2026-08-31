@@ -30,23 +30,67 @@ import { tmpdir } from 'node:os'
 import { basename, dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
+import { launchWindowsShim, resolveNodeCli, resolveNpm, resolvePnpm } from './lib/process.mjs'
+import { installInvocation } from './lib/install.mjs'
+
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const ARTIFACTS = join(ROOT, '.release-artifacts')
 const VERSION = JSON.parse(
   readFileSync(join(ROOT, 'packages', 'watch', 'cli', 'package.json'), 'utf8')).version
 
 /**
- * Run a command line, on a platform where the runners are all shims.
+ * Run a command, through the boundary the product uses.
  *
- * `npm`, `npx` and `pnpm` are `.cmd` files on Windows and Node will not spawn
- * one without a shell. Every argument here is built by this file.
+ * No shell. `npm` on Windows is a `.cmd` and Node will not spawn one without
+ * an interpreter, so this ran a quoted command line through `cmd.exe`
+ * instead — which worked here and was a *second* answer to the question the
+ * shipped CLI answered differently and wrongly. `resolveNpm` is the single
+ * answer: Node running npm's own `npm-cli.js`, on every platform.
  */
 function run(command, args, options = {}) {
-  const line = [command, ...args.map(argument => `"${argument}"`)].join(' ')
-  const ran = spawnSync(line, [], {
-    encoding: 'utf8', shell: true, timeout: 300_000, ...options,
+  const ran = spawnSync(command, args, {
+    encoding: 'utf8', shell: false, timeout: 300_000, ...options,
   })
   return { code: ran.status ?? 1, stdout: ran.stdout ?? '', stderr: ran.stderr ?? '' }
+}
+
+/**
+ * The one place a Windows shim is started, and the only one that needs to be.
+ *
+ * A globally installed `deepwatch` *is* a `.cmd` on Windows, and whether that
+ * shim works is precisely what this gate checks — so here, and only here, a
+ * command interpreter is genuinely required. It is the product's own
+ * `launchWindowsShim` rather than a second copy of the same quoting: that
+ * function refuses any argument a `cmd.exe` line could reinterpret before a
+ * process exists, and getting `cmd`'s quoting subtly right in two places is
+ * how one of them ends up subtly wrong.
+ */
+async function runShim(shim, args) {
+  if (process.platform !== 'win32') return run(shim, args)
+  const ran = await launchWindowsShim(shim, args, { timeoutMs: 300_000 })
+  return { code: ran.code ?? 1, stdout: ran.stdout, stderr: ran.stderr }
+}
+
+/**
+ * npx's own Node entry, so `npx` is started the way `npm` is.
+ *
+ * `npx` ships inside the npm package as `bin/npx-cli.js`; resolving it through
+ * `resolveNodeCli` keeps this on the same shell-free path as everything else
+ * rather than reaching for the `.cmd` beside it.
+ */
+function npxEntry() {
+  const entry = resolveNodeCli('npm', join('bin', 'npx-cli.js'))
+  if (entry === null) throw new Error('verify-packed-exec: no npx entry point was found')
+  return entry
+}
+
+/** npm, as the product resolves it. */
+function npm() {
+  const found = resolveNpm()
+  if (found === null) {
+    throw new Error('verify-packed-exec: no npm this tooling can run was found')
+  }
+  return found
 }
 
 const rooms = []
@@ -56,7 +100,7 @@ function room(prefix) {
   return dir
 }
 
-function main() {
+async function main() {
   const problems = []
   const say = (where, detail) => problems.push(`${where}: ${detail}`)
   const ran = []
@@ -77,7 +121,9 @@ function main() {
   writeFileSync(join(project, '.npmrc'), 'audit=false\nfund=false\n')
   const home = join(project, 'home')
 
-  const installed = run('npm', ['install', '--legacy-peer-deps', ...tarballs], { cwd: project })
+  const project_npm = npm()
+  const installed = run(project_npm.command,
+    [...project_npm.prefix, ...installInvocation(tarballs)], { cwd: project })
   if (installed.code !== 0) {
     say('install', installed.stderr.split('\n').filter(Boolean).slice(-3).join(' / '))
     return { problems, ran }
@@ -102,10 +148,13 @@ ERR<${result.stderr.slice(0, 300)}>
     : result.stdout.trim() === VERSION ? null : `printed ${result.stdout.trim()}`
 
   // Each runner, by its own resolution path.
-  expect('npm exec', run('npm', ['exec', '--', 'deepwatch', '--version'], { cwd: project }),
+  expect('npm exec',
+    run(project_npm.command, [...project_npm.prefix, 'exec', '--', 'deepwatch', '--version'],
+      { cwd: project }),
     sameVersion)
   expect('npx (against the local install)',
-    run('npx', ['--no-install', 'deepwatch', '--version'], { cwd: project }), sameVersion)
+    run(process.execPath, [npxEntry(), '--no-install', 'deepwatch', '--version'],
+      { cwd: project }), sameVersion)
 
   // pnpm needs a different shape, for a reason worth writing down.
   //
@@ -149,18 +198,24 @@ ERR<${result.stderr.slice(0, 300)}>
     // it and not for the package itself.
     dependencies: { '@deepwatch/cli': 'workspace:*' },
   }, null, 2)}\n`)
-  const pnpmInstalled = run('pnpm', ['install'], { cwd: pnpmRoom })
+  const pnpm = resolvePnpm()
+  const pnpmInstalled = pnpm === null
+    ? { code: 1, stdout: '', stderr: 'no pnpm this tooling can run was found' }
+    : run(pnpm.command, [...pnpm.prefix, 'install'], { cwd: pnpmRoom })
   if (pnpmInstalled.code !== 0) {
     say('pnpm install', pnpmInstalled.stderr.split('\n').filter(Boolean).slice(-3).join(' / '))
   } else {
     expect('pnpm exec (workspace of unpacked tarballs)',
-      run('pnpm', ['exec', 'deepwatch', '--version'], { cwd: pnpmRoom }), sameVersion)
+      run(pnpm.command, [...pnpm.prefix, 'exec', 'deepwatch', '--version'],
+        { cwd: pnpmRoom }), sameVersion)
   }
 
   // A global install into a prefix this script owns. Never the machine's.
   const prefix = room('deepwatch-global-')
-  const global_ = run('npm',
-    ['install', '--global', '--legacy-peer-deps', `--prefix=${prefix}`, ...tarballs])
+  const runner = npm()
+  const global_ = run(runner.command,
+    [...runner.prefix, 'install', '--global', '--legacy-peer-deps', '--no-audit', '--no-fund',
+      `--prefix=${prefix}`, ...tarballs])
   if (global_.code !== 0) {
     say('global install', global_.stderr.split('\n').filter(Boolean).slice(-3).join(' / '))
   } else {
@@ -170,8 +225,8 @@ ERR<${result.stderr.slice(0, 300)}>
     if (!existsSync(shim)) {
       say('global install', `installed and left no ${shim}`)
     } else {
-      expect('global deepwatch --version', run(shim, ['--version']), sameVersion)
-      expect('global deepwatch --help', run(shim, ['--help']), result =>
+      expect('global deepwatch --version', await runShim(shim, ['--version']), sameVersion)
+      expect('global deepwatch --help', await runShim(shim, ['--help']), result =>
         result.code === 0 && result.stdout.includes('deepwatch doctor')
           ? null : 'did not print usage')
     }
@@ -191,20 +246,35 @@ ERR<${result.stderr.slice(0, 300)}>
     }
   })
 
+  // Setup, refused for want of an artifact directory. Nothing under
+  // `@deepwatch` is published, so there is no registry answer to fall back to
+  // and the product says so rather than asking for a scope that does not exist.
+  expect('setup with no artifacts', run(process.execPath, [cli, 'setup', '--yes'], withHome),
+    result => {
+      if (result.code === 0) return 'reported success with nowhere to get the packages from'
+      const said = result.stdout + result.stderr
+      if (!said.includes('--artifacts')) return 'did not say what was missing'
+      if (existsSync(join(home, 'harness'))) return 'wrote where the runtime goes'
+      return null
+    })
+
   // Setup, refused. Non-interactive and without `--yes`, so the plan is shown
-  // and nothing is fetched — the case that would otherwise install four
+  // and nothing is fetched — the case that would otherwise install five
   // hundred packages inside somebody's CI.
-  expect('setup without consent', run('node', [cli, 'setup'], withHome), result => {
-    if (result.code === 0) return 'reported success without installing anything'
-    const said = result.stdout + result.stderr
-    if (!said.includes('registry.npmjs.org')) return 'did not name the registry first'
-    if (!said.includes('@deepseek-ai/dsh')) return 'did not name the package first'
-    if (existsSync(join(home, 'harness', 'node_modules'))) return 'downloaded something anyway'
-    return null
-  })
+  expect('setup without consent',
+    run(process.execPath, [cli, 'setup', '--artifacts', ARTIFACTS], withHome), result => {
+      if (result.code === 0) return 'reported success without installing anything'
+      const said = result.stdout + result.stderr
+      if (!said.includes('registry.npmjs.org')) return 'did not name the registry first'
+      if (!said.includes('@deepseek-ai/dsh')) return 'did not name the package first'
+      if (!said.includes(ARTIFACTS)) return 'did not name where the local packages come from'
+      if (existsSync(join(home, 'harness', 'node_modules'))) return 'downloaded something anyway'
+      return null
+    })
 
   // Setup, refused for a different reason: offline wins over consent.
-  expect('setup --offline --yes', run('node', [cli, 'setup', '--offline', '--yes'], withHome),
+  expect('setup --offline --yes',
+    run(process.execPath, [cli, 'setup', '--offline', '--yes'], withHome),
     result => {
       if (result.code === 0) return 'reported success while offline'
       if (!/offline/i.test(result.stdout + result.stderr)) return 'did not say why it refused'
@@ -222,7 +292,7 @@ ERR<${result.stderr.slice(0, 300)}>
 
 let report
 try {
-  report = main()
+  report = await main()
 } finally {
   for (const dir of rooms) rmSync(dir, { recursive: true, force: true, maxRetries: 5 })
 }
