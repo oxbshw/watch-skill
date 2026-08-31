@@ -14,6 +14,7 @@
  * @module @deepwatch/dsh-client-settings/client
  */
 
+import { useEffect, useSyncExternalStore } from 'react'
 import type { ReactNode } from 'react'
 import type { Context } from '@deepseek-ai/cordis'
 import {
@@ -68,6 +69,17 @@ export function apply(ctx: Context): void {
   // somebody trusted.
   const store = new BindingStore((ctx.get('connection') as { api: HostApi }).api)
   const RoleBindingsSection = (): ReactNode => RoleBindings({ store })
+  // Diagnostics reads the same store, so "Agent Model — Not configured" cannot
+  // sit beside a Role Bindings screen saying Chat is ready. One store, one
+  // answer, on every surface that asks.
+  const DiagnosticsWithRoles = (): ReactNode => {
+    // Subscribed, not sampled: a Diagnostics page that read the snapshot once
+    // would show the readiness that happened to be loaded when it mounted, and
+    // go quietly stale the moment somebody bound something in the next tab.
+    const snapshot = useSyncExternalStore(store.subscribe, store.getSnapshot, store.getSnapshot)
+    useEffect(() => { void store.load() }, [])
+    return DiagnosticsSection({ roles: snapshot.roles })
+  }
 
   const section = (id: string, label: string, order: number, component: unknown): void => {
     slots.inject('settings.section', () => {
@@ -102,7 +114,7 @@ export function apply(ctx: Context): void {
   section('watch-verification', 'Verification', 60, VerificationSection)
 
   // SYSTEM — what this installation actually is.
-  section('watch-diagnostics', 'Diagnostics', 70, DiagnosticsSection)
+  section('watch-diagnostics', 'Diagnostics', 70, DiagnosticsWithRoles)
   section('watch-about', 'About', 80, AboutSection)
 
   // The composer's own preflight, in the seat beside it.

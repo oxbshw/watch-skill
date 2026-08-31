@@ -37,6 +37,8 @@ const {
 } = await import(pathToFileURL(join(SETTINGS, 'lib', 'client', 'binding-state.js')).href)
 const { RoleBindings } = await import(
   pathToFileURL(join(SETTINGS, 'lib', 'client', 'role-bindings.js')).href)
+const { ReadinessList } = await import(
+  pathToFileURL(join(SETTINGS, 'lib', 'client', 'readiness.js')).href)
 const { EMPTY_BINDINGS, withBinding } = await import(
   pathToFileURL(join(ROOT, 'packages', 'watch', 'contracts', 'lib', 'bindings.js')).href)
 const { isExecutable } = await import(
@@ -478,5 +480,59 @@ describe('binding Chat points the runtime at it, not only the record', () => {
       join(ROOT, 'upstream', 'deepseek-harness', 'packages', 'bundle', 'base', 'cordis.patch.yml'),
       'utf8')
     assert.match(base, new RegExp(`- id: ${DEFAULT_MODEL_NAMESPACE}$`, 'm'))
+  })
+})
+
+/**
+ * The Chat row of the readiness list, alone.
+ *
+ * Scoped because the list is twelve rows and several of them legitimately say
+ * "Ready" (Watch Core does) or "Not configured" (every unbound role does). An
+ * assertion over the whole markup would pass or fail for the wrong row.
+ */
+function chatRow(markup) {
+  const start = markup.indexOf('>Chat<')
+  const end = markup.indexOf('>Visual perception<')
+  assert.ok(start >= 0, 'the readiness list has no Chat row')
+  return markup.slice(start, end < 0 ? undefined : end)
+}
+
+describe('every surface that reports readiness reports the same readiness', () => {
+  test('Diagnostics says Ready for a role Role Bindings calls Ready', async () => {
+    // These disagreed in the running product: Role Bindings showed Chat bound
+    // and ready while Diagnostics still read "Agent Model -- Not configured",
+    // because one screen asked the store and the other read a table written
+    // before the store existed. Two answers to one question is the defect this
+    // whole subsystem was built to remove, and it had grown a new instance.
+    const { store } = await loaded({ credentialConfigured: true, bindings: BOUND })
+    const roles = store.getSnapshot().roles
+    const diagnostics = renderToStaticMarkup(createElement(ReadinessList, { roles }))
+    assert.match(chatRow(diagnostics), />Ready</,
+      'Diagnostics does not report the binding')
+    assert.doesNotMatch(chatRow(diagnostics), />Not configured</,
+      'Diagnostics still calls a bound role unconfigured')
+  })
+
+  test('an unbound role reads as unconfigured on both', async () => {
+    const { store } = await loaded({ credentialConfigured: true })
+    const roles = store.getSnapshot().roles
+    const diagnostics = renderToStaticMarkup(createElement(ReadinessList, { roles }))
+    assert.match(chatRow(diagnostics), />Not configured</)
+    assert.doesNotMatch(chatRow(diagnostics), />Ready</)
+  })
+
+  test('a blocked role names its next step rather than its static description', async () => {
+    const { store } = await loaded({ credentialConfigured: false, bindings: BOUND })
+    const roles = store.getSnapshot().roles
+    const diagnostics = renderToStaticMarkup(createElement(ReadinessList, { roles }))
+    assert.ok(diagnostics.includes('Add a credential for this provider.'))
+  })
+
+  test('without a store the written text stands', async () => {
+    // A surface with no store is not a surface with a broken store; it shows
+    // what the table says, which is what it did before any of this existed.
+    const diagnostics = renderToStaticMarkup(createElement(ReadinessList, {}))
+    assert.ok(diagnostics.includes('Watch Core'))
+    assert.ok(diagnostics.includes('Not configured'))
   })
 })

@@ -18,8 +18,11 @@
  */
 
 import type { ReactNode } from 'react'
+import { BINDING_STATUS_LABEL, ROLE_LABEL, blockerMessage, isExecutable } from '@deepwatch/dsh-contracts'
+import type { BindableRole } from '@deepwatch/dsh-contracts'
 import { StatusChip } from './components.js'
 import type { ChipTone } from './components.js'
+import type { RoleRow } from './binding-state.js'
 
 /** One capability, and how far it has actually got. */
 export interface Readiness {
@@ -29,6 +32,16 @@ export interface Readiness {
   readonly tone: ChipTone
   /** The settings section that would change it, when there is one. */
   readonly section?: string
+  /**
+   * The role whose binding decides this row, when one does.
+   *
+   * Rows that name a role stop being static the moment a binding exists: their
+   * status is read from the same store Role Bindings writes. Without this, the
+   * two screens answered the same question differently -- Role Bindings said
+   * Chat was ready and Diagnostics said the Agent Model was not configured --
+   * which is precisely the disagreement this whole subsystem exists to remove.
+   */
+  readonly role?: BindableRole
 }
 
 /**
@@ -69,6 +82,7 @@ export const READINESS: readonly Readiness[] = [
   },
   {
     name: 'Agent Model',
+    role: 'agent_model',
     detail: 'Plans, reasons and writes. Any provider DSH supports — DeepSeek is one of them.',
     status: 'Not configured',
     tone: 'neutral',
@@ -76,6 +90,7 @@ export const READINESS: readonly Readiness[] = [
   },
   {
     name: 'Visual Perception',
+    role: 'visual_perception',
     detail: 'Reads what is on screen or in a frame. A local model works.',
     status: 'Not configured',
     tone: 'neutral',
@@ -90,6 +105,7 @@ export const READINESS: readonly Readiness[] = [
   },
   {
     name: 'ASR',
+    role: 'asr',
     detail: 'Speech to text, with timings a citation can point at.',
     status: 'Not configured',
     tone: 'neutral',
@@ -97,6 +113,7 @@ export const READINESS: readonly Readiness[] = [
   },
   {
     name: 'Audio Understanding',
+    role: 'audio_understanding',
     detail: 'Non-speech audio: events, tone, music.',
     status: 'Not configured',
     tone: 'neutral',
@@ -111,6 +128,7 @@ export const READINESS: readonly Readiness[] = [
   },
   {
     name: 'Embeddings / Retrieval',
+    role: 'embeddings',
     detail: 'Search over the library and over memory. Falls back to lexical matching.',
     status: 'Not configured',
     tone: 'neutral',
@@ -136,8 +154,19 @@ export function ReadinessList(
   // `exactOptionalPropertyTypes` is on, and the settings slot renders a section
   // with no props at all — so the absence has to be part of the type rather
   // than smuggled in by a default.
-  { openSection }: { readonly openSection?: ((id: string) => void) | undefined },
+  { openSection, roles }: {
+    readonly openSection?: ((id: string) => void) | undefined
+    /**
+     * Live role readiness, when the caller has it.
+     *
+     * Absent means the static text stands, which is what a surface with no
+     * store shows. Present means a role-backed row reports what is actually
+     * bound, so this list and Role Bindings cannot disagree.
+     */
+    readonly roles?: readonly RoleRow[] | undefined
+  },
 ): ReactNode {
+  const byRole = new Map((roles ?? []).map(row => [row.role, row]))
   return (
     <div style={{
       border: '1px solid var(--dsw-alias-border-l2)',
@@ -145,7 +174,23 @@ export function ReadinessList(
       overflow: 'hidden',
     }}
     >
-      {READINESS.map((item, index) => (
+      {READINESS.map((item, index) => {
+        // A bound role reports its own readiness; everything else keeps the
+        // text it was written with.
+        const live = item.role === undefined ? undefined : byRole.get(item.role)
+        const status = live === undefined
+          ? item.status
+          : BINDING_STATUS_LABEL[live.readiness.status]
+        const detail = live === undefined || isExecutable(live.readiness)
+          ? item.detail
+          : blockerMessage(live.readiness) ?? item.detail
+        const tone: ChipTone = live === undefined
+          ? item.tone
+          : isExecutable(live.readiness)
+            ? 'active'
+            : live.readiness.status === 'blocked' ? 'caution' : 'neutral'
+        const name = item.role === undefined ? item.name : ROLE_LABEL[item.role]
+        return (
         <div
           key={item.name}
           style={{
@@ -155,17 +200,17 @@ export function ReadinessList(
           }}
         >
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: '13px', fontWeight: 500 }}>{item.name}</div>
+            <div style={{ fontSize: '13px', fontWeight: 500 }}>{name}</div>
             <div style={{
               fontSize: '12px', lineHeight: 1.5, marginTop: '2px',
               color: 'var(--dsw-alias-label-tertiary)',
             }}
             >
-              {item.detail}
+              {detail}
             </div>
           </div>
           <span style={{ display: 'flex', gap: '8px', alignItems: 'center', flexShrink: 0 }}>
-            <StatusChip tone={item.tone}>{item.status}</StatusChip>
+            <StatusChip tone={tone}>{status}</StatusChip>
             {item.section === undefined || openSection === undefined
               ? null
               : (
@@ -184,7 +229,8 @@ export function ReadinessList(
                 )}
           </span>
         </div>
-      ))}
+        )
+      })}
     </div>
   )
 }

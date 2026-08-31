@@ -23,6 +23,7 @@ import type { BrandTone } from '@deepwatch/dsh-client-brand'
 // Correct on the host, fatal in a browser bundle.
 import { OCR_ENGINES } from '@deepwatch/dsh-technology/descriptors'
 import { ReadinessList } from './readiness.js'
+import type { RoleRow } from './binding-state.js'
 import { OCR_BY_WORKLOAD, OCR_DEVICE, OCR_ENGINE, OCR_MEASURED } from '../ocr-measured.js'
 import type { TechnologyDescriptor } from '@deepwatch/dsh-technology/descriptors'
 
@@ -470,7 +471,11 @@ export function VerificationSection(): ReactNode {
  * clipped sidebar column.
  */
 export function DiagnosticsSection(
-  { openSection }: { readonly openSection?: ((id: string) => void) | undefined } = {},
+  { openSection, roles }: {
+    readonly openSection?: ((id: string) => void) | undefined
+    /** Live role readiness, so this screen and Role Bindings agree. */
+    readonly roles?: readonly RoleRow[] | undefined
+  } = {},
 ): ReactNode {
   return (
     <div style={T.page}>
@@ -480,7 +485,7 @@ export function DiagnosticsSection(
         default.
       </p>
       <h2 style={T.h2}>Capability readiness</h2>
-      <ReadinessList openSection={openSection} />
+      <ReadinessList openSection={openSection} roles={roles} />
 
       <h2 style={T.h2}>Versions</h2>
       <div style={T.card}>
