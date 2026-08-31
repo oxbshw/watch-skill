@@ -50,7 +50,7 @@ const WHAT_SAYED_SAW = [
   'DEEPSEEK_API_KEY',
   'at Agent.step (/app/packages/core/agent-loop/src/index.ts:214:11)',
   'sandboxPolicy: workspace-write',
-  'file:///D:/Em/node_modules/@deepseek-ai/dsh-llm-deepseek/lib/index.js',
+  'file:///D:/Ws/node_modules/@deepseek-ai/dsh-llm-deepseek/lib/index.js',
 ]
 
 describe('no card carries implementation identity', () => {

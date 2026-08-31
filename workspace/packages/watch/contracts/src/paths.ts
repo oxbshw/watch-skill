@@ -1,7 +1,7 @@
 /**
  * Keeping this machine's directory names out of everything that leaves it.
  *
- * A workspace was selected, and from then on `D:\Em` appeared in the Context
+ * A workspace was selected, and from then on `D:\Ws` appeared in the Context
  * panel, in the session log, and in the text handed to the model — because a
  * workspace is a directory and every layer below the UI quite reasonably
  * carries the directory. None of those places needed the absolute path. The
@@ -10,7 +10,7 @@
  * name.
  *
  * So this module converts a real path into a *logical* one: `<workspace>/src`
- * rather than `D:\Em\src`. The logical form is stable, comparable, and says
+ * rather than `D:\Ws\src`. The logical form is stable, comparable, and says
  * everything the reader needs, and the real path stays on the Host where the
  * filesystem actually is.
  *
@@ -27,7 +27,7 @@
  * `d:\` are one directory), separators are mixed within a single string by the
  * time Node and a shell have both touched it, UNC paths have a leading `\\`
  * that is not a separator, and a prefix match without a boundary check makes
- * `D:\Employment` look like it is inside `D:\Em`.
+ * `D:\Wsuite` look like it is inside `D:\Ws`.
  *
  * @module @deepwatch/dsh-contracts/paths
  */
@@ -65,7 +65,7 @@ export interface PathRoot {
 /** The roots a redaction is measured against, longest first. */
 export type PathRoots = readonly PathRoot[]
 
-/** Windows drive-absolute, e.g. `D:\Em` or `d:/Em`. */
+/** Windows drive-absolute, e.g. `D:\Ws` or `d:/Ws`. */
 const DRIVE_ABSOLUTE = /^[A-Za-z]:[\\/]/
 /** UNC, e.g. `\\server\share\dir`. */
 const UNC_ABSOLUTE = /^[\\/]{2}[^\\/]+[\\/]+[^\\/]+/
@@ -103,7 +103,7 @@ export function normalisePath(value: string): string {
  * Whether `candidate` is `root` or sits inside it.
  *
  * The separator check is the whole point: a bare `startsWith` reports that
- * `D:\Employment` is inside `D:\Em`, which would redact an unrelated
+ * `D:\Wsuite` is inside `D:\Ws`, which would redact an unrelated
  * directory and leave the reader with a path that never existed.
  */
 export function isInsideRoot(root: string, candidate: string): boolean {
@@ -151,7 +151,7 @@ export function redactPath(value: string, roots: PathRoots): string {
  * The path relative to a root, for the places that want no label at all.
  *
  * What a model should be given: `src/index.ts`, not `<workspace>/src/index.ts`
- * and certainly not `D:\Em\src\index.ts`. Returns null when the path is not
+ * and certainly not `D:\Ws\src\index.ts`. Returns null when the path is not
  * inside the root, so a caller cannot accidentally send an absolute path by
  * treating a failed conversion as a success.
  */
@@ -250,7 +250,7 @@ const POSIX_LOCAL_ROOTS = ['home', 'Users', 'var', 'tmp', 'root', 'mnt', 'media'
  * guard somebody switches off. The lookbehind is what makes a drive letter a
  * drive letter: nothing alphabetic before it, and no colon before a `//`.
  *
- * `file:///D:/Em/x` still matches, and should: a file URL carries a real local
+ * `file:///D:/Ws/x` still matches, and should: a file URL carries a real local
  * path, and the `D:` in it is preceded by `/` rather than by a scheme.
  */
 export function findAbsolutePaths(text: string): readonly string[] {

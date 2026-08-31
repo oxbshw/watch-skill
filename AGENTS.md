@@ -88,20 +88,20 @@ gate. Do not add network calls to the offline suite.
 
 ## Commits
 
-Write them as the repository owner, because that is who they are from. A
-conventional prefix, then a plain declarative subject saying what changed and
-why — not what you did to find out.
+A conventional prefix, then a plain declarative subject saying what changed
+and why — not what you did to find out.
 
-Never add any of these:
+- Author each commit with the human identity accountable for the change.
+- Describe the product change and the reason for it. Nothing else belongs in
+  a commit message.
+- Keep the `Co-Authored-By` trailers of real human co-authors.
+- Do not add co-author trailers for anything that is not a person, and do not
+  add generated-by notices.
 
-- `Co-Authored-By` naming Claude, Anthropic, Copilot, Cursor or any other tool
-- a "Generated with …" line
-- any mention of AI assistance in the subject, the body or a trailer
-
-`npm run verify:commits` (in `workspace/`) checks the metadata of the commits
-on a branch and fails on any of the above. It reads authorship and message
-text only; prose about Claude Code as a supported integration is a product fact
-and is not what this rule is about. A real human co-author keeps their trailer.
+`npm run verify:commits` (in `workspace/`) checks commit metadata on a branch
+and fails on any of the above. It reads authorship and trailers only — it does
+not police prose, and product documentation about supported integrations is
+unaffected by it.
 
 Do not rewrite shared history unless the maintainer has asked you to.
 

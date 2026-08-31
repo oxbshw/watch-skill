@@ -67,12 +67,28 @@ your shell cannot be silently shadowed by one stored in the UI.
 
 On Desktop, Watch's own vault uses Electron `safeStorage`, which is OS-backed.
 
-The key is not written to `settings.yaml`, which holds UI state only. Confirm
-this yourself after entering one:
+The key is not written to `settings.yaml`, which holds UI state only.
+
+Confirm that yourself after entering one — without printing either file. A
+credential file is not a thing to display: a terminal keeps scrollback, a
+screen share carries it, and the answer you actually want is *which store holds
+it*, not what the value is.
 
 ```bash
-cat "$DSH_HOME/.credentials.yaml"
+# The credential store exists and only you can read it. No contents.
+ls -l "$DSH_HOME/.credentials.yaml"
 ```
+
+```bash
+# settings.yaml holds UI state, and the key is not among its fields.
+grep -c 'apiKey\|api_key' "$DSH_HOME/settings.yaml"   # expect 0
+```
+
+In the product itself, **Settings, Models** shows the provider with a stored
+credential and where it came from — the credential store or an inherited
+environment variable. That reading comes from the credentials service, which is
+the authority; the file listing above only confirms the store is where you
+expect it to be.
 
 ## Binding the provider to a role
 
@@ -144,11 +160,17 @@ exists to keep them apart.
 
 ## Removing the credential afterwards
 
-Settings, Models, **Edit** on the provider, and remove the key. To confirm it is
-gone from disk:
+Settings, Models, **Edit** on the provider, and remove the key.
+
+To confirm it is gone, read the state rather than the file. **Settings,
+Models** shows the provider with no stored credential, and Diagnostics reports
+the role as unconfigured. If you want a check outside the UI, ask the provider
+rather than the disk:
 
 ```bash
-cat "$DSH_HOME/.credentials.yaml"
+# A provider with no credential answers "credential unavailable",
+# never a redacted value and never the key itself.
+deepwatch providers test openrouter
 ```
 
 If you exported a key into your shell instead, unset it and restart the host;

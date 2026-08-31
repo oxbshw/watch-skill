@@ -101,8 +101,8 @@ def _roots() -> list[tuple[str, str]]:
 def _same_root(candidate: str, root: str) -> bool:
     """Prefix match with a boundary check and Windows case folding.
 
-    Without the boundary check ``D:\\Employment`` looks like it is inside
-    ``D:\\Em``; without the case folding ``d:\\`` and ``D:\\`` look like two
+    Without the boundary check ``D:\\Wsuite`` looks like it is inside
+    ``D:\\Ws``; without the case folding ``d:\\`` and ``D:\\`` look like two
     directories. Both have been real defects.
     """
     left = candidate.replace("\\", "/")

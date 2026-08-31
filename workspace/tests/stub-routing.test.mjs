@@ -172,13 +172,13 @@ describe('the bound route is the route that is called', () => {
 
 describe('what the provider is not sent', () => {
   test('no absolute workspace path reaches the request body', async () => {
-    // The other half of the incident: selecting a workspace put `D:\Em` into
+    // The other half of the incident: selecting a workspace put `D:\Ws` into
     // the Context panel, the session log, and the text handed to the model.
     const stub = await stubProvider()
     const deployment = await host(stub, { bindings: bound() })
 
-    const workspace = 'D:\\Em'
-    const file = 'D:\\Em\\src\\index.ts'
+    const workspace = 'D:\\Ws'
+    const file = 'D:\\Ws\\src\\index.ts'
     const relative = relativeToRoot(file, workspace)
     assert.equal(relative, 'src/index.ts')
 
@@ -194,17 +194,17 @@ describe('what the provider is not sent', () => {
   })
 
   test('a path-boundary collision is not mistaken for the workspace', () => {
-    // `D:\Employment` is not inside `D:\Em`, and a prefix match without a
+    // `D:\Wsuite` is not inside `D:\Ws`, and a prefix match without a
     // separator check would rewrite it into a directory that never existed.
-    assert.equal(relativeToRoot('D:\\Employment\\cv.md', 'D:\\Em'), null)
+    assert.equal(relativeToRoot('D:\\Wsuite\\cv.md', 'D:\\Ws'), null)
     // The drive letter folds, because `d:` and `D:` are one directory and a
     // case-sensitive comparison would miss half the matches.
-    assert.equal(relativeToRoot('d:\\Em\\src\\a.ts', 'D:\\Em'), 'src/a.ts')
-    assert.equal(relativeToRoot('D:/Em/src/a.ts', 'd:\\Em'), 'src/a.ts')
+    assert.equal(relativeToRoot('d:\\Ws\\src\\a.ts', 'D:\\Ws'), 'src/a.ts')
+    assert.equal(relativeToRoot('D:/Ws/src/a.ts', 'd:\\Ws'), 'src/a.ts')
     // The rest of the path does not fold, and that is the deliberate side of
     // the trade the module documents: a missed redaction is caught by a test,
     // a wrong one rewrites a directory nobody named.
-    assert.equal(relativeToRoot('d:/em/src/a.ts', 'D:\\Em'), null)
+    assert.equal(relativeToRoot('d:/em/src/a.ts', 'D:\\Ws'), null)
   })
 
   test('the recorded request never echoes the credential', async () => {

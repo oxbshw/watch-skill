@@ -1,20 +1,31 @@
 #!/usr/bin/env node
 /**
- * No tool signs a commit in this repository.
+ * Every commit in this repository is answerable to a person.
  *
- * Whatever helped write a change, the commit is from the person who made it.
- * A `Co-Authored-By` naming an assistant, a "Generated with" line, or a note
- * about AI assistance in a message is a claim about authorship that is not
- * true, and it is the kind of thing that accumulates quietly until a history
- * is full of it.
+ * That is the whole policy, and it is about accountability rather than about
+ * tools. A `Co-Authored-By` trailer is how this project records who is
+ * answerable for a change; a trailer naming something that cannot answer for
+ * anything makes the field mean less, and that meaning is the only reason the
+ * field is there.
  *
- * **This reads metadata, and only metadata.** Author, committer, subject, body
- * and trailers. It never looks at repository content, because the content
- * legitimately discusses Claude Code — it is a supported integration with its
- * own skills, commands and documentation page — and a gate that could not tell
- * a product fact from an authorship claim would be unusable here.
+ * What this gate checks:
  *
- * A real human co-author keeps their trailer. The rule is about tools.
+ * - the subject is a conventional commit, so history stays readable;
+ * - the author is a person, with a name and a routable address;
+ * - `Co-Authored-By` trailers name people, and are otherwise left alone;
+ * - no generated-by notice is appended as a trailer.
+ *
+ * What it deliberately does not check. It does not read prose, and it names
+ * no vendor. An earlier version refused any commit message mentioning
+ * particular assistants anywhere — subject, body or trailer — which made it
+ * impossible to describe the product's own supported integrations in a
+ * commit, and read as a rule about concealing how work was done rather than
+ * about who is accountable for it. Neither was intended and both were the
+ * effect, so the rules below are about the shape of authorship metadata and
+ * nothing else.
+ *
+ * **This reads metadata, and only metadata.** Author, committer, subject,
+ * body and trailers. It never looks at repository content.
  *
  * Usage:
  *   node scripts/verify-commits.mjs                 the branch against origin/main
@@ -29,60 +40,117 @@ import { fileURLToPath } from 'node:url'
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..')
 const JSON_OUT = process.argv.includes('--json')
 
+/** Conventional-commit subject: `type(scope)!: summary`. */
+export const CONVENTIONAL =
+  /^(build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test)(\([^)]+\))?!?: .+/
+
+/** A `Co-Authored-By` trailer line, captured so its parts can be judged. */
+const COAUTHOR_LINE = /^co-authored-by:[ \t]*(.*)$/gim
+
+/** `Name <address>`, which is the only shape a co-author trailer may take. */
+const NAMED_ADDRESS = /^([^<]+?)\s*<([^>@\s]+@[^>@\s]+)>$/
+
 /**
- * What may not appear in commit metadata.
+ * Addresses that route to nobody.
  *
- * Each pattern names one way the claim shows up, rather than one big
- * alternation, so a failure says which rule was broken.
+ * A no-reply address is the distinguishing mark of an automated committer,
+ * and testing for it is the vendor-neutral way to say so: it does not matter
+ * which service minted the address, only that no person receives mail there
+ * and so no person is being credited.
  */
-export const FORBIDDEN = [
-  {
-    rule: 'non-human co-author',
-    // Any Co-Authored-By whose name or address is a tool rather than a person.
-    test: /^co-authored-by:.*(claude|anthropic|copilot|cursor|codeium|chatgpt|openai|gemini|devin|noreply@)/im,
-  },
-  // Literal, and anywhere in the message. Not "named as the author" and not
-  // "inside a trailer": a subject or body that mentions one of these at all
-  // fails, including a message explaining this very rule. The exact wording
-  // belongs in CONTRIBUTING.md and AGENTS.md, which is where a person reads it.
-  { rule: 'vendor name', test: /claude/i },
-  { rule: 'vendor name', test: /anthropic/i },
-  // `\b` so an ordinary "regenerated with the new script" is left alone: the
-  // boundary fails inside a longer word, and only the standalone phrase trips.
-  { rule: 'generation notice', test: /\bgenerated\s+with\b/i },
-  { rule: 'assistance note', test: /\bai[-\s]generated\b/i },
-  { rule: 'assistance note', test: /\bai[-\s]assisted\b/i },
-  { rule: 'assistance note', test: /\bwritten\s+by\s+ai\b/i },
-  { rule: 'assistance note', test: /\bwith\s+the\s+help\s+of\s+(an\s+)?ai\b/i },
-]
+const UNROUTABLE = /^(no-?reply|do-?not-?reply)(\+[^@]*)?@/i
 
-/** A `Co-Authored-By` that names a person, which is allowed and kept. */
-export const HUMAN_COAUTHOR = /^co-authored-by:\s*[^<]+<[^>]+>\s*$/im
+/** Names that announce themselves as automation. */
+const BOT_NAME = /(\[bot\]|^bot$|\bbot\s*$)/i
 
 /**
- * Every rule one commit's metadata breaks, and whether a person co-authored it.
+ * A generated-by notice, as a trailer only.
+ *
+ * Anchored to a trailer line on purpose. "Regenerated with the pinned
+ * baseline" is an ordinary sentence about an ordinary release chore, and a
+ * rule that matched it anywhere in a body fired every time the inventories
+ * were refreshed.
+ */
+const GENERATED_TRAILER = /^(generated|co-generated|created)[-\s]?(with|by):/im
+
+/**
+ * Parse the `Co-Authored-By` trailers out of one commit's metadata.
+ *
+ * @param text - the full metadata blob for one commit.
+ * @returns one entry per trailer, with whether it names a person.
+ */
+export function coauthors(text) {
+  const found = []
+  for (const match of text.matchAll(COAUTHOR_LINE)) {
+    const value = (match[1] ?? '').trim()
+    const parts = NAMED_ADDRESS.exec(value)
+    if (parts === null) {
+      found.push({ value, human: false, why: 'not in `Name <address>` form' })
+      continue
+    }
+    const [, name, address] = parts
+    if (UNROUTABLE.test(address)) {
+      found.push({ value, human: false, why: 'the address routes to nobody' })
+      continue
+    }
+    if (BOT_NAME.test(name.trim())) {
+      found.push({ value, human: false, why: 'the name declares itself automation' })
+      continue
+    }
+    found.push({ value, human: true, why: null })
+  }
+  return found
+}
+
+/**
+ * Every rule one commit's metadata breaks, and how many people co-authored it.
  *
  * Separated from the command so it can be exercised against messages nobody
- * has to commit first. A gate this strict is worth showing rejecting things,
- * and writing a prohibited trailer into real history to prove it would be an
- * odd way to keep a history clean.
+ * has to commit first. A gate is worth showing refusing things, and writing a
+ * prohibited trailer into real history to prove it would be an odd way to keep
+ * a history clean.
  *
  * @param text - author, committer, subject, body and trailers of one commit.
  */
 export function inspectCommit(text) {
-  const broken = []
-  for (const { rule, test } of FORBIDDEN) {
-    if (!test.test(text)) continue
-    if (broken.some(found => found.rule === rule)) continue
-    broken.push({ rule, line: offending(text, test) })
+  const lines = text.split('\n')
+  // Layout, fixed by the --format in main(): sha, author, committer, Author:,
+  // Committer:, then the message. The subject is the first message line.
+  const author = (lines[1] ?? '').trim()
+  const subject = (lines[5] ?? '').trim()
+  const problems = []
+
+  if (!CONVENTIONAL.test(subject)) {
+    problems.push({
+      rule: 'conventional subject',
+      line: subject === '' ? '(empty subject)' : subject,
+    })
   }
-  return {
-    problems: broken,
-    // A co-author trailer that is not one of the forbidden ones is a person,
-    // and counting them is how this reports that it preserved them rather than
-    // stripping every trailer it saw.
-    humanCoauthor: HUMAN_COAUTHOR.test(text) && !FORBIDDEN[0].test.test(text),
+
+  const authorParts = NAMED_ADDRESS.exec(author)
+  if (authorParts === null
+    || UNROUTABLE.test(authorParts[2])
+    || BOT_NAME.test(authorParts[1].trim())) {
+    problems.push({ rule: 'human author', line: author === '' ? '(no author)' : author })
   }
+
+  const trailers = coauthors(text)
+  const nonHuman = trailers.find(entry => !entry.human)
+  if (nonHuman !== undefined) {
+    problems.push({
+      rule: 'non-human co-author',
+      line: `Co-Authored-By: ${nonHuman.value} — ${nonHuman.why}`,
+    })
+  }
+
+  if (GENERATED_TRAILER.test(text)) {
+    problems.push({
+      rule: 'generation notice',
+      line: lines.find(line => GENERATED_TRAILER.test(line))?.trim() ?? '(in the message)',
+    })
+  }
+
+  return { problems, humanCoauthors: trailers.filter(entry => entry.human).length }
 }
 
 /**
@@ -152,7 +220,7 @@ function main() {
     const sha = commit.split('\n')[0] ?? ''
     const found = inspectCommit(commit)
     for (const problem of found.problems) problems.push({ sha: sha.slice(0, 8), ...problem })
-    if (found.humanCoauthor) humanCoauthors += 1
+    humanCoauthors += found.humanCoauthors
   }
 
   const summary = { range: selected, commits: commits.length, humanCoauthors, problems }
@@ -168,20 +236,15 @@ function main() {
     }
     process.stderr.write(
       `\nwatch: ${String(problems.length)} commit(s) break the metadata policy.\n`
-      + '       A commit is authored by the person who made the change, and its\n'
-      + '       message says what changed rather than what helped. See the\n'
-      + '       Commits section of CONTRIBUTING.md.\n')
+      + '       A commit uses a conventional subject, is authored by the person\n'
+      + '       accountable for the change, and credits only people as\n'
+      + '       co-authors. See the Commits section of CONTRIBUTING.md.\n')
     process.exit(1)
   }
 
   process.stdout.write(
     `commits: ${String(commits.length)} checked over ${selected}, metadata policy clean\n`
     + `         ${String(humanCoauthors)} human co-author trailer(s) preserved\n`)
-}
-
-/** The line that tripped a rule, so a failure names something findable. */
-function offending(commit, test) {
-  return commit.split('\n').find(line => test.test(line))?.trim() ?? '(in the message)'
 }
 
 // Only when run, so importing the rules for a test does not audit a repository

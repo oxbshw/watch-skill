@@ -1,5 +1,5 @@
 /**
- * The commit metadata policy, shown rejecting things.
+ * The commit metadata policy, shown refusing things.
  *
  * A gate nobody has watched refuse anything is a gate nobody knows the shape
  * of. These are counterfactuals: each one is a message that must fail, written
@@ -7,16 +7,12 @@
  * a prohibited trailer into the history would be a strange way to keep one
  * clean.
  *
- * The rule is stricter than "no false authorship claim", and deliberately so.
- * A mention anywhere in a subject, a body or a trailer fails — including in a
- * sentence that is perfectly true about the product, and including in a
- * message explaining the rule itself. That last case is not hypothetical: the
- * commit that introduced this policy described it by naming what it forbids,
- * and so broke it.
- *
- * The other half matters as much. This reads commit metadata and nothing else.
- * Repository files describe the agent integrations this project supports, at
- * length, and none of that is the gate's business.
+ * The policy is about accountability, not about tools. A commit has a
+ * conventional subject, an author who is a person, and co-author trailers that
+ * name people. The gate names no vendor and reads no prose — the tests at the
+ * bottom of this file are what keep it that way, because the previous version
+ * did both, and the effect was a rule that could not be squared with
+ * documenting the product's own supported integrations.
  *
  * Nothing here reads a repository's history. Every other job takes a shallow
  * checkout deliberately, so an assertion about the branch would fail for want
@@ -30,12 +26,12 @@ import { readFileSync, readdirSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import { FORBIDDEN, inspectCommit } from '../scripts/verify-commits.mjs'
+import { CONVENTIONAL, coauthors, inspectCommit } from '../scripts/verify-commits.mjs'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const REPO = join(ROOT, '..')
 
-/** One commit's metadata, in the shape the gate reads it. */
+/** One commit's metadata, in the shape and order the gate reads it. */
 function commit({ author = 'Sayed Allam <person@example.com>', subject, body = '' }) {
   return [
     'e3b0c44298fc1c149afbf4c8996fb924',
@@ -55,79 +51,74 @@ function rulesBroken(text) {
 }
 
 describe('metadata that must be refused', () => {
-  test('a subject naming a tool vendor', () => {
-    const broken = rulesBroken(commit({
-      subject: 'chore(docs): document the Claude Code integration',
-    }))
-    assert.deepEqual(broken, ['vendor name'])
-  })
-
-  test('a body naming one inside an otherwise legitimate product sentence', () => {
-    // True, useful, and still not allowed here: the sentence belongs in the
-    // documentation, which is where somebody looks for it.
-    const broken = rulesBroken(commit({
-      subject: 'feat(mcp): add the tool listing endpoint',
-      body: 'This repository documents Claude Code as a supported integration,\n'
-        + 'with its own skills, commands and agent page.',
-    }))
-    assert.deepEqual(broken, ['vendor name'])
-  })
-
-  test('the other vendor name, wherever it appears', () => {
+  test('a subject that is not a conventional commit', () => {
     assert.deepEqual(
-      rulesBroken(commit({ subject: 'fix(api): retry an Anthropic 529 once' })),
-      ['vendor name'])
-    assert.deepEqual(
-      rulesBroken(commit({ subject: 'ok', body: 'see anthropic.com for the limits' })),
-      ['vendor name'])
+      rulesBroken(commit({ subject: 'made some changes to the parser' })),
+      ['conventional subject'])
   })
 
-  test('a co-author trailer that is a tool rather than a person', () => {
+  test('an empty subject', () => {
+    assert.ok(rulesBroken(commit({ subject: '' })).includes('conventional subject'))
+  })
+
+  test('a co-author trailer whose address routes to nobody', () => {
     const broken = rulesBroken(commit({
       subject: 'feat(library): add the facet index',
-      body: 'Co-Authored-By: Some Assistant <noreply@example.com>',
+      body: 'Co-Authored-By: Some Helper <noreply@example.com>',
     }))
     assert.ok(broken.includes('non-human co-author'),
-      'a trailer whose address is a no-reply robot is not a co-author')
+      'a no-reply address credits nobody, so it is not a co-author')
   })
 
-  test('a generation notice', () => {
-    assert.deepEqual(
-      rulesBroken(commit({ subject: 'ok', body: 'Generated with some tool v2' })),
-      ['generation notice'])
+  test('a co-author trailer whose name declares itself automation', () => {
+    const broken = rulesBroken(commit({
+      subject: 'chore(deps): bump the pinned baseline',
+      body: 'Co-Authored-By: dependabot[bot] <support@example.com>',
+    }))
+    assert.ok(broken.includes('non-human co-author'))
   })
 
-  test('assistance wording, hyphenated or spaced', () => {
-    for (const wording of [
-      'This patch was AI-generated from the failing test.',
-      'AI generated, then reviewed by hand.',
-      'An AI-assisted refactor of the parser.',
-      'ai assisted cleanup',
-      'The migration was written by AI and checked here.',
-      'Done with the help of an AI.',
-    ]) {
-      assert.deepEqual(rulesBroken(commit({ subject: 'ok', body: wording })),
-        ['assistance note'], `not refused: ${wording}`)
-    }
+  test('a co-author trailer that is not an address at all', () => {
+    const broken = rulesBroken(commit({
+      subject: 'fix(index): reuse the prepared statement',
+      body: 'Co-Authored-By: someone',
+    }))
+    assert.ok(broken.includes('non-human co-author'))
   })
 
-  test('case never matters', () => {
-    for (const subject of ['CLAUDE', 'claude', 'ClAuDe', 'ANTHROPIC']) {
-      assert.notDeepEqual(rulesBroken(commit({ subject })), [],
-        `${subject} passed, and it must not`)
-    }
+  test('an author who is not a person', () => {
+    assert.ok(rulesBroken(commit({
+      author: 'release[bot] <no-reply@example.com>',
+      subject: 'chore(release): publish the preview',
+    })).includes('human author'))
+  })
+
+  test('a generated-by trailer', () => {
+    assert.ok(rulesBroken(commit({
+      subject: 'chore(inventory): refresh the catalogue',
+      body: 'Generated with: some-tool v2',
+    })).includes('generation notice'))
   })
 })
 
 describe('metadata that must be left alone', () => {
   test('a real person keeps their co-author trailer', () => {
-    const text = commit({
+    const found = inspectCommit(commit({
       subject: 'feat(memory): add the correction ledger',
       body: 'Co-Authored-By: Ada Lovelace <ada@example.com>',
-    })
-    const found = inspectCommit(text)
+    }))
     assert.deepEqual(found.problems, [], 'a human co-author is not a violation')
-    assert.equal(found.humanCoauthor, true, 'and is counted as preserved')
+    assert.equal(found.humanCoauthors, 1, 'and is counted as preserved')
+  })
+
+  test('several human co-authors are all preserved', () => {
+    const found = inspectCommit(commit({
+      subject: 'feat(verify): add the attestation chain',
+      body: 'Co-Authored-By: Ada Lovelace <ada@example.com>\n'
+        + 'Co-Authored-By: Grace Hopper <grace@example.com>',
+    }))
+    assert.deepEqual(found.problems, [])
+    assert.equal(found.humanCoauthors, 2)
   })
 
   test('an ordinary message about ordinary work', () => {
@@ -139,9 +130,9 @@ describe('metadata that must be left alone', () => {
     assert.deepEqual(found.problems, [])
   })
 
-  test('a regenerated artifact is not a generation notice', () => {
-    // `\b` before "generated" is what keeps this from matching, and this is
-    // the sentence that would otherwise be caught every release.
+  test('a regenerated artifact is not a generated-by trailer', () => {
+    // The trailer anchor is what keeps this from matching, and this is the
+    // sentence that would otherwise be caught every release.
     const found = inspectCommit(commit({
       subject: 'chore(inventory): refresh the slot catalogue',
       body: 'Regenerated with the pinned baseline after the upstream bump.',
@@ -149,13 +140,26 @@ describe('metadata that must be left alone', () => {
     assert.deepEqual(found.problems, [])
   })
 
+  test('a message may describe the integrations this product supports', () => {
+    // The case the previous policy could not express. Naming a supported
+    // integration in a commit is a product fact, and refusing it made the rule
+    // read as one about concealment rather than about accountability.
+    for (const subject of [
+      'docs(agents): document the Claude Code integration',
+      'fix(providers): retry an Anthropic 529 once',
+      'feat(adapters): add the Cursor rules file',
+      'feat(providers): route OpenRouter through the shared client',
+    ]) {
+      assert.deepEqual(rulesBroken(commit({ subject })), [], `refused: ${subject}`)
+    }
+  })
+
   test('the word cursor, in the sense this codebase uses it constantly', () => {
     const found = inspectCommit(commit({
       subject: 'feat(live): make the event stream cursor-addressed',
       body: 'A cursor is idempotent: resuming from one returns the same page.',
     }))
-    assert.deepEqual(found.problems, [],
-      'a pagination cursor is not a tool vendor, and five commits say so')
+    assert.deepEqual(found.problems, [])
   })
 })
 
@@ -166,29 +170,60 @@ describe('what the gate is allowed to read', () => {
     // `git show`, or a diff would make documentation about a supported
     // integration fail a commit that never mentioned it.
     assert.match(source, /--format=/)
-    for (const reader of ['git grep', "'show'", "'diff'", 'readFileSync']) {
+    for (const reader of ['git grep', "'show'", "'diff'"]) {
       assert.ok(!source.includes(reader), `the gate must not use ${reader}`)
     }
   })
 
-  test('the documentation is free to describe the integrations it supports', () => {
-    // The counterpart to every test above: these files say the words on
-    // purpose, and no commit is refused because of them.
-    const docs = readdirSync(REPO).filter(name => name === 'AGENTS.md' || name === 'CONTRIBUTING.md')
-    assert.ok(docs.length > 0, 'the policy has to be written down somewhere')
-    for (const name of docs) {
-      const text = readFileSync(join(REPO, name), 'utf8')
-      assert.ok(text.length > 0, `${name} is empty`)
+  test('the policy names no vendor', () => {
+    // The load-bearing assertion of this whole file. A rule that names
+    // particular assistants is a rule about who helped rather than about who
+    // is accountable, and it cannot be stated publicly without reading as an
+    // instruction to conceal.
+    const source = readFileSync(join(ROOT, 'scripts', 'verify-commits.mjs'), 'utf8')
+    const rules = source.slice(source.indexOf('export const CONVENTIONAL')).toLowerCase()
+    for (const vendor of ['claude', 'anthropic', 'copilot', 'codeium', 'chatgpt', 'openai', 'gemini']) {
+      assert.ok(!rules.includes(vendor), `the rules must not name ${vendor}`)
     }
   })
 
-  test('every rule is a real regular expression with a name', () => {
-    assert.ok(FORBIDDEN.length >= 6, 'the policy names more than a couple of things')
-    for (const { rule, test: pattern } of FORBIDDEN) {
-      assert.equal(typeof rule, 'string')
-      assert.notEqual(rule, '')
-      assert.ok(pattern instanceof RegExp)
-      assert.ok(pattern.flags.includes('i'), `${rule} must be case-insensitive`)
+  test('the written policy does not require hiding how work was done', () => {
+    for (const name of ['AGENTS.md', 'CONTRIBUTING.md']) {
+      const text = readFileSync(join(REPO, name), 'utf8').toLowerCase()
+      for (const phrase of [
+        'no assistant attribution',
+        'as the repository owner',
+        'mention of ai assistance',
+      ]) {
+        assert.ok(!text.includes(phrase), `${name} still says "${phrase}"`)
+      }
     }
+  })
+
+  test('the documentation still states the policy somewhere', () => {
+    const docs = readdirSync(REPO).filter(name => name === 'AGENTS.md' || name === 'CONTRIBUTING.md')
+    assert.equal(docs.length, 2, 'the policy has to be written down')
+    for (const name of docs) {
+      const text = readFileSync(join(REPO, name), 'utf8')
+      assert.match(text, /co-authored-by/i, `${name} must state the co-author rule`)
+    }
+  })
+
+  test('the conventional-subject pattern accepts the types this repo uses', () => {
+    for (const subject of [
+      'feat: add a thing', 'fix(bridge): stop a thing', 'chore(release)!: drop a thing',
+      'docs: explain a thing', 'test(live): prove a thing', 'refactor(index): move a thing',
+    ]) {
+      assert.ok(CONVENTIONAL.test(subject), `rejected: ${subject}`)
+    }
+    for (const subject of ['add a thing', 'feat add a thing', 'nope: add a thing']) {
+      assert.ok(!CONVENTIONAL.test(subject), `accepted: ${subject}`)
+    }
+  })
+
+  test('coauthors reports why a trailer was refused', () => {
+    const [entry] = coauthors('Co-Authored-By: Helper <no-reply@example.com>')
+    assert.equal(entry.human, false)
+    assert.match(entry.why, /routes to nobody/)
   })
 })

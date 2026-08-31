@@ -80,17 +80,16 @@ or index databases (`.gitignore` already covers these — keep it that way).
 A commit message describes the product change and the reason for it. Nothing
 else belongs in one.
 
-**No assistant attribution, ever.** Whatever tool helped write a change, the
-commit is authored by the person who made it. That means no
-`Co-Authored-By` naming Claude, Anthropic, Copilot or any other tool, no
-"Generated with" line, and no mention of AI assistance in a subject, body or
-trailer. `npm run verify:commits` enforces this, and it reads commit
-*metadata* only — documentation is free to discuss Claude Code as a supported
-integration, because that is a product fact rather than a claim about who wrote
-a commit.
+**Authorship is a person.** Every commit is authored by the human accountable
+for the change, and real human co-authors keep their `Co-Authored-By`
+trailers. Trailers naming something that is not a person do not belong in the
+history, and neither do generated-by notices: the trailer field is how this
+project records who is answerable for a change, and an entry that names no one
+answerable makes it mean less.
 
-Real human co-authors keep their `Co-Authored-By` trailers. The rule is about
-tools, not about people.
+`npm run verify:commits` enforces that, and it reads commit *metadata* only.
+It does not read prose, and product documentation about supported integrations
+is outside its scope.
 
 Shared history is not rewritten without the maintainer asking for it.
 
