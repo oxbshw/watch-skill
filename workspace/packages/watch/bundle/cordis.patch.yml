@@ -49,6 +49,24 @@
         requestTimeoutMs: 30000
         autoConnect: true
 
+    # The Host's half of the routing preflight, and the store the binding
+    # screens write through.
+    #
+    # A composer that refuses to submit is an affordance -- it lives in a
+    # browser tab and the RPC it declines to call stays callable. This is the
+    # other half: it reads the same stored decisions and refuses a model
+    # request whose route nobody in this profile chose, so a stale tab or a
+    # caller that skipped the screens is stopped before the provider is
+    # reached rather than after.
+    #
+    # It injects `llm` and nothing else. Injecting `settings` would park it on
+    # a deployment that composes no settings file, and a routing check that
+    # quietly stops running is worse than one that is not there.
+    - id: watch-routing
+      name: '@deepwatch/dsh-technology'
+      config:
+        enforce: true
+
     # The model-facing surface: Watch's senses and its proof step as ordinary
     # Harness tools, plus the system-prompt section that tells the agent a
     # tool returning without error is not a verified outcome.

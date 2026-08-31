@@ -15,13 +15,13 @@
  */
 
 /** The audited closure this was derived from. */
-export const CLOSURE_DIGEST = 'sha256:bbedba55d475c1f0dacb7cc511cef26a98590801c2729ca0b7633f698500b1e3'
+export const CLOSURE_DIGEST = 'sha256:06cd30dc117f92c04966e4bf9225dc9092962a7e4715e2bc658ee7426052e5b3'
 
 /** The digest of the generated manifest itself. */
-export const MANIFEST_DIGEST = 'sha256:0adda06af431ed0c056c104218f4c80a3d914d1ca6e09f6fd26d6a2ca4bc8cb8'
+export const MANIFEST_DIGEST = 'sha256:7b9c7fd27eb8c21e9d10cafa5f90bff9ac734fa74008c60129894a29b37d0411'
 
 /** How many of the entries below are required peers rather than the Harness. */
-export const REQUIRED_PEER_COUNT = 27
+export const REQUIRED_PEER_COUNT = 29
 
 /** Exact package versions the managed runtime is installed from. */
 export const MANAGED_DEPENDENCIES: Readonly<Record<string, string>> = {
@@ -37,11 +37,13 @@ export const MANAGED_DEPENDENCIES: Readonly<Record<string, string>> = {
   '@deepseek-ai/dsh-compaction': '0.1.1-rc.2',
   '@deepseek-ai/dsh-fs': '0.1.1-rc.2',
   '@deepseek-ai/dsh-invariants': '0.1.1-rc.2',
+  '@deepseek-ai/dsh-llm': '0.1.1-rc.2',
   '@deepseek-ai/dsh-output-retention': '0.1.1-rc.2',
   '@deepseek-ai/dsh-sandbox': '0.1.1-rc.2',
   '@deepseek-ai/dsh-scope': '0.1.1-rc.2',
   '@deepseek-ai/dsh-session-telemetry': '0.1.1-rc.2',
   '@deepseek-ai/dsh-session-title-llm': '0.1.1-rc.2',
+  '@deepseek-ai/dsh-settings': '0.1.1-rc.2',
   '@deepseek-ai/dsh-shell': '0.1.1-rc.2',
   '@deepseek-ai/dsh-spill': '0.1.1-rc.2',
   '@deepseek-ai/dsh-subagent-in-process-driver': '0.1.1-rc.2',

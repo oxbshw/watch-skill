@@ -60,6 +60,9 @@
       "@deepwatch/dsh-technology/descriptors": [
         "./packages/watch/technology/src/descriptors.ts"
       ],
+      "@deepwatch/dsh-technology/routing": [
+        "./packages/watch/technology/src/routing.ts"
+      ],
       "@deepwatch/dsh-tools": [
         "./packages/watch/tools/src/index.ts"
       ]

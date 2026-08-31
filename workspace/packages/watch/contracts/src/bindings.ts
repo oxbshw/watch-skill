@@ -48,19 +48,50 @@ export const BINDINGS_NAMESPACE = 'watch-bindings'
 export const BINDINGS_VERSION = 1
 
 /**
- * The roles a person can bind, in the order the setup flow presents them.
+ * The roles a person can bind to a provider, in the order setup presents them.
  *
- * `chat` is first and is the only one the first conversation needs. The rest
- * are progressive: a product that demanded six bindings before the first
+ * These ids are `RoleId`s from `@deepwatch/dsh-technology`, spelled here rather
+ * than imported because `contracts` is the package everything else depends on
+ * and must not depend on anything. `tests/bindings-store.test.mjs` asserts the
+ * two lists agree, so the duplication is checked rather than trusted -- one
+ * role vocabulary with a gate on it, instead of two that drift.
+ *
+ * It is a *subset*. `verifier`, `ocr_layout`, `reranking` and
+ * `speaker_diarization` are served by local engines rather than chosen from a
+ * provider catalogue, so offering them here would offer a choice that is not
+ * there.
+ *
+ * `agent_model` is first and is the only one the first conversation needs. The
+ * rest are progressive: a product that demanded five bindings before the first
  * message would be a product nobody finished configuring.
  */
-export const BINDABLE_ROLES = ['chat', 'vision', 'asr', 'audio', 'embedding'] as const
+export const BINDABLE_ROLES = [
+  'agent_model', 'visual_perception', 'asr', 'audio_understanding', 'embeddings',
+] as const
 
 /** One of the roles this product knows how to bind. */
 export type BindableRole = (typeof BINDABLE_ROLES)[number]
 
 /** The role the first conversation needs, named once so nothing spells it twice. */
-export const PRIMARY_ROLE: BindableRole = 'chat'
+export const PRIMARY_ROLE: BindableRole = 'agent_model'
+
+/**
+ * What each role is called on screen.
+ *
+ * `agent_model` is labelled **Chat**, and the difference is not cosmetic. A
+ * person configuring this product is not choosing an "agent model" -- they are
+ * choosing what answers them in the surface the Harness calls Chat, and every
+ * blocked-composer message and setup step has to name the thing they are
+ * looking at. The id stays `agent_model` because that is the vocabulary the
+ * descriptors and the routing rules already use.
+ */
+export const ROLE_LABEL: Readonly<Record<BindableRole, string>> = {
+  agent_model: 'Chat',
+  visual_perception: 'Visual perception',
+  asr: 'Speech to text',
+  audio_understanding: 'Audio understanding',
+  embeddings: 'Embeddings and retrieval',
+}
 
 /** Whether a string is a role this product binds. */
 export function isBindableRole(value: string): value is BindableRole {
@@ -75,20 +106,20 @@ export function isBindableRole(value: string): value is BindableRole {
  * copies of this sentence would eventually be three different sentences.
  */
 export const ROLE_PURPOSE: Readonly<Record<BindableRole, string>> = {
-  chat: 'Plans, reasons and writes. The capability a conversation needs.',
-  vision: 'Reads what is on screen or in a frame.',
+  agent_model: 'Plans, reasons and writes. This is what answers you in a conversation.',
+  visual_perception: 'Reads what is on screen or in a frame.',
   asr: 'Speech to text, with timings a citation can point at.',
-  audio: 'Non-speech audio: events, tone, music.',
-  embedding: 'Search over the library and over memory.',
+  audio_understanding: 'Non-speech audio: events, tone, music.',
+  embeddings: 'Search over the library and over memory.',
 }
 
 /** The modalities each role's work actually needs a route to support. */
 export const ROLE_MODALITIES: Readonly<Record<BindableRole, readonly Modality[]>> = {
-  chat: ['text'],
-  vision: ['vision'],
+  agent_model: ['text'],
+  visual_perception: ['vision'],
   asr: ['audio'],
-  audio: ['audio'],
-  embedding: ['embedding'],
+  audio_understanding: ['audio'],
+  embeddings: ['embedding'],
 }
 
 /**
@@ -244,6 +275,52 @@ export function isBound(bindings: WatchBindings, role: BindableRole): boolean {
 export function boundProviders(bindings: WatchBindings): readonly string[] {
   const seen = new Set<string>()
   for (const record of Object.values(bindings.roles)) seen.add(record.provider)
+  return [...seen].sort()
+}
+
+/**
+ * Whether a provider/model pair is one this profile actually bound.
+ *
+ * The authoritative question, and deliberately the *narrow* one. It does not
+ * ask whether the route exists, whether a credential is stored, or whether the
+ * provider is reachable — those are the Host's to answer at the moment of the
+ * request. It asks the only thing a stored document can answer: did somebody
+ * choose this pair for something.
+ *
+ * That is what makes it usable as a gate at a routing boundary. A request for
+ * a pair nobody bound is a request nobody authorised, whatever the client that
+ * produced it believed — a stale tab holding a selection that has since been
+ * changed, or a caller that set one directly and skipped the screens.
+ *
+ * Any bound role counts, not only the one being served: a person who bound
+ * OpenRouter to Chat has authorised that route, and the title and compaction
+ * calls that ride the same selection are the same authorisation, not new ones.
+ *
+ * @param bindings - the stored document.
+ * @param provider - the route the request names.
+ * @param model - the model the request names.
+ * @returns whether some role in this profile is bound to exactly that pair.
+ */
+export function isRoutePermitted(
+  bindings: WatchBindings, provider: string, model: string,
+): boolean {
+  if (provider === '' || model === '') return false
+  return Object.values(bindings.roles).some(
+    record => record.provider === provider && record.model === model)
+}
+
+/**
+ * Every distinct provider/model pair this profile bound, for a diagnostic.
+ *
+ * A refusal that says "this route is not bound" is not much use without the
+ * ability to say what *is*, and that list is a set of choices rather than
+ * anything sensitive — no credential, no reference, no host path.
+ */
+export function permittedRoutes(bindings: WatchBindings): readonly string[] {
+  const seen = new Set<string>()
+  for (const record of Object.values(bindings.roles)) {
+    seen.add(`${record.provider}/${record.model}`)
+  }
   return [...seen].sort()
 }
 

@@ -10,6 +10,8 @@
   "seeds": [
     "@deepseek-ai/cordis@4.0.2",
     "@deepseek-ai/dsh-client-ui-primitives@0.1.1-rc.2",
+    "@deepseek-ai/dsh-llm@0.1.1-rc.2",
+    "@deepseek-ai/dsh-settings@0.1.1-rc.2",
     "@deepseek-ai/dsh-system-prompt@0.1.1-rc.2",
     "@deepseek-ai/dsh-tools@0.1.1-rc.2",
     "@deepseek-ai/dsh-typert-protocol@0.1.1-rc.2",
@@ -22,7 +24,7 @@
   "rounds": [
     {
       "round": 0,
-      "supplied": 9,
+      "supplied": 11,
       "installed": 510
     },
     {
@@ -44,11 +46,13 @@
     "@deepseek-ai/dsh-compaction": "^0.1.1-rc.2",
     "@deepseek-ai/dsh-fs": "^0.1.1-rc.2",
     "@deepseek-ai/dsh-invariants": "^0.1.1-rc.2",
+    "@deepseek-ai/dsh-llm": "^0.1.1-rc.2",
     "@deepseek-ai/dsh-output-retention": "^0.1.1-rc.2",
     "@deepseek-ai/dsh-sandbox": "^0.1.1-rc.2",
     "@deepseek-ai/dsh-scope": "^0.1.1-rc.2",
     "@deepseek-ai/dsh-session-telemetry": "^0.1.1-rc.2",
     "@deepseek-ai/dsh-session-title-llm": "^0.1.1-rc.2",
+    "@deepseek-ai/dsh-settings": "^0.1.1-rc.2",
     "@deepseek-ai/dsh-shell": "^0.1.1-rc.2",
     "@deepseek-ai/dsh-spill": "^0.1.1-rc.2",
     "@deepseek-ai/dsh-subagent-in-process-driver": "^0.1.1-rc.2",
@@ -12761,5 +12765,5 @@
       "peerDependenciesMeta": null
     }
   ],
-  "digest": "sha256:bbedba55d475c1f0dacb7cc511cef26a98590801c2729ca0b7633f698500b1e3"
+  "digest": "sha256:06cd30dc117f92c04966e4bf9225dc9092962a7e4715e2bc658ee7426052e5b3"
 }

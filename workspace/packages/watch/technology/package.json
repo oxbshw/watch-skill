@@ -32,7 +32,11 @@
       "types": "./lib/descriptors.d.ts",
       "default": "./lib/descriptors.js"
     },
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./routing": {
+      "types": "./lib/routing.d.ts",
+      "default": "./lib/routing.js"
+    }
   },
   "files": [
     "lib/**/*.js",
@@ -47,10 +51,17 @@
   },
   "peerDependencies": {
     "@deepseek-ai/cordis": "catalog:",
+    "@deepseek-ai/dsh-llm": "catalog:",
+    "@deepseek-ai/dsh-settings": "catalog:",
     "@deepseek-ai/schemastery": "^3.18.1"
   },
   "devDependencies": {
     "@deepseek-ai/cordis": "catalog:",
+    "@deepseek-ai/dsh-llm": "catalog:",
+    "@deepseek-ai/dsh-settings": "catalog:",
     "@deepseek-ai/schemastery": "^3.18.1"
+  },
+  "dependencies": {
+    "@deepwatch/dsh-contracts": "workspace:^"
   }
 }
