@@ -292,6 +292,19 @@ jobs:
       - name: Install
         run: pnpm install --frozen-lockfile
 
+      # The same step the `check` job runs, and for the same reason: several
+      # tests read the pinned DSH source rather than a description of it, and a
+      # fresh clone has no checkout because `upstream/deepseek-harness/` is
+      # script-managed and never vendored.
+      #
+      # It was missing here, so `default-model.test.mjs` failed on all three
+      # runners with `ENOENT ... cordis.patch.yml` — a red platform job that
+      # said nothing about any platform. `check` had the step and passed, which
+      # is exactly why it went unnoticed: the green job was the one that could
+      # not have caught it.
+      - name: Pinned upstream baseline
+        run: node scripts/upstream-sync.mjs
+
       - name: Build
         run: npm run build
 

@@ -16,7 +16,7 @@
     "brand": "node scripts/brand-assets.mjs",
     "brand:check": "node scripts/brand-assets.mjs --check",
     "build": "node scripts/build.mjs",
-    "check": "npm run verify:artifacts && npm run verify:graph && npm run verify:publishable && npm run package-docs:check && npm run inventory:check && npm run verify:parity && npm run verify:bundle && npm run verify:desktop && npm run verify:verdict && npm run verify:slots && npm run verify:portability && npm run verify:signing && npm run slots:check && npm run brand:check && npm run providers:check && npm run status:check && npm run closure:check && npm run managed:check && npm run verify:typert-face && npm run build && npm run lint && npm run typert:check && npm run ocr:check && npm run verify:client && npm run sbom && npm run release:check && npm run test",
+    "check": "npm run verify:artifacts && npm run verify:graph && npm run verify:publishable && npm run package-docs:check && npm run inventory:check && npm run verify:parity && npm run build && npm run verify:bundle && npm run verify:desktop && npm run verify:verdict && npm run verify:slots && npm run verify:portability && npm run verify:signing && npm run slots:check && npm run brand:check && npm run providers:check && npm run status:check && npm run closure:check && npm run managed:check && npm run verify:typert-face && npm run lint && npm run typert:check && npm run ocr:check && npm run verify:client && npm run sbom && npm run release:check && npm run test",
     "closure": "node scripts/gen-spec-closure.mjs",
     "closure:check": "node scripts/gen-spec-closure.mjs --check",
     "doctor": "node scripts/doctor.mjs",
