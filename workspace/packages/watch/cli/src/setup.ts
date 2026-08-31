@@ -57,7 +57,7 @@ import { resolveBundle } from './lib/bundle.js'
 import { composeProfile } from './lib/compose.js'
 import { managedPlan, provisionManagedRuntime, readArtifacts } from './lib/provision.js'
 import type { ManagedPackage, ManagedPlan, SourceMode } from './lib/provision.js'
-import { deepwatchHome, dshHome, profileName } from './lib/paths.js'
+import { deepwatchHome, dshHome, profileName, watchCoreBin } from './lib/paths.js'
 import { BUNDLE_PACKAGE, BUNDLE_VERSION, HARNESS_VERSION } from './version.js'
 
 /** How long a profile operation may take before it is a hang rather than work. */
@@ -302,6 +302,12 @@ export async function runSetup(invocation: Invocation): Promise<number> {
     // only check that fails when the profile is genuinely unusable is opening
     // it, so setup opens it.
     bootProbe: true,
+    // Honoured here as well as reported by `doctor`. It was reported and not
+    // honoured, so a machine with a real engine off `PATH` composed a profile
+    // whose Bridge spawned `watch-skill`, failed with ENOENT, fell back to its
+    // mock, and told every capability it was `not_tested` -- while `doctor`
+    // said the binary was fine.
+    watchCoreBin: watchCoreBin(env),
     onStep: message => { process.stdout.write(`${message}\n`) },
   })
   if (composition.outcome !== 'composed' && composition.outcome !== 'already-composed') {

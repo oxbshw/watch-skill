@@ -81,6 +81,8 @@ export interface CompositionReport {
   readonly changed?: boolean
   /** What was done about upstream's internal-testing notice, for the receipt. */
   readonly upstreamNotice?: 'already-answered' | 'marked-handled'
+  /** The Watch Core executable the Bridge was pointed at, when one was named. */
+  readonly watchCoreBin?: string
 }
 
 /** What to compose, and where. */
@@ -101,6 +103,14 @@ export interface ComposeOptions {
    * Off only where something else has already done it.
    */
   readonly bootProbe: boolean
+  /**
+   * The Watch Core executable, when `WATCH_CORE_BIN` names one.
+   *
+   * Absent means the Bridge keeps the bundle's `auto` transport and looks for
+   * `watch-skill` on `PATH`, which is the right default for a machine where
+   * nobody has said where the engine is.
+   */
+  readonly watchCoreBin?: string | null
   readonly onStep?: (message: string) => void
 }
 
@@ -154,6 +164,82 @@ export function acknowledgeUpstreamNotice(
   ].join('\n')
   writeFileSync(path, before === '' ? section : `${before.replace(/\n*$/, '\n')}${section}`, 'utf8')
   return 'marked-handled'
+}
+
+/** Where the Core-binary override is written, and how it is found again. */
+const CORE_BIN_MARK = '# deepwatch: Watch Core binary — written by `deepwatch setup`'
+const CORE_BIN_END = '# deepwatch: end of Watch Core binary override'
+
+/**
+ * Point the Bridge at the Watch Core executable a person actually named.
+ *
+ * `WATCH_CORE_BIN` was accepted, documented, and reported on by `doctor` --
+ * and completely ignored by the thing that spawns the engine. The bundle
+ * composes the Bridge with `command: watch-skill`, so a machine where the
+ * engine is real but not on `PATH` got `spawn watch-skill ENOENT`, the Bridge
+ * fell back to its mock, and every capability reported `not_tested` while
+ * `doctor` said the binary was fine. A variable that is honoured in the report
+ * and not in the runtime is worse than one that does not exist.
+ *
+ * The override goes in the *profile's own* patch layer, which is upstream's
+ * documented place for per-profile changes and is applied after every bundle
+ * layer. Written between markers so a second run replaces the block rather
+ * than appending one, and so anything a person put in that file by hand
+ * survives.
+ *
+ * **`stdio`, not `auto`.** `auto` falls back to the mock when the command is
+ * missing, which is right when nobody has said where the engine is. Somebody
+ * who sets `WATCH_CORE_BIN` has said exactly that, so a failure to start it is
+ * a fault to report rather than a fallback to accept -- the same reasoning the
+ * bundle already gives for pinning `stdio` in a deployment that requires the
+ * engine.
+ *
+ * Every key of the row's config is restated, because a Loader patch replaces
+ * the targeted row's whole `config` and an overlay that named only `command`
+ * would silently drop the timeouts with it.
+ *
+ * @param profileDir - the composed profile's directory.
+ * @param coreBin - the executable `WATCH_CORE_BIN` names.
+ * @returns the path as written, for the receipt.
+ */
+export function writeCoreBinOverride(profileDir: string, coreBin: string): string {
+  const path = join(profileDir, 'cordis.patch.yml')
+  const before = existsSync(path) ? readFileSync(path, 'utf8') : ''
+  const start = before.indexOf(CORE_BIN_MARK)
+  const kept = start < 0
+    ? before
+    : before.slice(0, start) + before.slice(before.indexOf(CORE_BIN_END) + CORE_BIN_END.length)
+  // The file the Harness writes for a new profile is the empty flow sequence
+  // `[]`, and `[]` followed by block entries is not a document any YAML reader
+  // will accept. Dropping it is what lets the first override be written at all.
+  const body = kept.split(/\r?\n/)
+    .filter(line => line.trim() !== '[]')
+    .join('\n')
+  // Forward slashes: a YAML scalar keeps its backslashes, and a Windows path
+  // that survives quoting still has to survive being read back as a command.
+  const command = coreBin.replace(/\\/g, '/')
+
+  writeFileSync(path, [
+    body.trimEnd(),
+    '',
+    CORE_BIN_MARK,
+    '#',
+    '# `WATCH_CORE_BIN` named this executable. `stdio` rather than `auto`: a',
+    '# person who says where the engine is has said it is there, so failing to',
+    '# start it is a fault to report rather than a mock to fall back to.',
+    '- id: watch-core-bridge',
+    '  config:',
+    '    transport: stdio',
+    `    command: '${command}'`,
+    '    args: [bridge]',
+    "    cwd: ''",
+    '    startupTimeoutMs: 10000',
+    '    requestTimeoutMs: 30000',
+    '    autoConnect: true',
+    CORE_BIN_END,
+    '',
+  ].join('\n'), 'utf8')
+  return command
 }
 
 /** The DeepWatch tarballs the runtime keeps for itself. */
@@ -312,6 +398,13 @@ export async function composeProfile(
     dsh: { ...manifest.dsh, profile: { ...manifest.dsh?.profile, bundles } },
   }, null, 2)}\n`, 'utf8')
 
+  // After `plugin add` (which rewrites the manifest) and before the config is
+  // resolved, so the dump and the boot probe both see the override.
+  const corePath = options.watchCoreBin === undefined || options.watchCoreBin === null
+    ? undefined
+    : writeCoreBinOverride(profileDir, options.watchCoreBin)
+  if (corePath !== undefined) say(`  pointing the Bridge at ${corePath}`)
+
   const dumped = await dsh(['--profile', options.profile, '--dump-config'])
   if (dumped.code !== 0) {
     return {
@@ -330,6 +423,7 @@ export async function composeProfile(
       bundles,
       changed: !already,
       upstreamNotice: notice,
+      ...corePath === undefined ? {} : { watchCoreBin: corePath },
     }
   }
 
@@ -366,6 +460,7 @@ export async function composeProfile(
     servedFrom: watched.match,
     changed: !already,
     upstreamNotice: notice,
+    ...corePath === undefined ? {} : { watchCoreBin: corePath },
   }
 }
 

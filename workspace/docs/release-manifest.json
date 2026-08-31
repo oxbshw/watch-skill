@@ -68,7 +68,7 @@
       {
         "name": "@deepwatch/cli",
         "version": "0.1.0-preview.0",
-        "integrity": "sha256:3cc190000aaf6b6e474d1b5163ec974023fe8ecf0008d778dec64abde64936e4",
+        "integrity": "sha256:bbe84ce4dfa9ed6185f553047d142c17c4ab416b4e85efe9c3c3f6c8e9699447",
         "sourceFiles": 11
       },
       {
@@ -185,7 +185,7 @@
       "creators": [
         "Tool: watch-gen-release-manifest"
       ],
-      "created": "2026-08-31T16:51:59Z"
+      "created": "2026-08-31T17:22:53Z"
     },
     "packages": [
       {
@@ -248,7 +248,7 @@
         "checksums": [
           {
             "algorithm": "SHA256",
-            "checksumValue": "3cc190000aaf6b6e474d1b5163ec974023fe8ecf0008d778dec64abde64936e4"
+            "checksumValue": "bbe84ce4dfa9ed6185f553047d142c17c4ab416b4e85efe9c3c3f6c8e9699447"
           }
         ]
       },
