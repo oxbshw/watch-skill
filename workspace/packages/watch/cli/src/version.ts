@@ -42,6 +42,33 @@ export const HARNESS_REGISTRY = 'https://registry.npmjs.org'
 export const BUNDLE_PACKAGE = '@deepwatch/dsh-bundle'
 
 /**
+ * Upstream's internal-testing notice, as this baseline ships it.
+ *
+ * The Harness shows a developer-facing notice on first run and records the
+ * acknowledgement as a durable setting, comparing it to this exact string. A
+ * DeepWatch-managed profile marks it handled at setup, so a person gets one
+ * onboarding surface — DeepWatch's — instead of an upstream notice about the
+ * DSH plugin ecosystem followed by a second modal about DeepWatch.
+ *
+ * Nothing is disabled and nothing is patched: this is the same durable field
+ * the Continue button writes, in the managed profile's own Harness home. A
+ * stock DSH profile elsewhere on the machine is untouched and still shows it,
+ * which is right — it is upstream's notice about upstream's product.
+ *
+ * Pinned rather than read at runtime, because the profile is seeded before
+ * anything is running. `tests/onboarding.test.mjs` compares these three
+ * constants against the pinned Harness source, so a baseline bump that changes
+ * the notice fails a gate instead of quietly bringing the modal back.
+ */
+export const UPSTREAM_NOTICE_NAMESPACE = 'ui-onboarding'
+
+/** The durable field carrying the last acknowledged notice version. */
+export const UPSTREAM_NOTICE_FIELD = 'welcomeNoticeVersion'
+
+/** The notice version the pinned Harness compares against, for exact equality. */
+export const UPSTREAM_NOTICE_VERSION = '2026-08-13.1'
+
+/**
  * The bundle version this CLI composes, which is its own.
  *
  * The DeepWatch packages are released as one set at one version, and

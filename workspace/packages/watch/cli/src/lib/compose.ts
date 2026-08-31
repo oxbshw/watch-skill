@@ -46,7 +46,9 @@ import { join } from 'node:path'
 
 import { run, startAndWaitFor } from './exec.js'
 import { ARTIFACT_DIR } from './provision.js'
-import { BUNDLE_PACKAGE } from '../version.js'
+import {
+  BUNDLE_PACKAGE, UPSTREAM_NOTICE_FIELD, UPSTREAM_NOTICE_NAMESPACE, UPSTREAM_NOTICE_VERSION,
+} from '../version.js'
 
 /** The Harness's own layers, in the order a web profile needs them. */
 const BASE_LAYER = '@deepseek-ai/dsh-base'
@@ -77,6 +79,8 @@ export interface CompositionReport {
   readonly servedFrom?: string
   /** Whether the layer list already held the bundle before this ran. */
   readonly changed?: boolean
+  /** What was done about upstream's internal-testing notice, for the receipt. */
+  readonly upstreamNotice?: 'already-answered' | 'marked-handled'
 }
 
 /** What to compose, and where. */
@@ -105,6 +109,51 @@ interface ProfileManifest {
   dependencies?: Record<string, string>
   dsh?: { profile?: { bundles?: string[] } }
   [key: string]: unknown
+}
+
+/**
+ * Mark upstream's internal-testing notice handled, for this profile only.
+ *
+ * The Harness shows a developer notice on first run and records the
+ * acknowledgement in its own durable settings document. DeepWatch has its own
+ * onboarding, and a person meeting both got two modals in a row — the first
+ * about the DSH plugin ecosystem, which is not what they installed.
+ *
+ * This writes the same field the Continue button writes, in the *managed*
+ * profile's Harness home. Three properties make that safe:
+ *
+ *   - it is scoped to `<DeepWatch home>/dsh-home`, so a stock DSH profile
+ *     elsewhere on the machine still shows the notice, which is upstream's to
+ *     show about upstream's product;
+ *   - it only ever *adds* a section that is absent. An existing
+ *     `ui-onboarding` block is left exactly as it is, so a person who has
+ *     already answered — or who edited the file — is not overwritten;
+ *   - it never rewrites the rest of the document. The settings file is the
+ *     Harness's, it carries other sections, and a setup step is not entitled
+ *     to reformat somebody's configuration.
+ *
+ * @returns what was done, for the composition receipt.
+ */
+export function acknowledgeUpstreamNotice(
+  dshHome: string,
+): 'already-answered' | 'marked-handled' {
+  const path = join(dshHome, 'settings.yaml')
+  const before = existsSync(path) ? readFileSync(path, 'utf8') : ''
+  // A top-level YAML key, at column zero. Matching loosely here would find the
+  // word inside a comment or a nested value and skip a profile that needs it.
+  if (new RegExp(`^${UPSTREAM_NOTICE_NAMESPACE}:`, 'm').test(before)) {
+    return 'already-answered'
+  }
+  mkdirSync(dshHome, { recursive: true })
+  const section = [
+    `${UPSTREAM_NOTICE_NAMESPACE}:`,
+    // Quoted: the version is a date-like string and an unquoted 2026-08-13.1
+    // is not a value a YAML reader is obliged to hand back as text.
+    `  ${UPSTREAM_NOTICE_FIELD}: '${UPSTREAM_NOTICE_VERSION}'`,
+    '',
+  ].join('\n')
+  writeFileSync(path, before === '' ? section : `${before.replace(/\n*$/, '\n')}${section}`, 'utf8')
+  return 'marked-handled'
 }
 
 /** The DeepWatch tarballs the runtime keeps for itself. */
@@ -194,6 +243,10 @@ export async function composeProfile(
       { env, timeoutMs: options.timeoutMs, cwd: options.managedRoot })
 
   mkdirSync(options.dshHome, { recursive: true })
+  // Before the Harness is asked to do anything with this home: the notice is
+  // read at first paint, so marking it handled afterwards would still show it
+  // once.
+  const notice = acknowledgeUpstreamNotice(options.dshHome)
 
   const initialised = await dsh(['plugin', '--profile', options.profile, 'install'])
   if (initialised.code !== 0) {
@@ -276,6 +329,7 @@ export async function composeProfile(
       fix: '',
       bundles,
       changed: !already,
+      upstreamNotice: notice,
     }
   }
 
@@ -311,6 +365,7 @@ export async function composeProfile(
     bundles,
     servedFrom: watched.match,
     changed: !already,
+    upstreamNotice: notice,
   }
 }
 

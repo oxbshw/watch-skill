@@ -415,7 +415,12 @@ test('the first run does not require DeepSeek', async t => {
   })
 
   await t.test('there is a way into the workspace without configuring anything', () => {
-    assert.match(ONBOARDING, />Continue</)
+    // The label changed from "Continue" to "Explore offline"; the property did
+    // not. "Continue" beside "Set up capabilities" gave a person two ghost
+    // links and no idea which was the way forward, and it also said nothing
+    // about what continuing would get them. What must remain true is that one
+    // action dismisses the notice and configures nothing.
+    assert.match(ONBOARDING, />Explore offline</)
     assert.match(ONBOARDING, /complete\?\.\(\)/)
   })
 
@@ -442,9 +447,15 @@ test('the first run does not require DeepSeek', async t => {
 
   await t.test('the notice and the list cannot disagree', () => {
     // The count on the notice is derived from the table Diagnostics renders,
-    // rather than written out a second time.
+    // rather than written out a second time. It is no longer stated as a
+    // fraction of the whole: "4 of 12 capabilities are ready" read as a
+    // warning about a broken installation rather than a description of a
+    // local-first product nobody had pointed at a model yet. The derivation is
+    // what this test is about, and it is unchanged.
     assert.match(ONBOARDING, /READINESS\.filter\(item => item\.tone === 'active'\)/)
-    assert.match(ONBOARDING, /READINESS\.length/)
+    assert.match(ONBOARDING, /\$\{String\(local\.length\)\}/,
+      'the count must come from the shared table, never be written out again')
+    assert.doesNotMatch(ONBOARDING, /\d+ of \d+ capabilities/)
   })
 
   await t.test('readiness is truthful, not a column of ticks', () => {
