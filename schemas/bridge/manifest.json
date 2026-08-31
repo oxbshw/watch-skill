@@ -739,7 +739,7 @@
       }
     },
     "library": {
-      "digest": "sha256:f54177e04f9c5e9d76b23702e798d394",
+      "digest": "sha256:cb1a1721b33ccca2e25ea000fe41c7f1",
       "schema": {
         "$defs": {
           "LibraryHit": {
@@ -856,13 +856,13 @@
           }
         },
         "additionalProperties": false,
-        "description": "A page of Library records, and whether the engine truncated it.",
+        "description": "A page of Library records, and whether the engine truncated it.\n\nThe rows are ``sources`` rather than ``records`` because that is the word\nthe whole surface already uses -- the tool is `watch_list_sources`, the\nidentifier is `sourceId` -- and a page whose rows are called something else\nmakes a reader ask whether they are the same thing.",
         "properties": {
-          "records": {
+          "sources": {
             "items": {
               "$ref": "#/$defs/LibraryRecord"
             },
-            "title": "Records",
+            "title": "Sources",
             "type": "array"
           },
           "total": {

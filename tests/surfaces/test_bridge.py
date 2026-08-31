@@ -164,7 +164,7 @@ class TestDispatch:
         reply = converse(HANDSHAKE, {
             "jsonrpc": "2.0", "id": 2, "method": "watch.library.list", "params": {"limit": 5},
         })[1]
-        assert reply["result"] == {"records": [], "total": 0, "truncated": False}
+        assert reply["result"] == {"sources": [], "total": 0, "truncated": False}
 
     def test_invalid_params_name_the_parameter(self) -> None:
         reply = converse(HANDSHAKE, {

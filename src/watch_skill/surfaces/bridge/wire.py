@@ -255,9 +255,15 @@ class LibraryRecord(WireModel):
 
 
 class LibraryPage(WireModel):
-    """A page of Library records, and whether the engine truncated it."""
+    """A page of Library records, and whether the engine truncated it.
 
-    records: list[LibraryRecord] = Field(default_factory=list)
+    The rows are ``sources`` rather than ``records`` because that is the word
+    the whole surface already uses -- the tool is `watch_list_sources`, the
+    identifier is `sourceId` -- and a page whose rows are called something else
+    makes a reader ask whether they are the same thing.
+    """
+
+    sources: list[LibraryRecord] = Field(default_factory=list)
     total: int
     truncated: bool = False
 

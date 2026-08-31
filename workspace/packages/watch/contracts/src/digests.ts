@@ -45,7 +45,7 @@ export const EXPECTED_SCHEMA_DIGESTS: Readonly<Record<SchemaFamily, string>> = {
   error: 'sha256:f83b04be5dffc2dfab6963f071c7455a',
   evidence: 'sha256:3facf1e0c00ffb61e9724d0a17b5d589',
   handshake: 'sha256:215466e1a4d3ea526e71c5a162bf861b',
-  library: 'sha256:f54177e04f9c5e9d76b23702e798d394',
+  library: 'sha256:cb1a1721b33ccca2e25ea000fe41c7f1',
   verification: 'sha256:0f381733ba98849b8335ad0fa1534534',
 }
 

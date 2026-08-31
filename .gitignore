@@ -62,3 +62,8 @@ t.xml
 # Local pytest transcript, written when diagnosing a slow run.
 .pytest-run.log
 .clean-build.log
+
+# The Watch Core venv the workspace platform CI job builds so the real
+# Node-to-Python integration suite runs instead of skipping. Named apart from
+# `.venv` so provisioning it in CI cannot disturb a developer's own.
+/.venv-core/

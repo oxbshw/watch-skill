@@ -17,6 +17,8 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Callable
+from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any
 
 from watch_skill.surfaces.bridge.protocol import BridgeError
@@ -140,7 +142,7 @@ def library_list(params: dict[str, Any]) -> Any:
     rows = list_videos()
     page = [_record_from_row(row) for row in rows[:limit]]
     return LibraryPage(
-        records=page, total=len(rows), truncated=len(rows) > limit
+        sources=page, total=len(rows), truncated=len(rows) > limit
     ).model_dump(by_alias=True)
 
 
@@ -165,7 +167,7 @@ def library_search(params: dict[str, Any]) -> Any:
         ]
         records.append(_record_from_row(video, hits))
     return LibraryPage(
-        records=records, total=len(records), truncated=False
+        sources=records, total=len(records), truncated=False
     ).model_dump(by_alias=True)
 
 
@@ -234,10 +236,19 @@ def source_moment(params: dict[str, Any]) -> Any:
 
 
 def capture_capabilities(_params: dict[str, Any]) -> Any:
-    """`watch.capture.capabilities` -> :func:`watch_skill.live.capability_matrix`."""
+    """`watch.capture.capabilities` -> :func:`watch_skill.live.capability_matrix`.
+
+    The per-kind rows are published as ``capture`` rather than under the
+    engine's own ``capabilities`` key. The handshake already answers something
+    called capabilities and it is a different list -- what the *product* can
+    do, versus what this machine can *record* -- and one word for both is how a
+    reader ends up asserting against the wrong one.
+    """
     from watch_skill.live import capability_matrix
 
-    return scrub(capability_matrix())
+    matrix = dict(capability_matrix())
+    matrix["capture"] = matrix.pop("capabilities", [])
+    return scrub(matrix)
 
 
 def live_start(params: dict[str, Any]) -> Any:
@@ -278,6 +289,32 @@ def live_ask(params: dict[str, Any]) -> Any:
             str(_require(params, "sessionId")),
             str(_require(params, "question")),
             scope=str(params.get("scope") or "recent"),
+        )
+    )
+
+
+def live_aligned(params: dict[str, Any]) -> Any:
+    """`watch.live.aligned` -> :func:`watch_skill.live.aligned_evidence`.
+
+    What every stream observed around one moment. Correlation is deterministic
+    -- timestamp overlap, nothing learned -- so an operator can reproduce the
+    answer by hand, which is the property that makes it evidence.
+    """
+    from watch_skill.live import aligned_evidence
+
+    media_ts = params.get("mediaTs")
+    if not isinstance(media_ts, (int, float)) or isinstance(media_ts, bool):
+        raise BridgeError(
+            error="bridge.invalid_params",
+            message='"mediaTs" must be a number.',
+            fix="Send mediaTs as seconds on the session clock.",
+            details={"parameter": "mediaTs"},
+        )
+    return scrub(
+        aligned_evidence(
+            str(_require(params, "sessionId")),
+            float(media_ts),
+            window=float(params.get("windowSeconds") or 2.0),
         )
     )
 
@@ -336,7 +373,20 @@ def _outcome_from_bundle(verification_id: str, bundle: Any) -> dict[str, Any]:
     }
     verdict = verdict_map.get(str(bundle.verdict).lower(), "INCONCLUSIVE")
     limitations = list(getattr(bundle, "limitations", []) or [])
-    reason = limitations[0] if limitations else f"Core returned verdict {bundle.verdict}."
+
+    # A verdict is only actionable if it says which check produced it. "Core
+    # returned verdict fail" is true and tells a reader nothing they can open,
+    # so a failure names the checks that failed before falling back to the
+    # engine's own limitations.
+    failed = [check.check_id for check in checks if check.passed is False]
+    if failed:
+        listed = ", ".join(failed[:5])
+        more = "" if len(failed) <= 5 else f" (and {len(failed) - 5} more)"
+        reason = f"{len(failed)} required check(s) failed: {listed}{more}."
+    elif limitations:
+        reason = limitations[0]
+    else:
+        reason = f"Core returned verdict {bundle.verdict}."
     return VerificationOutcome(
         verification_id=verification_id,
         verdict=verdict,  # type: ignore[arg-type]
@@ -350,36 +400,84 @@ def _outcome_from_bundle(verification_id: str, bundle: Any) -> dict[str, Any]:
 def verification_run(params: dict[str, Any]) -> Any:
     """`watch.verification.run` -> :func:`watch_skill.verify.verify_run`.
 
-    The contract arrives as a document, not a path: a Host that could name a
-    file on this machine and have Core read it would be a filesystem read
-    primitive wearing a verification method's name.
+    The Host sends an *expectation* and, when it has them, a list of checks —
+    that is what `watch_verify` in ``@deepwatch/dsh-tools`` actually puts on
+    the wire. This assembles a contract from them, freezes it, and runs it.
+
+    **An expectation with no checks does not pass.** It returns ``UNVERIFIED``,
+    because a sentence is not an executable postcondition and Core's whole
+    verdict taxonomy exists to keep those apart (ADR-002). That is the answer a
+    caller gets for "the deploy worked", and it is the correct one.
+
+    Checks are never read from a Host path. A method that took a filename and
+    had Core read it would be a filesystem read primitive wearing a
+    verification method's name, so the checks arrive inline and
+    ``workingDir`` bounds where they may look.
     """
+    import uuid
+
     from pydantic import ValidationError
 
     from watch_skill.verify import VerificationContract, verify_run
 
-    verification_id = str(params.get("verificationId") or "")
-    document = params.get("contract")
-    if not isinstance(document, dict):
+    expectation = str(_require(params, "expectation"))
+    verification_id = str(params.get("verificationId") or f"ver_{uuid.uuid4().hex[:16]}")
+    raw_checks = params.get("checks") or []
+    if not isinstance(raw_checks, list):
         raise BridgeError(
             error="bridge.invalid_params",
-            message='"contract" must be a verification contract document.',
-            fix="Send the contract inline; Core does not read contracts from Host paths.",
-            details={"parameter": "contract"},
+            message='"checks" must be a list.',
+            fix="Send checks as a list of check objects, or omit it entirely.",
+            details={"parameter": "checks"},
         )
+
+    if not raw_checks:
+        # A sentence is not an executable postcondition, and `UNVERIFIED` is
+        # the taxonomy's word for exactly that. Core refuses an empty contract
+        # outright (`verify.contract_empty`), which is right for its own CLI —
+        # you should not be able to *ask* for a verdict with nothing to check.
+        # Over the Bridge it is the wrong answer: the Host is reporting what an
+        # agent claimed, and "no executable expectation" is a finding to render
+        # rather than an error to raise. Nothing is invented here; this is the
+        # one verdict that follows from the request alone.
+        return VerificationOutcome(
+            verification_id=verification_id,
+            verdict="UNVERIFIED",
+            reason=(
+                "The expectation is prose, with no executable check behind it, "
+                "so nothing was verified."
+            ),
+            checks=[],
+            contract_digest="",
+            evaluated_at=datetime.now(UTC).isoformat(timespec="seconds"),
+        ).model_dump(by_alias=True)
+
     try:
-        contract = VerificationContract.model_validate(document)
+        contract = VerificationContract(
+            contract_id=verification_id,
+            title=expectation[:200],
+            created_by="bridge",
+            checks=raw_checks,
+            source_prompt=expectation,
+        )
     except ValidationError as exc:
+        # The count, never the messages: a validation error quotes the value it
+        # rejected, and the value came from the Host.
         raise BridgeError(
             error="verify.contract_invalid",
-            message="The verification contract did not validate.",
-            fix="Check the contract has contract_id, title and a checks list.",
+            message="The verification checks did not validate.",
+            fix="`watch-skill verify checks` lists the supported check types and their parameters.",
             details={"errors": len(exc.errors())},
         ) from None
-    if not contract.frozen:
-        contract = contract.freeze(created_by="bridge")
-    bundle, _attestation = verify_run(contract, isolated=True)
-    return _outcome_from_bundle(verification_id or bundle.run_id, bundle)
+
+    contract = contract.freeze(created_by="bridge")
+    working_dir = params.get("workingDir")
+    bundle, _attestation = verify_run(
+        contract,
+        working_dir=Path(str(working_dir)) if working_dir else Path("."),
+        isolated=True,
+    )
+    return _outcome_from_bundle(verification_id, bundle)
 
 
 def verification_show(params: dict[str, Any]) -> Any:
@@ -452,6 +550,7 @@ HANDLERS: dict[str, Handler] = {
     "watch.evidence.get": evidence_get,
     "watch.library.list": library_list,
     "watch.library.search": library_search,
+    "watch.live.aligned": live_aligned,
     "watch.live.ask": live_ask,
     "watch.live.observe": live_observe,
     "watch.live.start": live_start,

@@ -316,6 +316,34 @@ jobs:
       - name: Signing configuration
         run: npm run verify:signing
 
+      # Watch Core, so `core-integration.test.mjs` runs the real engine instead
+      # of skipping. That suite is the only thing in the repository that proves
+      # the two halves of the product agree -- framing, protocol negotiation,
+      # contract digests and capability truth, across two languages and two
+      # processes -- and every other Bridge test drives a JavaScript fixture
+      # that agrees with this build by construction.
+      #
+      # It skipped for the whole life of the branch, silently, because no CI
+      # job had ever installed Core. A skip that reads as a pass is how the
+      # Bridge came to be described by the architecture and absent from the
+      # engine.
+      - name: Install Watch Core
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Build and install Watch Core
+        working-directory: .
+        shell: bash
+        run: |
+          uv venv .venv-core
+          uv pip install --python .venv-core --quiet .
+          if [ -x .venv-core/bin/watch-skill ]; then
+            echo "WATCH_CORE_COMMAND=$PWD/.venv-core/bin/watch-skill" >> "$GITHUB_ENV"
+          else
+            echo "WATCH_CORE_COMMAND=$PWD/.venv-core/Scripts/watch-skill.exe" >> "$GITHUB_ENV"
+          fi
+
       - name: Tests
         run: npm test
 
