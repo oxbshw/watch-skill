@@ -355,6 +355,13 @@
       "kind": "third_party"
     },
     {
+      "name": "@deepseek-ai/cordis",
+      "version": "4.0.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
       "name": "@deepseek-ai/cordis-plugin-group",
       "version": "1.0.1",
       "license": "MIT",
@@ -392,6 +399,13 @@
     {
       "name": "@deepseek-ai/cosmokit",
       "version": "1.8.2",
+      "license": "MIT",
+      "path": null,
+      "kind": "third_party"
+    },
+    {
+      "name": "@deepseek-ai/cosmokit",
+      "version": "1.8.3",
       "license": "MIT",
       "path": null,
       "kind": "third_party"
@@ -6069,7 +6083,7 @@
   ],
   "counts": {
     "firstParty": 20,
-    "thirdParty": 837,
+    "thirdParty": 839,
     "modelWeights": 5,
     "distributableWeights": 3
   }
