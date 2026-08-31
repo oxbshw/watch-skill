@@ -127,13 +127,13 @@ def logical_path(value: str) -> str:
         # on this machine, so there is no root it could be under and nothing
         # worth keeping from it.
         #
-        # Skipping this check leaked a username. On Linux, `C:\Users\someone`
-        # is a *relative* path, so `resolve()` anchored it to the working
-        # directory — and the result then matched the `<home>` root, whose
-        # prefix was stripped while `someone/notes.txt` survived in the tail.
-        # A Windows path in a message read on a POSIX host is exactly the
-        # cross-platform case a Bridge sees, and it produced the one output
-        # this function exists to prevent.
+        # Skipping this check leaked a username. On Linux a drive-letter path
+        # is a *relative* one, so ``resolve()`` anchored it to the working
+        # directory — and the result then matched the ``<home>`` root, whose
+        # prefix was stripped while the user's own directory survived in the
+        # tail. A Windows path in a message read on a POSIX host is exactly
+        # the cross-platform case a Bridge sees, and it produced the one
+        # output this function exists to prevent.
         if not os.path.isabs(raw):
             return "<path>"
         try:

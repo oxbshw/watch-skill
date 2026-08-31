@@ -85,7 +85,6 @@ packages = ["src/watch_skill"]
 [tool.hatch.build.targets.sdist]
 include = [
     "/src",
-    "/tests",
     "/scripts",
     "/docs",
     "/examples",
@@ -93,7 +92,6 @@ include = [
     "/skills",
     "/commands",
     "/templates",
-    "/benchmarks",
     "/app/src",
     "/app/scripts",
     "/app/package.json",
@@ -120,6 +118,13 @@ exclude = [
     "**/out",
     "**/__pycache__",
     "**/*.tsbuildinfo",
+    # DeepWatch is a different product with its own release, and
+    # `workspace/upstream/deepseek-harness/` inside it is a script-managed
+    # checkout of somebody else's source that git does not track. Both were
+    # reaching the sdist -- 332 files, most of them a vendored third party --
+    # because hatchling walks the filesystem and nothing here said not to.
+    "/workspace",
+    "**/upstream",
 ]
 
 # PyPI renders the long description on its own, so every relative path in

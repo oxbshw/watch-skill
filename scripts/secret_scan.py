@@ -184,6 +184,41 @@ DELIBERATE: dict[tuple[str, str], str] = {
         "one synthetic positive control per rule; every value is fabricated",
 }
 
+# Files that legitimately ship carrying a shape one of these rules matches.
+#
+# Separate from DELIBERATE, and deliberately much smaller. A working-tree
+# exemption says "this file may contain that shape"; an entry here says "and it
+# is correct for it to leave the machine", which is a stronger claim and the
+# one the dist and packed passes exist to interrogate. Same discipline: exact
+# archive-relative path, exact rule, one stated reason.
+#
+# The scanner is the only member, because it is the only file whose purpose is
+# to define these shapes -- there is no way to state a rule for a private key
+# header without writing one.
+DELIBERATE_SHIPPED: dict[tuple[str, str], str] = {
+    ("scripts/secret_scan.py", "private key block"):
+        "this scanner's own rule for a private key header",
+    ("scripts/secret_scan.py", "encrypted private key"):
+        "this scanner's own rule for an encrypted private key header",
+    ("scripts/secret_scan.py", "certificate block"):
+        "this scanner's own rule for a certificate header",
+    ("scripts/secret_scan.py", "stale npm scope"):
+        "this scanner's own rule for the scope this project stopped publishing under",
+}
+
+
+def shipped_path(label: str) -> str:
+    """The path inside an archive, without the archive or its version prefix.
+
+    ``watch_skill-1.3.0rc2.tar.gz:watch_skill-1.3.0rc2/scripts/x.py`` becomes
+    ``scripts/x.py``, so an exemption is written once and does not have to be
+    reissued every time the version changes.
+    """
+    inner = label.split(":", 1)[1] if ":" in label else label
+    parts = inner.split("/", 1)
+    return parts[1] if len(parts) == 2 and "-" in parts[0] else inner
+
+
 BINARY_SUFFIXES = {".pyc", ".png", ".jpg", ".jpeg", ".gif", ".webm", ".mp4",
                    ".woff", ".woff2", ".ico", ".xz", ".zip", ".onnx"}
 
@@ -219,6 +254,13 @@ def scan(label: str, data: bytes, packed: bool = False) -> list[tuple[str, str, 
         # absent from the report rather than as a line nobody reads.
         if not packed and DELIBERATE.get((label, name)) is not None:
             EXEMPTED.append((label, name))
+            continue
+        # And the much narrower list of files it is correct to publish
+        # carrying that shape. Keyed on the label naming an archive rather than
+        # on `packed`, which distinguishes npm tarballs from wheels and sdists
+        # and is not the question here: all three are things that shipped.
+        if ":" in label and DELIBERATE_SHIPPED.get((shipped_path(label), name)) is not None:
+            EXEMPTED.append((shipped_path(label), name))
             continue
         for hit in hits:
             found.append((label, name, redact(hit)))
