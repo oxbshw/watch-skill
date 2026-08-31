@@ -29,6 +29,7 @@
 
 import { QUERY_LIMITS, isIdentifier, isSafeCount } from '../query.js'
 import type {
+  CoreHealthRequest,
   LibraryGetRequest,
   LibraryRefreshRequest,
   LibraryRequestRejected,
@@ -232,6 +233,32 @@ export function parseLibraryGetRequest(value: unknown): Validated<LibraryGetRequ
  * field here a caller could point somewhere.
  */
 export function parseLibraryRefreshRequest(value: unknown): Validated<LibraryRefreshRequest> {
+  const open = opened(value)
+  if (!open.ok) return open
+
+  const head = envelope(open.value)
+  if (!head.ok) return head
+
+  return {
+    ok: true,
+    value: {
+      protocol: head.value.protocol,
+      requestId: head.value.requestId,
+      deadlineMs: head.value.deadlineMs,
+    },
+  }
+}
+
+
+/**
+ * Validate a `coreHealth` request.
+ *
+ * The envelope and nothing else. A health read takes no parameters on purpose:
+ * every field of the answer is something the Host observed, so there is
+ * nothing for a caller to select and nothing it could select that would change
+ * what is true.
+ */
+export function parseCoreHealthRequest(value: unknown): Validated<CoreHealthRequest> {
   const open = opened(value)
   if (!open.ok) return open
 

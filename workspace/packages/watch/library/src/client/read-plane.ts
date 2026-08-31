@@ -31,6 +31,8 @@ import type {
   LibraryGetResponse,
   LibraryRecord,
   LibraryRefreshRequest,
+  CoreHealthRequest,
+  CoreHealthResponse,
   LibraryRefreshResponse,
   LibrarySearchPage,
   LibrarySearchRequest,
@@ -63,6 +65,17 @@ export interface WatchQueryRemote {
   readonly libraryRefresh: (
     request: LibraryRefreshRequest, signal?: AbortSignal,
   ) => Promise<RemoteResult<LibraryRefreshResponse>>
+  /**
+   * The state of Watch Core, read from the running Bridge.
+   *
+   * Not a Library read, and on this namespace because this is the only channel
+   * the browser has to the Host. Diagnostics is its caller: before it existed
+   * that panel rendered the engine's connection state and version as literals,
+   * because there was nowhere to read them from.
+   */
+  readonly coreHealth: (
+    request: CoreHealthRequest, signal?: AbortSignal,
+  ) => Promise<RemoteResult<CoreHealthResponse>>
 }
 
 /** One row of results, however the surface obtained it. */

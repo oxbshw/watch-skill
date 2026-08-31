@@ -49,12 +49,14 @@ import { Remote, TypertRemoteService } from '@deepseek-ai/dsh-typert-protocol'
 import { WATCH_QUERY_PROTOCOL_VERSION } from '@deepwatch/dsh-contracts/query'
 import type { IndexableRecord, LibraryIndex, SearchResult } from '@deepwatch/dsh-library'
 import type {
+  CapabilityTally, CoreBlocker, CoreHealthRequest, CoreHealthResponse,
   LibraryGetRequest, LibraryGetResponse, LibraryIndexGeneration,
   LibraryRecord, LibraryRefreshRequest, LibraryRefreshResponse,
   LibrarySearchRequest, LibrarySearchResponse,
 } from '@deepwatch/dsh-contracts/query/wire'
 import {
-  parseLibraryGetRequest, parseLibraryRefreshRequest, parseLibrarySearchRequest,
+  parseCoreHealthRequest, parseLibraryGetRequest, parseLibraryRefreshRequest,
+  parseLibrarySearchRequest,
 } from '@deepwatch/dsh-contracts/query/validate'
 import type { LibraryGenerations } from './library-generations.js'
 
@@ -207,6 +209,25 @@ export class WatchQueryService extends TypertRemoteService {
     request: LibraryRefreshRequest, signal: AbortSignal,
   ): Promise<LibraryRefreshResponse> {
     return refreshLibrary(request, this.config, signal)
+  }
+
+  /**
+   * What Watch Core is doing right now, read from the running Bridge.
+   *
+   * The one method here that is not about the Library, and it is here because
+   * this is the only channel the browser has to the Host. Diagnostics used to
+   * render "Connected over stdio" and a version number as literals in a
+   * component, because there was nowhere to read them from.
+   *
+   * Nothing is defaulted. A value the Bridge has not established is `null`,
+   * and the panel renders that as "not reported" -- which is worth less than a
+   * real reading and far more than a confident wrong one.
+   */
+  @Remote('coreHealth')
+  coreHealth(
+    request: CoreHealthRequest, signal: AbortSignal,
+  ): Promise<CoreHealthResponse> {
+    return Promise.resolve(readCoreHealth(request, this.ctx, signal))
   }
 }
 
@@ -436,3 +457,137 @@ function describeIndex(index: LibraryIndex): LibraryIndexGeneration {
  * that happened this second and did nothing.
  */
 const EPOCH = '1970-01-01T00:00:00.000Z'
+
+/**
+ * Read the Bridge's live state, and say honestly where it could not.
+ *
+ * Separate from the Service for the same reason the Library readers are: the
+ * Service is a Typert adapter with no decisions in it, and the whole path is
+ * testable without a DSH runtime.
+ *
+ * The rule this function exists to keep: **no field is defaulted.** A version
+ * the Bridge has never received is `null`, not `'unknown'` and not the version
+ * this build was compiled against. Diagnostics is the screen people open when
+ * they already suspect something is wrong, and it is the last place a
+ * plausible substitute belongs.
+ */
+export function readCoreHealth(
+  request: CoreHealthRequest,
+  ctx: Context,
+  signal: AbortSignal,
+): CoreHealthResponse {
+  const accepted = parseCoreHealthRequest(request)
+  if (!accepted.ok) return accepted.refusal
+  const checked = accepted.value
+
+  if (signal.aborted) {
+    return {
+      outcome: 'deadline_exceeded',
+      protocol: WATCH_QUERY_PROTOCOL_VERSION,
+      requestId: checked.requestId,
+      deadlineMs: checked.deadlineMs,
+    }
+  }
+
+  // The Bridge may not be mounted at all — a Workspace can run without Watch.
+  // That is a real state and it gets a real answer, rather than a throw the
+  // Gateway would render as an internal error.
+  const bridge = (ctx as { watchCore?: WatchCoreLike }).watchCore
+  if (bridge === undefined) {
+    return {
+      outcome: 'core_health',
+      protocol: WATCH_QUERY_PROTOCOL_VERSION,
+      requestId: checked.requestId,
+      phase: 'disconnected',
+      blocker: 'core_missing',
+      coreVersion: null,
+      coreBuild: null,
+      protocolVersion: null,
+      protocolMin: null,
+      transport: null,
+      isTestOnlyMock: false,
+      contractsMatch: false,
+      contractDrift: [],
+      lastHandshakeAt: null,
+      restartCount: 0,
+      capabilities: { ready: 0, unavailable: 0, degraded: 0, unknown: 0 },
+      fix: 'Watch Core is not configured for this Workspace. Install it and set '
+        + 'the Bridge command in Settings → Watch.',
+    }
+  }
+
+  const health = bridge.health()
+  const handshake = health.handshake
+  const drift = health.error?.error === 'bridge.schema_drift'
+    ? ((health.error.details['drift'] as { family: string }[] | undefined) ?? [])
+      .map(entry => entry.family)
+    : []
+
+  return {
+    outcome: 'core_health',
+    protocol: WATCH_QUERY_PROTOCOL_VERSION,
+    requestId: checked.requestId,
+    phase: health.phase,
+    blocker: health.blocker as CoreBlocker,
+    // From the handshake, never from this build's own constants: reporting
+    // what the Workspace speaks as though Core had said it is exactly the
+    // substitution that made the old panel wrong.
+    coreVersion: handshake?.coreVersion ?? null,
+    coreBuild: handshake?.coreBuild ?? null,
+    protocolVersion: handshake?.protocolVersion ?? null,
+    protocolMin: handshake === null ? null : (handshake as { protocolMin?: number }).protocolMin ?? null,
+    transport: health.transport,
+    isTestOnlyMock: health.isTestOnlyMock,
+    contractsMatch: handshake !== null && drift.length === 0,
+    contractDrift: drift,
+    lastHandshakeAt: health.lastHandshakeAt,
+    restartCount: health.restartCount,
+    capabilities: tally(bridge),
+    fix: health.error?.fix ?? '',
+  }
+}
+
+/** The shape of the Bridge this reader depends on, and no more of it. */
+interface WatchCoreLike {
+  health(): {
+    readonly phase: string
+    readonly transport: string | null
+    readonly blocker: string
+    readonly isTestOnlyMock: boolean
+    readonly lastHandshakeAt: string | null
+    readonly restartCount: number
+    readonly handshake: {
+      readonly coreVersion: string
+      readonly coreBuild: string | null
+      readonly protocolVersion: number
+    } | null
+    readonly error: {
+      readonly error: string
+      readonly fix: string
+      readonly details: Readonly<Record<string, unknown>>
+    } | null
+  }
+  capabilities(): readonly { readonly capabilityId: string; readonly status: string }[]
+  isCapable(capabilityId: string): boolean
+}
+
+/**
+ * Count capabilities by what is actually known about each one.
+ *
+ * `isCapable` decides `ready`, not the reported status, because a capability
+ * whose contract family drifted is reported by the engine as implemented and
+ * is nonetheless unusable — the two sides disagree about what its payload
+ * means. Counting the engine's word here would put a number on the screen that
+ * no button could honour.
+ */
+function tally(bridge: WatchCoreLike): CapabilityTally {
+  const counts: CapabilityTally = { ready: 0, unavailable: 0, degraded: 0, unknown: 0 }
+  const totals = { ...counts }
+  for (const capability of bridge.capabilities()) {
+    if (bridge.isCapable(capability.capabilityId)) totals.ready += 1
+    else if (capability.status === 'unavailable') totals.unavailable += 1
+    else if (capability.status === 'probed') totals.degraded += 1
+    else totals.unknown += 1
+  }
+  return totals
+}

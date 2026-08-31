@@ -302,3 +302,104 @@ export type LibraryRefreshResponse =
   | LibraryRefreshFailed
   | LibraryRequestRejected
   | LibraryDeadlineExceeded
+
+// -- core health -------------------------------------------------------------
+
+/**
+ * Ask the Host what Watch Core is doing right now.
+ *
+ * This method exists because Diagnostics had no way to find out. The panel
+ * rendered "Watch Core — Connected over stdio" as a green chip and a version
+ * beside it, and both were literals typed into a component: the read plane
+ * carried Library reads and nothing else, so the one screen whose job is to
+ * report the state of the engine was the one screen with no channel to it.
+ *
+ * The interim fix was to say "not read from here", which was honest and is not
+ * a product. This is the channel.
+ */
+export interface CoreHealthRequest {
+  readonly protocol: number
+  readonly requestId: string
+  readonly deadlineMs: number
+}
+
+/**
+ * Why the product is in the state it is in, in one word a screen can act on.
+ *
+ * Mirrors `BridgeBlocker`. Restated here rather than imported because this
+ * union crosses a generated codec, and a codec generated from an alias to
+ * another module's type is a codec that stops matching when that module moves.
+ */
+export type CoreBlocker =
+  | 'connected'
+  | 'core_missing'
+  | 'bridge_surface_missing'
+  | 'handshake_failed'
+  | 'protocol_mismatch'
+  | 'contract_mismatch'
+  | 'core_crashed'
+  | 'core_timeout'
+  | 'circuit_open'
+  | 'test_only_mock'
+
+/** How many capabilities are in each state, so a screen need not count. */
+export interface CapabilityTally {
+  /** Usable now: the engine reported them implemented or machine-tested. */
+  readonly ready: number
+  /** Known to be unusable here, with a reason the report carries. */
+  readonly unavailable: number
+  /** Present but reduced — a dependency probed, or a contract family drifted. */
+  readonly degraded: number
+  /** Never checked. Not the same as unavailable. */
+  readonly unknown: number
+}
+
+/**
+ * What the Host observed about Watch Core, at the moment it was asked.
+ *
+ * Every field is read from the running Bridge. There is no field here a
+ * component may substitute a default for: a value that could not be read is
+ * `null`, and a screen renders that as "not reported" rather than as a
+ * plausible number.
+ */
+export interface CoreHealthReport {
+  readonly outcome: 'core_health'
+  readonly protocol: number
+  readonly requestId: string
+  /** `disconnected` | `connecting` | `ready` | `degraded` | `failed`. */
+  readonly phase: string
+  readonly blocker: CoreBlocker
+  /** The engine's own version string. Null until a handshake has completed. */
+  readonly coreVersion: string | null
+  readonly coreBuild: string | null
+  /** The negotiated protocol, and the range Core said it supports. */
+  readonly protocolVersion: number | null
+  readonly protocolMin: number | null
+  /** Which backend is actually in use. Null before the first attempt. */
+  readonly transport: string | null
+  /**
+   * True only when the backend is the in-process fixture.
+   *
+   * Every surface that could present data as observed reads this first. It is
+   * carried separately from `transport` so that adding a second fake backend
+   * cannot quietly bypass the check.
+   */
+  readonly isTestOnlyMock: boolean
+  /** Whether Core's contract digests matched this build's. */
+  readonly contractsMatch: boolean
+  /** Families that disagreed, empty when they match. */
+  readonly contractDrift: readonly string[]
+  /** ISO-8601 of the last handshake that completed, null if none ever has. */
+  readonly lastHandshakeAt: string | null
+  /** Core processes started this session. A climbing number is a crash loop. */
+  readonly restartCount: number
+  readonly capabilities: CapabilityTally
+  /** What to do about `blocker`, in words. Empty only when connected. */
+  readonly fix: string
+}
+
+/** What `coreHealth` answers. */
+export type CoreHealthResponse =
+  | CoreHealthReport
+  | LibraryRequestRejected
+  | LibraryDeadlineExceeded
