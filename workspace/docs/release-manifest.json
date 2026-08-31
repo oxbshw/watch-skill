@@ -16,12 +16,12 @@
       "max": 1
     },
     "schemaDigests": {
-      "answer": "sha256:b1d08711b75396f21b1823a5e69c8b37",
-      "error": "sha256:b6e7b03def9e68dcd25d74347f1c1f77",
-      "evidence": "sha256:9d75abea243404fe19909146a340ecfa",
-      "handshake": "sha256:41e44cf6f9e29e4d4dbe7e4680dfc226",
-      "library": "sha256:c409cf6a0e2c71ade790be43525c7b98",
-      "verification": "sha256:3fb92fb22ccc8aa6258bd3b620bd76b1"
+      "answer": "sha256:2abc33bc76abe07486446bae94c70211",
+      "error": "sha256:f83b04be5dffc2dfab6963f071c7455a",
+      "evidence": "sha256:3facf1e0c00ffb61e9724d0a17b5d589",
+      "handshake": "sha256:215466e1a4d3ea526e71c5a162bf861b",
+      "library": "sha256:f54177e04f9c5e9d76b23702e798d394",
+      "verification": "sha256:0f381733ba98849b8335ad0fa1534534"
     },
     "upstreamLockPresent": true,
     "onDigestMismatch": "The affected contract family is disabled and both digests are reported. Other families continue."
@@ -98,13 +98,13 @@
       {
         "name": "@deepwatch/dsh-contracts",
         "version": "0.1.0-preview.0",
-        "integrity": "sha256:483c260696d2b3811532b45c93a4d2c46d4853a5f1bab3fb49f48c7c0798d25f",
+        "integrity": "sha256:acc76cd3178ad95737a8a4fe007c90015dad3d03b25ad694deb4329b96f21abd",
         "sourceFiles": 16
       },
       {
         "name": "@deepwatch/dsh-core-bridge",
         "version": "0.1.0-preview.0",
-        "integrity": "sha256:406dfb2cd3114253ee7d42af657ba9b6ad7041dcc931e29cbbd5a40aeaa6b916",
+        "integrity": "sha256:173e1fc72c265f7c4f3efb26824281105aa1194b983c1bc62d93abab49fab09e",
         "sourceFiles": 7
       },
       {
@@ -185,7 +185,7 @@
       "creators": [
         "Tool: watch-gen-release-manifest"
       ],
-      "created": "2026-08-31T18:06:19Z"
+      "created": "2026-08-31T21:31:36Z"
     },
     "packages": [
       {
@@ -328,7 +328,7 @@
         "checksums": [
           {
             "algorithm": "SHA256",
-            "checksumValue": "483c260696d2b3811532b45c93a4d2c46d4853a5f1bab3fb49f48c7c0798d25f"
+            "checksumValue": "acc76cd3178ad95737a8a4fe007c90015dad3d03b25ad694deb4329b96f21abd"
           }
         ]
       },
@@ -344,7 +344,7 @@
         "checksums": [
           {
             "algorithm": "SHA256",
-            "checksumValue": "406dfb2cd3114253ee7d42af657ba9b6ad7041dcc931e29cbbd5a40aeaa6b916"
+            "checksumValue": "173e1fc72c265f7c4f3efb26824281105aa1194b983c1bc62d93abab49fab09e"
           }
         ]
       },
