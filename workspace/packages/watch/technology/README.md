@@ -16,7 +16,7 @@ memory and independent verification.
 
 Provided by the host rather than installed here:
 
-- `@deepseek-ai/cordis@4.0.1`
+- `@deepseek-ai/cordis@4.0.2`
 - `@deepseek-ai/schemastery@^3.18.1`
 
 ## Where this fits
