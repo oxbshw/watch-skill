@@ -11,12 +11,15 @@ memory and independent verification.
 
 - `@deepwatch/dsh-technology`
 - `@deepwatch/dsh-technology/descriptors`
+- `@deepwatch/dsh-technology/routing`
 
 ## Peers
 
 Provided by the host rather than installed here:
 
 - `@deepseek-ai/cordis@4.0.2`
+- `@deepseek-ai/dsh-llm@0.1.1-rc.2`
+- `@deepseek-ai/dsh-settings@0.1.1-rc.2`
 - `@deepseek-ai/schemastery@^3.18.1`
 
 ## Where this fits
