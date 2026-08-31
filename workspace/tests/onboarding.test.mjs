@@ -228,31 +228,43 @@ describe('attribution is kept, and stops being furniture', () => {
 })
 
 describe('the acknowledgement stays in step with the pinned baseline', () => {
-  test('the version, namespace and field match the Harness source', () => {
-    // The gate. Upstream compares for exact equality, so a baseline bump that
-    // changes any of these brings the modal back on every new profile — and
-    // this is what makes that a build failure rather than a surprise.
-    const source = join(
-      UPSTREAM, 'packages', 'client', 'ui-settings-models', 'src', 'onboarding-copy.ts')
-    if (!existsSync(source)) {
-      assert.fail(`the pinned Harness source moved; this gate cannot see ${source}`)
-    }
-    const text = readFileSync(source, 'utf8')
+  // The lock is the tracked statement of what this distribution is built
+  // against; the source checkout under `upstream/deepseek-harness/` is
+  // gitignored and exists only on a machine that has run the bootstrap. So the
+  // always-on comparison is against the lock, exactly as `tests/cli.test.mjs`
+  // pins the Harness version, and the checkout is used as a second opinion
+  // wherever it happens to be present.
+  const LOCK = readFileSync(join(ROOT, 'upstream', 'deepseek-harness.lock'), 'utf8')
+  // Doubled escapes: this is a template literal, so `\s` in the source would
+  // reach RegExp as a bare `s` and match the wrong thing quietly.
+  const locked = field => new RegExp(
+    `^[ \\t]+${field}:[ \\t]*"?([^"\\r\\n]+?)"?[ \\t]*$`, 'm').exec(LOCK)?.[1]?.trim()
 
-    const pinned = /WELCOME_NOTICE_VERSION\s*=\s*'([^']+)'/.exec(text)?.[1]
-    const namespace = /WELCOME_NOTICE_SETTINGS_NAMESPACE\s*=\s*'([^']+)'/.exec(text)?.[1]
-    const field = /WELCOME_NOTICE_ACK_FIELD\s*=\s*'([^']+)'/.exec(text)?.[1]
-
-    assert.equal(pinned, version.UPSTREAM_NOTICE_VERSION,
-      'the pinned Harness changed its notice version; update UPSTREAM_NOTICE_VERSION')
-    assert.equal(namespace, version.UPSTREAM_NOTICE_NAMESPACE)
-    assert.equal(field, version.UPSTREAM_NOTICE_FIELD)
+  test('the CLI answers the notice the lock describes', () => {
+    // Compared for exact equality by upstream, so a drift here is a modal
+    // returning on every new profile rather than a cosmetic mismatch.
+    assert.equal(version.UPSTREAM_NOTICE_VERSION, locked('version'))
+    assert.equal(version.UPSTREAM_NOTICE_NAMESPACE, locked('settings_namespace'))
+    assert.equal(version.UPSTREAM_NOTICE_FIELD, locked('ack_field'))
   })
 
-  test('the notice this suppresses is the one that was seen', () => {
-    // Named so a reader of this file knows exactly which modal is meant.
-    const source = readFileSync(join(
-      UPSTREAM, 'packages', 'client', 'ui-settings-models', 'src', 'onboarding-copy.ts'), 'utf8')
-    assert.match(source, /Internal Testing Notice/)
+  test('the lock records what the pinned source actually says', () => {
+    // Only where the audit checkout is present. Skipping it on a machine
+    // without the checkout is not a weakened gate: the assertion above runs
+    // everywhere, and this one is what catches a baseline bump at the moment
+    // somebody syncs it.
+    const source = join(
+      UPSTREAM, 'packages', 'client', 'ui-settings-models', 'src', 'onboarding-copy.ts')
+    if (!existsSync(source)) return
+
+    const text = readFileSync(source, 'utf8')
+    assert.equal(/WELCOME_NOTICE_VERSION\s*=\s*'([^']+)'/.exec(text)?.[1], locked('version'),
+      'the pinned Harness changed its notice version; update the lock and the CLI')
+    assert.equal(
+      /WELCOME_NOTICE_SETTINGS_NAMESPACE\s*=\s*'([^']+)'/.exec(text)?.[1],
+      locked('settings_namespace'))
+    assert.equal(/WELCOME_NOTICE_ACK_FIELD\s*=\s*'([^']+)'/.exec(text)?.[1], locked('ack_field'))
+    // Named so a reader knows exactly which modal is meant.
+    assert.match(text, /Internal Testing Notice/)
   })
 })
