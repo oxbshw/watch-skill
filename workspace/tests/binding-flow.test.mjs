@@ -23,6 +23,7 @@ import { test, describe } from 'node:test'
 import assert from 'node:assert/strict'
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
+import { readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 
@@ -30,8 +31,10 @@ const HERE = dirname(fileURLToPath(import.meta.url))
 const ROOT = join(HERE, '..')
 const SETTINGS = join(ROOT, 'packages', 'watch', 'client-settings')
 
-const { BindingStore, chatReadiness, credentialRefOf, credentialStatusOf, roleRowOf } =
-  await import(pathToFileURL(join(SETTINGS, 'lib', 'client', 'binding-state.js')).href)
+const {
+  BindingStore, DEFAULT_MODEL_NAMESPACE, chatReadiness, credentialRefOf, credentialStatusOf,
+  roleRowOf,
+} = await import(pathToFileURL(join(SETTINGS, 'lib', 'client', 'binding-state.js')).href)
 const { RoleBindings } = await import(
   pathToFileURL(join(SETTINGS, 'lib', 'client', 'role-bindings.js')).href)
 const { EMPTY_BINDINGS, withBinding } = await import(
@@ -58,6 +61,7 @@ function host({
   writable = true,
   catalogFailure = null,
   onReplace = null,
+  defaultSelection = null,
 } = {}) {
   const namespaces = [
     {
@@ -68,6 +72,9 @@ function host({
   ]
   if (bindings !== null) {
     namespaces.push({ ns: 'watch-bindings', value: bindings, revision: 7 })
+  }
+  if (defaultSelection !== null) {
+    namespaces.push({ ns: 'agent-default-model', value: defaultSelection, revision: 2 })
   }
   const calls = { replace: [], credentials: [] }
   return {
@@ -253,9 +260,10 @@ describe('the decision is persisted, and persisted as a reference', () => {
   test('binding writes the whole document to the Watch namespace', async () => {
     const { store, stub } = await loaded({ credentialConfigured: true })
     await store.bind('agent_model', 'openrouter', 'openai/gpt-4o-mini')
-    assert.equal(stub.calls.replace.length, 1)
-    const written = stub.calls.replace[0]
-    assert.equal(written.ns, 'watch-bindings')
+    // Two writes, and both are the point: the decision, and the Harness
+    // selection that decision has to move. This one is about the decision.
+    const written = stub.calls.replace.find(call => call.ns === 'watch-bindings')
+    assert.ok(written, 'the binding was not recorded')
     assert.equal(written.section.roles.agent_model.provider, 'openrouter')
     assert.equal(written.section.roles.agent_model.model, 'openai/gpt-4o-mini')
   })
@@ -263,7 +271,8 @@ describe('the decision is persisted, and persisted as a reference', () => {
   test('what is written is a reference the Host resolves, never a value', async () => {
     const { store, stub } = await loaded({ credentialConfigured: true })
     await store.bind('agent_model', 'openrouter', 'openai/gpt-4o-mini')
-    const record = stub.calls.replace[0].section.roles.agent_model
+    const record = stub.calls.replace
+      .find(call => call.ns === 'watch-bindings').section.roles.agent_model
     assert.equal(record.credentialRef, 'OPENROUTER_API_KEY')
     assert.deepEqual(
       Object.keys(record).sort(), ['boundAt', 'credentialRef', 'model', 'provider'])
@@ -274,13 +283,15 @@ describe('the decision is persisted, and persisted as a reference', () => {
     // else's change.
     const { store, stub } = await loaded({ credentialConfigured: true, bindings: BOUND })
     await store.bind('visual_perception', 'openrouter', 'openai/gpt-4o-mini')
-    assert.equal(stub.calls.replace[0].expectedRevision, 7)
+    assert.equal(
+      stub.calls.replace.find(call => call.ns === 'watch-bindings').expectedRevision, 7)
   })
 
   test('unbinding removes the role rather than emptying its fields', async () => {
     const { store, stub } = await loaded({ credentialConfigured: true, bindings: BOUND })
     await store.unbind('agent_model')
-    assert.deepEqual(stub.calls.replace[0].section.roles, {})
+    assert.deepEqual(
+      stub.calls.replace.find(call => call.ns === 'watch-bindings').section.roles, {})
   })
 
   test('a refused write leaves the previous binding standing', async () => {
@@ -388,5 +399,84 @@ describe('the pieces the store is assembled from', () => {
       provider: 'openrouter', model: 'm', credentialRef: 'OPENROUTER_API_KEY', boundAt: '',
     }), providers)
     assert.equal(bound.readiness.status, 'executable')
+  })
+})
+
+describe('binding Chat points the runtime at it, not only the record', () => {
+  test('the Harness default selection is written with the binding', async () => {
+    // The defect this pins cost a real session. Everything DeepWatch showed
+    // agreed the binding existed -- and it did, in DeepWatch's document. But
+    // a prompt is routed by the Harness's model selection, which this
+    // distribution empties so nothing is chosen for anybody, and binding Chat
+    // was not filling it in. Two records of one decision, and the one the
+    // runtime reads was the one nobody wrote.
+    const { store, stub } = await loaded({ credentialConfigured: true })
+    await store.bind('agent_model', 'openrouter', 'openai/gpt-4o-mini')
+
+    const wrote = stub.calls.replace.map(call => call.ns)
+    assert.ok(wrote.includes('watch-bindings'), 'the binding was not recorded')
+    assert.ok(wrote.includes(DEFAULT_MODEL_NAMESPACE), 'the runtime was never pointed at it')
+
+    const selection = stub.calls.replace.filter(call => call.ns === DEFAULT_MODEL_NAMESPACE).pop()
+    assert.deepEqual(selection.section, { provider: 'openrouter', model: 'openai/gpt-4o-mini' })
+  })
+
+  test('the record is written first, so a default never outruns it', async () => {
+    const { store, stub } = await loaded({ credentialConfigured: true })
+    await store.bind('agent_model', 'openrouter', 'openai/gpt-4o-mini')
+    const order = stub.calls.replace.map(call => call.ns)
+    assert.ok(
+      order.indexOf('watch-bindings') < order.lastIndexOf(DEFAULT_MODEL_NAMESPACE),
+      'the runtime was pointed at a binding that had not been saved')
+  })
+
+  test('unbinding Chat empties the selection rather than leaving it', async () => {
+    // A default left pointing at an unbound route is the original defect in
+    // reverse: a route nobody has authorised, selected for them.
+    const { store, stub } = await loaded({ credentialConfigured: true, bindings: BOUND })
+    await store.unbind('agent_model')
+    const selection = stub.calls.replace.filter(call => call.ns === DEFAULT_MODEL_NAMESPACE).pop()
+    assert.deepEqual(selection.section, { provider: '', model: '' })
+  })
+
+  test('binding another role leaves the conversation selection alone', async () => {
+    // The other roles are DeepWatch's own concepts with no upstream selection
+    // to keep in step; writing one would point the conversation at a model
+    // chosen for something else.
+    const { store, stub } = await loaded({ credentialConfigured: true, bindings: BOUND })
+    await store.bind('visual_perception', 'openrouter', 'openai/gpt-4o')
+    const selection = stub.calls.replace.filter(call => call.ns === DEFAULT_MODEL_NAMESPACE).pop()
+    assert.deepEqual(selection.section, { provider: 'openrouter', model: 'openai/gpt-4o-mini' },
+      'a vision binding changed what Chat routes with')
+  })
+
+  test('a profile bound by an earlier build is repaired by being looked at', async () => {
+    // The binding is the authority and the selection is a projection of it, so
+    // a profile whose record says one thing and whose runtime says nothing is
+    // fixed on load rather than waiting for somebody to press the button
+    // again. This is the exact state the reported failure was in.
+    const { store, stub } = await loaded({ credentialConfigured: true, bindings: BOUND })
+    const selection = stub.calls.replace.find(call => call.ns === DEFAULT_MODEL_NAMESPACE)
+    assert.ok(selection, 'a stale profile was left disagreeing with itself')
+    assert.deepEqual(selection.section, { provider: 'openrouter', model: 'openai/gpt-4o-mini' })
+  })
+
+  test('a profile that already agrees is not rewritten', async () => {
+    // Reconciling on every read would bump the revision each time, and every
+    // other open editor would start failing its `expectedRevision`.
+    const { stub } = await loaded({
+      credentialConfigured: true,
+      bindings: BOUND,
+      defaultSelection: { provider: 'openrouter', model: 'openai/gpt-4o-mini' },
+    })
+    assert.equal(
+      stub.calls.replace.filter(call => call.ns === DEFAULT_MODEL_NAMESPACE).length, 0)
+  })
+
+  test('the namespace is the one the pinned baseline composes', () => {
+    const base = readFileSync(
+      join(ROOT, 'upstream', 'deepseek-harness', 'packages', 'bundle', 'base', 'cordis.patch.yml'),
+      'utf8')
+    assert.match(base, new RegExp(`- id: ${DEFAULT_MODEL_NAMESPACE}$`, 'm'))
   })
 })

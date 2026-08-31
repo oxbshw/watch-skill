@@ -62,8 +62,15 @@
     # It injects `llm` and nothing else. Injecting `settings` would park it on
     # a deployment that composes no settings file, and a routing check that
     # quietly stops running is worse than one that is not there.
+    #
+    # The `/routing` subpath, not the package root. The root re-exports the OCR
+    # worker and carries no `apply`; the Loader refuses a row whose module
+    # exports none with "invalid plugin", and takes the whole plugin tree down
+    # with it. `scripts/verify-bundle.mjs` now imports every row's module and
+    # checks for `apply`, because that failure looks exactly like a composition
+    # problem and is three minutes of provisioning away from being seen.
     - id: watch-routing
-      name: '@deepwatch/dsh-technology'
+      name: '@deepwatch/dsh-technology/routing'
       config:
         enforce: true
 
@@ -208,6 +215,39 @@
   config:
     provider: ''
     model: ''
+
+# The dedicated DeepSeek adapter, switched off.
+#
+# Not because DeepSeek is unwelcome -- it stays in the catalogue and stays one
+# click away -- but because it was the only provider in this distribution that
+# did not have to be chosen. `llm-deepseek` registers `deepseek-official` at
+# plugin load, unconditionally and with no credential, and three things follow
+# from that which nothing else in the product would tolerate:
+#
+#   - a route exists that nobody configured, so the Harness's own pre-turn
+#     admission check passes for it and a stale or careless client can spend a
+#     turn on a provider the person never set up. That is exactly how the first
+#     prompt in Sayed's profile reached DeepSeek;
+#   - `ui-settings-models` renders an "Add an API key to get started ---
+#     Configure the official DeepSeek provider" dialog whenever that row exists
+#     and holds no credential, so a fresh profile met a second first-run modal
+#     asking for a key to a provider it had not chosen. Its own readiness
+#     reports `adapter-absent` and skips the dialog when the row is gone, which
+#     is the supported way to answer it;
+#   - and it made DeepSeek a special case: every other provider is configured
+#     through Models & Providers, and one was configured by existing.
+#
+# `@earendil-works/pi-ai` carries `deepseek` in the same catalogue as the other
+# thirty-six routes, and `llm-pi-ai` declares its whole installed catalogue as
+# configurable from the moment it mounts -- dormant or not. So DeepSeek remains
+# selectable, with the same endpoint and the same `DEEPSEEK_API_KEY`, reached
+# the same way as Anthropic or OpenRouter. What it stops being is the one
+# provider that configures itself.
+#
+# `disabled: true` on a targeted id is upstream's own mechanism, so nothing
+# here is patched or forked, and removing this bundle restores the row.
+- id: llm-deepseek
+  disabled: true
 
 # The official brand row, switched off.
 #

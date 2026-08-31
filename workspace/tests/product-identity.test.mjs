@@ -177,9 +177,14 @@ test('the bundle composes the whole product', async t => {
     assert.match(BUNDLE, /- id: ui-brand-official\n\s+disabled: true/)
   })
 
-  await t.test('nothing upstream is removed beyond that one row', () => {
+  await t.test('every upstream row switched off is one the register accounts for', () => {
+    // Two, and each for a reason written beside it: the official brand mark,
+    // which would draw a second mark next to DeepWatch's, and the dedicated
+    // DeepSeek adapter, which registered a route at load with no credential
+    // and so made one provider configure itself. `tests/onboarding.test.mjs`
+    // holds each to having that reason in the file.
     const disabled = [...BUNDLE.matchAll(/^- id: (\S+)\n\s+disabled: true/gm)].map(m => m[1])
-    assert.deepEqual(disabled, ['ui-brand-official'])
+    assert.deepEqual(disabled.sort(), ['llm-deepseek', 'ui-brand-official'])
   })
 })
 

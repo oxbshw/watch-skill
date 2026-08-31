@@ -531,7 +531,11 @@ describe('journey 10: Watch for DSH installs into a stock profile', () => {
       assert.match(patch, /- insert:/)
       assert.equal(/- remove:/.test(patch), false, `${relative} removes an upstream row`)
       for (const name of patch.matchAll(/name:\s*'(@deepwatch\/[^']+)'/g)) {
-        assert.ok(name[1] in manifest.dependencies, `${relative} mounts ${name[1]} without depending on it`)
+        // A row may name a subpath -- `@deepwatch/dsh-technology/routing` --
+        // because the package root is not always the plugin. The dependency is
+        // on the package, so that is the half compared.
+        const owner = name[1].split('/').slice(0, 2).join('/')
+        assert.ok(owner in manifest.dependencies, `${relative} mounts ${name[1]} without depending on ${owner}`)
       }
     }
   })

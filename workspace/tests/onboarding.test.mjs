@@ -104,15 +104,41 @@ describe('the upstream notice is answered, not disabled', () => {
     assert.match(after, /^ui-onboarding:$/m)
   })
 
-  test('nothing upstream is disabled to achieve it', () => {
+  test('the notice itself is answered, and nothing is disabled to answer it', () => {
     // Disabling `ui-settings-models` would take the Models page with it, and
     // suppressing the notice for every profile on the machine is not this
-    // product's decision to make.
+    // product's decision to make. Two rows are switched off, and neither is
+    // how the notice is handled -- it is answered in the profile's own
+    // Harness home, through the field upstream's own Continue button writes.
     const patch = readFileSync(
       join(ROOT, 'packages', 'watch', 'bundle', 'cordis.patch.yml'), 'utf8')
     const disabled = [...patch.matchAll(/^- id: (\S+)\n\s+disabled: true/gm)].map(m => m[1])
-    assert.deepEqual(disabled, ['ui-brand-official'],
-      'the only upstream row DeepWatch disables is the duplicate brand mark')
+    assert.deepEqual(disabled.sort(), ['llm-deepseek', 'ui-brand-official'])
+    assert.equal(disabled.includes('ui-settings-models'), false,
+      'the Models page was switched off, taking provider configuration with it')
+  })
+
+  test('each disabled row is one this distribution can account for', () => {
+    // `ui-brand-official` draws a second brand mark beside DeepWatch's own.
+    // `llm-deepseek` registered a route at load with no credential, which
+    // made DeepSeek the one provider that configured itself -- and produced
+    // the second first-run modal asking for a key nobody had chosen to give.
+    const patch = readFileSync(
+      join(ROOT, 'packages', 'watch', 'bundle', 'cordis.patch.yml'), 'utf8')
+    for (const [row, why] of [
+      ['ui-brand-official', /both marks would be drawn/],
+      ['llm-deepseek', /did not have to be chosen/],
+    ]) {
+      // The comment block immediately above the row, rather than a fixed
+      // window: the reasons differ in length, and a character count would make
+      // this test about formatting instead of about whether a reason is there.
+      const before = patch.slice(0, patch.indexOf(`- id: ${row}`))
+      const block = before.split(/\n\s*\n/).pop() ?? ''
+      // Comment markers stripped and whitespace collapsed, so a reason that
+      // rewraps across lines still reads as the sentence it is.
+      const reason = block.replace(/^#/gm, '').replace(/\s+/g, ' ').trim()
+      assert.match(reason, why, `${row} is disabled with no reason beside it`)
+    }
   })
 })
 

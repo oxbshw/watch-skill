@@ -107,29 +107,31 @@ export function apply(ctx: Context): void {
 
   // The composer's own preflight, in the seat beside it.
   //
-  // Registered through `ctx.inject` rather than by adding `conversation` to
-  // this module's own inject list, and the difference matters: a missing
-  // conversation service must cost the gate, not the whole Technology &
-  // Capability Center. A settings panel that disappears because a composer
-  // could not be reached is a worse failure than an unblocked composer.
+  // The seat is claimed unconditionally and the conversation service is looked
+  // up when the gate renders. Parking the registration behind
+  // `ctx.inject(['conversation'], …)` looked tidier and was wrong: the
+  // callback never ran, so the card never drew and the composer was never
+  // blocked -- silently, while every other surface in this package worked.
+  // Upstream's own model-selection plugin reaches the same registry with a
+  // plain `ctx.get('conversation')` at the point of use, which is late enough
+  // to be there.
   //
   // It lives here rather than in the shell because this is the package that
-  // knows. Upstream's own note on composer blocks says the model-selection
-  // plugin is what raises one -- "the composer cannot read the plugins that
-  // would know" -- and in this distribution that is this package: it holds the
-  // store, the readiness and the picker. Putting the gate anywhere else would
-  // mean a second store, and two answers to "can Chat run?".
-  ctx.inject(['conversation'], (scoped: Context) => {
-    const blocks = (scoped as unknown as { conversation: ConversationService }).conversation.blocks
-    slots.inject('conversation.input.dock', () => {
-      slots.register(
-        // Order 5, ahead of the Watch composer panel at 10: a person who
-        // cannot send yet should meet the reason before the turn controls.
-        { name: 'conversation.input.dock', id: 'watch-chat-gate', order: 5 },
-        ({ sessionId }: { readonly sessionId: string }): ReactNode =>
-          ChatGate({ sessionId, store, blocks }),
-      )
-    })
+  // knows. Upstream's note on composer blocks says the model-selection plugin
+  // is what raises one -- "the composer cannot read the plugins that would
+  // know" -- and in this distribution that is this package: it holds the
+  // store, the readiness and the picker. Anywhere else would mean a second
+  // store, and two answers to "can Chat run?".
+  const blocks = (): ComposerBlocks | undefined =>
+    (ctx.get('conversation') as ConversationService | undefined)?.blocks
+  slots.inject('conversation.input.dock', () => {
+    slots.register(
+      // Order 5, ahead of the Watch composer panel at 10: a person who cannot
+      // send yet should meet the reason before the turn controls.
+      { name: 'conversation.input.dock', id: 'watch-chat-gate', order: 5 },
+      ({ sessionId }: { readonly sessionId: string }): ReactNode =>
+        ChatGate({ sessionId, store, blocks }),
+    )
   })
 
   // The first-run screen, ahead of upstream's.

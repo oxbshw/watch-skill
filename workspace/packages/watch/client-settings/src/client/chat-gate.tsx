@@ -53,7 +53,20 @@ export interface ChatGateProps {
   /** The session whose composer this gate governs. */
   readonly sessionId: string
   readonly store: BindingStore
-  readonly blocks: ComposerBlocks
+  /**
+   * The block registry, resolved when the gate renders rather than when the
+   * plugin loads.
+   *
+   * A getter, and the reason is a bug this had. Registering the seat behind
+   * `ctx.inject(['conversation'], …)` parked the registration on a service
+   * that arrives with the conversation plugin, and the callback never ran --
+   * so the card never drew and the composer was never blocked, silently, while
+   * every other surface in this package worked. Upstream's own model-selection
+   * plugin reaches the same registry with a plain `ctx.get('conversation')` at
+   * the moment it needs it, which is late enough to be there and cheap enough
+   * to repeat.
+   */
+  readonly blocks: () => ComposerBlocks | undefined
 }
 
 /**
@@ -112,17 +125,17 @@ export function ChatGate({ sessionId, store, blocks }: ChatGateProps): ReactNode
     ? null
     : cardForBlocker(chat.primaryBlocker)
 
+  // The same decision function the tests assert on, so what a person gets and
+  // what is asserted cannot drift apart.
+  const block = blockFor(snapshot)
   useEffect(() => {
-    // `idle` and `loading` deliberately raise nothing. Blocking a composer
-    // because an answer has not arrived yet would make every reload look like
-    // a misconfiguration, and the Host refuses an unbound route anyway — so
-    // the safe direction here is to say nothing until something is known.
-    if (snapshot.status !== 'ready') return
-    blocks.set(sessionId, ready || card === null ? undefined : { reason: blockReason(card.detail) })
+    const registry = blocks()
+    if (registry === undefined) return
+    registry.set(sessionId, block)
     // Clearing on unmount matters: a session whose gate is gone must not keep
     // a block nothing is left to lift.
-    return () => { blocks.set(sessionId, undefined) }
-  }, [blocks, sessionId, snapshot.status, ready, card])
+    return () => { registry.set(sessionId, undefined) }
+  }, [blocks, sessionId, block?.reason])
 
   if (ready || card === null || chat === null) return null
 

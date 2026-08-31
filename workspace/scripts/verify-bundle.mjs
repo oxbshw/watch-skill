@@ -18,7 +18,7 @@
 
 import { readFileSync, existsSync, readdirSync } from 'node:fs'
 import { join, dirname } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const BUNDLE = join(ROOT, 'packages', 'watch', 'bundle')
@@ -93,6 +93,22 @@ function declaredReconfiguration(row) {
   return INTENTIONAL_RECONFIGURATIONS.has(row.id) && row.reconfigures && row.module === null
 }
 
+/**
+ * The workspace package a row's module belongs to, and the export it names.
+ *
+ * A row may name a subpath — `@deepwatch/dsh-technology/routing` — because the
+ * package root is not always the plugin. Splitting the two is what lets the
+ * checks below ask the right question of each half: does the *package* exist
+ * and is it depended on, and does the *module* actually export an `apply`.
+ */
+function moduleTarget(name) {
+  if (!name.startsWith('@')) return { pkg: name, subpath: '.' }
+  const parts = name.split('/')
+  const pkg = parts.slice(0, 2).join('/')
+  const rest = parts.slice(2).join('/')
+  return { pkg, subpath: rest === '' ? '.' : `./${rest}` }
+}
+
 /** Every workspace package name, for resolving what the bundle references. */
 function workspacePackages() {
   const names = new Set()
@@ -156,13 +172,14 @@ function checkPatch(label, patchFile, manifest, baseline, packages) {
       problems.push(`${label}: row "${row.id}" names no module, so the Loader has nothing to import`)
       continue
     }
-    if (row.module.startsWith("@deepwatch/") && !packages.has(row.module)) {
+    const { pkg } = moduleTarget(row.module)
+    if (pkg.startsWith('@deepwatch/') && !packages.has(pkg)) {
       problems.push(`${label}: row "${row.id}" names ${row.module}, which is not a package in this workspace`)
     }
-    if (row.module.startsWith("@deepwatch/") && !dependencies.has(row.module)) {
+    if (pkg.startsWith('@deepwatch/') && !dependencies.has(pkg)) {
       problems.push(
-        `${label}: row "${row.id}" mounts ${row.module}, but the bundle does not depend on it — `
-        + "the profile install would resolve the layer and then fail to import the module",
+        `${label}: row "${row.id}" mounts ${row.module}, but the bundle does not depend on ${pkg} — `
+        + 'the profile install would resolve the layer and then fail to import the module',
       )
     }
   }
@@ -171,7 +188,49 @@ function checkPatch(label, patchFile, manifest, baseline, packages) {
 }
 
 
-function main() {
+/**
+ * Whether the module a row names actually exports an `apply`.
+ *
+ * The Loader refuses a row whose module exports none with "invalid plugin" and
+ * takes the whole plugin tree down with it — so a profile composes, dumps its
+ * config cleanly, and then serves nothing. That failure reads as a composition
+ * problem and is three minutes of provisioning away from being seen, which is
+ * exactly the shape of thing this gate exists to catch statically.
+ *
+ * It is a real import of the built module rather than a scan for the word,
+ * because the mistake that produced this check was a package whose *root*
+ * re-exported everything except the plugin, while a subpath had it.
+ *
+ * @param specifier - the module a row names.
+ * @returns null when it exports `apply`, or a sentence saying what it exports.
+ */
+async function missingApply(specifier) {
+  const { pkg, subpath } = moduleTarget(specifier)
+  if (!pkg.startsWith('@deepwatch/')) return null
+  const dir = readdirSync(join(ROOT, 'packages', 'watch')).find((entry) => {
+    const manifest = join(ROOT, 'packages', 'watch', entry, 'package.json')
+    return existsSync(manifest) && JSON.parse(readFileSync(manifest, 'utf8')).name === pkg
+  })
+  if (dir === undefined) return null
+  const manifest = JSON.parse(readFileSync(join(ROOT, 'packages', 'watch', dir, 'package.json'), 'utf8'))
+  const target = manifest.exports?.[subpath]
+  const file = typeof target === 'string' ? target : target?.default
+  if (typeof file !== 'string') return `${specifier} is not an export this package declares`
+  const built = join(ROOT, 'packages', 'watch', dir, file)
+  if (!existsSync(built)) return `${specifier} resolves to ${file}, which has not been built`
+  const loaded = await import(pathToFileURL(built).href)
+  // Both shapes the Loader accepts: a functional plugin exporting `apply`, and
+  // a Service class exported as default. Checking only the first reported two
+  // rows that have always worked, which is how a gate gets switched off.
+  if (typeof loaded.apply === 'function') return null
+  if (typeof loaded.default === 'function') return null
+  const exported = Object.keys(loaded).join(', ')
+  return `${specifier} exports neither an \`apply\` nor a default plugin `
+    + `(it exports ${exported === '' ? 'nothing' : exported}), so the Loader refuses it `
+    + 'as an invalid plugin and the whole plugin tree fails with it'
+}
+
+async function main() {
   const problems = []
 
   const manifest = JSON.parse(readFileSync(join(BUNDLE, 'package.json'), 'utf8'))
@@ -252,7 +311,8 @@ function main() {
       problems.push(`row "${row.id}" names no module, so the Loader has nothing to import`)
       continue
     }
-    if (row.module.startsWith('@deepwatch/') && !packages.has(row.module)) {
+    const { pkg } = moduleTarget(row.module)
+    if (pkg.startsWith('@deepwatch/') && !packages.has(pkg)) {
       problems.push(`row "${row.id}" names ${row.module}, which is not a package in this workspace`)
     }
   }
@@ -260,10 +320,21 @@ function main() {
   // A row the bundle mounts must also be a dependency, or the profile install
   // resolves the layer and then fails to import the module it names.
   const dependencies = new Set(Object.keys(manifest.dependencies ?? {}))
+  // Every row's module is imported and asked for its `apply`. This is the
+  // check that would have caught `@deepwatch/dsh-technology` being named where
+  // `@deepwatch/dsh-technology/routing` was meant.
   for (const row of rows) {
-    if (row.module?.startsWith('@deepwatch/') && !dependencies.has(row.module)) {
+    if (row.disabled || row.module === null) continue
+    const missing = await missingApply(row.module)
+    if (missing !== null) problems.push(`row "${row.id}": ${missing}`)
+  }
+
+  for (const row of rows) {
+    if (row.module === null) continue
+    const { pkg } = moduleTarget(row.module)
+    if (pkg.startsWith('@deepwatch/') && !dependencies.has(pkg)) {
       problems.push(
-        `row "${row.id}" mounts ${row.module}, but the bundle does not depend on it — `
+        `row "${row.id}" mounts ${row.module}, but the bundle does not depend on ${pkg} — `
         + 'the profile install would resolve the layer and then fail to import the module',
       )
     }
@@ -314,4 +385,4 @@ function main() {
   )
 }
 
-main()
+await main()

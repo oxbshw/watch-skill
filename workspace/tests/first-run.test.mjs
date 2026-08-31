@@ -147,3 +147,38 @@ describe('the upstream headline, and why it is still there', () => {
     }
   })
 })
+
+describe('exactly one first-run experience', () => {
+  const BUNDLE = read('packages/watch/bundle/cordis.patch.yml')
+  const SETTINGS = read('packages/watch/client-settings/src/client/index.tsx')
+
+  test('the DeepWatch step is registered ahead of the upstream ones', () => {
+    const order = /id: 'watch-welcome', order: (-?\d+)/.exec(SETTINGS)?.[1]
+    assert.ok(order !== undefined, 'the DeepWatch onboarding step is not registered')
+    assert.ok(Number(order) < 0)
+  })
+
+  test('the DeepSeek key dialog cannot appear, because its route does not exist', () => {
+    // `onboardingReadiness` returns `adapter-absent` -- and the dialog then
+    // renders null and completes -- when no `deepseek-official` row with
+    // settingsNs `llm-deepseek` is in the provider directory. Switching the
+    // dedicated adapter off is what removes that row, so the second modal a
+    // fresh profile used to meet is gone by upstream's own condition rather
+    // than by anything hidden.
+    assert.match(BUNDLE, /^- id: llm-deepseek$/m)
+    const readiness = upstream('packages/client/ui-settings-models/src/client/store.ts')
+    assert.match(readiness, /if \(row === undefined\) return \{ kind: 'adapter-absent' \}/)
+    const dialog = upstream(
+      'packages/client/ui-settings-models/src/client/DeepSeekOnboardingDialog.tsx')
+    assert.match(dialog, /case 'adapter-absent':/)
+  })
+
+  test('the Internal Testing Notice is answered rather than hidden', () => {
+    // The other upstream step, handled by writing the same durable field its
+    // own Continue button writes, in the managed profile's Harness home -- so
+    // a stock profile elsewhere on the machine still shows it.
+    const compose = read('packages/watch/cli/src/lib/compose.ts')
+    assert.match(compose, /acknowledgeUpstreamNotice/)
+    assert.match(compose, /scoped to `<DeepWatch home>\/dsh-home`/)
+  })
+})

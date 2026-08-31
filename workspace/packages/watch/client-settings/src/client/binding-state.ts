@@ -37,6 +37,17 @@ import type {
   BindableRole, ProviderCredentialStatus, RoleReadiness, RouteCapability, WatchBindings,
 } from '@deepwatch/dsh-contracts'
 
+/**
+ * Upstream's own settings section for the selection a new session starts with.
+ *
+ * Spelled here rather than imported: `AGENT_DEFAULT_MODEL_SETTINGS_NAMESPACE`
+ * lives in a Host package, and a browser bundle that imported it would carry
+ * the Harness's server-side settings machinery to learn one string.
+ * `tests/binding-flow.test.mjs` holds it to the value the pinned baseline
+ * composes.
+ */
+export const DEFAULT_MODEL_NAMESPACE = 'agent-default-model'
+
 /* ── the Host surface this store uses ───────────────────────────────────── */
 
 /**
@@ -272,6 +283,7 @@ export class BindingStore {
   /** Guards against a slow load landing after a newer one. */
   private generation = 0
   private revision: number | undefined
+  private defaultRevision: number | undefined
 
   constructor(private readonly api: HostApi) {}
 
@@ -380,6 +392,35 @@ export class BindingStore {
       bindings,
       roles: BINDABLE_ROLES.map(role => roleRowOf(role, bindings, rows)),
     })
+
+    // The binding is the authority; the Harness selection is a projection of
+    // it. Reconciling on read rather than only on write means a profile bound
+    // by an earlier build -- or a settings file somebody edited by hand -- is
+    // repaired by being looked at, instead of staying in the state this whole
+    // subsystem exists to prevent: a decision recorded, and a runtime that
+    // never heard about it.
+    if (writable) await this.reconcileDefaultSelection(bindings, byNs.get(DEFAULT_MODEL_NAMESPACE))
+  }
+
+  /**
+   * Write the Harness selection only when it disagrees with the binding.
+   *
+   * Guarded on disagreement because this runs on every load: rewriting an
+   * already-correct section would bump its revision, invalidate every other
+   * open editor's `expectedRevision`, and turn a read into a source of write
+   * conflicts.
+   */
+  private async reconcileDefaultSelection(
+    bindings: WatchBindings, view: NamespaceView | undefined,
+  ): Promise<void> {
+    this.defaultRevision = view?.revision
+    const chat = bindings.roles[PRIMARY_ROLE]
+    const wanted = chat === undefined
+      ? { provider: '', model: '' }
+      : { provider: chat.provider, model: chat.model }
+    const current = (view?.value ?? {}) as { provider?: unknown, model?: unknown }
+    if (current.provider === wanted.provider && current.model === wanted.model) return
+    await this.syncDefaultSelection(bindings)
   }
 
   /**
@@ -406,6 +447,48 @@ export class BindingStore {
     await this.write(withoutBinding(this.snapshot.bindings, role))
   }
 
+  /**
+   * Point the Harness's own default selection at what Chat is bound to.
+   *
+   * The link this subsystem was missing, and the failure it caused is worth
+   * stating plainly: a person added a provider, chose a model and assigned it
+   * to Chat, and still could not send. Every DeepWatch surface agreed the
+   * binding existed. It did — in DeepWatch's document. But the thing that
+   * actually routes a prompt is the Harness's model selection, which this
+   * distribution had *emptied* so that nothing would be chosen for anybody,
+   * and binding Chat never filled it in. Two records of one decision, and the
+   * one the runtime reads was the one nobody was writing.
+   *
+   * So a Chat binding writes both. `agent-default-model` is upstream's own
+   * settings section, read live by `AgentDefaultModelConfig` and re-read by a
+   * blank session on every look — so a session opened before the binding
+   * picks it up without being told.
+   *
+   * Only Chat. The other roles are DeepWatch's own concepts and have no
+   * upstream selection to keep in step; writing one for them would point the
+   * conversation at a model chosen for something else.
+   */
+  private async syncDefaultSelection(next: WatchBindings): Promise<void> {
+    const chat = next.roles[PRIMARY_ROLE]
+    const section = chat === undefined
+      // Emptied rather than removed: the row stays mounted and its schema
+      // requires both keys, so "nothing chosen" is two empty strings -- which
+      // is exactly the value a fresh profile composes.
+      ? { provider: '', model: '' }
+      : { provider: chat.provider, model: chat.model }
+    try {
+      const response = await this.api.settings.replace({
+        ns: DEFAULT_MODEL_NAMESPACE,
+        section,
+        ...this.defaultRevision === undefined ? {} : { expectedRevision: this.defaultRevision },
+      })
+      if (response.result.ok) this.defaultRevision = response.result.value.revision
+      else this.publish({ error: response.result.error.message })
+    } catch (error) {
+      this.publish({ error: error instanceof Error ? error.message : String(error) })
+    }
+  }
+
   private async write(next: WatchBindings): Promise<void> {
     // Before the document leaves the browser, not after somebody reports it in
     // a screenshot. Every write path builds this from a picker, so a value
@@ -424,6 +507,10 @@ export class BindingStore {
       }
       this.revision = response.result.value.revision
       const bindings = readBindings(response.result.value.value)
+      // After the binding is durable, never before: a default pointing at a
+      // binding that failed to save would route somewhere the record does not
+      // admit to.
+      await this.syncDefaultSelection(bindings)
       this.publish({
         saving: false,
         bindings,

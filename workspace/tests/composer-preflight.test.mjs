@@ -116,7 +116,11 @@ const BOUND = {
  * itself and prove nothing about what a person gets.
  */
 function mount(store, blocks, sessionId = 'session-1') {
-  const markup = renderToStaticMarkup(createElement(ChatGate, { sessionId, store, blocks }))
+  // `blocks` is a getter, the way the registration supplies it: the
+  // conversation service is resolved when the gate renders rather than when
+  // the plugin loads, because parking on it meant the gate never ran at all.
+  const markup = renderToStaticMarkup(
+    createElement(ChatGate, { sessionId, store, blocks: () => blocks }))
   blocks.set(sessionId, blockFor(store.getSnapshot()))
   return markup
 }
@@ -216,6 +220,17 @@ describe('what the gate must never do', () => {
     const markup = mount(store, recorder())
     assert.ok(markup.includes('aria-label="Chat setup"'),
       'the setup card has no accessible name')
+  })
+
+  test('an absent conversation service costs the block, not the card', async () => {
+    // The gate resolves the registry when it renders. A deployment without the
+    // conversation service still gets the card telling somebody what to fix;
+    // what it loses is the ability to make the composer inert, which the Host
+    // enforces anyway.
+    const store = await loaded({ credentialConfigured: true })
+    const markup = renderToStaticMarkup(
+      createElement(ChatGate, { sessionId: 's', store, blocks: () => undefined }))
+    assert.ok(markup.includes('Chat model is not configured'))
   })
 
   test('sending is refused by the Host too, not only by this card', () => {

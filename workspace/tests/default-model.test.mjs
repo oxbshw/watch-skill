@@ -24,8 +24,12 @@
  *   - the patch names no module, because a patch that names one is compared
  *     for equality and *skipped with a warning* when it differs — which is the
  *     one failure mode that would put DeepSeek back without any test noticing;
- *   - DeepSeek is still composed and still selectable, because removing a
- *     provider is not what was wrong. Choosing it for somebody was.
+ *   - DeepSeek is still selectable, because removing a provider is not what was
+ *     wrong. Choosing it for somebody was. The dedicated adapter is switched
+ *     off -- it was the one provider that registered a route without being
+ *     configured -- and DeepSeek is reached through the same catalogue as the
+ *     other thirty-six, which is what makes it a provider rather than a
+ *     default.
  */
 
 import { test, describe } from 'node:test'
@@ -121,14 +125,32 @@ describe('the inherited DeepSeek default is gone from a fresh profile', () => {
 })
 
 describe('DeepSeek stays available; it just stops being chosen', () => {
-  test('the DeepSeek adapter is still composed by the baseline', () => {
+  test('the baseline composes the dedicated adapter this bundle switches off', () => {
     const adapter = baseRows.find(row => row.module === '@deepseek-ai/dsh-llm-deepseek')
     assert.ok(adapter, 'the pinned baseline no longer composes the DeepSeek adapter')
+    assert.equal(adapter.id, 'llm-deepseek')
   })
 
-  test('the bundle does not disable it', () => {
-    assert.equal(/^-\s*id:\s*llm-deepseek\s*$/m.test(bundle), false)
-    assert.equal(bundle.includes('llm-pi-ai'), false)
+  test('the dedicated adapter is switched off, and only that one', () => {
+    // It registered `deepseek-official` at load with no credential, which made
+    // DeepSeek the one provider that configured itself: a route nobody chose
+    // that the pre-turn admission check accepted, and a second first-run modal
+    // asking for a key to a provider the person had not picked.
+    const off = bundleRows.filter(row => row.module === null && row.config.provider === undefined)
+    assert.ok(off.some(row => row.id === 'llm-deepseek'))
+    assert.equal(/^-\s*id:\s*llm-pi-ai\s*$/m.test(bundle), false,
+      'the multi-provider adapter was switched off too, which would remove DeepSeek entirely')
+  })
+
+  test('DeepSeek is still in the catalogue every other provider comes from', () => {
+    // `llm-pi-ai` declares its whole installed catalogue as configurable from
+    // the moment it mounts, so switching off the dedicated adapter changes how
+    // DeepSeek is reached, not whether it can be.
+    const providers = JSON.parse(readFileSync(join(ROOT, 'inventory', 'dsh-providers.json'), 'utf8'))
+    const deepseek = providers.providers.find(entry => entry.id === 'deepseek')
+    assert.ok(deepseek, 'DeepSeek is no longer offered by the pinned catalogue')
+    assert.equal(deepseek.reachableFromUi, true)
+    assert.equal(deepseek.configuredVia, 'DSH Settings → Models & Providers')
   })
 
   test('nothing in the bundle names a DeepSeek route as a value', () => {
