@@ -826,16 +826,16 @@ export async function provisionManagedRuntime(
       }), 'utf8')
     })
 
-    await phase('promote', () => {
+    await phase('promote', async () => {
       // The old runtime is moved aside, not deleted. If the rename that puts
       // the new one in place fails, the old one goes back, so there is no
       // moment at which a person has neither.
       const hadPrevious = existsSync(options.destination)
-      if (hadPrevious) renameSync(options.destination, supplanted)
+      if (hadPrevious) await renameWithRetry(options.destination, supplanted)
       try {
-        renameSync(staging, options.destination)
+        await renameWithRetry(staging, options.destination)
       } catch (error) {
-        if (hadPrevious) renameSync(supplanted, options.destination)
+        if (hadPrevious) await renameWithRetry(supplanted, options.destination)
         throw error instanceof Error ? error : new Error(String(error))
       }
       promoted = true
@@ -868,6 +868,35 @@ export async function provisionManagedRuntime(
     }
     void promoted
   }
+}
+
+/**
+ * Rename, and wait out the moment Windows is still holding the directory.
+ *
+ * A directory that a virus scanner, the search indexer or a child process that
+ * exited a millisecond ago still has open answers `EBUSY` or `EPERM` to a
+ * rename, and clears on its own in tens of milliseconds. Failing the promotion
+ * for that would strand a runtime that is complete, validated and one syscall
+ * from being in place — which is what CI saw on Windows and nowhere else.
+ *
+ * Bounded and backed off, because a lock that does not clear is a real fault
+ * and has to be reported as one rather than waited on forever. Any other error
+ * is raised immediately: a missing directory is not something waiting fixes.
+ */
+async function renameWithRetry(from: string, to: string): Promise<void> {
+  const transient = new Set(['EBUSY', 'EPERM', 'EACCES', 'ENOTEMPTY'])
+  let last: unknown
+  for (let attempt = 0; attempt < 8; attempt += 1) {
+    try {
+      renameSync(from, to)
+      return
+    } catch (error) {
+      last = error
+      if (!transient.has((error as NodeJS.ErrnoException).code ?? '')) throw error
+      await new Promise(resolve => setTimeout(resolve, 50 * (attempt + 1)))
+    }
+  }
+  throw last instanceof Error ? last : new Error(String(last))
 }
 
 /** Which outcome a phase failure is. */
