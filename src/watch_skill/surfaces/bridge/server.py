@@ -34,6 +34,7 @@ import contextlib
 import json
 import logging
 import os
+import sqlite3
 import sys
 import threading
 import time
@@ -317,6 +318,29 @@ class BridgeServer:
             from watch_skill.errors import WatchSkillError
         except ImportError:  # pragma: no cover - Core is always importable here
             WatchSkillError = ()  # type: ignore[assignment]
+
+        # A storage failure is not an engine defect, and saying "internal
+        # error" about one sends the reader to the wrong place. SQLite raises
+        # `OperationalError` for a database that cannot be opened, a directory
+        # that cannot be written, a lock that never cleared, and a first-run
+        # migration two processes reached at once — all of which are about this
+        # machine and all of which have different next steps than a bug.
+        if isinstance(exc, sqlite3.Error):
+            _log.warning("%s hit storage: %s", entry.method, type(exc).__name__)
+            return BridgeError(
+                error="core.storage_unavailable",
+                message=(
+                    f"Watch Core could not read its index while running {entry.method}."
+                ),
+                fix=(
+                    "Check the index with `watch-skill doctor`. A first run on a "
+                    "cold machine can also lose this race with itself; retrying "
+                    "once is safe, because a read changes nothing."
+                ),
+                details={"exception": type(exc).__name__},
+                retryable=True,
+                correlation_id=entry.correlation_id,
+            )
 
         if isinstance(exc, WatchSkillError):  # type: ignore[arg-type]
             _log.warning("%s failed: %s", entry.method, exc.code)
