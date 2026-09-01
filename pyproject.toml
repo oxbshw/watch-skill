@@ -125,7 +125,28 @@ exclude = [
     # because hatchling walks the filesystem and nothing here said not to.
     "/workspace",
     "**/upstream",
+    # Only stray READMEs survived the include list, which is not a decision
+    # anybody made. A directory in a source distribution should be there
+    # because somebody chose it.
+    "/benchmarks",
 ]
+
+# What the source distribution ships, and why each entry is in it.
+#
+# `src` and `pyproject.toml` build the package. `README`, `LICENSE`,
+# `CHANGELOG`, `SECURITY`, `CONTRIBUTING` and `llms.txt` are the documents a
+# source release is expected to carry. `docs`, `examples`, `skills`,
+# `templates`, `commands` and `adapters` are product content the package
+# refers to -- `adapters/agents-md/AGENTS.md` is a *template the adapter
+# ships*, not this repository's contributor guide. `app` is the workspace
+# viewer's source. `scripts` are the maintenance entry points the docs name.
+#
+# What is deliberately absent, each for its own reason: `workspace` is a
+# separate product, `upstream` is a vendored third party git does not track,
+# `tests` would publish credential-shaped fixtures for no one's benefit, and
+# `benchmarks` contributed nothing but stray READMEs.
+#
+# `tests/test_sdist_contents.py` holds this policy to it.
 
 # PyPI renders the long description on its own, so every relative path in
 # README.md would be a broken image or a dead link there. Rewrite them to
