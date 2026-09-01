@@ -3,8 +3,13 @@
 Every check that was run, the command that ran it, and what it returned. Rows
 for things that were not run say so and why; an empty cell would read as a pass.
 
-Measured on Windows 10 Pro 19045, Node v22.18.0, pnpm 10.29.1, Electron
-33.4.11, against DSH 0.1.1-rc.2 @ `b150a551b8d4`.
+Measured at `71300c0`, on Windows 10 Pro 19045, Node v22.18.0, pnpm 10.29.1,
+Electron 33.4.11, against DSH 0.1.1-rc.2 @ `b150a551b8d4`.
+
+_A record of one run, not a description of the current tree. Every number
+below belongs to that commit; re-running these commands today will produce
+different totals, and rewriting only some of them would leave a document
+whose rows came from two different builds._
 
 ## Gates
 
@@ -74,7 +79,7 @@ are DSH's own web-profile defaults plus the one replacement above.
 
 | Check | Observed |
 | --- | --- |
-| Desktop alive before, during, after | pid 14536 throughout |
+| Desktop alive before, during, after | one process throughout, never restarted |
 | Capture run 1 | exit 0, 80293ms |
 | Capture run 2 | exit 0, 78940ms |
 | Watch Core children | 4 → 4 → 4 |

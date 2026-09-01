@@ -16,6 +16,10 @@ audit can confirm it read the same text.
 Per-requirement detail is in [`spec-closure-matrix.md`](spec-closure-matrix.md)
 and its machine-readable twin.
 
+_Measured at `02343ca`. This is the record of one candidate's audit, kept as
+history: the counts and timings below describe that commit and are not
+claims about the current tree._
+
 ---
 
 ## 1. Implementation

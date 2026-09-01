@@ -359,7 +359,7 @@ unsigned artifact labelled as released.
 | Desktop | Electron application supervising a real Host that spawns real Core |
 | Packaging | 20 packages packed, installed from tarballs, and run through every runner |
 | Publishing | configured, gated, and never executed |
-| Tests | 1415 across 231 suites, all passing |
+| Tests | every workspace suite green under `npm run check` |
 
 Not built: team multi-tenancy beyond the two-tenant isolation tests, and any
 signed distribution.

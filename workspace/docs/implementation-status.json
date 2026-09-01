@@ -752,8 +752,7 @@
         "upstream/deepseek-harness.lock"
       ],
       "tests": [
-        "tests/offline-egress.test.mjs",
-        "docs/phase-2-closure.md"
+        "tests/offline-egress.test.mjs"
       ],
       "acceptance_journey": "A process-level sentinel installed by --require patches net/tls/dns beneath every outbound path; twelve route families run under offline_only and record zero non-loopback egress, and a self-test arm proves the sentinel catches a real connection",
       "known_limitations": [
