@@ -145,6 +145,13 @@ async function shot(win, name, note) {
  * and dispatching an event at a node the framework is not listening on.
  */
 async function click(win, needle) {
+  // Located twice, with a pause between. `LOCATE` scrolls the target into view
+  // and reads its rectangle in the same evaluation, so for anything below the
+  // fold the rectangle is the one from *before* the scroll and the click lands
+  // on whatever now occupies those coordinates. The navigation targets this was
+  // first written against are always on screen, which is why it looked right.
+  await win.webContents.executeJavaScript(`${LOCATE}(${JSON.stringify(needle)})`)
+  await wait(350)
   const at = await win.webContents.executeJavaScript(`${LOCATE}(${JSON.stringify(needle)})`)
   if (at === null) return false
   for (const type of ['mouseDown', 'mouseUp']) {
@@ -182,14 +189,17 @@ async function navigate(win, needle, expect, tries = 20) {
  * and wrong for a form whose fields are labelled by `aria-label` — those never
  * appear in `innerText`, so waiting for one reported a form that had opened.
  */
-async function navigateTo(win, needle, selector, tries = 20) {
+async function navigateTo(win, needle, selector, { tries = 20, retry = true } = {}) {
   await click(win, needle)
   for (let attempt = 0; attempt < tries; attempt += 1) {
     const there = await win.webContents.executeJavaScript(
       `document.querySelector(${JSON.stringify(selector)}) !== null`)
     if (there) return true
     await wait(400)
-    if (attempt === 8) await click(win, needle)
+    // The re-click helps a control that animates in and hurts one that
+    // toggles: clicking a row's "Choose a model" twice closes the editor the
+    // first click opened, and the poll then correctly reports no select.
+    if (attempt === 8 && retry) await click(win, needle)
   }
   log(`navigateTo: never saw ${selector} after clicking ${JSON.stringify(needle)}`)
   return false
@@ -334,6 +344,24 @@ async function providerPhase(win) {
     { sample: rolesAfter.slice(rolesAfter.indexOf('Chat'), rolesAfter.indexOf('Chat') + 320) })
   claim('credential-alone-is-not-ready', !/Chat[\s\S]{0,120}Ready/i.test(rolesAfter),
     { chatClaimedReady: /Chat[\s\S]{0,120}Ready/i.test(rolesAfter) })
+
+  // What this harness does not yet cover, stated rather than implied.
+  //
+  // The pass ends here: everything above proves the product refuses to
+  // pretend — a credential is stored and Chat still says it is not configured.
+  // The other half is still driven by hand: opening a capability's "Choose a
+  // model" editor, picking a provider and model, "Assign to Chat", and then
+  // one prompt whose request count the runner would check.
+  //
+  // The obstacle is this harness, not the product. That button did not open
+  // its editor under `sendInputEvent` while every navigation above works; the
+  // row sits inside the settings dialog's own scroll container and the
+  // coordinates reaching the page do not land on it. Both fixes found on the
+  // way are kept above, and the editor still did not open.
+  //
+  // Leaving a red assertion here would be worse than saying so: nobody reads
+  // one by the third run. `tests/stub-routing.test.mjs` covers the request
+  // counting at the routing layer in the meantime.
 }
 
 /**
