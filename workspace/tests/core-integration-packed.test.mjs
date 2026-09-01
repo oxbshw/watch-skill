@@ -81,9 +81,21 @@ function packedCore() {
         + 'install; this suite exists to test the shipped wheel',
     }
   }
-  const probe = spawnSync(named, ['--help'], { encoding: 'utf8', timeout: 60_000 })
-  if (probe.status !== 0 || !/\bbridge\b/.test(probe.stdout)) {
-    return { path: null, why: 'the named executable has no `bridge` command' }
+  // Both streams, and a generous timeout. The engine renders its help through
+  // Rich, which picks a stream and a width from the environment, and a cold
+  // first import on a CI runner is not fast. Reading only stdout made this
+  // report "no bridge command" about an engine that has one -- and because the
+  // suite skips rather than fails, the whole matrix stayed green while it ran
+  // nowhere. The refusal now carries the exit status and the size of what it
+  // read, so the next person is not guessing either.
+  const probe = spawnSync(named, ['--help'], { encoding: 'utf8', timeout: 180_000 })
+  const help = `${probe.stdout ?? ''}\n${probe.stderr ?? ''}`
+  if (!/bridge/.test(help)) {
+    return {
+      path: null,
+      why: 'the named executable has no `bridge` command '
+        + `(exit ${String(probe.status)}, ${String(help.length)} bytes of help)`,
+    }
   }
   return { path: named, why: '' }
 }

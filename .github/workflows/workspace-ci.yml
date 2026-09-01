@@ -371,6 +371,24 @@ jobs:
             echo "WATCH_CORE_NO_BRIDGE=$(exe "$outside/nobridge")"
           } >> "$GITHUB_ENV"
 
+          # Verify the provisioning, loudly.
+          #
+          # The packed suite skips itself when it cannot find a Core with a
+          # `bridge` command, and a skip reads as a pass: the whole matrix was
+          # green while that suite ran nowhere. Whatever goes wrong here has to
+          # fail this step with the engine's own output, not go quiet.
+          echo "--- packed core help ---"
+          "$(exe "$outside/packed")" --help || true
+          if ! "$(exe "$outside/packed")" --help 2>&1 | grep -q "bridge"; then
+            echo "::error::the packed Core has no bridge command; the packed suite would skip"
+            exit 1
+          fi
+          if "$(exe "$outside/nobridge")" --help 2>&1 | grep -q "bridge"; then
+            echo "::error::the nobridge Core still has the command; the counterfactual is vacuous"
+            exit 1
+          fi
+          echo "provisioning verified: packed has bridge, nobridge does not"
+
       - name: Tests
         run: npm test
 
