@@ -41,7 +41,17 @@ def main() -> int:
         print(f"the bridge command is not in {main_py}", file=sys.stderr)
         return 1
 
-    main_py.write_text(text[: match.start()] + text[match.end() :], encoding="utf-8")
+    # Unlink before writing, to break the hardlink.
+    #
+    # `uv pip install` populates a venv with hardlinks into its own cache, so
+    # two venvs installed from the same wheel share inodes. Writing in place
+    # therefore edited *both* — and the cache with them. On CI that removed the
+    # bridge command from the install this counterfactual is measured against,
+    # and the packed suite skipped itself with "no bridge command" while
+    # reporting success. Replacing the file gives this venv its own copy.
+    stripped = text[: match.start()] + text[match.end() :]
+    main_py.unlink()
+    main_py.write_text(stripped, encoding="utf-8")
     # Bytecode outlives the source edit and would keep serving the command.
     for stale in root.rglob("main.cpython*.pyc"):
         stale.unlink()
