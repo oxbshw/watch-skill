@@ -105,6 +105,21 @@ describe('an engine present but without the Bridge surface', () => {
       assert.equal(health.blocker, 'bridge_surface_missing')
       assert.equal(health.isTestOnlyMock, false)
       assert.notEqual(health.phase, 'ready')
+
+      // And it stays that way.
+      //
+      // Two things diagnose this failure — the transport, which read the
+      // engine's usage error, and the handshake, which only knows it got no
+      // reply — and which lands last is a matter of process scheduling. That
+      // is not hypothetical: the specific answer survived on Linux and Windows
+      // and was overwritten on macOS, where the blocker became
+      // `handshake_failed` and sent the reader to look for a timeout instead
+      // of an engine too old to have the command. Letting the queue drain and
+      // asking again is what makes a late overwrite visible on any platform,
+      // rather than only on the one whose ordering happens to expose it.
+      await new Promise((settled) => { setTimeout(settled, 50) })
+      assert.equal(ctx.watchCore.health().blocker, 'bridge_surface_missing',
+        'a later, vaguer failure overwrote the diagnosis')
     })
   })
 })

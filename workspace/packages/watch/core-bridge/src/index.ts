@@ -388,7 +388,20 @@ export class WatchCoreService extends Service {
     this.transport = transport
     this.publish({ phase: 'connecting', transport: transport.kind, handshake: null, error: null })
 
+    // Kept so a later, vaguer failure cannot bury this one.
+    //
+    // The transport knows things the handshake never can: that the engine
+    // exited with an argument parser's usage error, that it is too old to have
+    // a `bridge` command at all. The handshake only ever learns that it got no
+    // answer. Both fire, and which one lands last is a matter of process
+    // scheduling -- so on two platforms the specific diagnosis survived and on
+    // macOS the generic one overwrote it, leaving `handshake_failed` where the
+    // fix is "upgrade Watch Core" and the reported blocker says "check why the
+    // handshake timed out".
+    const diagnoses: WatchError[] = []
+
     transport.onFailure((error) => {
+      diagnoses.push(error)
       this.publish({ phase: 'failed', error, blocker: blockerFor(error) })
       this.onTransportFailure(error)
     })
@@ -412,7 +425,12 @@ export class WatchCoreService extends Service {
       signal: new AbortController().signal,
     })
     if (!handshake.ok) {
-      this.publish({ phase: 'failed', error: handshake.error, blocker: blockerFor(handshake.error) })
+      // The transport's own account wins when it has one, whichever order the
+      // two arrived in. `handshake.error` is still what the caller gets back:
+      // the request did fail, and the caller asked about the request. What is
+      // published is the diagnosis somebody has to act on.
+      const diagnosed = diagnoses[0] ?? handshake.error
+      this.publish({ phase: 'failed', error: diagnosed, blocker: blockerFor(diagnosed) })
       return handshake
     }
     this.lastHandshakeAt = new Date().toISOString()

@@ -104,7 +104,7 @@
       {
         "name": "@deepwatch/dsh-core-bridge",
         "version": "0.1.0-preview.0",
-        "integrity": "sha256:6890abe8de291f498e4254d4ffd9c549c45a340e644a8062eacd7b999cc078a5",
+        "integrity": "sha256:d6ac354dbd9db673a9bb03c7c258be7b4fbca6d84d602a4dd93125df3a32cc2d",
         "sourceFiles": 7
       },
       {
@@ -185,7 +185,7 @@
       "creators": [
         "Tool: watch-gen-release-manifest"
       ],
-      "created": "2026-09-01T11:50:58Z"
+      "created": "2026-09-01T16:07:41Z"
     },
     "packages": [
       {
@@ -344,7 +344,7 @@
         "checksums": [
           {
             "algorithm": "SHA256",
-            "checksumValue": "6890abe8de291f498e4254d4ffd9c549c45a340e644a8062eacd7b999cc078a5"
+            "checksumValue": "d6ac354dbd9db673a9bb03c7c258be7b4fbca6d84d602a4dd93125df3a32cc2d"
           }
         ]
       },
