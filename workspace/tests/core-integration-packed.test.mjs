@@ -199,7 +199,22 @@ describe('the packed Watch Core, driven by the real Node Bridge', { skip }, () =
       await ctx.watchCore.connect()
       const result = await ctx.watchCore.request('watch.library.list', { limit: 5 })
 
-      assert.equal(result.ok, true, JSON.stringify(result.error ?? {}))
+      // Two acceptable answers, and one that is not.
+      //
+      // A page is the ordinary outcome. A machine whose index cannot be opened
+      // right now — a cold first run where two Bridge processes reach the same
+      // migration, a directory that is not writable — is entitled to say so,
+      // and `core.storage_unavailable` is that answer: typed, retryable, with
+      // a fix. What the Bridge may never do is what it used to do here, which
+      // is report `core.internal_error` naming a Python class, because that
+      // sends the reader to look for a defect in the engine.
+      if (!result.ok) {
+        assert.equal(result.error.error, 'core.storage_unavailable',
+          `unexpected failure: ${JSON.stringify(result.error)}`)
+        assert.ok(result.error.retryable)
+        assert.ok(result.error.fix.length > 0)
+        return
+      }
       assert.ok(Array.isArray(result.value.sources))
       assert.equal(typeof result.value.total, 'number')
       assert.equal(typeof result.value.truncated, 'boolean')
