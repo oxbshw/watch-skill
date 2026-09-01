@@ -338,10 +338,16 @@ jobs:
         run: |
           uv venv .venv-core
           uv pip install --python .venv-core --quiet .
-          if [ -x .venv-core/bin/watch-skill ]; then
-            echo "WATCH_CORE_COMMAND=$PWD/.venv-core/bin/watch-skill" >> "$GITHUB_ENV"
+          # `$GITHUB_WORKSPACE`, not `$PWD`. Bash on a Windows runner reports
+          # `/d/a/watch-skill/...`, which is an MSYS path that Node's `spawn`
+          # cannot resolve -- the whole suite failed there with ENOENT on a
+          # file that was sitting exactly where the message said it was.
+          # GitHub sets GITHUB_WORKSPACE to the native path on every platform.
+          root="$GITHUB_WORKSPACE"
+          if [ -x "$root/.venv-core/bin/watch-skill" ]; then
+            echo "WATCH_CORE_COMMAND=$root/.venv-core/bin/watch-skill" >> "$GITHUB_ENV"
           else
-            echo "WATCH_CORE_COMMAND=$PWD/.venv-core/Scripts/watch-skill.exe" >> "$GITHUB_ENV"
+            echo "WATCH_CORE_COMMAND=$root/.venv-core/Scripts/watch-skill.exe" >> "$GITHUB_ENV"
           fi
 
       - name: Tests
