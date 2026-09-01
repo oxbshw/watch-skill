@@ -14,9 +14,10 @@
  * @module @deepwatch/dsh-client-settings/client
  */
 
-import { useEffect, useSyncExternalStore } from 'react'
+import { useCallback, useEffect, useState, useSyncExternalStore } from 'react'
 import type { ReactNode } from 'react'
 import type { Context } from '@deepseek-ai/cordis'
+import type { CoreHealthReport } from '@deepwatch/dsh-contracts/query/wire'
 import {
   AboutSection,
   DiagnosticsSection,
@@ -48,7 +49,21 @@ export * from './chat-gate.js'
  * assignments. Registering the section without it would put a control on
  * screen that fails when pressed.
  */
-export const inject = ['slots', 'connection']
+// `remote` is listed because Diagnostics reads the engine through
+// `remote.watchQuery`, and cordis refuses a property no inject entry claims —
+// the Health card rendered as a crashed slot until this said so.
+//
+// `remote.watchQuery` is listed for the same reason: cordis guards the nested
+// namespace separately, and reaching it without the entry crashed the settings
+// slot rather than returning undefined.
+//
+// Listing it parks this plugin until the namespace is mounted, which is only
+// safe because `@deepwatch/dsh-client-remotes` is now a declared
+// `dsh.client.inject` dependency in package.json — the boot graph reads that,
+// not this constant, and without it the mount ordering was not guaranteed.
+// The lookup below is still written defensively, so a profile that somehow
+// lacks the namespace gets "could not be read" rather than a blank card.
+export const inject = ['slots', 'connection', 'remote', 'remote.watchQuery']
 
 /** The minimal shape of DSH's slot service this module uses. */
 interface SlotService {
@@ -57,6 +72,21 @@ interface SlotService {
 }
 
 /** The half of the conversation service a composer block needs. */
+/** What Diagnostics renders: a health report, or nothing it could read. */
+type CoreHealth = CoreHealthReport
+
+/**
+ * The one read plane method this package calls.
+ *
+ * Typed locally rather than imported from the Library's declared namespace:
+ * this package needs one method and importing the whole face would make
+ * Settings depend on the Library's view of a service it shares.
+ */
+type CoreHealthReader = (
+  request: { protocol: number, requestId: string, deadlineMs: number },
+  signal?: AbortSignal,
+) => Promise<{ ok: true, value: unknown } | { ok: false }>
+
 interface ConversationService {
   readonly blocks: ComposerBlocks
 }
@@ -72,13 +102,70 @@ export function apply(ctx: Context): void {
   // Diagnostics reads the same store, so "Agent Model — Not configured" cannot
   // sit beside a Role Bindings screen saying Chat is ready. One store, one
   // answer, on every surface that asks.
+  /**
+   * The channel to the engine, looked up when Diagnostics renders.
+   *
+   * Deliberately *not* an `inject` entry. Naming `remote.watchQuery` there
+   * parks this whole plugin until the service exists, and the cost of being
+   * wrong about that is not a missing Health card — it is every Watch settings
+   * section disappearing, which is what happened: "View diagnostics" became a
+   * button that did nothing. The same mistake is recorded twenty lines below
+   * about `conversation`, and it is the same mistake.
+   *
+   * So this is read at the point of use, and its absence is a state the panel
+   * already renders honestly: "could not be read" rather than a plausible
+   * default. A screen that says it does not know beats a screen that is not
+   * there.
+   */
+  const readHealth = (): CoreHealthReader | null => {
+    const remote = (ctx as unknown as {
+      remote?: { watchQuery?: { coreHealth?: CoreHealthReader } }
+    }).remote
+    return remote?.watchQuery?.coreHealth ?? null
+  }
+
   const DiagnosticsWithRoles = (): ReactNode => {
     // Subscribed, not sampled: a Diagnostics page that read the snapshot once
     // would show the readiness that happened to be loaded when it mounted, and
     // go quietly stale the moment somebody bound something in the next tab.
     const snapshot = useSyncExternalStore(store.subscribe, store.getSnapshot, store.getSnapshot)
     useEffect(() => { void store.load() }, [])
-    return DiagnosticsSection({ roles: snapshot.roles })
+
+    // Read once per visit, and again on demand. Health is a *reading*, so it
+    // is fetched when somebody opens the screen rather than held in a store —
+    // a cached one would be the stale-number problem this panel was rewritten
+    // to remove, wearing a fresher-looking chip.
+    const [health, setHealth] = useState<CoreHealth | null>(null)
+    const [reading, setReading] = useState(true)
+    const refresh = useCallback(() => {
+      setReading(true)
+      const controller = new AbortController()
+      const coreHealth = readHealth()
+      if (coreHealth === null) { setHealth(null); setReading(false); return }
+      void coreHealth(
+        { protocol: 1, requestId: `req_${Date.now().toString(36)}`, deadlineMs: 15_000 },
+        controller.signal,
+      ).then((result) => {
+        // A refusal is not a reading. Anything that is not a health report
+        // leaves `health` null, and the panel says it could not read rather
+        // than rendering the shape of an answer it did not get.
+        // `value`, not `data`: upstream's RemoteResult carries the payload
+        // under `value`, and reading the wrong field is indistinguishable from
+        // a host that answered nothing — the panel said "could not be read"
+        // while the host was answering correctly every time.
+        const value = result.ok ? result.value : null
+        const report = value as CoreHealth | null | undefined
+        setHealth(
+          report !== null && report !== undefined && report.outcome === 'core_health'
+            ? report
+            : null,
+        )
+        setReading(false)
+      }, () => { setHealth(null); setReading(false) })
+    }, [])
+    useEffect(refresh, [refresh])
+
+    return DiagnosticsSection({ roles: snapshot.roles, health, reading, onRefresh: refresh })
   }
 
   const section = (id: string, label: string, order: number, component: unknown): void => {

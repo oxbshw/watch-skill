@@ -16,6 +16,7 @@
  */
 
 import type { ReactNode } from 'react'
+import type { CoreHealthReport } from '@deepwatch/dsh-contracts/query/wire'
 import { ATTRIBUTION, INDEPENDENCE, PRODUCT_NAME, WATCH_MARK_PNG, tokenFor } from '@deepwatch/dsh-client-brand'
 import type { BrandTone } from '@deepwatch/dsh-client-brand'
 // The `/descriptors` subpath, not the package root: the root re-exports the
@@ -463,6 +464,31 @@ export function VerificationSection(): ReactNode {
 /* ── 6. Diagnostics ─────────────────────────────────────────────────────── */
 
 /**
+ * What the engine is doing, in one chip.
+ *
+ * `connected` is the only state that gets the active tone. Everything else —
+ * including the mock backend, which is *working* and is still not the product
+ * — reads as a problem, because on this screen it is one.
+ */
+function CoreStateChip(
+  { health, reading }: {
+    readonly health?: CoreHealthReport | null | undefined
+    readonly reading: boolean
+  },
+): ReactNode {
+  if (health === null || health === undefined) {
+    return (
+      <StatusChip tone="neutral">
+        {reading ? 'Reading…' : 'Could not be read'}
+      </StatusChip>
+    )
+  }
+  if (health.blocker === 'connected') return <StatusChip tone="active">Connected</StatusChip>
+  if (health.isTestOnlyMock) return <StatusChip tone="caution">Test-only mock</StatusChip>
+  return <StatusChip tone="caution">{health.phase}</StatusChip>
+}
+
+/**
  * Diagnostics. What is actually running, and what is not.
  *
  * The capability readiness list lives here rather than in the first-run notice.
@@ -471,10 +497,14 @@ export function VerificationSection(): ReactNode {
  * clipped sidebar column.
  */
 export function DiagnosticsSection(
-  { openSection, roles }: {
+  { openSection, roles, health, reading, onRefresh }: {
     readonly openSection?: ((id: string) => void) | undefined
     /** Live role readiness, so this screen and Role Bindings agree. */
     readonly roles?: readonly RoleRow[] | undefined
+    /** The engine, as the Host last read it. Null when it could not be read. */
+    readonly health?: CoreHealthReport | null | undefined
+    readonly reading?: boolean | undefined
+    readonly onRefresh?: (() => void) | undefined
   } = {},
 ): ReactNode {
   return (
@@ -492,32 +522,102 @@ export function DiagnosticsSection(
         <div style={T.meta}>
           <Row label="DeepWatch">0.1.0-preview.0</Row>
           <Row label="DeepSeek Harness">0.1.1-rc.2</Row>
-          <Row label="Bridge protocol">1</Row>
+          {/* Read from the engine, not from this build's own constant. The
+              version beside it used to be typed in, on the screen that
+              promises it does not do that. */}
+          <Row label="Watch Core">
+            {health === null || health === undefined || health.coreVersion === null
+              ? <StatusChip tone="neutral">Not reported</StatusChip>
+              : health.coreVersion}
+          </Row>
+          <Row label="Bridge protocol">
+            {health === null || health === undefined || health.protocolVersion === null
+              ? <StatusChip tone="neutral">Not reported</StatusChip>
+              : `${String(health.protocolVersion)} (Core supports ${
+                health.protocolMin === null ? '?' : String(health.protocolMin)
+              }-${health.protocolVersion === null ? '?' : String(health.protocolVersion)})`}
+          </Row>
           <Row label="Memory store schema">1</Row>
         </div>
       </div>
       <h2 style={T.h2}>Health</h2>
       <div style={T.card}>
         <div style={T.meta}>
-          {/* Not "Connected over stdio". That was a literal, on the one screen
-              whose own opening sentence promises the opposite — and it was
-              wrong: the Bridge was running its mock backend, because the Core
-              it names ships no `bridge` surface at all. A green chip asserting
-              a connection nobody had checked is the exact failure this panel
-              exists to catch, and it was in the panel.
+          {/* Every row below is the Host's reading of the running engine,
+              fetched through `watchQuery.coreHealth` when this screen opens.
 
-              The browser cannot read the Bridge's live state: no read-plane
-              namespace carries it. So this says that, rather than guessing.
-              The agent-facing `watch_capabilities` tool does report the real
-              transport and version, and Session Log records what it said. */}
+              It used to say "Connected over stdio" as a literal — on the one
+              screen whose opening sentence promises it does not do that, and
+              it was wrong: the Bridge was on its mock backend because the Core
+              it named shipped no `bridge` surface. The interim honesty fix
+              said "not read from here", which was true and was not a product.
+              This is the channel that was missing. */}
           <Row label="Watch Core">
-            <StatusChip tone="neutral">Not read from here</StatusChip>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+              <CoreStateChip health={health} reading={reading === true} />
+              {onRefresh === undefined
+                ? null
+                : (
+                  <button type="button" onClick={onRefresh} disabled={reading === true}
+                    style={{
+                      background: 'none', border: 'none', padding: 0,
+                      font: 'inherit', fontSize: '12px', cursor: 'pointer',
+                      color: tokenFor('info'), textDecoration: 'underline',
+                    }}
+                  >
+                    Re-read
+                  </button>
+                )}
+            </span>
           </Row>
           <Row label="Bridge transport">
-            A child process of the Host; it holds no socket. Whether it is the
-            real engine or the mock backend is a Host fact this screen has no
-            channel for — ask the agent for a capability report, which reads it.
+            {health === null || health === undefined
+              ? <StatusChip tone="neutral">Not reported</StatusChip>
+              : health.isTestOnlyMock
+                ? <StatusChip tone="caution">Test-only mock backend</StatusChip>
+                : health.transport === null
+                  ? <StatusChip tone="neutral">Not reported</StatusChip>
+                  : health.transport}
           </Row>
+          <Row label="Contract">
+            {health === null || health === undefined
+              ? <StatusChip tone="neutral">Not reported</StatusChip>
+              : health.contractsMatch
+                ? <StatusChip tone="active">Matches this build</StatusChip>
+                : <StatusChip tone="caution">
+                  {health.contractDrift.length === 0
+                    ? 'Unverified'
+                    : `Drifted: ${health.contractDrift.join(', ')}`}
+                </StatusChip>}
+          </Row>
+          <Row label="Capabilities">
+            {health === null || health === undefined
+              ? <StatusChip tone="neutral">Not reported</StatusChip>
+              : `${String(health.capabilities.ready)} ready · `
+                + `${String(health.capabilities.degraded)} degraded · `
+                + `${String(health.capabilities.unavailable)} unavailable · `
+                + `${String(health.capabilities.unknown)} unknown`}
+          </Row>
+          <Row label="Last handshake">
+            {health === null || health === undefined || health.lastHandshakeAt === null
+              ? <StatusChip tone="neutral">Never</StatusChip>
+              : health.lastHandshakeAt}
+          </Row>
+          <Row label="Engine starts">
+            {health === null || health === undefined
+              ? <StatusChip tone="neutral">Not reported</StatusChip>
+              : String(health.restartCount)}
+          </Row>
+          {health !== null && health !== undefined && health.blocker !== 'connected'
+            ? (
+              <Row label="Blocker">
+                <span>
+                  <StatusChip tone="caution">{health.blocker}</StatusChip>
+                  {health.fix === '' ? null : <span style={T.note}> {health.fix}</span>}
+                </span>
+              </Row>
+            )
+            : null}
           <Row label="Offline">
             <StatusChip tone="active">Offline only</StatusChip>
           </Row>

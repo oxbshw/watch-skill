@@ -24,6 +24,7 @@
   "dsh": {
     "client": {
       "inject": [
+        "@deepwatch/dsh-client-remotes",
         "@deepseek-ai/dsh-client-ui-slots",
         "@deepseek-ai/dsh-client-ui-primitives"
       ],
