@@ -302,7 +302,10 @@ async function providerPhase(win) {
 
   // The stub, never a public host. Each fill reports whether the field was
   // found, so a renamed label is a named failure rather than a silent no-op.
-  const setUrl = await fill(win, 'base url', `${STUB}/v1`)
+  // `STUB` is already a full base URL including its version segment — the
+  // stub hands one out rather than a host, so appending anything produces a
+  // path it does not serve.
+  const setUrl = await fill(win, 'base url', STUB)
   const setKey = await fill(win, 'api key', STUB_KEY)
   claim('provider-fields-filled', setUrl && setKey,
     { baseUrl: setUrl, apiKey: setKey, fields: form.fields.length })
