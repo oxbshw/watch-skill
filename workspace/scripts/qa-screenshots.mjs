@@ -192,12 +192,31 @@ const MEASURE = `(function () {
  * have counted thirty-eight successes. A missing file cannot be mistaken for
  * evidence; a duplicate one can.
  */
+/**
+ * Wait for the compositor, not for the clock.
+ *
+ * `capturePage` returns the last frame that was actually painted, and a window
+ * this size can be throttled enough that a mode which has already changed in
+ * the DOM has not yet been drawn. The result is two files with one image in
+ * them — and, because the tab really was selected when it was checked, every
+ * assertion about reaching the state passes while the picture shows the
+ * previous one. Two animation frames is the browser saying it has drawn,
+ * rather than this script assuming it by now.
+ */
+async function repainted(win) {
+  await win.webContents.executeJavaScript(
+    'new Promise(function (done) { requestAnimationFrame(function () {'
+    + ' requestAnimationFrame(function () { done(true) }) }) })',
+  )
+}
+
 async function capture(win, name, note, reached = true) {
   if (!reached) {
     shots.push({ name, file: null, note, captured: false })
     say('  ' + name.padEnd(38) + ' NOT CAPTURED — ' + note)
     return false
   }
+  await repainted(win)
   const image = await win.webContents.capturePage()
   const file = join(OUT, name + '.png')
   writeFileSync(file, image.toPNG())
@@ -212,8 +231,28 @@ async function measure(win, label) {
   return data
 }
 
-/** What the shipped onboarding steps offer as a way past themselves. */
-const DISMISS = ['Continue', 'Configure later', 'Got it', 'Skip', 'Dismiss']
+/** Which mode tab is actually selected, by the attribute the shell sets. */
+const SELECTED_TAB = "(function(){"
+  + "var t=document.querySelector('[role=\"tab\"][aria-selected=\"true\"]');"
+  + " return t ? t.innerText.trim() : ''})()"
+
+/**
+ * What the shipped onboarding steps offer as a way past themselves.
+ *
+ * `Explore offline` is the Welcome dialog's, and it is the one that matches
+ * what the next shot is captioned: entering the workspace without configuring
+ * a provider. `Finish setup` would configure one and `View diagnostics` goes
+ * somewhere else entirely, so neither belongs here.
+ *
+ * This list going stale is not hypothetical. Every label here was once
+ * sufficient, the Welcome dialog was then given its own three, and the next
+ * capture cleared nothing and photographed the dialog under the name of the
+ * workspace behind it — which is the failure the comment below already
+ * described from the time before that.
+ */
+const DISMISS = [
+  'Explore offline', 'Continue', 'Configure later', 'Got it', 'Skip', 'Dismiss',
+]
 
 /**
  * Clear every onboarding step, whatever it is called.
@@ -278,7 +317,49 @@ async function run(win, viewport) {
   const cleared = await clearOnboarding(win)
   say('  cleared ' + String(cleared) + ' onboarding step(s)')
   await wait(1200)
-  await capture(win, p('03-workspace'), 'the workspace, entered without configuring any provider')
+
+  // Whether anything is still on top, rather than how many were dismissed.
+  //
+  // The count was printed and nothing read it. When the Welcome dialog grew
+  // labels this list did not have, `clearOnboarding` truthfully reported zero
+  // and the run continued, capturing the dialog under the name of the
+  // workspace: two files, byte-identical, one of them evidence for a claim it
+  // did not show. A count of zero is not by itself wrong — a profile that has
+  // already dismissed everything also clears nothing — so the count cannot be
+  // the check. What is on screen can.
+  // The second viewport pass inherits the first one's session.
+  //
+  // DSH restores the last session on load, so by the time the narrow pass runs
+  // there is one open, on whatever mode the wide pass left it. The shot named
+  // for the workspace then showed a session — and, being whatever mode came
+  // last, was byte-identical to one of the mode shots that followed.
+  //
+  // Starting a new session puts the shell back in the state this shot is named
+  // after: DSH hides the session header while a session is blank, which is the
+  // same empty workspace the first pass photographs before any session exists.
+  const openSession = await win.webContents.executeJavaScript(
+    "document.querySelectorAll('[role=\"tab\"]').length")
+  if (openSession > 0) {
+    await win.webContents.executeJavaScript(CLICK_BY_TEXT + "('button', 'New Session')")
+    await wait(1600)
+    // Starting a session with no provider configured brings the first-run
+    // notice back, so the queue has to be cleared again. Found by the check
+    // below refusing to photograph the dialog as the workspace, which is the
+    // whole reason that check exists.
+    await clearOnboarding(win)
+    await wait(800)
+  }
+
+  const stillOpen = await win.webContents.executeJavaScript(
+    "(function(){var d=document.querySelector('[role=\"dialog\"]');"
+    + " return d ? d.innerText.split('\\n')[0].slice(0,60) : ''})()",
+  )
+  await capture(win, p('03-workspace'),
+    stillOpen === ''
+      ? 'the workspace, entered without configuring any provider'
+      : 'a dialog is still on screen and would be photographed as the '
+        + 'workspace: ' + stillOpen,
+    stillOpen === '')
   await measure(win, 'workspace')
 
   // Open a session that actually has content.
@@ -366,12 +447,32 @@ async function run(win, viewport) {
   }
 
   for (const mode of ['Chat', 'Trajectory', 'Watch', 'Live', 'Memory', 'Library', 'Compare']) {
-    const ok = await win.webContents.executeJavaScript(
-      CLICK_BY_TEXT + "('[role=\"tab\"]', " + JSON.stringify(mode) + ')',
-    )
-    await wait(1200)
+    // Click, then read back which tab is selected.
+    //
+    // A click that lands on the right element is not the same as a mode that
+    // changed, and the difference is invisible in the resulting PNG unless
+    // somebody opens it and knows what each mode looks like. The first click
+    // of a pass is the one that misses: the tablist has just been re-rendered
+    // around a restored session, and the event arrives before it is live. That
+    // produced three files with one image in them — a workspace, a Chat and a
+    // Compare that were all Compare — and every one of them looked like a
+    // screenshot of something.
+    let selected = ''
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      await win.webContents.executeJavaScript(
+        CLICK_BY_TEXT + "('[role=\"tab\"]', " + JSON.stringify(mode) + ')',
+      )
+      await wait(1200)
+      selected = await win.webContents.executeJavaScript(SELECTED_TAB)
+      if (selected === mode) break
+    }
     await capture(win, p('05-mode-' + mode.toLowerCase()),
-      ok ? mode + ' mode' : mode + ' tab was not present, so nothing was photographed', ok)
+      selected === mode
+        ? mode + ' mode'
+        : 'the ' + mode + ' tab did not become active'
+          + (selected === '' ? ' and no tab is selected' : ', ' + selected + ' is')
+          + ', so nothing was photographed',
+      selected === mode)
   }
 
   // Settings, and every Watch section in it.
