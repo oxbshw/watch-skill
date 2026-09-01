@@ -164,7 +164,7 @@
       {
         "name": "@deepwatch/dsh-workspace",
         "version": "0.1.0-preview.0",
-        "integrity": "sha256:fd7ae430cda38b596fd51605653e116952c84f88f49c48db46d47abee21e70e0",
+        "integrity": "sha256:f6fa1107f3a18fe6e8b700b9536c29ecea7545fc0a6a2efc35bdf75d666c0c62",
         "sourceFiles": 15
       },
       {
@@ -185,7 +185,7 @@
       "creators": [
         "Tool: watch-gen-release-manifest"
       ],
-      "created": "2026-09-01T11:22:57Z"
+      "created": "2026-09-01T11:50:58Z"
     },
     "packages": [
       {
@@ -504,7 +504,7 @@
         "checksums": [
           {
             "algorithm": "SHA256",
-            "checksumValue": "fd7ae430cda38b596fd51605653e116952c84f88f49c48db46d47abee21e70e0"
+            "checksumValue": "f6fa1107f3a18fe6e8b700b9536c29ecea7545fc0a6a2efc35bdf75d666c0c62"
           }
         ]
       },

@@ -32,6 +32,32 @@
  *     slot `conversation` and is not exported, so owning it means
  *     reimplementing the whole conversation skeleton.
  *
+ * **And on a cold start it does not appear at all.** That is a second,
+ * separate upstream fact, and it is the one that decides what a person sees
+ * the first time they open DeepWatch:
+ *
+ *   - `ConversationRoot.tsx` renders this seat as
+ *     `zone !== undefined && renderSlot('conversation.input.dock', zone)`;
+ *   - `zone` is `undefined` whenever `session === undefined`, which is exactly
+ *     the cold-start hero (`sessionId === undefined`);
+ *   - `ConversationSession.tsx` independently returns `null` while
+ *     `blank && composerPhase === 'blank'`.
+ *
+ * So on a fresh profile the input dock is not mounted, this component is never
+ * called, and the hero shows upstream's headline with no DeepWatch sentence
+ * under it. Once a session exists the seat renders and the line appears.
+ *
+ * The hero's only slot is `conversation.hero.brand.mark`, and it is a 34px
+ * inline hitbox beside the headline span — a seat for a mark, not for a line
+ * of prose.
+ *
+ * **What would fix it upstream**, and either is a few lines: a
+ * `conversation.hero.headline` slot (which would also let the bare `Preview`
+ * badge become `DeepWatch Preview`), or a locale `override(ns, locale,
+ * partial)` API. Until one exists a distribution cannot own this screen
+ * without reimplementing the conversation skeleton, and hiding somebody
+ * else's text with a stylesheet is not ownership.
+ *
  * So this sits underneath rather than instead, in the one seat in the hero that
  * is a list and is genuinely free. Replacing the headline needs an upstream
  * `conversation.hero.headline` slot or a locale-override API; either is small,
