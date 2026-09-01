@@ -93,7 +93,10 @@ describe('an engine present but without the Bridge surface', () => {
     await withBridge({
       transport: 'auto',
       command: process.execPath,
-      args: [join(FIXTURES, 'core-without-bridge.mjs')],
+      // The subcommand travels with it, as it does in production
+      // (`watch-skill bridge`): that is what the transport matches the
+      // engine's usage error against.
+      args: [join(FIXTURES, 'core-without-bridge.mjs'), 'bridge'],
     }, async (ctx) => {
       const result = await ctx.watchCore.connect()
 

@@ -468,7 +468,21 @@ export class StdioTransport implements Transport {
   private surfaceMissing(): WatchFailure | null {
     const text = this.lastStderr.toLowerCase()
     const usage = /no such command|unrecognized arguments|invalid choice|unknown command/.test(text)
-    if (!usage || !text.includes('bridge')) return null
+    // The subcommands actually requested, not the literal `bridge`.
+    //
+    // Hardcoding the word meant this only fired when the engine happened to
+    // echo it, so a Core configured with different args reported
+    // `core_crashed` for a missing surface — the one diagnosis this check
+    // exists to prevent. Keying on `args[0]` was no better: when the command
+    // is an interpreter the first argument is a script path, not a
+    // subcommand.
+    //
+    // A subcommand is a bare word: no separator, no extension. Anything with
+    // either is a path, and a usage error that quotes a path is not this.
+    const subcommands = this.options.args
+      .filter(argument => !/[\\./]/.test(argument))
+      .map(argument => argument.toLowerCase())
+    if (!usage || !subcommands.some(name => text.includes(name))) return null
     return watchError(
       'bridge.bridge_surface_missing',
       `"${this.options.command}" is installed but has no "bridge" command, so this `

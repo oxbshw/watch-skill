@@ -344,11 +344,32 @@ jobs:
           # file that was sitting exactly where the message said it was.
           # GitHub sets GITHUB_WORKSPACE to the native path on every platform.
           root="$GITHUB_WORKSPACE"
-          if [ -x "$root/.venv-core/bin/watch-skill" ]; then
-            echo "WATCH_CORE_COMMAND=$root/.venv-core/bin/watch-skill" >> "$GITHUB_ENV"
-          else
-            echo "WATCH_CORE_COMMAND=$root/.venv-core/Scripts/watch-skill.exe" >> "$GITHUB_ENV"
-          fi
+
+          # Two more installs, outside the working tree, because the packed
+          # suite asks a different question than the ordinary one. A developer
+          # venv is an install of the *source*; it can import a module the
+          # wheel does not ship, and has. `packed` is the wheel a user would
+          # download, and `nobridge` is that same wheel with the command
+          # deleted from the installed package -- a Core predating the Bridge
+          # surface rather than a fixture imitating one.
+          outside="$(dirname "$root")/watch-core-ci"
+          mkdir -p "$outside"
+          uv build --wheel --out-dir "$outside/dist"
+          uv venv "$outside/packed"
+          uv pip install --python "$outside/packed" --quiet "$outside"/dist/*.whl
+          uv venv "$outside/nobridge"
+          uv pip install --python "$outside/nobridge" --quiet "$outside"/dist/*.whl
+          python scripts/disable_bridge_command.py "$outside/nobridge"
+
+          exe() {
+            if [ -x "$1/bin/watch-skill" ]; then echo "$1/bin/watch-skill"
+            else echo "$1/Scripts/watch-skill.exe"; fi
+          }
+          {
+            echo "WATCH_CORE_COMMAND=$(exe "$root/.venv-core")"
+            echo "WATCH_CORE_PACKED=$(exe "$outside/packed")"
+            echo "WATCH_CORE_NO_BRIDGE=$(exe "$outside/nobridge")"
+          } >> "$GITHUB_ENV"
 
       - name: Tests
         run: npm test
