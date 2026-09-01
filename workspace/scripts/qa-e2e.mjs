@@ -160,6 +160,35 @@ async function click(win, needle) {
   return true
 }
 
+
+/**
+ * Click the element directly, rather than aiming a mouse at its coordinates.
+ *
+ * The two are not interchangeable, and each covers what the other misses. The
+ * navigation in this application hangs off pointer handlers on ancestor
+ * `div`s, which only a real input event reaches; a `<button onClick>` deep in
+ * a scrolling dialog is the opposite case — `HTMLElement.click()` fires its
+ * handler wherever it happens to be, while coordinates have to survive a
+ * scroll container to arrive.
+ */
+const CLICK_DIRECT = `(function (needle) {
+  const candidates = [...document.querySelectorAll('button, a, [role="button"]')]
+    .filter(node => (node.innerText || node.textContent || '').trim().includes(needle))
+  if (candidates.length === 0) return false
+  candidates.sort((a, b) => {
+    const ta = (a.innerText || a.textContent || '').trim().length
+    const tb = (b.innerText || b.textContent || '').trim().length
+    return ta - tb
+  })
+  candidates[0].click()
+  return true
+})`
+
+/** Click by DOM, for a control whose handler is on the element itself. */
+function clickDirect(win, needle) {
+  return win.webContents.executeJavaScript(`${CLICK_DIRECT}(${JSON.stringify(needle)})`)
+}
+
 /**
  * Click, then wait until the page actually shows what the click was for.
  *
@@ -200,6 +229,9 @@ async function navigateTo(win, needle, selector, { tries = 20, retry = true } = 
     // toggles: clicking a row's "Choose a model" twice closes the editor the
     // first click opened, and the poll then correctly reports no select.
     if (attempt === 8 && retry) await click(win, needle)
+    // Halfway, try the other kind of click once. A `<button onClick>` inside a
+    // scrolling dialog is reached by the DOM and not always by coordinates.
+    if (attempt === 4) await clickDirect(win, needle)
   }
   log(`navigateTo: never saw ${selector} after clicking ${JSON.stringify(needle)}`)
   return false
@@ -345,6 +377,60 @@ async function providerPhase(win) {
   claim('credential-alone-is-not-ready', !/Chat[\s\S]{0,120}Ready/i.test(rolesAfter),
     { chatClaimedReady: /Chat[\s\S]{0,120}Ready/i.test(rolesAfter) })
 
+  // ── choosing a model, and assigning it to Chat ──────────────────────────
+  //
+  // The step the first manual run never reached. Everything above proves the
+  // product refuses to pretend; this proves it can be finished.
+  const editorOpen = await navigateTo(
+    win, 'Choose a model', 'select', { retry: false })
+  claim('model-chooser-opens', editorOpen, { reached: editorOpen })
+  if (!editorOpen) return
+
+  const chosenProvider = await choose(win, 'Provider', 'openrouter')
+  claim('binding-provider-offered', chosenProvider.ok, chosenProvider)
+
+  // The model list is DSH's bundled catalogue, not a read of the endpoint this
+  // provider is pointed at.
+  //
+  // Worth stating plainly, because the first version of this step assumed
+  // otherwise and looked for the stub's own model: with a custom base URL the
+  // list still shows OpenRouter's shipped catalogue, and the stub receives no
+  // request while it is drawn. That is a finding about the product, not about
+  // the harness, and it is why nothing here asserts live discovery.
+  //
+  // Which model is chosen does not matter to what this step is for. The
+  // question is *where the request goes*, the stub answers for any model id,
+  // and the runner counts what arrives.
+  await wait(3000)
+  const catalogue = await choose(win, 'Model', '*')
+  claim('binding-model-offered', catalogue.ok, {
+    chose: catalogue.chose ?? null,
+    note: 'from the bundled catalogue; this build does not read models from '
+      + 'the configured base URL',
+  })
+  await shot(win, 'model-selection', 'the model list offered for the provider')
+  if (!catalogue.ok) return
+
+  await clickDirect(win, 'Assign to Chat')
+  const bound = await text(win, 3500)
+  await shot(win, 'chat-bound', 'Chat assigned to an explicitly chosen model')
+  claim('chat-bound', !/Chat is not configured yet/i.test(bound), {
+    sample: bound.slice(bound.indexOf('Chat'), bound.indexOf('Chat') + 260),
+  })
+
+  // Persistence is what a reload tests: the Host writes the binding to the
+  // profile, so a binding that only lived in this tab's store would vanish.
+  await win.webContents.reload()
+  await wait(7000)
+  await click(win, 'Explore offline')
+  await navigate(win, 'Settings', 'Diagnostics')
+  await navigate(win, 'Role Bindings', 'Chat')
+  const afterReload = await text(win, 2500)
+  await shot(win, 'binding-persisted', 'the binding, after the browser reloaded')
+  claim('binding-survives-reload', !/Chat is not configured yet/i.test(afterReload), {
+    sample: afterReload.slice(afterReload.indexOf('Chat'), afterReload.indexOf('Chat') + 260),
+  })
+
   // What this harness does not yet cover, stated rather than implied.
   //
   // The pass ends here: everything above proves the product refuses to
@@ -372,11 +458,17 @@ async function providerPhase(win) {
  * not a click target in this layout.
  */
 const CHOOSE = `(function (aria, label) {
+  const named = (s) => {
+    const own = s.getAttribute('aria-label') || ''
+    const tied = s.labels && s.labels[0] ? s.labels[0].innerText : ''
+    return (own + ' ' + tied).toLowerCase()
+  }
   const select = [...document.querySelectorAll('select')]
-    .find(s => (s.getAttribute('aria-label') || '').toLowerCase().includes(aria.toLowerCase()))
+    .find(s => named(s).includes(aria.toLowerCase()))
   if (select === undefined) return { ok: false, why: 'no select matched ' + aria }
-  const option = [...select.options]
-    .find(o => (o.textContent || '').toLowerCase().includes(label.toLowerCase()))
+  const option = label === '*'
+    ? [...select.options].find(o => o.value !== '')
+    : [...select.options].find(o => (o.textContent || '').toLowerCase().includes(label.toLowerCase()))
   if (option === undefined) {
     return { ok: false, why: 'no option matched ' + label, options: [...select.options].map(o => o.textContent) }
   }
