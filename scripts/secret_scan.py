@@ -98,6 +98,8 @@ DELIBERATE: dict[tuple[str, str], str] = {
         "hostile inputs proving the index stores no absolute path",
     ("workspace/tests/library-index.test.mjs", "posix home path"):
         "hostile inputs proving the index stores no absolute path",
+    ("workspace/tests/stub-classification.test.mjs", "posix home path"):
+        "a synthetic path proving the request classifier reports absolute paths",
     ("workspace/scripts/verify-portability.mjs", "maintainer drive"):
         "the gate that detects drive letters, which has to contain one to match it",
     ("workspace/scripts/lib/manual-paths.mjs", "maintainer drive"):

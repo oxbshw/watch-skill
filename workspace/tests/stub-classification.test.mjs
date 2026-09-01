@@ -102,7 +102,7 @@ test('absolute paths are detected, and URLs are not paths', () => {
   const windows = turn({ system: 'Checkout at D:\\watch-handoff\\home\\harness\\.' })
   assert.equal(classifyCompletion(windows, PROMPT, STUB_API_KEY).mentionsAbsolutePath, true)
 
-  const posix = turn({ system: 'Workspace is /home/sayed/project.' })
+  const posix = turn({ system: 'Workspace is /home/example/project.' })
   assert.equal(classifyCompletion(posix, PROMPT, STUB_API_KEY).mentionsAbsolutePath, true)
 
   // `https://` ends in `s:/`, which a naive drive-letter pattern matches. The
