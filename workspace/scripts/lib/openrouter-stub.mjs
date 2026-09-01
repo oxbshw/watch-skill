@@ -128,6 +128,71 @@ function streamChunks(model) {
 }
 
 /**
+ * What a completion request *was*, rather than merely that one happened.
+ *
+ * One prompt does not produce one request, and a test that asserted it did
+ * would have been wrong about this product. A turn goes out carrying the
+ * agent's whole toolset; the Host then makes a second, toolless call whose
+ * system prompt asks for a session title. Both are legitimate, and the
+ * difference between them is structural — the toolset — not a matter of
+ * reading English out of a system prompt.
+ *
+ * The classification matters because the interesting failure is an
+ * *unrecognised* extra call. "Two requests arrived" is compatible with a
+ * silent retry, a second provider, or a background feature nobody reviewed
+ * sending the same text somewhere else. Naming each one turns that from a
+ * number into a claim.
+ *
+ * @param entry - one recorded request, as the stub stores it.
+ * @param promptText - the exact text the caller sent, so a turn can be
+ *   recognised by the message it carries rather than by its size.
+ * @param credential - the token that must never appear in a body.
+ */
+export function classifyCompletion(entry, promptText, credential) {
+  const body = entry.body ?? {}
+  const messages = Array.isArray(body.messages) ? body.messages : []
+  const toolCount = Array.isArray(body.tools) ? body.tools.length : 0
+  const asText = message => (typeof message.content === 'string'
+    ? message.content
+    : JSON.stringify(message.content ?? ''))
+
+  const carriesPromptVerbatim = messages.some(
+    message => message.role === 'user' && asText(message).trim() === promptText)
+  const titled = messages.some(
+    message => message.role === 'system'
+      && /concise title/i.test(asText(message)))
+
+  let kind = 'unrecognised'
+  if (toolCount > 0 && carriesPromptVerbatim) kind = 'turn'
+  else if (toolCount === 0 && titled) kind = 'session-title'
+
+  const whole = entry.raw ?? ''
+  return {
+    kind,
+    model: typeof body.model === 'string' ? body.model : null,
+    authorized: entry.authorized,
+    streamed: body.stream === true,
+    toolCount,
+    roles: messages.map(message => message.role),
+    bytes: whole.length,
+    /**
+     * Whether the payload contains a Windows or POSIX absolute path.
+     *
+     * Recorded, not forbidden. A coding agent is told where it is working, so
+     * its session workspace and the harness checkout reach the model by
+     * design — asserting their absence would fail against correct behaviour.
+     * What this flag is for is that the fact stays visible: the Bridge goes to
+     * real trouble to keep a machine's paths out of what it emits, and the
+     * Host's model context does not, so the two must not be described as if
+     * they had the same disclosure.
+     */
+    mentionsAbsolutePath: /(?:^|[^A-Za-z])[A-Za-z]:[\\/]|\/(?:home|Users)\//.test(whole),
+    /** The credential travels in a header. Finding it in a body is a defect. */
+    leaksCredential: whole.includes(credential),
+  }
+}
+
+/**
  * Start the stub provider.
  *
  * @param options.failWith - answer every completion with this status instead,
