@@ -57,9 +57,22 @@ app.whenReady().then(async () => {
     })
   })
 
+  // Long enough for a cold machine to start Electron for the first time.
+  //
+  // Twenty seconds was the budget, and a Windows CI runner missed it while
+  // running exactly the code that had passed on the same runner two commits
+  // earlier. A smoke test that fails on how busy the machine is teaches people
+  // that red means nothing, which costs more than the minutes it saves.
+  //
+  // Still bounded, and still well inside the harness's own 90s cap, so a
+  // renderer that genuinely never answers is reported rather than waited on.
+  const budgetMs = Number(process.env.WATCH_SMOKE_RENDERER_MS ?? '60000')
   const timeout = setTimeout(() => {
-    finish({ ok: false, reason: 'the renderer did not answer within 20s' })
-  }, 20_000)
+    finish({
+      ok: false,
+      reason: `the renderer did not answer within ${String(Math.round(budgetMs / 1000))}s`,
+    })
+  }, budgetMs)
   timeout.unref?.()
 
   try {
