@@ -90,7 +90,9 @@ function packedCore() {
   // read, so the next person is not guessing either.
   const probe = spawnSync(named, ['--help'], { encoding: 'utf8', timeout: 180_000 })
   const help = `${probe.stdout ?? ''}\n${probe.stderr ?? ''}`
-  if (!/bridge/.test(help)) {
+  // A UTF-16 console leaves a NUL between every character, which is how a
+  // help output plainly containing the word failed to match it.
+  if (!/bridge/.test(help.split('\0').join(''))) {
     return {
       path: null,
       why: 'the named executable has no `bridge` command '

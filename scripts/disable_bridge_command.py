@@ -14,13 +14,52 @@ producing something that merely looks disabled.
 from __future__ import annotations
 
 import re
+import subprocess
 import sys
 from pathlib import Path
 
 COMMAND = re.compile(r"@app\.command\(\)\ndef bridge\(.*?\n\n\n", re.S)
 
 
+def has_bridge(exe: Path) -> bool:
+    """Whether an installed Core offers the `bridge` command.
+
+    Asked here rather than with a shell pipeline. The engine renders its help
+    through Rich, and reading that back through `grep` turned out to depend on
+    the console encoding a pipe negotiates: the word was plainly in the output
+    and the pipeline did not find it, on every platform at least once.
+    Decoding the bytes explicitly, and tolerating what will not decode, removes
+    the guesswork.
+    """
+    result = subprocess.run(
+        [str(exe), "--help"], capture_output=True, timeout=300, check=False
+    )
+    text = (result.stdout + b"\n" + result.stderr).decode("utf-8", "replace")
+    if "bridge" in text:
+        return True
+    # A UTF-16 console leaves a NUL between every character; strip them and
+    # look again before concluding the command is absent.
+    return "bridge" in text.replace("\x00", "")
+
+
+def verify(mode: str, exe: Path) -> int:
+    """Assert the provisioning is what the caller intended, and say what it saw."""
+    present = has_bridge(exe)
+    if mode == "--verify-has-bridge" and not present:
+        print(f"{exe} has no bridge command; the packed suite would skip", file=sys.stderr)
+        return 1
+    if mode == "--verify-lacks-bridge" and present:
+        print(f"{exe} still has the bridge command; the counterfactual is vacuous",
+              file=sys.stderr)
+        return 1
+    verb = "has" if present else "does not have"
+    print(f"verified: {exe} {verb} the bridge command")
+    return 0
+
+
 def main() -> int:
+    if len(sys.argv) == 3 and sys.argv[1].startswith("--verify-"):
+        return verify(sys.argv[1], Path(sys.argv[2]))
     if len(sys.argv) != 2:
         print(__doc__, file=sys.stderr)
         return 2
