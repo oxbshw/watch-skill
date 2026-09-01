@@ -33,6 +33,8 @@ import { fileURLToPath } from 'node:url'
 const HERE = dirname(fileURLToPath(import.meta.url))
 const URL = process.env['WATCH_E2E_URL'] ?? 'http://127.0.0.1:8931'
 const STUB = process.env['WATCH_E2E_STUB'] ?? ''
+/** The fake credential the stub accepts. Never a real one, by construction. */
+const STUB_KEY = process.env['WATCH_E2E_STUB_KEY'] ?? 'sk-stub-not-a-real-key-0000'
 const OUT = process.env['WATCH_E2E_OUT'] ?? join(HERE, '..', 'qa', 'e2e')
 const LOG = join(OUT, 'e2e.log')
 
@@ -173,6 +175,26 @@ async function navigate(win, needle, expect, tries = 20) {
   return false
 }
 
+/**
+ * Click, then wait until a selector appears.
+ *
+ * `navigate` polls visible text, which is right for a screen with a heading
+ * and wrong for a form whose fields are labelled by `aria-label` — those never
+ * appear in `innerText`, so waiting for one reported a form that had opened.
+ */
+async function navigateTo(win, needle, selector, tries = 20) {
+  await click(win, needle)
+  for (let attempt = 0; attempt < tries; attempt += 1) {
+    const there = await win.webContents.executeJavaScript(
+      `document.querySelector(${JSON.stringify(selector)}) !== null`)
+    if (there) return true
+    await wait(400)
+    if (attempt === 8) await click(win, needle)
+  }
+  log(`navigateTo: never saw ${selector} after clicking ${JSON.stringify(needle)}`)
+  return false
+}
+
 /** Dismiss the DeepWatch onboarding, counting how many dialogs appeared. */
 async function dismissOnboarding(win) {
   const before = await text(win, 1800)
@@ -188,6 +210,157 @@ async function dismissOnboarding(win) {
   await click(win, 'Explore offline')
   await wait(1200)
   return before
+}
+
+
+/** Every field and control on screen, for the log when a step cannot proceed. */
+const INVENTORY = `(function () {
+  const fields = [...document.querySelectorAll('input, textarea, select')].map(f => ({
+    tag: f.tagName, type: f.type || '', name: f.name || '', id: f.id || '',
+    placeholder: f.placeholder || '', aria: f.getAttribute('aria-label') || '',
+    label: (f.labels && f.labels[0] ? f.labels[0].innerText : '').trim(),
+  }))
+  const buttons = [...document.querySelectorAll('button, [role="button"]')]
+    .map(b => (b.innerText || '').trim()).filter(s => s !== '').slice(0, 60)
+  return JSON.stringify({ fields, buttons })
+})`
+
+/** Fill a field the way a controlled React input requires. */
+const FILL = `(function (match, value) {
+  const fields = [...document.querySelectorAll('input, textarea')]
+  const target = fields.find((f) => {
+    const hay = [f.name, f.id, f.placeholder, f.getAttribute('aria-label') || '',
+      (f.labels && f.labels[0] ? f.labels[0].innerText : '')].join(' ').toLowerCase()
+    return hay.includes(match.toLowerCase())
+  })
+  if (target === undefined) return false
+  const proto = target instanceof HTMLTextAreaElement
+    ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype
+  Object.getOwnPropertyDescriptor(proto, 'value').set.call(target, value)
+  target.dispatchEvent(new Event('input', { bubbles: true }))
+  target.dispatchEvent(new Event('change', { bubbles: true }))
+  return true
+})`
+
+/** Log what is on screen, so a stuck step names what it could not find. */
+async function inventory(win, label) {
+  const found = JSON.parse(await win.webContents.executeJavaScript(`${INVENTORY}()`))
+  log(`inventory ${label} :: ${JSON.stringify(found)}`)
+  return found
+}
+
+/** Fill a field by any of its identifying strings. */
+function fill(win, match, value) {
+  return win.webContents.executeJavaScript(
+    `${FILL}(${JSON.stringify(match)}, ${JSON.stringify(value)})`)
+}
+
+/**
+ * Configure the stub provider through the real Models screen.
+ *
+ * Skipped when no stub URL is supplied, because the alternative is reaching a
+ * provider on the public internet, which this harness must never do.
+ */
+async function providerPhase(win) {
+  if (STUB === '') {
+    log('provider phase skipped: WATCH_E2E_STUB is not set')
+    return
+  }
+
+  const reachedList = await navigate(win, 'Models', 'Add provider')
+  claim('models-screen', reachedList, { reached: reachedList })
+  await shot(win, 'models-screen', 'the Models screen before anything is configured')
+  if (!reachedList) return
+
+  // A fresh profile has no providers, so one is added rather than edited.
+  // That is the flow a person follows, and the flow the first manual run took.
+  const opened = await navigateTo(win, 'Add provider', 'select[aria-label*="Provider" i]')
+  claim('provider-form-opens', opened, { reached: opened })
+  const form = await inventory(win, 'provider-form')
+  await shot(win, 'provider-form', 'the add-provider form, before anything is entered')
+  if (!opened) return
+
+  // The catalogue lists providers that are *not yet configured*, so a profile
+  // that already has one offers a shorter list. That is correct behaviour and
+  // it makes this phase order-dependent: it must run against a profile nobody
+  // has configured, which is what `WATCH_E2E_URL` is expected to point at.
+  //
+  // Saying so is the point. A run that silently adapted to a configured
+  // profile would report "provider saved" without having saved anything, and
+  // this whole file exists because a green report was trusted once already.
+  const picked = await choose(win, 'Provider', 'openrouter')
+  if (!picked.ok && Array.isArray(picked.options) && !picked.options.includes('openrouter')) {
+    claim('provider-phase-needs-fresh-profile', false, {
+      why: 'openrouter is already configured in this profile, so the add-provider '
+        + 'catalogue no longer offers it; point WATCH_E2E_URL at a fresh profile',
+      offered: picked.options,
+    })
+    return
+  }
+  claim('provider-openrouter-offered', picked.ok, picked)
+  if (!picked.ok) return
+
+  // The stub, never a public host. Each fill reports whether the field was
+  // found, so a renamed label is a named failure rather than a silent no-op.
+  const setUrl = await fill(win, 'base url', `${STUB}/v1`)
+  const setKey = await fill(win, 'api key', STUB_KEY)
+  claim('provider-fields-filled', setUrl && setKey,
+    { baseUrl: setUrl, apiKey: setKey, fields: form.fields.length })
+
+  // "Apply", not "Save": the form's own word, discovered by inventorying it
+  // rather than assumed. A harness that guesses a button label fails in a way
+  // that reads as a product defect.
+  await inventory(win, 'provider-form-filled')
+  await click(win, 'Apply')
+  const afterSave = await text(win, 3000)
+  await shot(win, 'provider-saved', 'the provider saved, and not yet assigned to a role')
+  claim('credential-saved', /Saved openrouter/i.test(afterSave),
+    { sawSaved: /Saved openrouter/i.test(afterSave) })
+
+  // Where the distinction actually has to appear. The Models screen says the
+  // credential was stored; Role Bindings is the screen that must refuse to
+  // call that readiness, which is the exact confusion the first manual run hit.
+  await navigate(win, 'Role Bindings', 'Chat')
+  const rolesAfter = await text(win, 2000)
+  await shot(win, 'saved-not-assigned', 'a stored credential that is still assigned to nothing')
+
+  // The sentence the first manual run never showed: a stored credential is
+  // not an assignment, and the product has to say so before anybody sends.
+  claim('saved-not-assigned',
+    /not (yet )?assigned|Nothing assigned|Choose models and roles|Not configured/i.test(rolesAfter),
+    { sample: rolesAfter.slice(rolesAfter.indexOf('Chat'), rolesAfter.indexOf('Chat') + 320) })
+  claim('credential-alone-is-not-ready', !/Chat[\s\S]{0,120}Ready/i.test(rolesAfter),
+    { chatClaimedReady: /Chat[\s\S]{0,120}Ready/i.test(rolesAfter) })
+}
+
+/**
+ * Choose an option in a native `<select>`, the way the framework hears it.
+ *
+ * The provider catalogue is a select rather than a list of clickable names,
+ * which is why clicking the provider's text found nothing: an `<option>` is
+ * not a click target in this layout.
+ */
+const CHOOSE = `(function (aria, label) {
+  const select = [...document.querySelectorAll('select')]
+    .find(s => (s.getAttribute('aria-label') || '').toLowerCase().includes(aria.toLowerCase()))
+  if (select === undefined) return { ok: false, why: 'no select matched ' + aria }
+  const option = [...select.options]
+    .find(o => (o.textContent || '').toLowerCase().includes(label.toLowerCase()))
+  if (option === undefined) {
+    return { ok: false, why: 'no option matched ' + label, options: [...select.options].map(o => o.textContent) }
+  }
+  Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value').set.call(select, option.value)
+  select.dispatchEvent(new Event('input', { bubbles: true }))
+  select.dispatchEvent(new Event('change', { bubbles: true }))
+  return { ok: true, chose: option.textContent }
+})`
+
+/** Choose an option and report what the page offered when it could not. */
+async function choose(win, aria, label) {
+  const outcome = JSON.parse(await win.webContents.executeJavaScript(
+    `JSON.stringify(${CHOOSE}(${JSON.stringify(aria)}, ${JSON.stringify(label)}))`))
+  if (!outcome.ok) log(`choose failed :: ${JSON.stringify(outcome)}`)
+  return outcome
 }
 
 async function main() {
@@ -244,6 +417,8 @@ async function main() {
     { boundToDeepSeek: deepseekBinding, attributionPresent: /Built on DeepSeek Harness/.test(roles) })
   claim('nothing-assigned', roles.includes('Nothing assigned'),
     { sawNothingAssigned: roles.includes('Nothing assigned') })
+
+  await providerPhase(win)
 
   // ── Diagnostics reads the running system ────────────────────────────────
   const reachedDiagnostics = await navigate(win, 'Diagnostics', 'CAPABILITY READINESS')
