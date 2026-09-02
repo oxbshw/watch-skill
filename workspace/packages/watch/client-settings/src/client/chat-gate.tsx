@@ -193,6 +193,7 @@ export function ChatGate({ sessionId, store, blocks }: ChatGateProps): ReactNode
                 type="button"
                 style={CONTROL.primary}
                 disabled={!snapshot.writable || snapshot.testingRole !== null}
+                aria-describedby={snapshot.writable ? undefined : 'watch-chat-gate-readonly'}
                 onClick={() => {
                   if (chat.primaryBlocker === 'provider_untested') void store.testRole(PRIMARY_ROLE)
                   else setOpen(true)
@@ -200,6 +201,15 @@ export function ChatGate({ sessionId, store, blocks }: ChatGateProps): ReactNode
               >
                 {snapshot.testingRole === PRIMARY_ROLE ? 'Testing provider…' : card.action}
               </button>
+              {snapshot.writable
+                ? null
+                : (
+                    <span id="watch-chat-gate-readonly" style={{ fontSize: '12px', color: 'var(--dsw-alias-label-tertiary)' }}>
+                      This Workspace cannot change settings here, so Chat cannot
+                      be bound from this screen. What is shown is still read from
+                      the running system.
+                    </span>
+                  )}
               <span style={{ fontSize: '12px', color: 'var(--dsw-alias-label-tertiary)' }}>
                 {/* Named rather than linked: the settings panel's open state is
                     local to its own component, so nothing can navigate there,

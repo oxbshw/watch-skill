@@ -281,6 +281,7 @@ function RoleCard(
                 type="button"
                 style={CONTROL.primary}
                 disabled={!snapshot.writable}
+                aria-describedby={snapshot.writable ? undefined : 'watch-bindings-readonly'}
                 onClick={() => { onEdit(row.role) }}
               >
                 {row.model === null ? 'Choose a model' : 'Change model'}
@@ -307,6 +308,7 @@ function RoleCard(
                       type="button"
                       style={CONTROL.quiet}
                       disabled={!snapshot.writable || snapshot.saving}
+                      aria-describedby={snapshot.writable ? undefined : 'watch-bindings-readonly'}
                       onClick={() => { void store.unbind(row.role) }}
                     >
                       {`Unassign ${ROLE_LABEL[row.role]}`}
@@ -450,6 +452,27 @@ export function RoleBindings({ store }: RoleBindingsProps): ReactNode {
         assigns itself.
       </p>
 
+      {/* Every control below is disabled when the Harness will not accept a
+          settings write, and three greyed-out buttons with no reason is the
+          kind of screen a person blames themselves for. The reason is stated
+          once, here, and referenced by the controls it explains. */}
+      {snapshot.writable
+        ? null
+        : (
+            <div id="watch-bindings-readonly" style={{ ...T.card, borderStyle: 'dashed' }}>
+              <div style={T.cardHead}>
+                <h3 style={T.title}>Settings are read-only</h3>
+                <StatusChip tone="caution">Not writable</StatusChip>
+              </div>
+              <p style={{ ...T.lead, margin: '8px 0 0' }}>
+                This Workspace was opened against a configuration the Harness
+                will not let it change, so assignments cannot be edited here.
+                Nothing is wrong with the capabilities themselves — what is
+                shown below is accurate and read from the running system.
+              </p>
+            </div>
+          )}
+
       {/* The one thing a person has to finish before a conversation works, at
           the top and stated as a fact rather than a warning. It disappears the
           moment Chat can run, so a configured product is not still being told
@@ -470,6 +493,7 @@ export function RoleBindings({ store }: RoleBindingsProps): ReactNode {
                   type="button"
                   style={CONTROL.primary}
                   disabled={!snapshot.writable}
+                  aria-describedby={snapshot.writable ? undefined : 'watch-bindings-readonly'}
                   onClick={() => { setEditing(PRIMARY_ROLE) }}
                 >
                   Choose models and roles
