@@ -48,7 +48,7 @@ client yourself:
   "mcpServers": {
     "watch-skill": {
       "command": "uv",
-      "args": ["run", "--project", "/path/to/watch-skill", "watch-skill", "serve"]
+      "args": ["run", "--project", "<watch-skill-checkout>", "watch-skill", "serve"]
     }
   }
 }

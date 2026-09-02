@@ -128,12 +128,15 @@ reports as "contract unverified" while continuing to work.
 
 Regenerate with `python scripts/gen_bridge_schemas.py` in `watch-skill`.
 
-## Repository split
+## The two halves, and their release trains
 
-| Repository | Contents | Release train |
-|---|---|---|
-| `watch-skill` | Python Core, MCP, REST, CLI, Bridge, contracts, evals | PyPI |
-| `watch-workspace` | DSH distribution, Watch plugins, Web, Desktop | npm |
+One repository, `oxbshw/watch-skill`, and two products in it that ship
+separately.
+
+| Half | Where | Contents | Release train |
+|---|---|---|---|
+| Watch Skill | repository root | Python Core, MCP, REST, CLI, Bridge, contracts, evals | PyPI, `core-v*` |
+| DeepWatch | `workspace/` | DSH distribution, Watch plugins, Web, Desktop | npm, `deepwatch-v*` |
 
 Watch Core runs headless with no Node present, and DSH boots with no Watch
 present. Both directions are tested. See

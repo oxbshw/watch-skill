@@ -270,6 +270,11 @@ jobs:
       - name: Two packs of this commit produce the same twenty archives
         run: npm run verify:pack-reproducible
 
+      # With tarballs on disk, this also reads every document inside them --
+      # which is the copy a person sees on the registry page.
+      - name: Nothing stale, unfinished or personal on the release surface
+        run: npm run verify:release-surface
+
   # The real Web journey: stock DSH Host, artifact-built DeepWatch profile,
   # packed Watch Core and an OpenRouter-compatible loopback provider. The
   # uploaded report is intentionally smaller than the local diagnostic set.

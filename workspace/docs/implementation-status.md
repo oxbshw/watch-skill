@@ -19,8 +19,8 @@ Baseline: DeepSeek Harness `0.1.1-rc.2 @ b150a551b8d465e31e418e1b2eaf5e79bbb7d28
 
 | Subsystem | Status | Owner | Tests |
 |---|---|---|---|
-| `foundation.parity-register` — Every DSH client product capability classified, enforced by a gate | ✅ tested | watch-workspace | 1 |
-| `foundation.upstream-lock` — Pinned DSH baseline, consumed as published packages | ✅ tested | watch-workspace | 1 |
+| `foundation.parity-register` — Every DSH client product capability classified, enforced by a gate | ✅ tested | DeepWatch | 1 |
+| `foundation.upstream-lock` — Pinned DSH baseline, consumed as published packages | ✅ tested | DeepWatch | 1 |
 
 <details><summary>Known limitations</summary>
 
@@ -34,8 +34,8 @@ Baseline: DeepSeek Harness `0.1.1-rc.2 @ b150a551b8d465e31e418e1b2eaf5e79bbb7d28
 
 | Subsystem | Status | Owner | Tests |
 |---|---|---|---|
-| `bridge.transport` — JSON-RPC over stdio with deadlines, cancellation, correlation, idempotency | ✅ tested | watch-workspace | 3 |
-| `bundle.install` — Watch for DSH bundle installs into a stock profile | ✅ tested | watch-workspace | 3 |
+| `bridge.transport` — JSON-RPC over stdio with deadlines, cancellation, correlation, idempotency | ✅ tested | DeepWatch | 3 |
+| `bundle.install` — Watch for DSH bundle installs into a stock profile | ✅ tested | DeepWatch | 3 |
 
 <details><summary>Known limitations</summary>
 
@@ -56,11 +56,11 @@ Baseline: DeepSeek Harness `0.1.1-rc.2 @ b150a551b8d465e31e418e1b2eaf5e79bbb7d28
 | Subsystem | Status | Owner | Tests |
 |---|---|---|---|
 | `bridge.contracts` — Pydantic-sourced wire contracts with digest drift detection | ✅ tested | both | 2 |
-| `core.bridge-surface` — Watch Core Bridge: handshake, capability truth, sensory and operator methods | ✅ tested | watch-skill | 1 |
-| `evidence.inspector` — Evidence Inspector showing resolved records | ✅ tested | watch-workspace | 2 |
-| `tools.agent-surface` — Watch capabilities as DSH agent tools | ✅ tested | watch-workspace | 1 |
-| `trajectory.records` — Watch records in DSH's own event system, with replay determinism | ✅ tested | watch-workspace | 2 |
-| `trajectory.selection` — Unified Selection Model and deep links | ✅ tested | watch-workspace | 2 |
+| `core.bridge-surface` — Watch Core Bridge: handshake, capability truth, sensory and operator methods | ✅ tested | Watch Skill | 1 |
+| `evidence.inspector` — Evidence Inspector showing resolved records | ✅ tested | DeepWatch | 2 |
+| `tools.agent-surface` — Watch capabilities as DSH agent tools | ✅ tested | DeepWatch | 1 |
+| `trajectory.records` — Watch records in DSH's own event system, with replay determinism | ✅ tested | DeepWatch | 2 |
+| `trajectory.selection` — Unified Selection Model and deep links | ✅ tested | DeepWatch | 2 |
 
 <details><summary>Known limitations</summary>
 
@@ -91,7 +91,7 @@ Baseline: DeepSeek Harness `0.1.1-rc.2 @ b150a551b8d465e31e418e1b2eaf5e79bbb7d28
 
 | Subsystem | Status | Owner | Tests |
 |---|---|---|---|
-| `browser.operator` — Browser operator with durable receipts and approval gating | ✅ tested | watch-skill | 1 |
+| `browser.operator` — Browser operator with durable receipts and approval gating | ✅ tested | Watch Skill | 1 |
 
 <details><summary>Known limitations</summary>
 
@@ -105,10 +105,10 @@ Baseline: DeepSeek Harness `0.1.1-rc.2 @ b150a551b8d465e31e418e1b2eaf5e79bbb7d28
 
 | Subsystem | Status | Owner | Tests |
 |---|---|---|---|
-| `memory.compiler` — Context Compiler with inclusion trace and token budget | ✅ tested | watch-workspace | 1 |
-| `memory.ledger` — MemoryEvent ledger, correction precedence, real forgetting | ✅ tested | watch-workspace | 2 |
-| `memory.projections` — Deterministic taste.md, index.md and log.md | ✅ tested | watch-workspace | 1 |
-| `memory.tools` — Memory in the agent loop, bounded by ADR-008 | ✅ tested | watch-workspace | 1 |
+| `memory.compiler` — Context Compiler with inclusion trace and token budget | ✅ tested | DeepWatch | 1 |
+| `memory.ledger` — MemoryEvent ledger, correction precedence, real forgetting | ✅ tested | DeepWatch | 2 |
+| `memory.projections` — Deterministic taste.md, index.md and log.md | ✅ tested | DeepWatch | 1 |
+| `memory.tools` — Memory in the agent loop, bounded by ADR-008 | ✅ tested | DeepWatch | 1 |
 
 <details><summary>Known limitations</summary>
 
@@ -132,14 +132,14 @@ Baseline: DeepSeek Harness `0.1.1-rc.2 @ b150a551b8d465e31e418e1b2eaf5e79bbb7d28
 
 | Subsystem | Status | Owner | Tests |
 |---|---|---|---|
-| `brand.package` — Watch brand and theme over DSH's token system | ✅ tested | watch-workspace | 2 |
+| `brand.package` — Watch brand and theme over DSH's token system | ✅ tested | DeepWatch | 2 |
 | `i18n.evidence` — Language-aware evidence contract | ✅ tested | both | 4 |
-| `memory.product-ui` — Memory surfaces: taste, timeline, wiki, decisions, lessons, failures | ✅ tested | watch-workspace | 1 |
+| `memory.product-ui` — Memory surfaces: taste, timeline, wiki, decisions, lessons, failures | ✅ tested | DeepWatch | 1 |
 | `ocr.engines` — OCR engine family with isolated workers | ✅ tested | both | 3 |
-| `providers.role-bindings` — Role bindings over DSH Models and Providers | ✅ tested | watch-workspace | 3 |
-| `technology.center` — Technology descriptors and capability lifecycle | ✅ tested | watch-workspace | 2 |
-| `workspace.composer` — Composer extensions: sources, scope, observe, remember, act, verify, budget, privacy | ✅ tested | watch-workspace | 1 |
-| `workspace.modes` — Agent / Watch / Live / Memory / Library / Compare / Trajectory modes | ✅ tested | watch-workspace | 1 |
+| `providers.role-bindings` — Role bindings over DSH Models and Providers | ✅ tested | DeepWatch | 3 |
+| `technology.center` — Technology descriptors and capability lifecycle | ✅ tested | DeepWatch | 2 |
+| `workspace.composer` — Composer extensions: sources, scope, observe, remember, act, verify, budget, privacy | ✅ tested | DeepWatch | 1 |
+| `workspace.modes` — Agent / Watch / Live / Memory / Library / Compare / Trajectory modes | ✅ tested | DeepWatch | 1 |
 
 <details><summary>Known limitations</summary>
 
@@ -192,13 +192,13 @@ Baseline: DeepSeek Harness `0.1.1-rc.2 @ b150a551b8d465e31e418e1b2eaf5e79bbb7d28
 
 | Subsystem | Status | Owner | Tests |
 |---|---|---|---|
-| `adapters.llmwiki` — LLMWiki-compatible import and export | ✅ tested | watch-workspace | 1 |
-| `adapters.obsidian` — Optional Obsidian vault adapter | ✅ tested | watch-workspace | 1 |
-| `compare.surface` — Compare runs, revisions and before/after states | ✅ tested | watch-workspace | 3 |
-| `library.surface` — Library of sources and evidence, separate from memory | ✅ tested | watch-workspace | 2 |
-| `live.surface` — Live mode with gaps, clocks and reconnect | ✅ tested | watch-workspace | 4 |
-| `memory.governed-learning` — Candidate lifecycle with eval, promotion, canary and rollback | ✅ tested | watch-workspace | 2 |
-| `wiki.projections` — Workspace wiki projections with provenance | ✅ tested | watch-workspace | 1 |
+| `adapters.llmwiki` — LLMWiki-compatible import and export | ✅ tested | DeepWatch | 1 |
+| `adapters.obsidian` — Optional Obsidian vault adapter | ✅ tested | DeepWatch | 1 |
+| `compare.surface` — Compare runs, revisions and before/after states | ✅ tested | DeepWatch | 3 |
+| `library.surface` — Library of sources and evidence, separate from memory | ✅ tested | DeepWatch | 2 |
+| `live.surface` — Live mode with gaps, clocks and reconnect | ✅ tested | DeepWatch | 4 |
+| `memory.governed-learning` — Candidate lifecycle with eval, promotion, canary and rollback | ✅ tested | DeepWatch | 2 |
+| `wiki.projections` — Workspace wiki projections with provenance | ✅ tested | DeepWatch | 1 |
 
 <details><summary>Known limitations</summary>
 
@@ -247,7 +247,7 @@ Baseline: DeepSeek Harness `0.1.1-rc.2 @ b150a551b8d465e31e418e1b2eaf5e79bbb7d28
 
 | Subsystem | Status | Owner | Tests |
 |---|---|---|---|
-| `desktop.shell` — Electron shell around the same Workspace packages | ✅ tested | watch-workspace | 4 |
+| `desktop.shell` — Electron shell around the same Workspace packages | ✅ tested | DeepWatch | 4 |
 
 <details><summary>Known limitations</summary>
 
@@ -265,9 +265,9 @@ Baseline: DeepSeek Harness `0.1.1-rc.2 @ b150a551b8d465e31e418e1b2eaf5e79bbb7d28
 
 | Subsystem | Status | Owner | Tests |
 |---|---|---|---|
-| `ecosystem.sdk` — Third-party Watch capability developer path | ✅ tested | watch-workspace | 1 |
+| `ecosystem.sdk` — Third-party Watch capability developer path | ✅ tested | DeepWatch | 1 |
 | `security.offline-proof` — Socket-level proof that offline_only means zero non-loopback egress | ✅ tested | both | 1 |
-| `supply-chain.metadata` — SBOM, licences, notices and model provenance gates | ✅ tested | watch-workspace | 3 |
+| `supply-chain.metadata` — SBOM, licences, notices and model provenance gates | ✅ tested | DeepWatch | 3 |
 
 <details><summary>Known limitations</summary>
 
@@ -298,7 +298,7 @@ Baseline: DeepSeek Harness `0.1.1-rc.2 @ b150a551b8d465e31e418e1b2eaf5e79bbb7d28
 
 | Subsystem | Status | Owner | Tests |
 |---|---|---|---|
-| `team.tenancy` — Tenant model, RBAC, remote workers and audit | ✅ tested | watch-workspace | 1 |
+| `team.tenancy` — Tenant model, RBAC, remote workers and audit | ✅ tested | DeepWatch | 1 |
 
 <details><summary>Known limitations</summary>
 
