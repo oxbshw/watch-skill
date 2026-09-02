@@ -22,7 +22,7 @@
  */
 
 import { app, BrowserWindow } from 'electron'
-import { writeFileSync, mkdirSync, appendFileSync, rmSync, readFileSync } from 'node:fs'
+import { writeFileSync, mkdirSync, appendFileSync, rmSync, readFileSync, existsSync } from 'node:fs'
 import { join, dirname, relative, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { tmpdir } from 'node:os'
@@ -51,6 +51,38 @@ const portablePath = (absolute) => {
 
 const URL = process.env.WATCH_QA_URL ?? 'http://127.0.0.1:8931'
 const OUT = manualPath('WATCH_QA_OUT', ['qa', 'screenshots'])
+const SCENARIO_REPORT_PATH = process.env.WATCH_QA_SCENARIO_REPORT ?? ''
+
+/**
+ * Only non-secret, reviewer-useful fields cross from the E2E report into the
+ * screenshot evidence. In particular, URLs, filesystem paths, credentials and
+ * raw provider responses are never copied.
+ */
+function safeScenario() {
+  if (SCENARIO_REPORT_PATH === '' || !existsSync(SCENARIO_REPORT_PATH)) return null
+  const report = JSON.parse(readFileSync(SCENARIO_REPORT_PATH, 'utf8'))
+  return {
+    schemaVersion: report.schemaVersion,
+    scenario: report.scenario,
+    result: report.result,
+    provider: report.provider,
+    providerLabel: report.providerLabel
+      ?? (report.provider === 'openrouter-e2e' ? 'OpenRouter QA (local stub)' : null),
+    model: report.model,
+    modelLabel: report.modelLabel
+      ?? (report.model === 'stub/echo-small' ? 'Stub Echo Small' : null),
+    // Copied, never defaulted. `?? 'connected'` here meant a report that had
+    // not observed the engine still described a connected one, and the
+    // Diagnostics verdict downstream is decided by exactly this field.
+    core: report.core ?? null,
+    coreTransport: report.coreTransport ?? null,
+    coreVersion: report.coreVersion ?? null,
+    requestClassification: report.requestClassification,
+    failureScenarios: report.failureScenarios,
+  }
+}
+
+const SCENARIO = safeScenario()
 
 /**
  * A session with history, so the mode tabs are actually mounted.
@@ -64,9 +96,19 @@ const SESSION_ID = process.env.WATCH_QA_SESSION ?? ''
 const SESSION_CWD = process.env.WATCH_QA_CWD ?? process.cwd()
 
 /** Desktop, and a narrower desktop window — both sizes the product supports. */
+/**
+ * The widths this product is claimed to work at, and why these three.
+ *
+ * 1440 is the desktop case. The other two sit on the breakpoints the
+ * stylesheets actually declare — the mode surfaces reflow at 760px and the
+ * first-run card goes single-column at 620px — so a capture at 1024 was
+ * evidence for neither. A responsive claim is only as good as the width it
+ * was photographed at.
+ */
 const VIEWPORTS = [
   { name: 'wide', width: 1440, height: 900 },
-  { name: 'narrow', width: 1024, height: 720 },
+  { name: 'narrow', width: 768, height: 1024 },
+  { name: 'compact', width: 600, height: 900 },
 ]
 
 /**
@@ -89,6 +131,12 @@ const VIEWPORTS = [
 const QA_PROFILE = process.env.WATCH_QA_PROFILE
   ?? join(tmpdir(), 'watch-qa-capture-profile')
 
+// Removed before it is created, not only after it is used. Whether the
+// first-run notice appears at all is decided by this directory: a run that
+// did not exit cleanly leaves it behind, and the next capture then reports
+// "already dismissed in this profile" about a profile nobody dismissed
+// anything in — and photographs nothing for the first screen of the product.
+rmSync(QA_PROFILE, { recursive: true, force: true })
 mkdirSync(QA_PROFILE, { recursive: true })
 app.setPath('userData', QA_PROFILE)
 app.setPath('sessionData', join(QA_PROFILE, 'session'))
@@ -210,6 +258,82 @@ async function repainted(win) {
   )
 }
 
+/**
+ * Small, structured facts from the frame that was photographed.
+ *
+ * This is intentionally not a DOM dump. It records only named product claims
+ * and exact matches against the sanitized E2E scenario, so the committed
+ * evidence cannot contain a credential, host path or arbitrary conversation.
+ */
+async function captureFacts(win) {
+  return win.webContents.executeJavaScript(`(function (expected) {
+    var bodyText = document.body ? document.body.innerText : ''
+    var dialog = document.querySelector('[role="dialog"]')
+    var text = dialog ? dialog.innerText : bodyText
+    var exact = function (value) {
+      return typeof value === 'string' && value.length > 0 ? text.indexOf(value) !== -1 : null
+    }
+    var countLines = function (label) {
+      return text.split(/\\r?\\n/).filter(function (line) {
+        return line.trim().toLowerCase() === label
+      }).length
+    }
+    var settings = ['General', 'Models', 'Role Bindings', 'Perception', 'Sources',
+      'Memory', 'Verification', 'Diagnostics', 'About']
+    var activeSettings = Array.prototype.slice.call(document.querySelectorAll('button'))
+      .filter(function (button) {
+        var label = button.textContent.trim()
+        var signal = [button.getAttribute('aria-selected'), button.getAttribute('aria-current'),
+          button.getAttribute('data-state'), button.className].join(' ').toLowerCase()
+        return settings.indexOf(label) !== -1 && /true|page|active|selected/.test(signal)
+      })
+      .map(function (button) { return button.textContent.trim() })[0] || null
+    var selected = document.querySelector('[role="tab"][aria-selected="true"]')
+    var readinessSummary = text.match(/(\\d+)\\s+of\\s+(\\d+)\\s+capabilities\\s+are\\s+ready/i)
+    var readinessPassed = text.match(/(\\d+)\\s+capabilities?\\s+passed\\s+their\\s+readiness\\s+gates/i)
+    var readinessNeeds = text.match(/(\\d+)\\s+capabilities?\\s+still\\s+need/i)
+    var readyMetric = document.querySelector('[data-watch-readiness="ready"] [data-watch-count]')
+    var pendingMetric = document.querySelector('[data-watch-readiness="pending"] [data-watch-count]')
+    var metricReady = readyMetric && /^\\d+$/.test(readyMetric.textContent.trim())
+      ? Number(readyMetric.textContent.trim()) : null
+    var metricPending = pendingMetric && /^\\d+$/.test(pendingMetric.textContent.trim())
+      ? Number(pendingMetric.textContent.trim()) : null
+    var summaryReady = readinessSummary ? Number(readinessSummary[1])
+      : readinessPassed ? Number(readinessPassed[1]) : metricReady
+    var summaryTotal = readinessSummary ? Number(readinessSummary[2])
+      : readinessPassed && readinessNeeds
+        ? Number(readinessPassed[1]) + Number(readinessNeeds[1])
+        : metricReady !== null && metricPending !== null ? metricReady + metricPending : null
+    return {
+      dialogOpen: !!dialog,
+      watchOnboarding: /Welcome to DeepWatch|Meet Watch|Watch can observe, act, remember/i.test(text),
+      selectedMode: selected ? selected.textContent.trim() : null,
+      settingsSection: activeSettings,
+      providerMatch: exact(expected && expected.providerLabel),
+      providerIdMatch: exact(expected && expected.provider),
+      modelMatch: exact(expected && expected.model) === true
+        || exact(expected && expected.modelLabel) === true,
+      stubReplyVisible: text.indexOf('The stub provider answered.') !== -1,
+      coreConnected: /Core[\\s\\S]{0,80}Connected/i.test(text)
+        || /Connected[\\s\\S]{0,80}Core/i.test(text),
+      completedNotVerified: /Agent completed\\s*(?:≠|!=|is not)\\s*Verified/i.test(text),
+      libraryIndexVisible: /record\\(s\\) indexed/i.test(text) && /Rebuild index/i.test(text),
+      memoryLedgerVisible: /memory ledger/i.test(text) || /correctable/i.test(text),
+      compareBoundaryVisible: /computed, not reasoned about/i.test(text),
+      readiness: {
+        summaryReady: summaryReady,
+        summaryTotal: summaryTotal,
+        ready: countLines('ready'),
+        degraded: countLines('degraded'),
+        unconfigured: countLines('not configured'),
+        unavailable: countLines('unavailable'),
+        notTested: countLines('not tested'),
+        error: countLines('error')
+      }
+    }
+  })(${JSON.stringify(SCENARIO)})`)
+}
+
 async function capture(win, name, note, reached = true) {
   if (!reached) {
     shots.push({ name, file: null, note, captured: false })
@@ -220,9 +344,71 @@ async function capture(win, name, note, reached = true) {
   const image = await win.webContents.capturePage()
   const file = join(OUT, name + '.png')
   writeFileSync(file, image.toPNG())
-  shots.push({ name, file: portablePath(file), note, captured: true })
+  const facts = await captureFacts(win)
+  shots.push({ name, file: portablePath(file), note, captured: true, facts })
   say('  ' + name.padEnd(38) + ' ' + note)
   return true
+}
+
+/**
+ * Photograph the first-run notice at every width, before it is dismissed.
+ *
+ * Nothing else may run first: the notice is on screen exactly once per
+ * profile, and the pass that clears it is the pass that makes every later
+ * width report "already dismissed".
+ */
+async function captureOnboarding(win) {
+  try {
+    await win.loadURL(URL)
+  } catch (error) {
+    say('  load retry after: ' + String(error))
+    await wait(2500)
+    await win.loadURL(URL)
+  }
+  await wait(4000)
+  for (const viewport of VIEWPORTS) {
+    win.setContentSize(viewport.width, viewport.height)
+    await wait(1200)
+    const firstDialog = await win.webContents.executeJavaScript(
+      "(function(){var d=document.querySelector('[role=\"dialog\"]');"
+      + " return d ? d.innerText.split('\\n')[0].slice(0,60) : ''})()",
+    )
+    await capture(win, viewport.name + '-01-onboarding',
+      firstDialog === ''
+        ? 'no first-run dialog: already dismissed in this profile'
+        : 'first-run dialog: ' + firstDialog,
+      firstDialog !== '')
+  }
+}
+
+/**
+ * Open the sidebar, and wait until it is.
+ *
+ * A pass *ends* by collapsing the rail to photograph it, and the next viewport
+ * inherits that through the browser's own stored state. With the rail
+ * collapsed there is no Settings button at all, so every section shot in the
+ * second and third passes came back "not reachable" — and the two that did not
+ * check their own precondition filed photographs of the workspace and of the
+ * Memory *mode* under the names of settings sections.
+ *
+ * Polled rather than clicked once: at 600px the shell mounts the rail after
+ * the first paint, and a single click landed before the button existed.
+ */
+async function ensureSidebar(win, tries = 10) {
+  for (let attempt = 0; attempt < tries; attempt += 1) {
+    const state = await win.webContents.executeJavaScript(`(function () {
+      var bs = Array.prototype.slice.call(document.querySelectorAll('button'))
+      if (bs.some(function (b) { return b.textContent.trim() === 'Settings' })) return 'open'
+      var t = bs.filter(function (b) {
+        return /open sidebar/i.test(b.getAttribute('aria-label') || '')
+      })[0]
+      if (t) { t.click(); return 'clicked' }
+      return 'absent'
+    })()`)
+    if (state === 'open') return true
+    await wait(700)
+  }
+  return false
 }
 
 async function measure(win, label) {
@@ -304,15 +490,8 @@ async function run(win, viewport) {
   // runs in the same Electron profile, so the first pass has already
   // dismissed it -- writing the file anyway produced a second copy of the
   // plain workspace under the name of the first-run notice.
-  const firstDialog = await win.webContents.executeJavaScript(
-    "(function(){var d=document.querySelector('[role=\"dialog\"]');"
-    + " return d ? d.innerText.split('\\n')[0].slice(0,60) : ''})()",
-  )
-  await capture(win, p('01-onboarding'),
-    firstDialog === ''
-      ? 'no first-run dialog: already dismissed in this profile'
-      : 'first-run dialog: ' + firstDialog,
-    firstDialog !== '')
+  const sidebar = await ensureSidebar(win)
+  if (!sidebar) say('  sidebar: could not be opened; settings shots will report unreachable')
 
   const cleared = await clearOnboarding(win)
   say('  cleared ' + String(cleared) + ' onboarding step(s)')
@@ -476,9 +655,36 @@ async function run(win, viewport) {
   }
 
   // Settings, and every Watch section in it.
-  await win.webContents.executeJavaScript(CLICK_BY_TEXT + "('button', 'Settings')")
+  //
+  // The sidebar is reopened *here* as well as at the top of the pass. Below
+  // 768px the shell treats it as an overlay and closes it as soon as anything
+  // in the main area is touched — and the seven mode tabs above are exactly
+  // that. Opening it once per pass was enough at 1440 and reported "Settings
+  // was not reachable" for every section at the two widths that matter most.
+  await ensureSidebar(win)
+  const settingsOpened = await win.webContents.executeJavaScript(
+    CLICK_BY_TEXT + "('button', 'Settings')",
+  )
   await wait(1600)
-  await capture(win, p('06-settings-general'), 'DSH General kept above the Watch sections')
+  await capture(win, p('06-settings-general'),
+    settingsOpened
+      ? 'DSH General kept above the Watch sections'
+      : 'Settings was not reachable, so nothing was photographed',
+    settingsOpened)
+
+  // Scoped to the dialog, because the labels are not unique on the page.
+  // "Memory" is a settings section *and* a mode tab, and the unscoped click
+  // photographed the Memory mode under the name of the settings section on
+  // every pass where the dialog had not opened.
+  const modelsOpened = await win.webContents.executeJavaScript(
+    CLICK_BY_TEXT + "('[role=\"dialog\"] button', 'Models')",
+  )
+  await wait(1200)
+  await capture(win, p('06-settings-models'),
+    modelsOpened
+      ? 'upstream Models with the configured deterministic provider'
+      : 'Models was not reachable, so nothing was photographed',
+    modelsOpened)
 
   // Read the sections out of the module that registers them.
   //
@@ -488,7 +694,7 @@ async function run(win, viewport) {
   const sections = settingsSections()
   for (const [label, slug] of sections) {
     const ok = await win.webContents.executeJavaScript(
-      CLICK_BY_TEXT + "('button', " + JSON.stringify(label) + ')',
+      CLICK_BY_TEXT + "('[role=\"dialog\"] button', " + JSON.stringify(label) + ')',
     )
     await wait(1000)
     // `ok` is the precondition here too: a section that was never opened must
@@ -544,6 +750,15 @@ app.whenReady().then(async () => {
     webPreferences: { nodeIntegration: false, contextIsolation: true, sandbox: true },
   })
 
+  // The first-run notice, at every width, before anything dismisses it.
+  //
+  // It is a one-shot: completing the step is recorded in the profile, so the
+  // second viewport pass finds no dialog and the shot named for it was a
+  // second photograph of the workspace behind it. Photographing it for every
+  // width up front needs no reset and no second profile, and it is the only
+  // way the surface a person meets first has responsive evidence at all.
+  await captureOnboarding(win)
+
   for (const viewport of VIEWPORTS) {
     say('[' + viewport.name + '] ' + String(viewport.width) + 'x' + String(viewport.height))
     win.setContentSize(viewport.width, viewport.height)
@@ -557,6 +772,9 @@ app.whenReady().then(async () => {
   win.destroy()
 
   writeFileSync(join(OUT, 'index.json'), JSON.stringify(shots, null, 2) + '\n', 'utf8')
+  if (SCENARIO !== null) {
+    writeFileSync(join(OUT, 'scenario.json'), JSON.stringify(SCENARIO, null, 2) + '\n', 'utf8')
+  }
   say(String(shots.length) + ' shot(s) written')
   say('qa profile: isolated, outside the repository')
 

@@ -24,6 +24,10 @@ const MANIFEST = join(WORKSPACE, 'docs', 'screenshot-manifest.json')
 
 const manifest = JSON.parse(readFileSync(MANIFEST, 'utf8'))
 
+/** The engine version this branch builds, read from the one place it lives. */
+const CORE_VERSION = /^version\s*=\s*"([^"]+)"/m
+  .exec(readFileSync(join(WORKSPACE, '..', 'pyproject.toml'), 'utf8'))?.[1] ?? '(unreadable)'
+
 test('the manifest describes a real set of shots', () => {
   // Guards every assertion below: an empty manifest would satisfy all of them.
   assert.ok(manifest.shots.length > 30,
@@ -66,7 +70,43 @@ test('a shot that was not captured claims no file and says why', () => {
     // this test's own first bug.
     assert.ok(typeof shot.reason === 'string' && shot.reason.length > 0,
       `${shot.name} is not captured and does not say why`)
+    assert.equal(shot.verdict, 'blocked',
+      `${shot.name} is missing but has the misleading verdict ${shot.verdict}`)
   }
+})
+
+test('the capture is linked to the passing deterministic E2E scenario', () => {
+  assert.equal(manifest.scenario.result, 'passed')
+  assert.equal(manifest.scenario.provider, 'openrouter-e2e')
+  assert.equal(manifest.scenario.model, 'stub/echo-small')
+  assert.equal(manifest.scenario.core, 'connected')
+  assert.equal(manifest.scenario.coreTransport, 'stdio')
+  // The engine the shots were taken against is the one this branch builds.
+  assert.equal(manifest.scenario.coreVersion, CORE_VERSION)
+})
+
+test('Models, Role Bindings and Diagnostics agree with the linked scenario', () => {
+  for (const viewport of ['wide', 'narrow', 'compact']) {
+    const models = manifest.shots.find(shot => shot.name === `${viewport}-06-settings-models`)
+    const roles = manifest.shots.find(shot => shot.name === `${viewport}-07-settings-roles`)
+    const diagnostics = manifest.shots.find(
+      shot => shot.name === `${viewport}-07-settings-diagnostics`)
+    assert.equal(models?.state, 'captured')
+    assert.equal(models?.facts?.providerMatch === true || models?.facts?.providerIdMatch === true,
+      true, `${viewport} Models does not show the scenario provider`)
+    assert.equal(roles?.facts?.modelMatch, true,
+      `${viewport} Role Bindings does not show the scenario model`)
+    assert.equal(diagnostics?.facts?.coreConnected, true,
+      `${viewport} Diagnostics contradicts the connected Core scenario`)
+    assert.notEqual(models?.verdict, 'fail')
+    assert.notEqual(roles?.verdict, 'fail')
+    assert.notEqual(diagnostics?.verdict, 'fail')
+  }
+})
+
+test('the manifest does not preserve the retired fixed readiness count', () => {
+  const serialized = JSON.stringify(manifest)
+  assert.equal(serialized.includes('4 of 12'), false)
 })
 
 test('the totals are the shots, not a number typed beside them', () => {
