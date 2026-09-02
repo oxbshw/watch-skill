@@ -87,14 +87,15 @@ full walkthrough is [docs/getting-started.md](docs/getting-started.md), and the
 design with the reasoning behind it is
 [docs/architecture.md](docs/architecture.md).
 
-To add DeepWatch to a Harness profile you already run, without the CLI:
+To test DeepWatch in a Harness profile before npm publication:
 
 ```bash
-dsh plugin --profile web add @deepwatch/dsh-bundle
+npm run release:artifacts
+WATCH_CORE_BIN=watch-skill node scripts/manual-profile.mjs --from-artifacts
 ```
 
-That works from a local tarball today, and from the registry once the packages
-are published.
+The script verifies and installs local tarballs. A registry-name install is not
+documented until the first publication exists.
 
 ## The `deepwatch` command
 
@@ -375,8 +376,9 @@ signed distribution.
 | [docs/releasing.md](docs/releasing.md) | the two trains, dist-tags and recovery |
 | [docs/provider-handoff.md](docs/provider-handoff.md) | where the provider boundary sits |
 | [docs/platform-support.md](docs/platform-support.md) | what was run where |
+| [docs/upstream-hero-extension-request.md](docs/upstream-hero-extension-request.md) | the one remaining upstream visual seam |
 | [docs/signing.md](docs/signing.md) | what a signed release still needs |
-| [docs/release-candidate-audit.md](docs/release-candidate-audit.md) | the standing audit |
+| [docs/release-candidate-audit.md](docs/release-candidate-audit.md) | immutable historical audit of commit `02343ca` |
 | [docs/adr/](docs/adr/) | decisions that need a superseding ADR to change |
 
 ## Attribution

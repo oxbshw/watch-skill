@@ -42,20 +42,21 @@ error is not proof that anything worked.
 
 ## Without Watch Core installed
 
-The Bridge runs on its mock backend. It answers the handshake, reports every
-capability as `not_tested`, and refuses every real call with the install step
-attached. Nothing pretends to work, and the rest of your Workspace is
-unaffected.
+Watch reports itself unavailable. `auto` does not substitute a mock: the
+Bridge says `core_missing`, every Watch capability reads **Unavailable**, and
+the install step is attached to each of them. Nothing pretends to work, and the
+rest of your Workspace is unaffected.
 
-If Watch Core is installed but fails to start, that is reported as a fault
-rather than quietly replaced by the mock — otherwise you would have a green
-Workspace and no indication that nothing you ask will ever be answered.
+If Watch Core is installed but fails to start, that is reported as a fault too,
+with its own fix. Neither case is ever answered from the mock — a Bridge that
+did that would give you a green Workspace and no indication that nothing you
+ask will ever be answered.
 
 ## Configuration
 
 | Key | Default | Meaning |
 |---|---|---|
-| `transport` | `auto` | `auto` connects the engine if installed, else mock. `stdio` requires it. `mock` never starts it. |
+| `transport` | `auto` | `auto` connects the engine, and reports it unavailable when it is absent or broken — it never selects the mock. `stdio` is the same transport named explicitly. `mock` is the test-only in-process backend and must be asked for by name. |
 | `command` | `watch-skill` | the executable that starts Watch Core in Bridge mode |
 | `args` | `[bridge]` | its arguments |
 | `startupTimeoutMs` | `10000` | how long the engine has to start |

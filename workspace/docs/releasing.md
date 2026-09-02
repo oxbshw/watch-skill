@@ -28,13 +28,58 @@ after a tag exists.
 npm run check && npm run release:artifacts
 ```
 
-Then, once per package and once only, a Trusted Publisher has to exist on npm:
-**Settings → Publishing access → GitHub Actions**, for repository
-`oxbshw/watch-skill` and workflow `release-deepwatch.yml`. Until that is
-configured for a package, publishing it fails — which is the intended
-behaviour. There is deliberately no `NODE_AUTH_TOKEN` fallback in the workflow,
-because a fallback turns a misconfigured trusted publisher into a silent,
-unattested publish.
+## One-time first publication
+
+Trusted Publisher cannot create a package that does not exist yet. The first
+publication of all twenty packages therefore uses a short-lived npm publisher
+credential held only by the release owner. The repository procedure is
+offline and dry-run by default:
+
+```bash
+# after release:artifacts, from a clean exact candidate commit
+npm run first-publish:dry-run
+```
+
+It consumes only `.release-artifacts/*.tgz` plus that directory's
+`packed-artifacts.json`. Before any registry write it refuses a dirty tree,
+wrong SHA-256, wrong package name/version/scope/access, private package,
+changed file list, changed dependency graph, `workspace:`/`file:` source
+fallback, a missing package, or an order that differs from the manifest graph.
+The state report is `.release-artifacts/first-publish-state.json` and always
+lists `created`, `skipped`, `failed`, and `remaining` packages.
+
+The release owner may check identity and `@deepwatch` organisation access
+without printing either credentials or the npm user name:
+
+```bash
+node scripts/first-publish.mjs --check-access
+```
+
+Only after reviewing the dry-run and enabling strong authentication/2FA may
+the owner explicitly authorize the irreversible path:
+
+```bash
+node scripts/first-publish.mjs --publish --confirm-first-publish
+```
+
+The script's only write is `npm publish <verified-tarball> --access public
+--tag preview`, in the exact dependency order printed by
+`node scripts/publish-order.mjs`. This task must never run that command.
+
+Current organisation hardening is a prerequisite, not an afterthought. The
+default `Developers` team currently has read/write access: add no members while
+that remains true. Create a limited publisher/maintainer team, make ordinary
+contributors read-only where appropriate, require strong authentication/2FA
+for maintainers, and protect the GitHub `npm` environment with required
+reviewers.
+
+After the first publication, configure a Trusted Publisher separately on all
+twenty package pages: **Settings → Publishing access → GitHub Actions**, with
+repository `oxbshw/watch-skill`, workflow `release-deepwatch.yml`, and
+environment `npm`. Verify the next preview entirely through that OIDC workflow,
+then disable token publishing or restrict the bootstrap token so it cannot
+publish. Until every package has the publisher, the workflow must fail closed.
+There is deliberately no `NODE_AUTH_TOKEN` fallback.
 
 The `npm` Environment must also exist in repository settings with required
 reviewers. That is what makes a release an approval against one exact tag

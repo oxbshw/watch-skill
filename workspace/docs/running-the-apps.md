@@ -1,8 +1,8 @@
 # Running the applications
 
-Both apps are running now. This is how to get them back after a reboot, and what
-each command is actually doing — because when one of them fails, the useful thing
-is knowing which of the three processes stopped.
+This page gives reproducible start commands; it makes no claim that a process
+from an earlier session is still running. When one fails, the useful thing is
+knowing which of the three processes stopped.
 
 ## What is running
 
@@ -47,7 +47,7 @@ Ready when the log prints `dsh web: http://127.0.0.1:8931`.
 ## Desktop
 
 ```bash
-cd apps/desktop && npx electron .
+cd apps/desktop && pnpm exec electron .
 ```
 
 Ready when the log prints a `WATCH_DESKTOP_READY` line with `"step":"ready"`.
@@ -62,7 +62,9 @@ plainly present on disk.
 ## Rebuilding the profile from nothing
 
 ```bash
-node scripts/manual-profile.mjs && node scripts/seed-manual-fixtures.mjs
+npm run release:artifacts
+WATCH_CORE_BIN=<packed-watch-skill> node scripts/manual-profile.mjs --from-artifacts --rebuild
+node scripts/seed-manual-fixtures.mjs
 ```
 
 The first builds `<manual root>/dsh-home` — a stock DSH `web` profile with the

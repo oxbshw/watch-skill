@@ -1,6 +1,18 @@
 # Changelog
 
-## Unreleased
+## v1.4.0rc1 — 2026-09-02 (release candidate)
+
+The 1.4 candidate closes the real DeepWatch authority path: supervised browser
+operations now return stable Core-owned evidence and receipts, Node talks to the
+packed Python Bridge in required integration tests, and runtime readiness is one
+truth shared by onboarding and Diagnostics. The companion DeepWatch workspace
+remains an unpublished preview; its 20 npm packages are prepared as verified
+tarballs and are not published by this release-candidate build.
+
+The first-run and product surfaces now use one responsive DeepWatch design
+language across Watch, Live, Memory, Library, Compare, settings and evidence.
+“Into the Know” appears only on DeepWatch-owned surfaces until the pinned
+Harness exposes a supported headline extension.
 
 ### `watch-skill notes` — a write-up whose every line is checkable
 

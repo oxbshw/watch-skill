@@ -7,8 +7,10 @@ ones you will see. No real provider has been contacted.
 
 ## Before you start
 
-Web is at `http://127.0.0.1:8931`. Desktop is already open; if it was closed,
-run `npx electron .` in `apps/desktop`.
+Start a fresh artifact-built Web profile as described in
+[setup.md](setup.md), then use the loopback URL printed by that process. For a
+Desktop smoke, run the locally installed Electron binary from
+`apps/desktop`; no previous process is assumed to exist.
 
 The workspace runs without a provider. Perception, memory, verification and the
 browser all work offline, and Diagnostics lists which capabilities are ready and
@@ -39,10 +41,11 @@ supply with `openai-completions`, not a separate feature.
 
 ## Testing the connection
 
-**Fetch available models** in the provider dialog is the connection test. It
-calls the endpoint and reports what came back. There is no separate "test"
-button, so this is the step that tells you whether the base URL, protocol and
-key are right before you spend a turn on it.
+**Fetch available models** in the provider dialog interrogates the configured
+endpoint and lets you adopt returned models. It proves discovery only. After
+assigning an exact provider/model in **Role Bindings**, choose **Run provider
+test**. That one bounded model request is the fact that changes the binding
+from “Configured · not tested” to Ready; saving a credential never does.
 
 If it returns nothing, the dialog says so and notes that unlisted model IDs can
 still be sent directly.
@@ -68,6 +71,13 @@ your shell cannot be silently shadowed by one stored in the UI.
 On Desktop, Watch's own vault uses Electron `safeStorage`, which is OS-backed.
 
 The key is not written to `settings.yaml`, which holds UI state only.
+
+Provider consent and evidence/media egress are separate boundaries. Saving a
+provider credential or testing a one-token role request authorizes neither a
+video upload nor evidence transmission. Watch Core remains local-only by
+default; cloud perception requires its own user-controlled opt-in and policy
+check before a key is read or a request is built. The agent cannot flip either
+setting.
 
 Confirm that yourself after entering one — without printing either file. A
 credential file is not a thing to display: a terminal keeps scrollback, a
@@ -167,11 +177,9 @@ Models** shows the provider with no stored credential, and Diagnostics reports
 the role as unconfigured. If you want a check outside the UI, ask the provider
 rather than the disk:
 
-```bash
-# A provider with no credential answers "credential unavailable",
-# never a redacted value and never the key itself.
-deepwatch providers test openrouter
-```
+Use **Run provider test** on the affected Role Bindings row. With the key
+removed it reports the missing credential without displaying a value. There
+is no `deepwatch providers test` command in this candidate.
 
 If you exported a key into your shell instead, unset it and restart the host;
 the environment layer takes precedence and will otherwise keep the provider

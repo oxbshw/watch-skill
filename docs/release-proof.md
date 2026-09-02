@@ -202,7 +202,7 @@ than copied from an earlier report.
 
 | Channel | State |
 |---|---|
-| PyPI `watch-skill` | `1.2.0` is the only published version. The source is `1.3.0rc2` and is not installable from PyPI. |
+| PyPI `watch-skill` | `1.2.0` is the only published version. The source is `1.4.0rc1` and is not installable from PyPI. |
 | Agent Skills (skills.sh) | Badge endpoint returns HTTP 200, `Skills: 1.1K`. Ten `SKILL.md` files in the repository. |
 | GHCR `ghcr.io/oxbshw/watch-skill` | OCI index with `linux/amd64` and `linux/arm64`, plus two attestation manifests. |
 | GitHub release `v1.2.0` | Wheel, sdist and `watch-skill.skill`. |
@@ -216,7 +216,7 @@ The README states PyPI as the install channel and no longer reads as though
 
 | Check | Result |
 |---|---|
-| `watch-skill --version` | `1.3.0rc2` |
+| `watch-skill --version` | `1.4.0rc1` |
 | `watch-skill doctor --no-fix --json` | valid JSON, 16 checks |
 | MCP `initialize` over real stdio | ok |
 | `tools/list` over real stdio | 37 tools |

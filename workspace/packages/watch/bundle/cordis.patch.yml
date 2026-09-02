@@ -17,15 +17,20 @@
     # The Bridge to Watch Core. Everything Watch can perceive, prove or
     # remember reaches the Harness through this one service.
     #
-    # `auto` connects the real engine when `watch-skill` is installed, and
-    # falls back to the mock backend only when the command is genuinely not
-    # there. Nothing is hidden by that fallback: the mock reports every
-    # capability as `not_tested` and carries the install step, and a Watch Core
-    # that *is* present and fails is reported as a fault rather than replaced
-    # by a mock that answers nothing.
+    # `auto` connects the real engine when `watch-skill` is installed. It does
+    # not fall back to the mock, and never has an outcome other than a real
+    # child process: a missing engine is reported as `core_missing` and one
+    # that fails to start as `handshake_failed`, each carrying the step that
+    # fixes it, and the Workspace stays fully usable with Watch features
+    # disabled. The fallback did exist, and is what let a machine with no
+    # engine report itself connected while refusing every real request — which
+    # the surfaces drew as an empty result nobody could tell from "nothing
+    # indexed yet".
     #
-    # A deployment that requires the engine should pin `stdio`, which never
-    # falls back and so fails loudly when it is missing. A patch replaces the
+    # `stdio` is the same transport named explicitly. `mock` is the in-process
+    # test backend and has to be asked for by name; everything it touches is
+    # flagged `isTestOnlyMock`, so no screen can present it as data. A patch
+    # replaces the
     # targeted row's whole `config`, so an overlay must restate every key it
     # wants to keep:
     #

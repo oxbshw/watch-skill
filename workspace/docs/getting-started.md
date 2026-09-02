@@ -5,18 +5,23 @@ inside it; pick the second if you are working on Watch itself.
 
 ---
 
-## 1. Add Watch to a Harness you already run
+## 1. Test the unpublished candidate in a Harness you already run
 
 ```bash
 # the engine that sees and proves
 pip install watch-skill
 
-# the capabilities, into the profile you use
-dsh plugin --profile web add @deepwatch/dsh-bundle
+# from workspace/, build and verify all local candidate artifacts
+npm run release:artifacts
+
+# build a profile whose @deepwatch packages all resolve to verified tarballs
+WATCH_CORE_BIN=watch-skill node scripts/manual-profile.mjs --from-artifacts
 ```
 
-Restart the profile. The Bridge finds `watch-skill` on `PATH` and connects on
-its own; nothing else needs configuring.
+The `@deepwatch` packages are not published yet. Do not install them by
+registry name and do not use `npx @deepwatch/cli`; the candidate path above
+checks every tarball hash before the profile is served. The Bridge command is
+the packed `watch-skill` executable supplied through `WATCH_CORE_BIN`.
 
 Ask your agent what it can see:
 
@@ -169,11 +174,10 @@ retrieval, from the files, and from every rebuild rather than hiding it.
 | Watch Core side | `watch-skill bridge`, with capability truth and contract digests |
 | Agent tools | 16, covering the senses, the browser operator and verification |
 | Memory | event ledger, correction precedence, real forgetting, Context Compiler |
-| Browser half | verdict and evidence cards in DSH's own tool-view slot |
+| Browser and Evidence | real Chromium operations in Watch Core; approval in the DSH host; stable receipts and evidence records |
 | Contract drift | detected at connect time, scoped to the affected capabilities |
-
-Not yet built: the branded Workspace shell, the Technology & Capability
-Center, Compare, Desktop, and team multi-tenancy.
+| DeepWatch surfaces | branded Workspace, Technology Center, Compare, Library, Live, Memory, Settings and Desktop shell |
+| Team multi-tenancy | contract/package groundwork only; no production team service is claimed |
 
 ## When something is wrong
 

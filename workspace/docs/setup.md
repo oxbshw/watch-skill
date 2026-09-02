@@ -86,7 +86,7 @@ OpenAI-compatible servers, where the key is stored, and how to remove it.
 
 | Capability | Needs | Without it |
 | --- | --- | --- |
-| Watch Core | `pip install watch-skill` | the Bridge runs its mock backend and every capability reports `not_tested` |
+| Watch Core | install the candidate wheel with `watch-skill[loop]` | `auto` attempts the real stdio Bridge and reports unavailable/error; it never falls back to mock |
 | OCR, ASR | Python and the engine you choose | Perception shows the engine as not installed |
 | Video and audio sources | ffmpeg | those sources are not offered as startable |
 | Desktop | Electron, installed by `pnpm install` | the Web application is unaffected |

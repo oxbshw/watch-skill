@@ -25,14 +25,14 @@ lowered deliberately; it has not been lowered to make a local run compliant.
 
 | Platform | Web | Desktop | Gates | Basis |
 | --- | --- | --- | --- | --- |
-| Windows x64 | run | run | pass | executed here, repeatedly |
-| Linux x64 | not run | not run | not run | CI job defined, never executed |
-| macOS arm64 | not run | not run | not run | CI job defined, never executed |
-| macOS x64 | not run | not run | not run | CI job defined, never executed |
+| Windows x64 | required | required | required | `workspace / platform (windows-latest)` |
+| Linux x64 | required | required under Xvfb | required | `workspace / platform (ubuntu-latest)` |
+| macOS | required | required | required | `workspace / platform (macos-latest)` |
 
-The CI matrix in `.github/workflows/ci.yml` defines all three. Running it needs
-a push to a remote, which this work does not do, so no Linux or macOS result
-exists to report.
+The matrix in `.github/workflows/workspace-ci.yml` runs all three for every
+Workspace change. Platform support for a candidate is established only by the
+checks attached to that exact commit; this page deliberately does not preserve
+an old green result as a claim about a newer tree.
 
 ## What makes the other platforms plausible
 
@@ -72,9 +72,6 @@ These cannot be closed from inside this repository.
 
 | Requirement | Blocks | Why |
 | --- | --- | --- |
-| macOS machine or runner | macOS Web/Desktop validation | none available |
-| Linux machine or runner | Linux Web/Desktop validation | none available; a container would not exercise native Desktop behaviour |
-| Push access to a remote | any CI result | pushing is out of scope for this work |
 | Windows Authenticode certificate | signed Windows release | must be purchased; a generated one proves nothing and is never created |
 | Apple Developer ID + notarization | signed, notarized macOS release | needs a paid Apple Developer account and Apple's online service |
 | GPG signing key | signed Linux artifacts | needs a key the release owner controls |
