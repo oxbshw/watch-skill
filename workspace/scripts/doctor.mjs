@@ -100,7 +100,7 @@ if (existsSync(join(ROOT, 'node_modules'))) {
 
 const optional = [
   ['watch-skill', ['--version'], 'Watch Core',
-    'pip install watch-skill. Without it the Bridge runs on its mock backend and every capability reports not_tested.'],
+    'Install the candidate Watch Skill wheel. Without it the real Bridge is unavailable; auto never falls back to mock.'],
   ['python', ['--version'], 'OCR and ASR engines',
     'Only needed if you enable a local perception engine.'],
   ['ffmpeg', ['-version'], 'video and audio sources',

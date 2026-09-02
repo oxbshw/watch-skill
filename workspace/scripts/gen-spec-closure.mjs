@@ -201,9 +201,9 @@ const REQUIREMENTS = [
     'One provider experience for all external connections, one Technology Center for local engines, unified Role Bindings for every capability.',
     'PASS',
     'Role bindings sit over DSH Models and Providers with no second credential store; the Technology Center owns local engine descriptors and lifecycle.',
-    ['packages/watch/technology/src/descriptor.ts'],
-    ['tests/technology.test.mjs'],
-    ['The DSH Settings surface that edits bindings is inherited from upstream; Watch adds no editor of its own, and none was exercised in a browser here.'], false),
+    ['packages/watch/technology/src/descriptor.ts', 'packages/watch/client-settings/src/client/role-bindings.tsx'],
+    ['tests/technology.test.mjs', 'tests/binding-flow.test.mjs', 'scripts/qa-e2e.mjs'],
+    ['The provider form remains DSH-owned; DeepWatch contributes the unified Role Bindings editor and tests it in the required browser journey.'], true),
 
   R('dod.ocr-optional', '25 / Product surfaces',
     'DeepSeek-OCR an optional worker with a revision pin, licence/provenance, resource receipt, and a usable CPU fallback.',

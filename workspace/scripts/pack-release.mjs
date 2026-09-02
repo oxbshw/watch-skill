@@ -199,6 +199,7 @@ function packOne(entry, out) {
       file: filename.split(/[\\/]/).pop(),
       name: manifest.name,
       version: manifest.version,
+      access: manifest.publishConfig?.access ?? null,
       bytes: bytes.length,
       sha256: createHash('sha256').update(bytes).digest('hex'),
       fileCount: files.length,

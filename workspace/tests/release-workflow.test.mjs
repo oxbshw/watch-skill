@@ -157,3 +157,14 @@ describe('what reaches the registry, and in what order', () => {
     assert.match(doc, /Neither train has ever run/)
   })
 })
+
+test('the required workspace result includes the real browser journey', () => {
+  const workflow = readFileSync(join(WORKFLOWS, 'workspace-ci.yml'), 'utf8')
+  const browser = job(workflow, 'browser-e2e')
+  assert.match(browser, /qa-e2e-run\.mjs/)
+  assert.match(browser, /openrouter-compatible loopback provider|qa\/e2e/)
+  assert.match(browser, /ci-report\.json/)
+  assert.ok(!browser.includes('stub-accounting.json'))
+  const required = job(workflow, 'workspace-required')
+  assert.match(required, /browser-e2e/)
+})

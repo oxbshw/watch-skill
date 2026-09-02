@@ -39,6 +39,9 @@ import { manualPath } from './lib/manual-paths.mjs'
 import { ensureCli } from './lib/dsh-cli.mjs'
 import { packageNameOf } from './lib/packed.mjs'
 import { withPinnedPnpm } from './lib/pnpm-shim.mjs'
+import { resolvePnpm } from './lib/process.mjs'
+import { verifyArtifacts } from './first-publish.mjs'
+import { acknowledgeUpstreamNotice } from './lib/compose.mjs'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const HOME = manualPath('WATCH_MANUAL_HOME', ['dsh-home'])
@@ -254,6 +257,11 @@ function fromArtifacts() {
   if (!existsSync(source)) {
     fail('there are no packed artifacts to build from', 'run npm run pack first')
   }
+  // The same verification the first-publish bootstrap uses: every one of the
+  // twenty archives, not only the bundle closure, must match its recorded
+  // digest, identity, access, file list and dependency graph before a profile
+  // is allowed to consume this candidate.
+  verifyArtifacts(source)
   const wanted = new Set(bundlePackages().map(
     relative => JSON.parse(readFileSync(join(ROOT, relative, 'package.json'), 'utf8')).name))
 
@@ -276,8 +284,9 @@ function packAll() {
   mkdirSync(PACKED, { recursive: true })
   const tarballs = []
   for (const relative of bundlePackages()) {
-    const result = run('pnpm', ['pack', '--pack-destination', PACKED], {
-      shell: process.platform === 'win32',
+    const pnpm = resolvePnpm()
+    if (pnpm === null) fail('pnpm is unavailable')
+    const result = run(pnpm.command, [...pnpm.prefix, 'pack', '--pack-destination', PACKED], {
       cwd: join(ROOT, relative),
     })
     if (result.status !== 0) fail(`packing ${relative} failed`, result.stderr)
@@ -350,7 +359,7 @@ function writeOverlay(corePath, memoryDir, evidenceRoot) {
     queryTimeoutMs: 120000
     verifyTimeoutMs: 60000
     readTimeoutMs: 30000
-    liveStartTimeoutMs: 30000
+    liveStartTimeoutMs: 75000
     actTimeoutMs: 60000
     observeTimeoutMs: 30000
     libraryRoots:
@@ -385,13 +394,13 @@ function main() {
 
   const core = coreCandidates().find(candidate => existsSync(candidate))
   if (core === undefined) {
-    process.stderr.write(
-      'watch: Watch Core was not found; the profile will fall back to the mock backend\n',
-    )
+    fail('Watch Core was not found',
+      'set WATCH_CORE_BIN to the executable installed from the candidate wheel; no mock fallback is permitted')
   }
 
   if (process.argv.includes('--rebuild')) removeTree(HOME)
   mkdirSync(HOME, { recursive: true })
+  const upstreamNotice = acknowledgeUpstreamNotice(HOME)
   const env = {
     ...withPinnedPnpm(ROOT),
     DSH_HOME: HOME,
@@ -455,7 +464,7 @@ function main() {
   const seedDir = posixPath(join(HOME, 'watch-fixtures'))
   mkdirSync(seedDir, { recursive: true })
 
-  const overlay = core === undefined ? null : writeOverlay(core, memoryDir, seedDir)
+  const overlay = writeOverlay(core, memoryDir, seedDir)
 
   // Seed the deterministic demo fixtures where the profile can reach them.
   if (existsSync(FIXTURES)) {
@@ -466,7 +475,7 @@ function main() {
 
   const dump = run(
     process.execPath,
-    [cli.entry, '--profile', PROFILE, ...(overlay === null ? [] : ['--patch', overlay]), '--dump-config'],
+    [cli.entry, '--profile', PROFILE, '--patch', overlay, '--dump-config'],
     { env, cwd: ROOT },
   )
   if (dump.status !== 0) fail('the composed profile did not resolve', dump.stderr || dump.stdout)
@@ -496,6 +505,7 @@ function main() {
     fixtures: seedDir,
     watchRows: rows,
     upstreamRows: upstream,
+    upstreamNotice,
     builtAt: new Date().toISOString(),
   }
   writeFileSync(join(HOME, 'manual-profile.json'), `${JSON.stringify(summary, null, 2)}\n`, 'utf8')
@@ -505,15 +515,16 @@ function main() {
     + `  DSH_HOME:     ${HOME}\n`
     + `  profile:      ${PROFILE}\n`
     + `  DSH:          ${cli.version}\n`
-    + `  Watch Core:   ${core ?? 'not found — mock backend'}\n`
-    + `  overlay:      ${overlay ?? 'none'}\n`
+    + `  Watch Core:   ${core}\n`
+    + `  overlay:      ${overlay}\n`
     + `  memory:       local_personal at ${memoryDir}\n`
     + `  fixtures:     ${seedDir}\n`
     + `  Watch rows:   ${rows.join(', ')}\n`
     + `  upstream:     ${upstream.join(', ')} intact\n`
+    + `  DSH notice:   ${upstreamNotice}\n`
     + '\nServe with:\n'
     + `  DSH_HOME=${HOME} node ${cli.entry} --profile ${PROFILE}`
-    + `${overlay === null ? '' : ` --patch ${overlay}`} --no-open --host 127.0.0.1 --port <port>\n`,
+    + ` --patch ${overlay} --no-open --host 127.0.0.1 --port <port>\n`,
   )
 }
 
