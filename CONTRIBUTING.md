@@ -34,8 +34,24 @@ uv run watch-skill doctor      # bootstraps ffmpeg + yt-dlp
 uv run pytest -q               # must be green before you start
 ```
 
-Python 3.11+. The dev venv pins 3.11 (`.python-version`) because the native
-deps (onnxruntime, CTranslate2) publish wheels there first.
+### Which Python, and why the dev venv pins the oldest one
+
+Watch Skill supports **3.11, 3.12 and 3.13**. `requires-python` says
+`>=3.11`, the classifiers list all three, and CI runs every one of them on
+Linux and Windows.
+
+`.python-version` says `3.11`, and that is deliberate: it is the
+**compatibility floor**, not a preference and not the newest thing that works.
+Developing on the oldest supported interpreter is what makes a 3.12-only
+syntax or standard-library call fail on the machine that wrote it, in seconds,
+rather than in a matrix job twenty minutes later — and a floor nobody develops
+on is a floor that quietly rises. It also happens to be where onnxruntime and
+CTranslate2 publish wheels first, which is a convenience rather than the
+reason.
+
+Change it only as part of deliberately raising the minimum supported version:
+`requires-python`, the classifiers, the CI matrix and this paragraph move
+together, and `tests/test_python_version_policy.py` fails until they agree.
 
 ## Architecture rules (non-negotiable)
 
