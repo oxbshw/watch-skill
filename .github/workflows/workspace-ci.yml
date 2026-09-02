@@ -262,6 +262,86 @@ jobs:
       - name: Pack, install from the tarballs, and run every runner
         run: npm run release:artifacts
 
+  # The real Web journey: stock DSH Host, artifact-built DeepWatch profile,
+  # packed Watch Core and an OpenRouter-compatible loopback provider. The
+  # uploaded report is intentionally smaller than the local diagnostic set.
+  browser-e2e:
+    needs: changes
+    if: needs.changes.outputs.workspace == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: workspace
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+          cache-dependency-path: workspace/pnpm-lock.yaml
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Install and build
+        run: |
+          pnpm install --frozen-lockfile
+          npm run build
+          npm run pack
+
+      - name: Install packed Watch Core browser runtime
+        working-directory: .
+        run: |
+          set -euo pipefail
+          core_root="$RUNNER_TEMP/deepwatch-e2e-core"
+          uv build --wheel --out-dir "$core_root/dist"
+          wheel=$(find "$core_root/dist" -maxdepth 1 -name '*.whl' -print -quit)
+          test -n "$wheel"
+          uv venv "$core_root/venv"
+          uv pip install --python "$core_root/venv" "${wheel}[loop]"
+          "$core_root/venv/bin/python" -m playwright install --with-deps chromium
+          echo "WATCH_CORE_BIN=$core_root/venv/bin/watch-skill" >> "$GITHUB_ENV"
+
+      - name: Build the fresh artifact profile
+        env:
+          WATCH_MANUAL_ROOT: ${{ runner.temp }}/deepwatch-e2e-profile
+        run: node scripts/manual-profile.mjs --rebuild --from-artifacts
+
+      - name: Browser journey
+        env:
+          WATCH_MANUAL_ROOT: ${{ runner.temp }}/deepwatch-e2e-profile
+        run: |
+          set -euo pipefail
+          dsh_home="$WATCH_MANUAL_ROOT/dsh-home"
+          cli=$(node -p "require('$dsh_home/manual-profile.json').cliEntry")
+          overlay=$(node -p "require('$dsh_home/manual-profile.json').overlay")
+          DSH_HOME="$dsh_home" node "$cli" --profile web --patch "$overlay" \
+            --no-open --host 127.0.0.1 --port 8931 > "$RUNNER_TEMP/deepwatch-e2e-host.log" 2>&1 &
+          host_pid=$!
+          trap 'kill "$host_pid" 2>/dev/null || true; wait "$host_pid" 2>/dev/null || true' EXIT
+          ready=0
+          for attempt in $(seq 1 120); do
+            if curl --fail --silent http://127.0.0.1:8931/ >/dev/null; then ready=1; break; fi
+            sleep 1
+          done
+          test "$ready" -eq 1
+          xvfb-run --auto-servernum node scripts/qa-e2e-run.mjs \
+            --url http://127.0.0.1:8931 --home "$WATCH_MANUAL_ROOT" --out qa/e2e
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: browser-e2e-${{ runner.os }}
+          path: workspace/qa/e2e/ci-report.json
+          if-no-files-found: error
+          retention-days: 7
+
   # The parts only the operating system itself can answer.
   platform:
     needs: changes
@@ -356,9 +436,11 @@ jobs:
           mkdir -p "$outside"
           uv build --wheel --out-dir "$outside/dist"
           uv venv "$outside/packed"
-          uv pip install --python "$outside/packed" --quiet "$outside"/dist/*.whl
+          wheel=$(find "$outside/dist" -maxdepth 1 -name '*.whl' -print -quit)
+          test -n "$wheel"
+          uv pip install --python "$outside/packed" --quiet "${wheel}[loop]"
           uv venv "$outside/nobridge"
-          uv pip install --python "$outside/nobridge" --quiet "$outside"/dist/*.whl
+          uv pip install --python "$outside/nobridge" --quiet "$wheel"
           python scripts/disable_bridge_command.py "$outside/nobridge"
 
           exe() {
@@ -383,6 +465,16 @@ jobs:
           # the output and the pipeline did not find it.
           python scripts/disable_bridge_command.py --verify-has-bridge "$(exe "$outside/packed")"
           python scripts/disable_bridge_command.py --verify-lacks-bridge "$(exe "$outside/nobridge")"
+
+          packed_python() {
+            if [ -x "$outside/packed/bin/python" ]; then echo "$outside/packed/bin/python"
+            else echo "$outside/packed/Scripts/python.exe"; fi
+          }
+          if [ "$RUNNER_OS" = "Linux" ]; then
+            "$(packed_python)" -m playwright install --with-deps chromium
+          else
+            "$(packed_python)" -m playwright install chromium
+          fi
 
       - name: Tests
         run: npm test
@@ -437,7 +529,7 @@ jobs:
   # in this workflow, not a change that needed no testing.
   workspace-required:
     if: always()
-    needs: [changes, check, cold-build, commit-metadata, packed-artifacts, platform]
+    needs: [changes, check, cold-build, commit-metadata, packed-artifacts, browser-e2e, platform]
     runs-on: ubuntu-latest
     steps:
       - name: Gather the results
