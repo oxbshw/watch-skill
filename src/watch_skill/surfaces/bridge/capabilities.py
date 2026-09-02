@@ -46,15 +46,19 @@ _CAPABILITY_CHECKS: dict[str, tuple[str, ...]] = {
     "watch.video.query": ("index",),
     "watch.library.search": ("index",),
     "watch.memory.recall": ("index",),
-    "watch.evidence.resolve": ("index",),
+    # Browser evidence is retained by the Bridge authority itself.  It does
+    # not depend on the Library index, and claiming that it did made a healthy
+    # browser citation look unavailable on a fresh profile with an empty index.
+    "watch.evidence.resolve": (),
     "watch.verification.run": (),
     "watch.live.session": ("ffmpeg",),
-    "watch.browser.observe": ("deno",),
-    "watch.browser.operate": ("deno",),
+    "watch.browser.observe": (),
+    "watch.browser.operate": (),
 }
 
 #: Capabilities whose truth comes from the live capture matrix instead.
 _CAPTURE_BACKED = frozenset({"watch.live.session"})
+_BROWSER_CAPTURE_BACKED = frozenset({"watch.browser.observe", "watch.browser.operate"})
 
 #: Capabilities the contract declares that this Bridge cannot perform, with
 #: the reason and the fix.
@@ -64,20 +68,7 @@ _CAPTURE_BACKED = frozenset({"watch.live.session"})
 #: Reporting them from their doctor checks instead would be the exact defect
 #: this whole file exists to prevent: the dependency is present, so the
 #: capability looks ready, so the Host draws a control that cannot work.
-_NOT_BRIDGED: dict[str, tuple[str, str]] = {
-    "watch.browser.observe": (
-        "the Bridge owns no browser session to observe",
-        "Drive the browser through Watch Core directly in this release.",
-    ),
-    "watch.browser.operate": (
-        "the Bridge owns no browser session to act in",
-        "Drive the browser through Watch Core directly in this release.",
-    ),
-    "watch.evidence.resolve": (
-        "this Core has no global evidence store keyed by evidenceId",
-        "Read evidence through the verification run or live session that produced it.",
-    ),
-}
+_NOT_BRIDGED: dict[str, tuple[str, str]] = {}
 
 
 def _doctor_index(report: Any) -> dict[str, tuple[str, str]]:
@@ -201,6 +192,53 @@ def _from_capture(capability_id: str, matrix: dict[str, Any] | None, core_versio
     )
 
 
+def _from_browser_capture(
+    capability_id: str, matrix: dict[str, Any] | None, core_version: str
+) -> CapabilityTruth:
+    """Report the Playwright/Chromium path, never an unrelated JS runtime."""
+    rows = [] if matrix is None else list(matrix.get("capabilities") or [])
+    browser = next(
+        (row for row in rows if isinstance(row, dict) and row.get("kind") == "browser"),
+        None,
+    )
+    if browser is None:
+        return CapabilityTruth(
+            capability_id=capability_id,
+            provider="watch-skill",
+            provider_version=core_version,
+            status="not_tested",
+            requirements=["Playwright with a Chromium runtime"],
+            detected={},
+            missing=["browser capture probe"],
+            fixes=["Run `watch-skill capture-capabilities` to probe the browser runtime."],
+            last_checked_at=_now(),
+        )
+    status = str(browser.get("status") or "unavailable")
+    if status == "available":
+        truth = "probed"
+        missing: list[str] = []
+        fixes: list[str] = []
+    elif status == "degraded":
+        truth = "probed"
+        missing = []
+        fixes = [str(browser.get("repair") or "Inspect browser capture diagnostics.")]
+    else:
+        truth = "unavailable"
+        missing = [str(browser.get("missing_system_api") or "Playwright Chromium")]
+        fixes = [str(browser.get("repair") or "Install `watch-skill[loop]` and Chromium.")]
+    return CapabilityTruth(
+        capability_id=capability_id,
+        provider="watch-skill",
+        provider_version=core_version,
+        status=truth,  # type: ignore[arg-type]
+        requirements=["Playwright with a Chromium runtime"],
+        detected={"browser": status, "backend": str(browser.get("backend") or "")},
+        missing=missing,
+        fixes=fixes,
+        last_checked_at=_now(),
+    )
+
+
 def capability_report(core_version: str) -> list[CapabilityTruth]:
     """Establish every capability's truth from the running Core.
 
@@ -251,6 +289,8 @@ def capability_report(core_version: str) -> list[CapabilityTruth]:
                     last_checked_at=_now(),
                 )
             )
+        elif capability_id in _BROWSER_CAPTURE_BACKED:
+            report.append(_from_browser_capture(capability_id, matrix, core_version))
         elif capability_id in _CAPTURE_BACKED:
             report.append(_from_capture(capability_id, matrix, core_version))
         else:

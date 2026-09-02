@@ -15,16 +15,22 @@ convincing lie.
 """
 from __future__ import annotations
 
+import hashlib
+import json
 import logging
+import threading
 from collections.abc import Callable
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from pydantic import ValidationError
+
 from watch_skill.surfaces.bridge.protocol import BridgeError
 from watch_skill.surfaces.bridge.redact import safe_message, scrub
 from watch_skill.surfaces.bridge.wire import (
     AnswerCitation,
+    EvidenceRecord,
     LibraryHit,
     LibraryPage,
     LibraryRecord,
@@ -260,6 +266,14 @@ def live_start(params: dict[str, Any]) -> Any:
         target,
         kind=str(params.get("kind") or "file_replay"),
         profile=str(params.get("profile") or "local-lite"),
+        # These are the deliberately narrow public policy knobs exposed by
+        # the Host tool.  Dropping allowLocal here made loopback fixtures --
+        # and legitimate locally hosted applications -- impossible through
+        # the Bridge even after the person explicitly allowed them.
+        allow_local=params.get("allowLocal") is True,
+        allowed_hosts=[str(host) for host in (params.get("allowedHosts") or [])]
+        if isinstance(params.get("allowedHosts"), list)
+        else None,
     )
     payload = session.to_public() if hasattr(session, "to_public") else session
     return scrub(payload)
@@ -489,52 +503,294 @@ def verification_show(params: dict[str, Any]) -> Any:
     return _outcome_from_bundle(run_id, bundle)
 
 
-# -- browser -----------------------------------------------------------------
+# -- browser and evidence ----------------------------------------------------
 
 
-def _browser_unavailable(method: str) -> Handler:
-    """Declare a browser method present in the contract and absent in Core.
+# The live-session registry owns browser processes.  The Bridge owns only the
+# operator facade, command receipts, and evidence lookup for the life of this
+# Core process.  Keeping those roles separate means stopping a live session
+# still closes Chromium in one place, while a deadline on a Bridge request can
+# be recovered through the idempotency key even if the browser thread finishes
+# after the Host stopped waiting.
+_browser_runtimes: dict[str, Any] = {}
+_browser_attempts: dict[str, dict[str, Any]] = {}
+_evidence: dict[str, dict[str, Any]] = {}
+_browser_state_lock = threading.RLock()
 
-    Core has a browser subsystem (:mod:`watch_skill.operate`), and it is real.
-    What it does not have is a *Bridge-owned session lifecycle*: `observe`,
-    `act` and `receipt` are three calls against one live page, and the Bridge
-    has nowhere to keep that page between them.
 
-    Building that lifecycle is a product decision, not a transport detail, so
-    the transport does not quietly invent one. Until it exists these methods
-    report unavailable, the handshake reports the same for
-    ``watch.browser.observe`` and ``watch.browser.operate``, and the Host
-    disables the surface instead of drawing a button that cannot work.
-    """
+def _canonical(value: Any) -> bytes:
+    """Stable bytes for an id/digest, with no value copied into the id."""
+    return json.dumps(
+        scrub(value), sort_keys=True, separators=(",", ":"), ensure_ascii=False
+    ).encode("utf-8")
 
-    def handler(_params: dict[str, Any]) -> Any:
-        raise _unavailable(
-            method,
-            "this Watch Core exposes no Bridge-owned browser session to act on.",
-            "Drive the browser through Watch Core directly; the Bridge does not "
-            "own browser sessions in this release.",
+
+def _digest(value: Any) -> str:
+    return f"sha256:{hashlib.sha256(_canonical(value)).hexdigest()}"
+
+
+def _runtime_for_session(session_id: str) -> Any | None:
+    """Return one operator facade for a browser session running here."""
+    from watch_skill.live.session import running_session
+    from watch_skill.operate.runtime import BrowserRuntime
+
+    runner = running_session(session_id)
+    source = None if runner is None else getattr(runner, "_source", None)
+    kind = None if runner is None else getattr(runner.session.spec.kind, "value", None)
+    if runner is None or kind != "browser" or not bool(getattr(source, "running", False)):
+        with _browser_state_lock:
+            stale = _browser_runtimes.pop(session_id, None)
+        if stale is not None:
+            stale.close()
+        return None
+    with _browser_state_lock:
+        runtime = _browser_runtimes.get(session_id)
+        if runtime is None:
+            runtime = BrowserRuntime(source, run_id=f"bridge_{session_id}", session_id=session_id)
+            _browser_runtimes[session_id] = runtime
+        return runtime
+
+
+def _browser_runtime(params: dict[str, Any]) -> tuple[str, Any]:
+    session_id = str(_require(params, "sessionId"))
+    runtime = _runtime_for_session(session_id)
+    if runtime is None:
+        raise BridgeError(
+            error="browser.session_unavailable",
+            message="The named browser session is not running in this Watch Core process.",
+            fix="Start a live session with kind=browser and use the returned sessionId.",
+            details={"sessionId": session_id},
+            retryable=False,
         )
+    return session_id, runtime
 
-    return handler
+
+def _mint_evidence(
+    *, session_id: str, navigation_epoch: int, modality: str, content: Any
+) -> dict[str, Any]:
+    """Mint and retain a Core-authored EvidenceRecord from a real runtime result."""
+    from watch_skill import __version__
+
+    content_digest = _digest(content)
+    evidence_id = "evi_" + hashlib.sha256(
+        f"{session_id}\0{navigation_epoch}\0{modality}\0{content_digest}".encode()
+    ).hexdigest()[:24]
+    record = EvidenceRecord(
+        evidence_id=evidence_id,
+        source_revision_id=f"browser:{session_id}:epoch:{navigation_epoch}",
+        artifact_ids=[],
+        modality=modality,  # type: ignore[arg-type]
+        provenance="observation",
+        producer="watch-core-browser-runtime",
+        producer_version=__version__,
+        capture_quality="structured browser observation",
+        freshness="current",
+        content_digest=content_digest,
+        retention_class="core-process-session",
+        confidence=None,
+    ).model_dump(by_alias=True)
+    with _browser_state_lock:
+        _evidence[evidence_id] = record
+    return record
+
+
+def browser_observe(params: dict[str, Any]) -> Any:
+    """Observe the real page and mint a DOM evidence record for the reading."""
+    session_id, runtime = _browser_runtime(params)
+    observation = runtime.observe()
+    public = scrub(observation.model_dump(mode="json"))
+    record = _mint_evidence(
+        session_id=session_id,
+        navigation_epoch=int(observation.navigation_epoch),
+        modality="dom",
+        content=public,
+    )
+    return {
+        "authority": "watch-core",
+        "observation": public,
+        "evidenceId": record["evidenceId"],
+        # Observation establishes what the page showed.  It does not establish
+        # that an intended effect worked.
+        "verification": None,
+    }
+
+
+def _parse_action(raw: Any, operation_id: str) -> Any:
+    from watch_skill.operate.types import Action
+
+    if not isinstance(raw, dict):
+        raise BridgeError(
+            error="bridge.invalid_params",
+            message='"action" must be an object.',
+            fix="Send one typed browser action.",
+            details={"parameter": "action"},
+        )
+    try:
+        # The Host operation identity becomes the Core action identity.  A
+        # model cannot choose either one, and every receipt can be followed
+        # across the transport with the same value.
+        return Action.model_validate({**raw, "action_id": operation_id})
+    except ValidationError as exc:
+        raise BridgeError(
+            error="bridge.invalid_params",
+            message="The browser action did not match the supported action contract.",
+            fix="Use one of the advertised action kinds and its typed fields.",
+            details={"parameter": "action", "errors": len(exc.errors())},
+        ) from None
+
+
+def browser_act(params: dict[str, Any]) -> Any:
+    """Perform one typed action with approval and idempotency before touch."""
+    from watch_skill.operate.types import SideEffect, Verdict
+
+    # Command identity is transport policy, not optional action metadata.
+    operation_id = str(_require(params, "operationId"))
+    key = str(_require(params, "idempotencyKey"))
+    input_digest = str(_require(params, "inputDigest"))
+    action = _parse_action(_require(params, "action"), operation_id)
+
+    # Approval is checked before resolving the session and therefore before a
+    # BrowserRuntime can enqueue anything on the Playwright thread.
+    if action.risk in (SideEffect.SIDE_EFFECTING, SideEffect.DESTRUCTIVE):
+        approval_id = params.get("approvalId")
+        if not isinstance(approval_id, str) or not approval_id.strip():
+            raise BridgeError(
+                error="bridge.approval_required",
+                message="This browser action may change server state and has no Host approval.",
+                fix="Ask through the Host approval service, then dispatch the exact approved action once.",
+                details={"operationId": operation_id, "risk": action.risk.value},
+                retryable=False,
+            )
+
+    with _browser_state_lock:
+        existing = _browser_attempts.get(key)
+        if existing is not None:
+            if existing["inputDigest"] != input_digest:
+                raise BridgeError(
+                    error="bridge.idempotency_conflict",
+                    message="That idempotency key already names a different browser action.",
+                    fix="Read the existing receipt; use a fresh Host-minted operation for different input.",
+                    details={"idempotencyKey": key},
+                    retryable=False,
+                )
+            if existing["status"] == "completed":
+                return existing["result"]
+            if existing["status"] == "failed":
+                raise BridgeError(**existing["error"])
+            return {
+                "status": "in_flight",
+                "idempotencyKey": key,
+                "operationId": existing["operationId"],
+            }
+        _browser_attempts[key] = {
+            "status": "in_flight",
+            "inputDigest": input_digest,
+            "operationId": operation_id,
+        }
+
+    try:
+        session_id, runtime = _browser_runtime(params)
+        receipt = runtime.act(action)
+        public = scrub(receipt.to_public())
+        epoch = int(getattr(runtime.source, "_navigation_epoch", 0)) if hasattr(runtime, "source") else 0
+        record = _mint_evidence(
+            session_id=session_id,
+            navigation_epoch=epoch,
+            modality="dom",
+            content=public,
+        )
+        result = {
+            **public,
+            "authority": "watch-core",
+            "operationId": operation_id,
+            "idempotencyKey": key,
+            "completed": True,
+            "verified": receipt.verdict is Verdict.SUCCEEDED,
+            "evidenceId": record["evidenceId"],
+        }
+    except Exception as exc:
+        if isinstance(exc, BridgeError):
+            error = {
+                "error": exc.error,
+                "message": exc.message,
+                "fix": exc.fix,
+                "details": scrub(exc.details),
+                "retryable": exc.retryable,
+            }
+        else:
+            error = {
+                "error": getattr(exc, "code", "browser.action_failed"),
+                "message": safe_message(getattr(exc, "message", "The browser action failed.")),
+                "fix": safe_message(getattr(exc, "fix", None) or "Inspect the browser session and receipt before retrying."),
+                "details": scrub(getattr(exc, "details", {})),
+                "retryable": False,
+            }
+        with _browser_state_lock:
+            _browser_attempts[key] = {
+                "status": "failed", "inputDigest": input_digest,
+                "operationId": operation_id, "error": error,
+            }
+        raise BridgeError(**error) from None
+
+    with _browser_state_lock:
+        _browser_attempts[key] = {
+            "status": "completed", "inputDigest": input_digest,
+            "operationId": operation_id, "result": result,
+        }
+    return result
+
+
+def browser_receipt(params: dict[str, Any]) -> Any:
+    """Read, never repeat, an action named by its idempotency key."""
+    key = str(_require(params, "idempotencyKey"))
+    with _browser_state_lock:
+        attempt = _browser_attempts.get(key)
+        if attempt is None:
+            return {"status": "unknown", "idempotencyKey": key}
+        if attempt["status"] == "completed":
+            return {"status": "completed", **attempt["result"]}
+        if attempt["status"] == "failed":
+            return {
+                "status": "failed", "idempotencyKey": key,
+                "operationId": attempt["operationId"],
+                "error": attempt["error"]["error"],
+                "message": attempt["error"]["message"],
+                "fix": attempt["error"]["fix"],
+            }
+        return {
+            "status": "in_flight", "idempotencyKey": key,
+            "operationId": attempt["operationId"],
+        }
 
 
 # -- evidence ----------------------------------------------------------------
 
 
 def evidence_get(params: dict[str, Any]) -> Any:
-    """`watch.evidence.get` — declared, and not backed by a Core operation.
-
-    Core mints evidence *inside* a verification bundle and *inside* a live
-    session; it has no global store keyed by ``evidenceId``, so there is
-    nothing to look one up in. Saying so is the honest answer. Returning a
-    synthesised record would put a fabricated observation in front of a user
-    under the one contract that is supposed to guarantee the opposite.
-    """
-    raise _unavailable(
-        "watch.evidence.get",
-        "this Core has no global evidence store to resolve an evidenceId against.",
-        "Read evidence through the verification run or live session that produced it.",
+    """Resolve evidence minted by this Core process's browser authority."""
+    evidence_id = str(_require(params, "evidenceId"))
+    with _browser_state_lock:
+        record = _evidence.get(evidence_id)
+        if record is not None:
+            return dict(record)
+    raise BridgeError(
+        error="evidence.not_found",
+        message="That evidence id is not retained by this Watch Core process.",
+        fix="Use an evidence id returned by the current Core session, or re-observe the source.",
+        details={"evidenceId": evidence_id},
+        retryable=False,
     )
+
+
+def _reset_browser_bridge_state() -> None:
+    """Close facades and clear process-local records. Tests and shutdown hooks."""
+    with _browser_state_lock:
+        runtimes = list(_browser_runtimes.values())
+        _browser_runtimes.clear()
+        _browser_attempts.clear()
+        _evidence.clear()
+    for runtime in runtimes:
+        runtime.close()
 
 
 #: Every method the Bridge answers, and the Core call behind it.
@@ -543,9 +799,9 @@ def evidence_get(params: dict[str, Any]) -> Any:
 #: ``watch.cancel`` are handled by the server itself, because they are about
 #: the connection rather than about the engine.
 HANDLERS: dict[str, Handler] = {
-    "watch.browser.act": _browser_unavailable("watch.browser.act"),
-    "watch.browser.observe": _browser_unavailable("watch.browser.observe"),
-    "watch.browser.receipt": _browser_unavailable("watch.browser.receipt"),
+    "watch.browser.act": browser_act,
+    "watch.browser.observe": browser_observe,
+    "watch.browser.receipt": browser_receipt,
     "watch.capture.capabilities": capture_capabilities,
     "watch.evidence.get": evidence_get,
     "watch.library.list": library_list,

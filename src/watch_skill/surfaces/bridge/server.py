@@ -635,6 +635,15 @@ class BridgeServer:
             stop_all()
         except Exception as exc:  # noqa: BLE001 - shutdown must not raise
             _log.warning("live shutdown reported %s", type(exc).__name__)
+        try:
+            # Receipts and evidence are process-local by contract.  Clear
+            # their facades after live sources stop so a reused in-memory
+            # server cannot resolve stale evidence from an earlier lifetime.
+            from watch_skill.surfaces.bridge.methods import _reset_browser_bridge_state
+
+            _reset_browser_bridge_state()
+        except Exception as exc:  # noqa: BLE001 - shutdown must not raise
+            _log.warning("browser bridge shutdown reported %s", type(exc).__name__)
 
 
 _STARTED_AT = time.monotonic()

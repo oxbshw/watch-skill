@@ -121,12 +121,13 @@ class TestHandshake:
         assert statuses, "the handshake must report capabilities"
         assert "machine_tested" not in statuses.values()
 
-    def test_a_capability_with_no_bridge_operation_says_unavailable(self) -> None:
-        """The contract declares browser methods; this Core cannot serve them."""
+    def test_browser_and_evidence_have_real_bridge_operations(self) -> None:
+        """The contract and the running Bridge agree that the authority exists."""
         result = converse(HANDSHAKE)[0]["result"]
         statuses = {c["capabilityId"]: c["status"] for c in result["capabilities"]}
-        assert statuses["watch.browser.observe"] == "unavailable"
-        assert statuses["watch.evidence.resolve"] == "unavailable"
+        assert statuses["watch.browser.observe"] in {"probed", "unavailable"}
+        assert statuses["watch.browser.operate"] in {"probed", "unavailable"}
+        assert statuses["watch.evidence.resolve"] == "implemented"
 
     def test_an_older_host_protocol_is_refused_with_both_versions(self) -> None:
         reply = converse({**HANDSHAKE, "params": {"protocolVersion": 0}})[0]
@@ -150,14 +151,14 @@ class TestDispatch:
         assert reply["error"]["code"] == protocol.METHOD_NOT_FOUND
         assert reply["error"]["data"]["error"] == "bridge.method_not_found"
 
-    def test_a_declared_method_with_no_core_operation_is_unavailable(self) -> None:
-        """Distinct from method_not_found: the Host was right to call it."""
+    def test_an_unknown_evidence_id_is_absent_not_unavailable(self) -> None:
+        """The operation exists; this id simply was not minted here."""
         reply = converse(
             HANDSHAKE,
             {"jsonrpc": "2.0", "id": 2, "method": "watch.evidence.get",
              "params": {"evidenceId": "e_1"}},
         )[1]
-        assert reply["error"]["data"]["error"] == "bridge.capability_unavailable"
+        assert reply["error"]["data"]["error"] == "evidence.not_found"
 
     def test_library_list_reaches_the_real_index(self) -> None:
         """An empty index answers zero rows — never a plausible-looking one."""

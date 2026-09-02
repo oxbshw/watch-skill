@@ -17,3 +17,4 @@ evidence would force a revisit — not a summary of the discussion.
 | [ADR-008](ADR-008-governed-self-learning.md) | Self-learning is governed by evaluation and promotion | Accepted |
 | [ADR-009](ADR-009-local-library-index.md) | The Library index is local, derived, and rebuildable | Accepted |
 | [ADR-010](ADR-010-single-repository.md) | One repository, two release trains | Accepted |
+| [ADR-011](ADR-011-browser-evidence-authority.md) | Watch Core owns browser execution and evidence normalization | Accepted |
