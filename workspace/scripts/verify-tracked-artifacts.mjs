@@ -82,6 +82,21 @@ const EXEMPT = [
     why: 'this gate names the scope it forbids',
   },
   {
+    path: 'release-surface-rules.json',
+    rule: 'stale package scope',
+    why: 'the release-surface rule table names the scope it forbids',
+  },
+  {
+    path: 'workspace/tests/release-surface.test.mjs',
+    rule: 'stale package scope',
+    why: 'the control that proves the release-surface gate fires on the old scope',
+  },
+  {
+    path: 'workspace/tests/release-surface.test.mjs',
+    rule: 'build-machine path',
+    why: 'the control that proves the release-surface gate fires on a personal path',
+  },
+  {
     path: 'workspace/scripts/verify-tracked-artifacts.mjs',
     rule: 'build-machine path',
     why: 'this gate names the path shape it forbids',

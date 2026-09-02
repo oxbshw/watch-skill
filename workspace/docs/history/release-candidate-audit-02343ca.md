@@ -18,7 +18,7 @@ authored here, and copying it in would create a second copy that could drift
 from the one that actually governs. The digest is recorded instead, so a future
 audit can confirm it read the same text.
 
-Per-requirement detail is in [`spec-closure-matrix.md`](spec-closure-matrix.md)
+Per-requirement detail is in [`spec-closure-matrix.md`](../spec-closure-matrix.md)
 and its machine-readable twin.
 
 _Measured at `02343ca`. This is the record of one candidate's audit, kept as
@@ -391,7 +391,7 @@ Neither blocks the manual testing this candidate is for.
 
 The candidate is ready for manual testing. Both applications are running, both
 have a live Watch Core, the fixtures are seeded, and
-[`manual-test-checklist.md`](manual-test-checklist.md) is written for someone
+[`manual-test-checklist.md`](../manual-test-checklist.md) is written for someone
 sitting in front of them.
 
 What this audit does **not** say is that the product is proven correct. It says

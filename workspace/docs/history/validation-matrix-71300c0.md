@@ -133,7 +133,7 @@ workload fails; a corpus everything passes is not evidence.
 | Fail | 0 |
 | Blocked | 16 |
 
-Full detail in [screenshot-manifest.md](screenshot-manifest.md). The 16 blocked
+Full detail in [screenshot-manifest.md](../screenshot-manifest.md). The 16 blocked
 shots are the mode tabs and the tablist: DSH hides the session header while a
 session is blank, so they need a turn, and a turn needs a provider key.
 
@@ -168,5 +168,5 @@ defect that was real and fails without its fix.
 | The agent loop itself | needs a provider key |
 | Camera, microphone, screen capture | needs real hardware and a human granting permission |
 
-See [platform-support.md](platform-support.md) for the full external-requirement
+See [platform-support.md](../platform-support.md) for the full external-requirement
 list.
