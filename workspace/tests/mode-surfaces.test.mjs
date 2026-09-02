@@ -21,6 +21,7 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const read = relative => readFileSync(join(ROOT, relative), 'utf8')
 
 const SURFACE = read('packages/watch/workspace/src/client/surface.tsx')
+const THEME = read('packages/watch/brand/src/client/theme.css')
 // The Watch mode body stayed in workspace; the other three moved into the
 // packages that own their capability, because a mode view and the engine
 // behind it belonging to different packages is what created the circular
@@ -68,13 +69,13 @@ test('the mode scaffold', async t => {
   await t.test('a surface owns its own scroll', () => {
     // The page body must never scroll sideways, and a mode that grows has to
     // scroll inside its own region rather than pushing the shell around.
-    assert.match(SURFACE, /overflowY: 'auto'/)
-    assert.match(SURFACE, /minHeight: 0/)
+    assert.match(THEME, /\.watch-mode-root[\s\S]*?overflow-y: auto/)
+    assert.match(THEME, /\.watch-mode-root[\s\S]*?min-height: 0/)
   })
 
   await t.test('offsets are logical, so RTL needs no second stylesheet', () => {
-    assert.match(SURFACE, /borderInlineStart|paddingInlineStart/)
-    assert.doesNotMatch(SURFACE, /borderLeft:|paddingLeft:|marginLeft:/)
+    assert.match(THEME, /border-inline-start|padding-inline-start|margin-inline-start/)
+    assert.doesNotMatch(THEME, /border-left:|padding-left:|margin-left:/)
   })
 
   await t.test('a tool result that cannot be read renders nothing', () => {

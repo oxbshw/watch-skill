@@ -20,6 +20,7 @@
  */
 
 import type { ReactNode } from 'react'
+import { WATCH_MARK_PNG } from '@deepwatch/dsh-client-brand'
 
 /** What DSH hands a `conversation.view` entry. */
 export interface ModeViewProps {
@@ -28,52 +29,47 @@ export interface ModeViewProps {
   readonly onInspectDone?: () => void
 }
 
-const S = {
-  root: {
-    display: 'flex',
-    flexDirection: 'column' as const,
-    height: '100%',
-    minHeight: 0,
-    overflowY: 'auto' as const,
-    padding: '20px 24px 32px',
-    gap: '18px',
-  },
-  head: { display: 'flex', flexDirection: 'column' as const, gap: '4px' },
-  title: { fontSize: '15px', fontWeight: 600, margin: 0, letterSpacing: '-0.005em' },
-  lead: {
-    fontSize: '13px', lineHeight: 1.6, margin: 0, maxWidth: '68ch',
-    color: 'var(--dsw-alias-label-secondary)',
-  },
-  panel: {
-    border: '1px solid var(--dsw-alias-border-l2)',
-    borderRadius: '10px',
-    padding: '16px 18px',
-    background: 'var(--dsw-alias-bg-base)',
-  },
-  dashed: {
-    border: '1px dashed var(--dsw-alias-border-l2)',
-    borderRadius: '10px',
-    padding: '20px 22px',
-    background: 'transparent',
-  },
-  h: {
-    fontSize: '11px', fontWeight: 600, letterSpacing: '0.06em',
-    textTransform: 'uppercase' as const,
-    color: 'var(--dsw-alias-label-tertiary)', margin: '0 0 8px',
-  },
-  meta: {
-    display: 'grid', gridTemplateColumns: 'max-content 1fr',
-    columnGap: '16px', rowGap: '5px', fontSize: '12px', margin: 0,
-  },
-  key: { color: 'var(--dsw-alias-label-tertiary)' },
-  value: { color: 'var(--dsw-alias-label-secondary)', wordBreak: 'break-word' as const },
-  note: {
-    fontSize: '12px', lineHeight: 1.55, margin: '14px 0 0',
-    color: 'var(--dsw-alias-label-tertiary)',
-    borderInlineStart: '2px solid var(--watch-accent)',
-    paddingInlineStart: '10px',
-  },
+const MODE_KICKER: Readonly<Record<string, string>> = {
+  Watch: 'Trust layer',
+  Live: 'Observation',
+  Memory: 'Knowledge',
+  Library: 'Evidence library',
+  Compare: 'Change analysis',
 }
+
+/** Stable global class names; their rules live with the product theme. */
+const C = {
+  root: 'watch-mode-root',
+  hero: 'watch-mode-hero',
+  markFrame: 'watch-mode-mark-frame',
+  mark: 'watch-mode-mark',
+  heroCopy: 'watch-mode-hero-copy',
+  eyebrow: 'watch-mode-eyebrow',
+  title: 'watch-mode-title',
+  lead: 'watch-mode-lead',
+  localBadge: 'watch-mode-local-badge',
+  body: 'watch-mode-body',
+  empty: 'watch-empty',
+  emptyCopy: 'watch-empty-copy',
+  sectionLabel: 'watch-section-label',
+  emptyShows: 'watch-empty-shows',
+  emptyWhy: 'watch-empty-why',
+  nextBlock: 'watch-next-block',
+  nextList: 'watch-next-list',
+  panel: 'watch-panel',
+  panelHeading: 'watch-panel-heading',
+  facts: 'watch-facts',
+  factRow: 'watch-fact-row',
+  factKey: 'watch-fact-key',
+  factValue: 'watch-fact-value',
+  note: 'watch-note',
+  noteMark: 'watch-note-mark',
+  unavailable: 'watch-unavailable',
+  unavailableHead: 'watch-unavailable-head',
+  unavailableBadge: 'watch-unavailable-badge',
+  unavailableBecause: 'watch-unavailable-because',
+  requirements: 'watch-requirements',
+} as const
 
 /** The frame: a title, one sentence of what this is, then the body. */
 export function ModeSurface(
@@ -84,12 +80,21 @@ export function ModeSurface(
   },
 ): ReactNode {
   return (
-    <div style={S.root} data-watch-mode={title.toLowerCase()}>
-      <header style={S.head}>
-        <h2 style={S.title}>{title}</h2>
-        <p style={S.lead}>{lead}</p>
+    <div className={C.root} data-watch-mode={title.toLowerCase()}>
+      <header className={C.hero}>
+        <span className={C.markFrame} aria-hidden="true">
+          <img className={C.mark} src={WATCH_MARK_PNG} alt="" />
+        </span>
+        <div className={C.heroCopy}>
+          <span className={C.eyebrow}>
+            {`DEEPWATCH / ${MODE_KICKER[title] ?? 'Evidence workspace'}`}
+          </span>
+          <h2 className={C.title}>{title}</h2>
+          <p className={C.lead}>{lead}</p>
+        </div>
+        <span className={C.localBadge}>Local-first</span>
       </header>
-      {children}
+      <div className={C.body}>{children}</div>
     </div>
   )
 }
@@ -109,18 +114,22 @@ export function EmptyState(
   },
 ): ReactNode {
   return (
-    <div style={S.dashed}>
-      <p style={{ ...S.lead, marginBottom: '10px' }}>{shows}</p>
-      <p style={{ ...S.lead, color: 'var(--dsw-alias-label-tertiary)', margin: 0 }}>{why}</p>
-      {next.length === 0 ? null : (
-        <ul style={{
-          margin: '12px 0 0', paddingInlineStart: '18px',
-          fontSize: '12px', lineHeight: 1.7, color: 'var(--dsw-alias-label-secondary)',
-        }}
-        >
-          {next.map(step => <li key={step}>{step}</li>)}
-        </ul>
-      )}
+    <div className={C.empty} data-watch-empty-state="">
+      <div className={C.emptyCopy}>
+        <span className={C.sectionLabel}>What appears here</span>
+        <p className={C.emptyShows}>{shows}</p>
+        <p className={C.emptyWhy}>{why}</p>
+      </div>
+      {next.length === 0
+        ? null
+        : (
+            <div className={C.nextBlock}>
+              <span className={C.sectionLabel}>Start here</span>
+              <ol className={C.nextList}>
+                {next.map(step => <li key={step}>{step}</li>)}
+              </ol>
+            </div>
+          )}
     </div>
   )
 }
@@ -130,8 +139,8 @@ export function Panel(
   { heading, children }: { readonly heading?: string, readonly children: ReactNode },
 ): ReactNode {
   return (
-    <section style={S.panel}>
-      {heading === undefined ? null : <h3 style={S.h}>{heading}</h3>}
+    <section className={C.panel} data-watch-panel="">
+      {heading === undefined ? null : <h3 className={C.panelHeading}>{heading}</h3>}
       {children}
     </section>
   )
@@ -142,11 +151,11 @@ export function Facts(
   { rows }: { readonly rows: readonly (readonly [string, ReactNode])[] },
 ): ReactNode {
   return (
-    <dl style={S.meta}>
+    <dl className={C.facts}>
       {rows.map(([label, value]) => (
-        <div key={label} style={{ display: 'contents' }}>
-          <dt style={S.key}>{label}</dt>
-          <dd style={{ ...S.value, margin: 0 }}>{value}</dd>
+        <div key={label} className={C.factRow}>
+          <dt className={C.factKey}>{label}</dt>
+          <dd className={C.factValue}>{value}</dd>
         </div>
       ))}
     </dl>
@@ -155,7 +164,12 @@ export function Facts(
 
 /** A short aside in the product's own voice, marked by the accent rule. */
 export function Note({ children }: { readonly children: ReactNode }): ReactNode {
-  return <p style={S.note}>{children}</p>
+  return (
+    <aside className={C.note}>
+      <span className={C.noteMark} aria-hidden="true">i</span>
+      <p>{children}</p>
+    </aside>
+  )
 }
 
 /**
@@ -174,26 +188,18 @@ export function Unavailable(
   },
 ): ReactNode {
   return (
-    <div style={S.dashed}>
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: '10px', flexWrap: 'wrap' }}>
-        <h3 style={{ ...S.title, fontSize: '13px' }}>{what}</h3>
-        <span style={{
-          fontSize: '11px', padding: '2px 8px', borderRadius: '999px',
-          border: '1px solid var(--watch-tone-neutral)', color: 'var(--watch-tone-neutral)',
-        }}
-        >
+    <div className={C.unavailable} data-watch-unavailable="">
+      <div className={C.unavailableHead}>
+        <h3>{what}</h3>
+        <span className={C.unavailableBadge}>
           Not available in this build
         </span>
       </div>
-      <p style={{ ...S.lead, margin: '8px 0 0' }}>{because}</p>
+      <p className={C.unavailableBecause}>{because}</p>
       {wouldNeed.length === 0 ? null : (
         <>
-          <h4 style={{ ...S.h, margin: '14px 0 6px' }}>What it would take</h4>
-          <ul style={{
-            margin: 0, paddingInlineStart: '18px',
-            fontSize: '12px', lineHeight: 1.7, color: 'var(--dsw-alias-label-secondary)',
-          }}
-          >
+          <h4 className={C.panelHeading}>What it would take</h4>
+          <ul className={C.requirements}>
             {wouldNeed.map(item => <li key={item}>{item}</li>)}
           </ul>
         </>

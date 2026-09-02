@@ -45,12 +45,12 @@ const S = {
     textTransform: 'uppercase' as const, color: 'var(--dsw-alias-label-tertiary)',
   },
   select: {
-    background: 'var(--dsw-alias-bg-layer-2)', border: '1px solid var(--dsw-alias-border-l2)',
-    borderRadius: '8px', padding: '7px 10px', fontSize: '13px', color: 'inherit', width: '100%',
+    background: 'var(--dsw-alias-bg-layer-2)', border: '1px solid color-mix(in srgb, var(--watch-accent) 12%, var(--dsw-alias-border-l2))',
+    borderRadius: '10px', padding: '9px 11px', fontSize: '13px', color: 'inherit', width: '100%',
   },
   button: {
     background: 'transparent', border: '1px solid var(--dsw-alias-border-l2)',
-    borderRadius: '8px', padding: '7px 12px', fontSize: '13px', color: 'inherit', cursor: 'pointer',
+    borderRadius: '10px', padding: '9px 13px', fontSize: '13px', color: 'inherit', cursor: 'pointer',
   },
   row: {
     borderTop: '1px solid var(--dsw-alias-border-l2)',

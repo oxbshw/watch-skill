@@ -68,6 +68,22 @@ const THEME = readFileSync(
  */
 const THEME_RULES = THEME.replace(/\/\*[\s\S]*?\*\//g, '')
 
+/**
+ * Every stylesheet this product ships, by name.
+ *
+ * The rules that assert an *absence* have to see all of them. The onboarding
+ * redesign added a second stylesheet, and a rule that only read the brand
+ * theme would have called the product clean while the first screen a person
+ * sees pinned six heights in pixels.
+ */
+const STYLESHEETS = [
+  ['the brand theme', THEME],
+  ['the onboarding surface', readFileSync(
+    join(ROOT, 'packages', 'watch', 'client-settings', 'src', 'client', 'onboarding.module.css'),
+    'utf8',
+  )],
+]
+
 const READY = {
   capabilities: ['source.ask', 'live.observe', 'library.search'].map(capabilityId => ({
     capabilityId, provider: 'watch-core', providerVersion: '1', status: 'machine_tested',
@@ -293,10 +309,14 @@ describe('focus, contrast and zoom', () => {
   })
 
   test('no fixed pixel height is imposed on a surface that has to grow at 200%', () => {
-    // `height: 40px` on a control is what clips a label at 200% zoom. The
-    // theme uses min-height instead, and this asserts the absence.
-    assert.equal(/\bheight:\s*\d+px/.test(THEME), false,
-      'the theme pins a pixel height, which clips at 200% zoom')
+    // `height: 40px` on a control is what clips a label at 200% zoom, and a
+    // `line-height` in pixels does the same to a wrapped paragraph. Sizes are
+    // expressed in rem or em so they follow the reader's text size, and this
+    // asserts the absence across every stylesheet the product ships.
+    for (const [name, sheet] of STYLESHEETS) {
+      assert.equal(/\bheight:\s*\d+px/.test(sheet), false,
+        `${name} pins a pixel height, which clips at 200% zoom`)
+    }
   })
 })
 
