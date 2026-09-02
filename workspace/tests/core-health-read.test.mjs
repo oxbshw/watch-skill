@@ -21,7 +21,7 @@ import assert from 'node:assert/strict'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 
-import { readCoreHealth } from '../packages/watch/tools/lib/read-plane.js'
+import { readCoreHealth, testProvider } from '../packages/watch/tools/lib/read-plane.js'
 
 const FIXTURES = join(dirname(fileURLToPath(import.meta.url)), 'fixtures')
 
@@ -60,7 +60,7 @@ const READY = {
   lastHandshakeAt: '2026-09-01T00:00:00Z',
   restartCount: 1,
   handshake: {
-    coreVersion: '1.3.0rc2',
+    coreVersion: '1.4.0rc1',
     coreBuild: null,
     protocolVersion: 1,
     protocolMin: 1,
@@ -72,7 +72,7 @@ describe('a connected engine is reported as itself', () => {
   test('the version comes from the handshake, not from this build', () => {
     const report = read(bridge(READY))
     assert.equal(report.outcome, 'core_health')
-    assert.equal(report.coreVersion, '1.3.0rc2')
+    assert.equal(report.coreVersion, '1.4.0rc1')
     assert.equal(report.protocolVersion, 1)
     assert.equal(report.protocolMin, 1)
     assert.equal(report.transport, 'stdio')
@@ -87,17 +87,21 @@ describe('a connected engine is reported as itself', () => {
     // about what its payload means. Counting the engine's word would put a
     // number on the screen that no button could honour.
     const capabilities = [
-      { capabilityId: 'a', status: 'machine_tested' },
-      { capabilityId: 'b', status: 'implemented' },
-      { capabilityId: 'c', status: 'unavailable' },
-      { capabilityId: 'd', status: 'probed' },
-      { capabilityId: 'e', status: 'not_tested' },
+      { capabilityId: 'a', status: 'machine_tested', missing: [], fixes: [], lastCheckedAt: '2026-09-01T00:00:00Z' },
+      { capabilityId: 'b', status: 'implemented', missing: [], fixes: [], lastCheckedAt: null },
+      { capabilityId: 'c', status: 'unavailable', missing: ['binary'], fixes: ['Install it.'], lastCheckedAt: '2026-09-01T00:00:00Z' },
+      { capabilityId: 'd', status: 'probed', missing: [], fixes: [], lastCheckedAt: '2026-09-01T00:00:00Z' },
+      { capabilityId: 'e', status: 'not_tested', missing: [], fixes: [], lastCheckedAt: null },
     ]
     const usable = new Set(['a'])
     const report = read(bridge(READY, capabilities, id => usable.has(id)))
 
     assert.deepEqual(report.capabilities, {
       ready: 1, unavailable: 1, degraded: 1, unknown: 2,
+    })
+    assert.deepEqual(report.capabilityDetails[0], {
+      capabilityId: 'a', status: 'machine_tested', usable: true,
+      missing: [], fixes: [], lastCheckedAt: '2026-09-01T00:00:00Z',
     })
   })
 })
@@ -137,6 +141,7 @@ describe('nothing is defaulted', () => {
     assert.equal(report.blocker, 'core_missing')
     assert.equal(report.coreVersion, null)
     assert.deepEqual(report.capabilities, { ready: 0, unavailable: 0, degraded: 0, unknown: 0 })
+    assert.deepEqual(report.capabilityDetails, [])
   })
 })
 
@@ -220,5 +225,37 @@ describe('counterfactual: break the handshake, lose the claim', () => {
     } finally {
       await fiber.dispose()
     }
+  })
+})
+
+describe('the explicit provider test reports facts, never provider output', () => {
+  const providerRequest = {
+    protocol: 1, requestId: 'req_provider_1', deadlineMs: 5_000,
+    provider: 'stub', model: 'stub-model',
+  }
+
+  test('a completed stub stream verifies the exact binding', async () => {
+    const ctx = { llm: { stream: async function* () {
+      yield { type: 'text-delta', index: 0, text: 'SECRET_PROVIDER_OUTPUT' }
+      yield { type: 'finish', reason: { kind: 'stop' } }
+    } } }
+    const result = await testProvider(providerRequest, ctx, new AbortController().signal)
+    assert.equal(result.ok, true)
+    assert.equal(result.credential, 'verified')
+    assert.equal(result.reachability, 'reachable')
+    assert.equal(JSON.stringify(result).includes('SECRET_PROVIDER_OUTPUT'), false)
+  })
+
+  test('an authentication failure is classified without quoting it', async () => {
+    const ctx = { llm: { stream: async function* () {
+      yield { type: 'finish', reason: { kind: 'error', failure: {
+        code: 'AUTH', status: 401, message: 'sk-do-not-return-this',
+      } } }
+    } } }
+    const result = await testProvider(providerRequest, ctx, new AbortController().signal)
+    assert.equal(result.ok, false)
+    assert.equal(result.credential, 'rejected')
+    assert.equal(result.reachability, 'unauthorized')
+    assert.equal(JSON.stringify(result).includes('sk-do-not-return-this'), false)
   })
 })

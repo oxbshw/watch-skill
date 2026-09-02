@@ -122,6 +122,15 @@ describe('resolving a package manager', () => {
       assert.doesNotMatch(part, /\.(cmd|bat)$/i)
     }
   })
+
+  test('the bundled Node layout beside bin is discoverable', () => {
+    const source = readFileSync(join(CLI, 'src', 'lib', 'exec.ts'), 'utf8')
+    assert.match(
+      source,
+      /join\(dirname\(nodeDir\), 'node_modules', tool, relative\)/,
+      'embedded runtimes place pnpm at <node>/node_modules while node.exe is at <node>/bin',
+    )
+  })
 })
 
 describe('paths and arguments', () => {

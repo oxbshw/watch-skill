@@ -42,7 +42,7 @@ export type { BrowserConfig } from './browser.js'
 export type { SensoryConfig } from './sensory.js'
 
 export const name = 'watch-tools'
-export const inject = ['tools', 'watchCore', 'systemPrompt']
+export const inject = ['tools', 'watchCore', 'systemPrompt', 'llm']
 
 /** Deployment policy for the Watch tool surface. */
 export interface Config {
@@ -80,7 +80,7 @@ export const Config: s<Config> = s.object({
   queryTimeoutMs: s.number().step(1).min(1_000).default(120_000),
   verifyTimeoutMs: s.number().step(1).min(1_000).default(60_000),
   readTimeoutMs: s.number().step(1).min(1_000).default(30_000),
-  liveStartTimeoutMs: s.number().step(1).min(1_000).default(60_000),
+  liveStartTimeoutMs: s.number().step(1).min(1_000).default(75_000),
   actTimeoutMs: s.number().step(1).min(1_000).default(60_000),
   observeTimeoutMs: s.number().step(1).min(1_000).default(30_000),
 })

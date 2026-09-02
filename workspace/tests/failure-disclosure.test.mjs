@@ -32,7 +32,7 @@ const {
 
 /** Every kind a reader can be shown. */
 const KINDS = [
-  'not_configured', 'credential_unavailable', 'credential_rejected', 'model_unavailable',
+  'not_configured', 'not_tested', 'credential_unavailable', 'credential_rejected', 'model_unavailable',
   'provider_unreachable', 'rate_limited', 'policy_forbids', 'unavailable',
 ]
 
@@ -181,7 +181,8 @@ describe('a readiness blocker becomes a card a person can act on', () => {
   test('every blocker maps to a disclosure-safe card', () => {
     const blockers = [
       'no_binding', 'provider_unknown', 'credential_absent', 'credential_rejected',
-      'credential_inaccessible', 'model_unset', 'model_unavailable', 'model_invalid',
+      'credential_inaccessible', 'provider_untested', 'provider_unreachable',
+      'provider_rate_limited', 'model_unset', 'model_unavailable', 'model_invalid',
       'route_lacks_role', 'modality_unsupported', 'consent_required', 'policy_forbids',
       'contract_mismatch',
     ]

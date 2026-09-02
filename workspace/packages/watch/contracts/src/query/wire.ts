@@ -354,6 +354,17 @@ export interface CapabilityTally {
   readonly unknown: number
 }
 
+/** One Core capability, including why it is or is not usable on this machine. */
+export interface CapabilityHealthDetail {
+  readonly capabilityId: string
+  /** Core's evidence level; kept separate from whether contract negotiation made it usable. */
+  readonly status: 'implemented' | 'machine_tested' | 'probed' | 'unavailable' | 'not_tested'
+  readonly usable: boolean
+  readonly missing: readonly string[]
+  readonly fixes: readonly string[]
+  readonly lastCheckedAt: string | null
+}
+
 /**
  * What the Host observed about Watch Core, at the moment it was asked.
  *
@@ -394,6 +405,8 @@ export interface CoreHealthReport {
   /** Core processes started this session. A climbing number is a crash loop. */
   readonly restartCount: number
   readonly capabilities: CapabilityTally
+  /** Per-capability truth used by readiness surfaces; never reconstructed from the tally. */
+  readonly capabilityDetails: readonly CapabilityHealthDetail[]
   /** What to do about `blocker`, in words. Empty only when connected. */
   readonly fix: string
 }
@@ -403,3 +416,27 @@ export type CoreHealthResponse =
   | CoreHealthReport
   | LibraryRequestRejected
   | LibraryDeadlineExceeded
+
+// -- explicit provider test -------------------------------------------------
+
+/** A user-triggered, bounded one-token request against one exact binding. */
+export interface ProviderTestRequest {
+  readonly protocol: number
+  readonly requestId: string
+  readonly deadlineMs: number
+  readonly provider: string
+  readonly model: string
+}
+
+/** Only provider-neutral facts cross back; provider output and credentials never do. */
+export interface ProviderTestResponse {
+  readonly outcome: 'provider_test'
+  readonly protocol: number
+  readonly requestId: string
+  readonly provider: string
+  readonly model: string
+  readonly ok: boolean
+  readonly credential: 'configured_unverified' | 'verified' | 'rejected'
+  readonly reachability: 'reachable' | 'unreachable' | 'rate_limited' | 'unauthorized'
+  readonly message: string
+}

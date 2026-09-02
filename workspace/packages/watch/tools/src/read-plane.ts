@@ -46,6 +46,8 @@
 
 import { type Context } from '@deepseek-ai/cordis'
 import { Remote, TypertRemoteService } from '@deepseek-ai/dsh-typert-protocol'
+import { createUserMessage } from '@deepseek-ai/dsh-llm'
+import type { LlmFailure } from '@deepseek-ai/dsh-llm'
 import { WATCH_QUERY_PROTOCOL_VERSION } from '@deepwatch/dsh-contracts/query'
 import type { IndexableRecord, LibraryIndex, SearchResult } from '@deepwatch/dsh-library'
 import type {
@@ -53,6 +55,7 @@ import type {
   LibraryGetRequest, LibraryGetResponse, LibraryIndexGeneration,
   LibraryRecord, LibraryRefreshRequest, LibraryRefreshResponse,
   LibrarySearchRequest, LibrarySearchResponse,
+  ProviderTestRequest, ProviderTestResponse,
 } from '@deepwatch/dsh-contracts/query/wire'
 import {
   parseCoreHealthRequest, parseLibraryGetRequest, parseLibraryRefreshRequest,
@@ -229,6 +232,74 @@ export class WatchQueryService extends TypertRemoteService {
   ): Promise<CoreHealthResponse> {
     return Promise.resolve(readCoreHealth(request, this.ctx, signal))
   }
+
+  /** Spend one deliberately tiny provider request only after a person asks. */
+  @Remote('providerTest')
+  providerTest(
+    request: ProviderTestRequest, signal: AbortSignal,
+  ): Promise<ProviderTestResponse> {
+    return testProvider(request, this.ctx, signal)
+  }
+}
+
+function providerFailure(
+  request: ProviderTestRequest, failure: LlmFailure | null,
+): ProviderTestResponse {
+  const code = failure?.code.toUpperCase() ?? 'UNREACHABLE'
+  if (code.includes('AUTH') || failure?.status === 401 || failure?.status === 403) {
+    return {
+      outcome: 'provider_test', protocol: WATCH_QUERY_PROTOCOL_VERSION,
+      requestId: request.requestId, provider: request.provider, model: request.model,
+      ok: false, credential: 'rejected', reachability: 'unauthorized',
+      message: 'The provider rejected the saved credential.',
+    }
+  }
+  if (code.includes('RATE') || failure?.status === 429) {
+    return {
+      outcome: 'provider_test', protocol: WATCH_QUERY_PROTOCOL_VERSION,
+      requestId: request.requestId, provider: request.provider, model: request.model,
+      ok: false, credential: 'configured_unverified', reachability: 'rate_limited',
+      message: 'The provider rate-limited the test. Wait, then try again.',
+    }
+  }
+  return {
+    outcome: 'provider_test', protocol: WATCH_QUERY_PROTOCOL_VERSION,
+    requestId: request.requestId, provider: request.provider, model: request.model,
+    ok: false, credential: 'configured_unverified', reachability: 'unreachable',
+    message: 'The provider test did not complete. Check the route and network, then try again.',
+  }
+}
+
+/** Execute a provider request without returning or logging model output. */
+export async function testProvider(
+  request: ProviderTestRequest, ctx: Context, signal: AbortSignal,
+): Promise<ProviderTestResponse> {
+  const bounded = AbortSignal.any([signal, AbortSignal.timeout(request.deadlineMs)])
+  try {
+    const messages = [createUserMessage({
+      content: [{ type: 'text', text: 'Reply with OK.' }],
+      source: { kind: 'user' },
+    })]
+    for await (const chunk of ctx.llm.stream({
+      provider: request.provider, model: request.model, messages,
+      maxTokens: 1, temperature: 0, signal: bounded,
+    })) {
+      if (chunk.type !== 'finish') continue
+      if (chunk.reason.kind === 'error' || chunk.reason.kind === 'aborted') {
+        return providerFailure(request, chunk.reason.failure)
+      }
+      return {
+        outcome: 'provider_test', protocol: WATCH_QUERY_PROTOCOL_VERSION,
+        requestId: request.requestId, provider: request.provider, model: request.model,
+        ok: true, credential: 'verified', reachability: 'reachable',
+        message: 'Provider request succeeded. This exact binding is ready.',
+      }
+    }
+  } catch {
+    // The provider's message is intentionally not returned: adapters should
+    // redact it, but the readiness channel never needs provider text at all.
+  }
+  return providerFailure(request, null)
 }
 
 
@@ -511,6 +582,7 @@ export function readCoreHealth(
       lastHandshakeAt: null,
       restartCount: 0,
       capabilities: { ready: 0, unavailable: 0, degraded: 0, unknown: 0 },
+      capabilityDetails: [],
       fix: 'Watch Core is not configured for this Workspace. Install it and set '
         + 'the Bridge command in Settings → Watch.',
     }
@@ -543,6 +615,14 @@ export function readCoreHealth(
     lastHandshakeAt: health.lastHandshakeAt,
     restartCount: health.restartCount,
     capabilities: tally(bridge),
+    capabilityDetails: bridge.capabilities().map(capability => ({
+      capabilityId: capability.capabilityId,
+      status: capability.status,
+      usable: bridge.isCapable(capability.capabilityId),
+      missing: capability.missing,
+      fixes: capability.fixes,
+      lastCheckedAt: capability.lastCheckedAt,
+    })),
     fix: health.error?.fix ?? '',
   }
 }
@@ -567,7 +647,13 @@ interface WatchCoreLike {
       readonly details: Readonly<Record<string, unknown>>
     } | null
   }
-  capabilities(): readonly { readonly capabilityId: string; readonly status: string }[]
+  capabilities(): readonly {
+    readonly capabilityId: string
+    readonly status: 'implemented' | 'machine_tested' | 'probed' | 'unavailable' | 'not_tested'
+    readonly missing: readonly string[]
+    readonly fixes: readonly string[]
+    readonly lastCheckedAt: string | null
+  }[]
   isCapable(capabilityId: string): boolean
 }
 

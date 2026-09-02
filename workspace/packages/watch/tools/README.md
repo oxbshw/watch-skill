@@ -18,9 +18,11 @@ memory and independent verification.
 Provided by the host rather than installed here:
 
 - `@deepseek-ai/cordis@4.0.2`
+- `@deepseek-ai/dsh-llm@0.1.1-rc.2`
 - `@deepseek-ai/dsh-system-prompt@0.1.1-rc.2`
 - `@deepseek-ai/dsh-tools@0.1.1-rc.2`
 - `@deepseek-ai/dsh-typert-protocol@0.1.1-rc.2`
+- `@deepseek-ai/dsh-user-approval@^0.1.1-rc.2`
 - `@deepseek-ai/schemastery@^3.18.1`
 - `zod@^4.5.2`
 

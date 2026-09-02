@@ -64,25 +64,26 @@ const S = {
   },
   input: {
     background: 'var(--dsw-alias-bg-layer-2)',
-    border: '1px solid var(--dsw-alias-border-l2)',
-    borderRadius: '8px', padding: '7px 10px', fontSize: '13px',
+    border: '1px solid color-mix(in srgb, var(--watch-accent) 12%, var(--dsw-alias-border-l2))',
+    borderRadius: '10px', padding: '9px 11px', fontSize: '13px',
     color: 'inherit', font: 'inherit', minWidth: 0, width: '100%',
   },
   select: {
     background: 'var(--dsw-alias-bg-layer-2)',
-    border: '1px solid var(--dsw-alias-border-l2)',
-    borderRadius: '8px', padding: '7px 10px', fontSize: '13px', color: 'inherit',
+    border: '1px solid color-mix(in srgb, var(--watch-accent) 12%, var(--dsw-alias-border-l2))',
+    borderRadius: '10px', padding: '9px 11px', fontSize: '13px', color: 'inherit',
   },
   button: {
     background: 'transparent', border: '1px solid var(--dsw-alias-border-l2)',
-    borderRadius: '8px', padding: '7px 12px', fontSize: '13px',
+    borderRadius: '10px', padding: '9px 13px', fontSize: '13px',
     color: 'inherit', cursor: 'pointer',
   },
   status: { fontSize: '12px', color: 'var(--dsw-alias-label-tertiary)', margin: 0 },
   list: { display: 'flex', flexDirection: 'column' as const, gap: '8px', margin: 0, padding: 0, listStyle: 'none' },
   hit: {
-    border: '1px solid var(--dsw-alias-border-l2)', borderRadius: '10px',
-    padding: '12px 14px', background: 'var(--dsw-alias-bg-base)',
+    border: '1px solid color-mix(in srgb, var(--watch-accent) 9%, var(--dsw-alias-border-l2))', borderRadius: '14px',
+    padding: '14px 16px', background: 'linear-gradient(145deg, color-mix(in srgb, var(--watch-accent) 3%, var(--dsw-alias-bg-layer-2)), var(--dsw-alias-bg-base))',
+    boxShadow: '0 8px 24px color-mix(in srgb, black 7%, transparent)',
   },
   title: { fontSize: '13.5px', fontWeight: 600, margin: 0 },
   snippet: {

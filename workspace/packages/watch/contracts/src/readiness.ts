@@ -104,6 +104,9 @@ export type ReadinessBlocker =
   | 'credential_absent'
   | 'credential_rejected'
   | 'credential_inaccessible'
+  | 'provider_untested'
+  | 'provider_unreachable'
+  | 'provider_rate_limited'
   | 'model_unset'
   | 'model_unavailable'
   | 'model_invalid'
@@ -190,6 +193,9 @@ const BLOCKER_ORDER: readonly ReadinessBlocker[] = [
   'model_unset',
   'model_invalid',
   'model_unavailable',
+  'provider_untested',
+  'provider_unreachable',
+  'provider_rate_limited',
   'route_lacks_role',
   'modality_unsupported',
   'contract_mismatch',
@@ -220,9 +226,13 @@ export function roleReadiness(role: string, inputs: ReadinessInputs): RoleReadin
     if (inputs.credential === 'absent') found.add('credential_absent')
     if (inputs.credential === 'inaccessible') found.add('credential_inaccessible')
     if (inputs.credential === 'rejected') found.add('credential_rejected')
+    if (inputs.credential === 'configured_unverified') found.add('provider_untested')
     // A rejected credential is also what an `unauthorized` probe reports; both
     // are the same missing step for a person, so they collapse to one blocker.
     if (inputs.reachability === 'unauthorized') found.add('credential_rejected')
+    if (inputs.reachability === 'unknown') found.add('provider_untested')
+    if (inputs.reachability === 'unreachable') found.add('provider_unreachable')
+    if (inputs.reachability === 'rate_limited') found.add('provider_rate_limited')
 
     if (inputs.model === 'none' || binding.model === '') found.add('model_unset')
     if (inputs.model === 'invalid') found.add('model_invalid')
@@ -247,7 +257,11 @@ export function roleReadiness(role: string, inputs: ReadinessInputs): RoleReadin
   }
   // `unbound` and `blocked` are different answers to "what do I do now?": one
   // needs a first choice, the other needs something repaired.
-  const status: RoleBindingStatus = binding === null ? 'unbound' : 'blocked'
+  const status: RoleBindingStatus = binding === null
+    ? 'unbound'
+    : blockers.every(blocker => blocker === 'provider_untested')
+      ? 'bound_unverified'
+      : 'blocked'
   return { role, status, blockers, primaryBlocker: blockers[0] ?? null }
 }
 
@@ -268,6 +282,9 @@ const BLOCKER_COPY: Readonly<Record<ReadinessBlocker, string>> = {
   credential_absent: 'Add a credential for this provider.',
   credential_inaccessible: 'The saved credential could not be read. Save it again.',
   credential_rejected: 'The provider rejected the saved credential. Update it.',
+  provider_untested: 'Run the provider test before using this capability.',
+  provider_unreachable: 'The provider did not answer. Check the network and try again.',
+  provider_rate_limited: 'The provider rate-limited the test. Wait, then try again.',
   model_unset: 'Choose a model for this capability.',
   model_invalid: 'The chosen model is not valid for this provider. Choose another.',
   model_unavailable: 'The provider no longer offers the chosen model. Choose another.',

@@ -15,7 +15,7 @@ import WatchCoreService from '@deepwatch/dsh-core-bridge'
 import { apply as applyWatchTools, Config as WatchToolsConfig } from '@deepwatch/dsh-tools'
 
 /** The execution context the DSH tool runner passes to `execute`. */
-const EXEC = { signal: undefined }
+const EXEC = { signal: undefined, agent: {}, callId: 'watch-test-call' }
 
 /**
  * Mount the Bridge plus the tool surface, capturing what gets registered.
@@ -23,16 +23,23 @@ const EXEC = { signal: undefined }
  * `tools` and `systemPrompt` are stubbed to their registration surface only.
  * Booting the real DSH host here would test DSH, not this package.
  */
-async function mountTools(bridgeConfig = {}) {
+async function mountTools(bridgeConfig = {}, approvalOutcome = 'allowed-once') {
   const ctx = new Context()
   const registered = new Map()
   const sections = []
+  const approvals = []
 
   const fiber = await ctx.plugin({
     name: 'watch-tools-harness',
     apply(inner) {
       inner.provide('tools', { register: definition => registered.set(definition.name, definition) })
       inner.provide('systemPrompt', { section: section => sections.push(section) })
+      inner.provide('approval', {
+        request: async request => {
+          approvals.push(request)
+          return approvalOutcome
+        },
+      })
     },
   })
 
@@ -50,6 +57,7 @@ async function mountTools(bridgeConfig = {}) {
     ctx,
     registered,
     sections,
+    approvals,
     dispose: async () => {
       await tools.dispose()
       await bridge.dispose()
@@ -353,7 +361,6 @@ describe('acting on a page', () => {
         intent: 'submit the form',
         target_name: 'Submit',
         expect_text_present: 'Thanks',
-        approval_id: 'apr_1',
       }, EXEC)
       assert.equal(value.ok, false)
       assert.ok(value.idempotencyKey, 'a failed action must say which key to check')
@@ -393,7 +400,40 @@ describe('acting on a page', () => {
       const act = mounted.registered.get('watch_browser_act')
       assert.match(act.description, /unverified/)
       assert.match(act.description, /not a success/i)
-      assert.match(act.description, /approval_id/)
+      assert.match(act.description, /approval service/i)
+      assert.equal(Object.hasOwn(act.parameters, 'approval_id'), false,
+        'a model must not be able to mint its own approval reference')
+    } finally {
+      await mounted.dispose()
+    }
+  })
+
+  test('a consequential action asks the Host once before dispatch', async () => {
+    const mounted = await mountTools()
+    try {
+      await mounted.ctx.watchCore.connect()
+      await mounted.registered.get('watch_browser_act').execute({
+        session_id: 'live_1', kind: 'click', intent: 'submit the form',
+        target_name: 'Submit', expect_text_present: 'Thanks',
+      }, EXEC)
+      assert.equal(mounted.approvals.length, 1)
+      assert.equal(mounted.approvals[0].toolName, 'watch_browser_act')
+      assert.equal(mounted.approvals[0].callId, 'watch-test-call')
+    } finally {
+      await mounted.dispose()
+    }
+  })
+
+  test('a rejected approval never reaches the Bridge', async () => {
+    const mounted = await mountTools({}, 'rejected')
+    try {
+      await mounted.ctx.watchCore.connect()
+      const value = await mounted.registered.get('watch_browser_act').execute({
+        session_id: 'live_1', kind: 'click', intent: 'submit the form',
+        target_name: 'Submit', expect_text_present: 'Thanks',
+      }, EXEC)
+      assert.equal(value.error, 'approval.rejected')
+      assert.equal(mounted.approvals.length, 1)
     } finally {
       await mounted.dispose()
     }

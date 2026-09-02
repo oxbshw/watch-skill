@@ -45,6 +45,8 @@ import type { ReadinessBlocker } from './readiness.js'
 export type FailureKind =
   /** No model is bound to this capability. The first-run case. */
   | 'not_configured'
+  /** A complete binding exists, but no provider request has succeeded. */
+  | 'not_tested'
   /** A credential is referenced and the store could not produce it. */
   | 'credential_unavailable'
   /** The provider answered and rejected the credential. */
@@ -98,6 +100,12 @@ const CARDS: Readonly<Record<FailureKind, Omit<FailureCard, 'kind' | 'hasDiagnos
     title: 'Chat model is not configured',
     detail: 'Choose a provider and a model, then assign one to Chat. Nothing is sent until you do.',
     action: 'Choose models and roles',
+    target: 'role-bindings',
+  },
+  not_tested: {
+    title: 'Chat provider has not been tested',
+    detail: 'The provider and model are assigned, but no provider request has succeeded yet.',
+    action: 'Run provider test',
     target: 'role-bindings',
   },
   credential_unavailable: {
@@ -167,8 +175,14 @@ export function failureCard(kind: FailureKind, hasDiagnostics = true): FailureCa
 export function cardForBlocker(blocker: ReadinessBlocker): FailureCard {
   const kind: FailureKind = blocker === 'credential_inaccessible'
     ? 'credential_unavailable'
-    : blocker === 'credential_rejected'
+    : blocker === 'provider_untested'
+      ? 'not_tested'
+      : blocker === 'credential_rejected'
       ? 'credential_rejected'
+      : blocker === 'provider_unreachable'
+        ? 'provider_unreachable'
+        : blocker === 'provider_rate_limited'
+          ? 'rate_limited'
       : blocker === 'model_unavailable' || blocker === 'model_invalid'
         ? 'model_unavailable'
         : blocker === 'policy_forbids' || blocker === 'consent_required'

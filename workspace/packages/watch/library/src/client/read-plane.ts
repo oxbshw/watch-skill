@@ -37,6 +37,8 @@ import type {
   LibrarySearchPage,
   LibrarySearchRequest,
   LibrarySearchResponse,
+  ProviderTestRequest,
+  ProviderTestResponse,
 } from '@deepwatch/dsh-contracts/query/wire'
 import { WATCH_QUERY_WIRE_VERSION } from '@deepwatch/dsh-contracts/query/wire'
 import type { IndexHealth, IndexQueryResult } from '../index-store.js'
@@ -76,6 +78,9 @@ export interface WatchQueryRemote {
   readonly coreHealth: (
     request: CoreHealthRequest, signal?: AbortSignal,
   ) => Promise<RemoteResult<CoreHealthResponse>>
+  readonly providerTest: (
+    request: ProviderTestRequest, signal?: AbortSignal,
+  ) => Promise<RemoteResult<ProviderTestResponse>>
 }
 
 /** One row of results, however the surface obtained it. */

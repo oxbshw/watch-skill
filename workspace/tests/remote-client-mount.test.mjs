@@ -232,7 +232,7 @@ test('what the client mounted is the strict generated descriptor', async () => {
   const endpoints = ctx.typert.remotes.list().map(entry => `${entry.namespace}/${entry.method}`)
   assert.deepEqual(endpoints.sort(),
     ['watchQuery/coreHealth', 'watchQuery/libraryGet', 'watchQuery/libraryRefresh',
-      'watchQuery/librarySearch'],
+      'watchQuery/librarySearch', 'watchQuery/providerTest'],
     'the client registry holds exactly the endpoints the bundle carried')
 
   // Typert can also dispatch from an SRC claim collected at runtime, and a
