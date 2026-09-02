@@ -291,11 +291,18 @@ are held back by a gate that refuses to pack them.
 npm run release:artifacts
 ```
 
-That packs all twenty with pnpm — which is what rewrites `workspace:` ranges —
-records name, version, size, SHA-256, file list, dependencies and exports for
-each in [`inventory/packed-artifacts.json`](inventory/packed-artifacts.json),
-installs them into a clean project, and runs the CLI through `npm exec`, `npx`,
-`pnpm` and a global install into a temporary prefix.
+That packs all twenty from a canonical manifest, so two packs of one commit
+produce twenty identical archives; installs them into a clean project; and
+runs the CLI through `npm exec`, `npx`, `pnpm` and a global install into a
+temporary prefix.
+
+It writes two inventories, because there are two questions.
+[`inventory/packed-artifacts.json`](inventory/packed-artifacts.json) is tracked
+and says what a pack of this source is expected to produce — names, versions,
+access, file lists, dependency sets, exports and publish order — so packing
+does not dirty the worktree. `.release-artifacts/packed-artifacts.json` is
+ignored, sits beside the tarballs, and carries the digests of *those* archives,
+which is what every digest check reads.
 
 Two release trains, and no shared `v*` trigger: `core-v*` publishes Watch Skill
 to PyPI, `deepwatch-v*` publishes these packages to npm. Publishing uses npm

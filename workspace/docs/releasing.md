@@ -48,26 +48,44 @@ fallback, a missing package, or an order that differs from the manifest graph.
 The state report is `.release-artifacts/first-publish-state.json` and always
 lists `created`, `skipped`, `failed`, and `remaining` packages.
 
-### A digest belongs to one pack
+### Two inventories, because there are two questions
 
-Packing twice from the same commit does not produce the same bytes.
-`@deepwatch/dsh-bundle` declares its siblings through the `workspace:`
-protocol, pnpm resolves those to concrete ranges while packing, and the
-rewritten `dependencies` object comes out in a different key order each time
--- so that one archive's size and SHA-256 move, and the totals with them. The
-dependency *set* is identical; only its order is not.
+`.release-artifacts/packed-artifacts.json` describes **these** archives: the
+commit they came from, and each tarball's name, SHA-256 and size. It sits
+beside the tarballs, git ignores it, and every check that compares an archive
+to a digest -- `verify:packed`, `verify:packed-contents`, the profile builder
+and the first-publish bootstrap -- reads the inventory written by the pack
+that produced the archive it is looking at.
 
-What follows from that, exactly. `packed-artifacts.json` is the record of the
-pack that produced the archives beside it, not a claim about what a later pack
-would produce, and `workspace/inventory/packed-artifacts.json` in the
-repository is a snapshot of one such pack rather than a digest anybody can
-reproduce from the source. Every check that compares an archive to a digest --
-`verify:packed`, `verify:packed-contents`, the profile builder and the
-first-publish bootstrap -- reads the inventory written *by the same pack*, so
-each is a real check and none of them depends on cross-run reproducibility.
+`workspace/inventory/packed-artifacts.json` is tracked, and describes what a
+pack of *this source* is expected to produce: names, versions, access, file
+lists, dependency and peer sets, exports, bins and the publish order derived
+from the manifest graph. Every field is read out of a manifest, so packing
+rewrites it to the same bytes.
 
-Publish the archives a pack produced, from the directory that pack wrote. Do
-not pack again between verifying and publishing.
+That separation is load-bearing rather than tidy. The tracked file used to
+carry digests and a date, so `npm run release:artifacts` left the worktree
+dirty -- and the very next command this guide gives, `first-publish`, refuses
+a dirty tree. The documented path to a first publication could not be walked,
+and `npm run verify:release-sequence` is the gate that walks it.
+
+### The bytes are reproducible
+
+Two packs of one commit produce twenty identical archives. That was not true
+until the pack pipeline was made to stage a canonical manifest:
+`@deepwatch/dsh-bundle` declares thirteen siblings through the `workspace:`
+protocol, pnpm resolved those to concrete ranges while packing, and the
+rewritten `dependencies` object came out in a different key order on each run
+-- so one archive's digest moved for a reason that had nothing to do with its
+contents.
+
+The pack now resolves those ranges itself, sorted by code unit, writes that
+manifest over the real one for the length of one `pnpm pack`, and restores the
+original bytes afterwards whatever happens. pnpm is left with nothing to
+rewrite and nothing to reorder. `npm run verify:pack-reproducible` packs
+twice into two temporary directories and compares all twenty digests.
+
+Publish the archives a pack produced, from the directory that pack wrote.
 
 The release owner may check identity and `@deepwatch` organisation access
 without printing either credentials or the npm user name:

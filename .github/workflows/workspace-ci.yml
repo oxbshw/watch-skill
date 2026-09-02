@@ -259,8 +259,16 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: Pack, install from the tarballs, and run every runner
-        run: npm run release:artifacts
+      # `verify:release-sequence` runs `release:artifacts` itself, and checks
+      # the worktree before, between and after the commands the release guide
+      # gives in that order. Packing used to write a tracked file, so the guide's
+      # second command refused a dirty tree — a defect no job could see, because
+      # the jobs that packed never looked at `git status` afterwards.
+      - name: Pack, install from the tarballs, run every runner, keep the tree clean
+        run: npm run verify:release-sequence
+
+      - name: Two packs of this commit produce the same twenty archives
+        run: npm run verify:pack-reproducible
 
   # The real Web journey: stock DSH Host, artifact-built DeepWatch profile,
   # packed Watch Core and an OpenRouter-compatible loopback provider. The

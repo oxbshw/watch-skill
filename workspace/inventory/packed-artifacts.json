@@ -1,23 +1,38 @@
 {
   "generatedBy": "scripts/pack-release.mjs",
-  "note": "Packed with pnpm, which rewrites workspace: ranges. Nothing here has been published; these are local artifacts used for install testing.",
-  "packedAt": "2026-09-02",
-  "directory": ".release-artifacts",
+  "note": "Source-derived expectations for a release pack. Per-run facts -- the digest, the size, the commit, the directory -- belong to the inventory written beside the tarballs, never here.",
   "counts": {
     "packages": 20,
-    "bytes": 1982139,
     "files": 390
   },
+  "publishOrder": [
+    "@deepwatch/dsh-client-brand",
+    "@deepwatch/dsh-contracts",
+    "@deepwatch/dsh-trajectory",
+    "@deepwatch/dsh-workspace",
+    "@deepwatch/dsh-client-evidence",
+    "@deepwatch/dsh-memory",
+    "@deepwatch/dsh-client-memory",
+    "@deepwatch/dsh-technology",
+    "@deepwatch/dsh-library",
+    "@deepwatch/dsh-core-bridge",
+    "@deepwatch/dsh-tools",
+    "@deepwatch/dsh-client-remotes",
+    "@deepwatch/dsh-client-settings",
+    "@deepwatch/dsh-live",
+    "@deepwatch/dsh-bundle",
+    "@deepwatch/cli",
+    "@deepwatch/dsh-wiki",
+    "@deepwatch/dsh-adapters",
+    "@deepwatch/dsh-sdk",
+    "@deepwatch/dsh-tenancy"
+  ],
   "packages": [
     {
-      "file": "deepwatch-cli-0.1.0-preview.0.tgz",
       "name": "@deepwatch/cli",
       "version": "0.1.0-preview.0",
       "access": "public",
-      "bytes": 64885,
-      "sha256": "6bb0e2de5be14939554c7118fcd8a9242eaa0761ff9fd6d286d932c296ecf53e",
       "fileCount": 33,
-      "unpackedTextBytes": 210210,
       "dependencies": {
         "@deepwatch/dsh-bundle": "^0.1.0-preview.0"
       },
@@ -68,14 +83,10 @@
       ]
     },
     {
-      "file": "deepwatch-dsh-adapters-0.1.0-preview.0.tgz",
       "name": "@deepwatch/dsh-adapters",
       "version": "0.1.0-preview.0",
       "access": "public",
-      "bytes": 9640,
-      "sha256": "89190a2add7a6023353dc3131c2504fda517dc57432265be9bc8bd11de58bfe3",
       "fileCount": 9,
-      "unpackedTextBytes": 32263,
       "dependencies": {
         "@deepwatch/dsh-memory": "^0.1.0-preview.0",
         "@deepwatch/dsh-wiki": "^0.1.0-preview.0"
@@ -99,25 +110,21 @@
       ]
     },
     {
-      "file": "deepwatch-dsh-bundle-0.1.0-preview.0.tgz",
       "name": "@deepwatch/dsh-bundle",
       "version": "0.1.0-preview.0",
       "access": "public",
-      "bytes": 8966,
-      "sha256": "ee93b17de9e5e4aaaa7c38566302cb03fbb9461be137866e9392333c8d235340",
       "fileCount": 8,
-      "unpackedTextBytes": 23137,
       "dependencies": {
         "@deepwatch/dsh-client-brand": "^0.1.0-preview.0",
         "@deepwatch/dsh-client-evidence": "^0.1.0-preview.0",
-        "@deepwatch/dsh-client-settings": "^0.1.0-preview.0",
         "@deepwatch/dsh-client-memory": "^0.1.0-preview.0",
-        "@deepwatch/dsh-core-bridge": "^0.1.0-preview.0",
         "@deepwatch/dsh-client-remotes": "^0.1.0-preview.0",
+        "@deepwatch/dsh-client-settings": "^0.1.0-preview.0",
+        "@deepwatch/dsh-core-bridge": "^0.1.0-preview.0",
+        "@deepwatch/dsh-library": "^0.1.0-preview.0",
         "@deepwatch/dsh-live": "^0.1.0-preview.0",
         "@deepwatch/dsh-memory": "^0.1.0-preview.0",
         "@deepwatch/dsh-technology": "^0.1.0-preview.0",
-        "@deepwatch/dsh-library": "^0.1.0-preview.0",
         "@deepwatch/dsh-tools": "^0.1.0-preview.0",
         "@deepwatch/dsh-trajectory": "^0.1.0-preview.0",
         "@deepwatch/dsh-workspace": "^0.1.0-preview.0"
@@ -137,14 +144,10 @@
       ]
     },
     {
-      "file": "deepwatch-dsh-client-brand-0.1.0-preview.0.tgz",
       "name": "@deepwatch/dsh-client-brand",
       "version": "0.1.0-preview.0",
       "access": "public",
-      "bytes": 986890,
-      "sha256": "05a9fd46d5f9f62bfcadcfc0e26a811a7dd9e291a5bd5b4e0a25b33b33f41b10",
       "fileCount": 26,
-      "unpackedTextBytes": 74857,
       "dependencies": {},
       "peerDependencies": {
         "@deepseek-ai/cordis": "4.0.2",
@@ -186,19 +189,15 @@
       ]
     },
     {
-      "file": "deepwatch-dsh-client-evidence-0.1.0-preview.0.tgz",
       "name": "@deepwatch/dsh-client-evidence",
       "version": "0.1.0-preview.0",
       "access": "public",
-      "bytes": 83247,
-      "sha256": "5f5ba21ec4d9b5f52b513ac874036e03b697fe583857e8be9dc01572d2a11c49",
       "fileCount": 29,
-      "unpackedTextBytes": 304337,
       "dependencies": {
         "@deepwatch/dsh-client-brand": "^0.1.0-preview.0",
-        "@deepwatch/dsh-workspace": "^0.1.0-preview.0",
+        "@deepwatch/dsh-contracts": "^0.1.0-preview.0",
         "@deepwatch/dsh-trajectory": "^0.1.0-preview.0",
-        "@deepwatch/dsh-contracts": "^0.1.0-preview.0"
+        "@deepwatch/dsh-workspace": "^0.1.0-preview.0"
       },
       "peerDependencies": {
         "@deepseek-ai/cordis": "4.0.2",
@@ -246,14 +245,10 @@
       ]
     },
     {
-      "file": "deepwatch-dsh-client-memory-0.1.0-preview.0.tgz",
       "name": "@deepwatch/dsh-client-memory",
       "version": "0.1.0-preview.0",
       "access": "public",
-      "bytes": 39819,
-      "sha256": "0a673ea224bbae75915e4f04af7d4c4367adc61356db340784431695d3e1146c",
       "fileCount": 20,
-      "unpackedTextBytes": 130909,
       "dependencies": {
         "@deepwatch/dsh-client-brand": "^0.1.0-preview.0",
         "@deepwatch/dsh-memory": "^0.1.0-preview.0"
@@ -294,14 +289,10 @@
       ]
     },
     {
-      "file": "deepwatch-dsh-client-remotes-0.1.0-preview.0.tgz",
       "name": "@deepwatch/dsh-client-remotes",
       "version": "0.1.0-preview.0",
       "access": "public",
-      "bytes": 69725,
-      "sha256": "6f0d369f3b47df2902342a3b0bd7da95e7469ad940e399caa29c725f0d351697",
       "fileCount": 11,
-      "unpackedTextBytes": 345717,
       "dependencies": {
         "@deepwatch/dsh-library": "^0.1.0-preview.0",
         "@deepwatch/dsh-tools": "^0.1.0-preview.0"
@@ -330,18 +321,14 @@
       ]
     },
     {
-      "file": "deepwatch-dsh-client-settings-0.1.0-preview.0.tgz",
       "name": "@deepwatch/dsh-client-settings",
       "version": "0.1.0-preview.0",
       "access": "public",
-      "bytes": 165162,
-      "sha256": "d9c7f6795c5cbb95b528e0a3895eef96c80ce6f5e9d5cd5eb6ef53db50d20f0a",
       "fileCount": 35,
-      "unpackedTextBytes": 606580,
       "dependencies": {
         "@deepwatch/dsh-client-brand": "^0.1.0-preview.0",
-        "@deepwatch/dsh-technology": "^0.1.0-preview.0",
-        "@deepwatch/dsh-contracts": "^0.1.0-preview.0"
+        "@deepwatch/dsh-contracts": "^0.1.0-preview.0",
+        "@deepwatch/dsh-technology": "^0.1.0-preview.0"
       },
       "peerDependencies": {
         "@deepseek-ai/cordis": "4.0.2",
@@ -394,14 +381,10 @@
       ]
     },
     {
-      "file": "deepwatch-dsh-contracts-0.1.0-preview.0.tgz",
       "name": "@deepwatch/dsh-contracts",
       "version": "0.1.0-preview.0",
       "access": "public",
-      "bytes": 68705,
-      "sha256": "29c42f62e258618819a31de3ce1a72c15d127ff1ccce390e7d3619b2cfd255e4",
       "fileCount": 29,
-      "unpackedTextBytes": 218357,
       "dependencies": {},
       "peerDependencies": {},
       "exports": [
@@ -446,14 +429,10 @@
       ]
     },
     {
-      "file": "deepwatch-dsh-core-bridge-0.1.0-preview.0.tgz",
       "name": "@deepwatch/dsh-core-bridge",
       "version": "0.1.0-preview.0",
       "access": "public",
-      "bytes": 23312,
-      "sha256": "806c9d6d9d1278452f558f9b4774df442907d6ecc92a3499f851e591a1e1df55",
       "fileCount": 11,
-      "unpackedTextBytes": 76845,
       "dependencies": {
         "@deepwatch/dsh-contracts": "^0.1.0-preview.0"
       },
@@ -481,14 +460,10 @@
       ]
     },
     {
-      "file": "deepwatch-dsh-library-0.1.0-preview.0.tgz",
       "name": "@deepwatch/dsh-library",
       "version": "0.1.0-preview.0",
       "access": "public",
-      "bytes": 101563,
-      "sha256": "10a55c6a32d5edd09a38906696b57d5a30792eedf9441cb16d72f2c2d732081c",
       "fileCount": 23,
-      "unpackedTextBytes": 336103,
       "dependencies": {
         "@deepwatch/dsh-client-brand": "^0.1.0-preview.0",
         "@deepwatch/dsh-contracts": "^0.1.0-preview.0",
@@ -538,18 +513,14 @@
       ]
     },
     {
-      "file": "deepwatch-dsh-live-0.1.0-preview.0.tgz",
       "name": "@deepwatch/dsh-live",
       "version": "0.1.0-preview.0",
       "access": "public",
-      "bytes": 58752,
-      "sha256": "6009b2e626499f5dc7b9190ab93568c3f581f183b6007bb9d9cde23819bc7c78",
       "fileCount": 23,
-      "unpackedTextBytes": 189938,
       "dependencies": {
-        "@deepwatch/dsh-workspace": "^0.1.0-preview.0",
+        "@deepwatch/dsh-client-brand": "^0.1.0-preview.0",
         "@deepwatch/dsh-contracts": "^0.1.0-preview.0",
-        "@deepwatch/dsh-client-brand": "^0.1.0-preview.0"
+        "@deepwatch/dsh-workspace": "^0.1.0-preview.0"
       },
       "peerDependencies": {
         "@deepseek-ai/cordis": "4.0.2",
@@ -593,14 +564,10 @@
       ]
     },
     {
-      "file": "deepwatch-dsh-memory-0.1.0-preview.0.tgz",
       "name": "@deepwatch/dsh-memory",
       "version": "0.1.0-preview.0",
       "access": "public",
-      "bytes": 40967,
-      "sha256": "8333420878648285f45d1b8ea7d7774dac893d5c07625a82cb0f8f28d66096db",
       "fileCount": 19,
-      "unpackedTextBytes": 132675,
       "dependencies": {},
       "peerDependencies": {
         "@deepseek-ai/cordis": "4.0.2",
@@ -636,18 +603,14 @@
       ]
     },
     {
-      "file": "deepwatch-dsh-sdk-0.1.0-preview.0.tgz",
       "name": "@deepwatch/dsh-sdk",
       "version": "0.1.0-preview.0",
       "access": "public",
-      "bytes": 11059,
-      "sha256": "80babb6b4d2c93fb4dcdea60107c8018fd8123510a86fe8a87ea5c943bc539cb",
       "fileCount": 11,
-      "unpackedTextBytes": 36540,
       "dependencies": {
-        "@deepwatch/dsh-trajectory": "^0.1.0-preview.0",
+        "@deepwatch/dsh-contracts": "^0.1.0-preview.0",
         "@deepwatch/dsh-technology": "^0.1.0-preview.0",
-        "@deepwatch/dsh-contracts": "^0.1.0-preview.0"
+        "@deepwatch/dsh-trajectory": "^0.1.0-preview.0"
       },
       "peerDependencies": {
         "react": "^18.2.0"
@@ -673,14 +636,10 @@
       ]
     },
     {
-      "file": "deepwatch-dsh-technology-0.1.0-preview.0.tgz",
       "name": "@deepwatch/dsh-technology",
       "version": "0.1.0-preview.0",
       "access": "public",
-      "bytes": 37159,
-      "sha256": "e28ad8311e81d55755d639cc5a35db0b45ea7a0c9e6681d78311434da042274d",
       "fileCount": 17,
-      "unpackedTextBytes": 118565,
       "dependencies": {
         "@deepwatch/dsh-contracts": "^0.1.0-preview.0"
       },
@@ -718,14 +677,10 @@
       ]
     },
     {
-      "file": "deepwatch-dsh-tenancy-0.1.0-preview.0.tgz",
       "name": "@deepwatch/dsh-tenancy",
       "version": "0.1.0-preview.0",
       "access": "public",
-      "bytes": 22806,
-      "sha256": "685a38564bac3b07aa5676d0a750d18f7c609b08bee60539065ffdcca011ab95",
       "fileCount": 15,
-      "unpackedTextBytes": 69998,
       "dependencies": {
         "@deepwatch/dsh-contracts": "^0.1.0-preview.0"
       },
@@ -754,27 +709,23 @@
       ]
     },
     {
-      "file": "deepwatch-dsh-tools-0.1.0-preview.0.tgz",
       "name": "@deepwatch/dsh-tools",
       "version": "0.1.0-preview.0",
       "access": "public",
-      "bytes": 48651,
-      "sha256": "19b51924d8805d1dd70fd257b519431049cf7e87dd0b608d6a7345da8725cd50",
       "fileCount": 22,
-      "unpackedTextBytes": 192255,
       "dependencies": {
-        "@deepwatch/dsh-core-bridge": "^0.1.0-preview.0",
         "@deepwatch/dsh-contracts": "^0.1.0-preview.0",
+        "@deepwatch/dsh-core-bridge": "^0.1.0-preview.0",
         "@deepwatch/dsh-library": "^0.1.0-preview.0",
         "@deepwatch/dsh-memory": "^0.1.0-preview.0"
       },
       "peerDependencies": {
         "@deepseek-ai/cordis": "4.0.2",
-        "@deepseek-ai/dsh-system-prompt": "0.1.1-rc.2",
         "@deepseek-ai/dsh-llm": "0.1.1-rc.2",
+        "@deepseek-ai/dsh-system-prompt": "0.1.1-rc.2",
         "@deepseek-ai/dsh-tools": "0.1.1-rc.2",
-        "@deepseek-ai/dsh-user-approval": "^0.1.1-rc.2",
         "@deepseek-ai/dsh-typert-protocol": "0.1.1-rc.2",
+        "@deepseek-ai/dsh-user-approval": "^0.1.1-rc.2",
         "@deepseek-ai/schemastery": "^3.18.1",
         "zod": "^4.5.2"
       },
@@ -811,14 +762,10 @@
       ]
     },
     {
-      "file": "deepwatch-dsh-trajectory-0.1.0-preview.0.tgz",
       "name": "@deepwatch/dsh-trajectory",
       "version": "0.1.0-preview.0",
       "access": "public",
-      "bytes": 24529,
-      "sha256": "1bbaca0bee08a322073c4c634783137dcc24f82f91d602911889b7787cba6aee",
       "fileCount": 17,
-      "unpackedTextBytes": 82834,
       "dependencies": {
         "@deepwatch/dsh-contracts": "^0.1.0-preview.0"
       },
@@ -849,14 +796,10 @@
       ]
     },
     {
-      "file": "deepwatch-dsh-wiki-0.1.0-preview.0.tgz",
       "name": "@deepwatch/dsh-wiki",
       "version": "0.1.0-preview.0",
       "access": "public",
-      "bytes": 7777,
-      "sha256": "3b269a1b2758ff4ff648ec702323560cd8ae3c4737b4020bd611f431a8a5cfd6",
       "fileCount": 7,
-      "unpackedTextBytes": 24884,
       "dependencies": {
         "@deepwatch/dsh-memory": "^0.1.0-preview.0"
       },
@@ -877,18 +820,14 @@
       ]
     },
     {
-      "file": "deepwatch-dsh-workspace-0.1.0-preview.0.tgz",
       "name": "@deepwatch/dsh-workspace",
       "version": "0.1.0-preview.0",
       "access": "public",
-      "bytes": 108525,
-      "sha256": "73239453000442bbc8a6776b4eaa3597172d96ecc664dab4897ca9ab2537d08c",
       "fileCount": 25,
-      "unpackedTextBytes": 365006,
       "dependencies": {
         "@deepwatch/dsh-client-brand": "^0.1.0-preview.0",
-        "@deepwatch/dsh-trajectory": "^0.1.0-preview.0",
-        "@deepwatch/dsh-contracts": "^0.1.0-preview.0"
+        "@deepwatch/dsh-contracts": "^0.1.0-preview.0",
+        "@deepwatch/dsh-trajectory": "^0.1.0-preview.0"
       },
       "peerDependencies": {
         "@deepseek-ai/cordis": "4.0.2",

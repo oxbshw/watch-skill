@@ -248,9 +248,9 @@ function clearStaleInstalls() {
  *
  * `--from-artifacts` is what makes a QA pass a statement about the *release*
  * rather than about the working tree: the profile is built from the exact
- * files `inventory/packed-artifacts.json` records, hashes and all, so a
- * screenshot taken afterwards is a picture of the artifact and not of whatever
- * happened to be on disk that afternoon.
+ * files the pack recorded in `.release-artifacts/packed-artifacts.json`,
+ * digests and all, so a screenshot taken afterwards is a picture of the
+ * artifact and not of whatever happened to be on disk that afternoon.
  */
 function fromArtifacts() {
   const source = join(ROOT, '.release-artifacts')

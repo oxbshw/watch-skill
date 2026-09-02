@@ -19,10 +19,25 @@
  * - no dependency may still say `workspace:`, name a private package, or
  *   mention the scope this project used to publish under.
  *
- * What it writes is evidence: `inventory/packed-artifacts.json` records name,
- * version, size, SHA-256, unpacked size, the full file list, dependencies and
- * exports for all twenty, so a later claim about a release can be checked
- * against the artifacts rather than against a memory of them.
+ * What it writes is evidence, in two files that answer two different
+ * questions and must not be one file.
+ *
+ * `<out>/packed-artifacts.json` describes **these** archives: the commit they
+ * were packed from, each tarball's name, its SHA-256 and its size. It lives
+ * beside the tarballs, is ignored by git, and is what every consumer checks a
+ * tarball against — `deepwatch setup --artifacts`, the profile builder and
+ * the first-publish bootstrap all read the inventory written by the pack that
+ * produced the archives they are looking at.
+ *
+ * `inventory/packed-artifacts.json` is tracked, and describes what a pack of
+ * *this source* is expected to produce: names, versions, access, file lists,
+ * dependency and peer sets, exports and bins. Nothing in it comes from a
+ * particular run, so packing does not modify it.
+ *
+ * That separation is not tidiness. The tracked file used to carry digests and
+ * a date, so `npm run release:artifacts` left the worktree dirty — and the
+ * very next command the release guide gives, `first-publish`, refuses a dirty
+ * tree. The documented path to a first publication could not be walked.
  *
  * Usage:
  *   node scripts/pack-release.mjs
@@ -36,6 +51,7 @@ import { basename, dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { audit } from './verify-publishable.mjs'
+import { publishOrder } from './publish-order.mjs'
 import { byCodeUnit } from './lib/order.mjs'
 import { resolvePnpm } from './lib/process.mjs'
 
@@ -69,6 +85,46 @@ const FORBIDDEN_CONTENT = [
 
 /** Files worth scanning as text at all. */
 const TEXT = /\.(js|mjs|cjs|ts|mts|cts|d\.ts|json|yml|yaml|md|map|html|css|txt)$/
+
+/**
+ * The commit these archives were packed from, for the inventory beside them.
+ *
+ * Recorded with whether the tree was clean, because "packed from abc1234" and
+ * "packed from abc1234 plus whatever was in the working tree" are different
+ * claims and only one of them is checkable later.
+ */
+function headCommit() {
+  const at = join(ROOT, '..')
+  const sha = run('git', ['rev-parse', 'HEAD'], { cwd: at })
+  if (sha.code !== 0) return { sha: null, clean: null }
+  const dirt = run('git', ['status', '--porcelain=v1', '--untracked-files=all'], { cwd: at })
+  return {
+    sha: sha.stdout.trim(),
+    clean: dirt.code === 0 ? dirt.stdout.trim() === '' : null,
+  }
+}
+
+/**
+ * One package as the tracked inventory records it.
+ *
+ * Everything here is read out of a manifest, so it is the same on every
+ * machine and in every run. What is deliberately absent is everything that is
+ * true of one pack and not of the source: the digest, the archive size, the
+ * date and the directory.
+ */
+function structural(record) {
+  return {
+    name: record.name,
+    version: record.version,
+    access: record.access,
+    fileCount: record.fileCount,
+    dependencies: record.dependencies,
+    peerDependencies: record.peerDependencies,
+    exports: record.exports,
+    bin: record.bin,
+    files: record.files,
+  }
+}
 
 /** Run a command and hand back everything it did. */
 function run(command, args, options = {}) {
@@ -131,10 +187,83 @@ function exportTargets(exports_) {
   return out.filter(target => target.startsWith('./')).map(target => target.slice(2))
 }
 
+/** Every workspace package's version, so a `workspace:` range resolves here. */
+function workspaceVersions() {
+  const versions = new Map()
+  for (const parent of ['packages/watch', 'apps']) {
+    const at = join(ROOT, parent)
+    if (!existsSync(at)) continue
+    for (const name of readdirSync(at)) {
+      const path = join(at, name, 'package.json')
+      if (!existsSync(path)) continue
+      const manifest = JSON.parse(readFileSync(path, 'utf8'))
+      if (typeof manifest.name === 'string') versions.set(manifest.name, manifest.version)
+    }
+  }
+  return versions
+}
+
+/** pnpm's workspace protocol, resolved the way pnpm resolves it. */
+function resolveWorkspaceRange(range, version) {
+  if (!range.startsWith('workspace:')) return range
+  const rest = range.slice('workspace:'.length)
+  if (rest === '*') return version
+  if (rest === '^' || rest === '~') return `${rest}${version}`
+  // `workspace:>=1.2.0` and friends publish as the range itself.
+  return rest
+}
+
+const DEPENDENCY_FIELDS = [
+  'dependencies', 'devDependencies', 'peerDependencies', 'optionalDependencies',
+]
+
+/**
+ * The manifest as it will be published, in an order nothing can reorder.
+ *
+ * pnpm resolves `workspace:` ranges itself while packing, and the object it
+ * writes back comes out in a different key order on each run — so two packs of
+ * one commit produced two different archives for `@deepwatch/dsh-bundle`, the
+ * one package with thirteen siblings, and its digest moved for a reason that
+ * had nothing to do with its contents. Resolving the ranges here, sorted,
+ * leaves pnpm nothing to rewrite and nothing to reorder.
+ */
+function canonicalManifest(manifest, versions) {
+  const canonical = { ...manifest }
+  for (const field of DEPENDENCY_FIELDS) {
+    const declared = manifest[field]
+    if (declared === undefined) continue
+    const resolved = {}
+    for (const name of Object.keys(declared).sort(byCodeUnit)) {
+      const range = String(declared[name])
+      const version = versions.get(name)
+      if (range.startsWith('workspace:') && version === undefined) {
+        throw new Error(
+          `${manifest.name}: ${name} is a workspace range and no workspace package declares it`)
+      }
+      resolved[name] = resolveWorkspaceRange(range, version ?? '')
+    }
+    canonical[field] = resolved
+  }
+  return canonical
+}
+
 /** Pack one package and describe what came out of it. */
-function packOne(entry, out) {
+function packOne(entry, out, versions) {
   const dir = join(ROOT, entry.dir)
-  const packed = pnpmPack(['pack', '--pack-destination', out], dir)
+  const manifestPath = join(dir, 'package.json')
+  // Staged over the real manifest for the length of one `pnpm pack`, and
+  // restored from the bytes that were there whatever happens. Packing from a
+  // copy elsewhere would mean deciding what ships, which is the manifest's own
+  // job and not something this script should answer a second time.
+  const original = readFileSync(manifestPath, 'utf8')
+  let packed
+  try {
+    writeFileSync(manifestPath,
+      `${JSON.stringify(canonicalManifest(entry.manifest, versions), null, 2)}\n`, 'utf8')
+    packed = pnpmPack(['pack', '--pack-destination', out], dir)
+  } finally {
+    writeFileSync(manifestPath, original, 'utf8')
+  }
   if (packed.code !== 0) {
     throw new Error(`pnpm pack failed for ${entry.manifest.name}:\n${packed.stderr}`)
   }
@@ -241,11 +370,12 @@ function main() {
     }
   }
 
+  const versions = workspaceVersions()
   const records = []
   const problems = []
   for (const entry of entries.sort((a, b) => byCodeUnit(a.manifest.name, b.manifest.name))) {
     process.stdout.write(`  packing ${entry.manifest.name}\n`)
-    const packed = packOne(entry, out)
+    const packed = packOne(entry, out, versions)
     records.push(packed.record)
     problems.push(...packed.problems)
   }
@@ -259,26 +389,37 @@ function main() {
     problems.push({ package: '(output)', rule: 'stray-artifact', file: name, detail: 'not packed by this run' })
   }
 
-  const inventory = {
+  const totalBytes = records.reduce((total, record) => total + record.bytes, 0)
+  const totalFiles = records.reduce((total, record) => total + record.fileCount, 0)
+  const directory = outFlag >= 0 ? out : '.release-artifacts'
+
+  // Beside the tarballs: what *these* archives are. `deepwatch setup
+  // --artifacts <dir>`, the profile builder and the first-publish bootstrap
+  // each read the inventory written by the pack that produced the tarballs
+  // they are looking at, so a digest is always compared within one pack.
+  writeFileSync(join(out, 'packed-artifacts.json'), `${JSON.stringify({
     generatedBy: 'scripts/pack-release.mjs',
-    note: 'Packed with pnpm, which rewrites workspace: ranges. Nothing here has '
-      + 'been published; these are local artifacts used for install testing.',
-    packedAt: new Date().toISOString().slice(0, 10),
-    directory: outFlag >= 0 ? out : '.release-artifacts',
-    counts: {
-      packages: records.length,
-      bytes: records.reduce((total, record) => total + record.bytes, 0),
-      files: records.reduce((total, record) => total + record.fileCount, 0),
-    },
+    note: 'These are local artifacts for install testing. Nothing here has been '
+      + 'published. The digests below belong to this pack and to no other.',
+    packedAt: new Date().toISOString(),
+    commit: headCommit(),
+    directory,
+    counts: { packages: records.length, bytes: totalBytes, files: totalFiles },
     packages: records,
-  }
-  const serialised = `${JSON.stringify(inventory, null, 2)}\n`
-  writeFileSync(join(ROOT, 'inventory', 'packed-artifacts.json'), serialised)
-  // And beside the tarballs themselves, so the artifact directory describes
-  // what is in it. `deepwatch setup --artifacts <dir>` reads this to check
-  // every tarball's digest before installing one, and a directory of tarballs
-  // with no inventory is a directory nobody can verify.
-  writeFileSync(join(out, 'packed-artifacts.json'), serialised)
+  }, null, 2)}\n`)
+
+  // Tracked: what a pack of this source is expected to produce. Every field is
+  // read out of a manifest, so packing rewrites it to the same bytes and the
+  // worktree stays clean -- which the release guide's next command requires.
+  writeFileSync(join(ROOT, 'inventory', 'packed-artifacts.json'), `${JSON.stringify({
+    generatedBy: 'scripts/pack-release.mjs',
+    note: 'Source-derived expectations for a release pack. Per-run facts -- the '
+      + 'digest, the size, the commit, the directory -- belong to the inventory '
+      + 'written beside the tarballs, never here.',
+    counts: { packages: records.length, files: totalFiles },
+    publishOrder: publishOrder().map(entry => entry.name),
+    packages: records.map(structural),
+  }, null, 2)}\n`)
 
   if (problems.length > 0) {
     for (const problem of problems) {
@@ -287,10 +428,10 @@ function main() {
     process.stderr.write(`\npack: ${problems.length} problem(s) in the packed artifacts\n`)
     return 1
   }
-  const megabytes = (inventory.counts.bytes / 1024 / 1024).toFixed(1)
+  const megabytes = (totalBytes / 1024 / 1024).toFixed(1)
   process.stdout.write(
-    `\npacked ${records.length} packages, ${inventory.counts.files} files, ${megabytes} MB `
-    + `into ${inventory.directory}\n`)
+    `\npacked ${records.length} packages, ${totalFiles} files, ${megabytes} MB `
+    + `into ${directory}\n`)
   return 0
 }
 
