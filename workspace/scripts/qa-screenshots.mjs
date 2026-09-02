@@ -22,6 +22,13 @@
  */
 
 import { app, BrowserWindow } from 'electron'
+
+// See `qa-e2e.mjs`: a hosted Linux runner has no usable setuid sandbox helper,
+// and Electron exits rather than starting without one.
+if (process.platform === 'linux') {
+  app.commandLine.appendSwitch('no-sandbox')
+  app.commandLine.appendSwitch('disable-dev-shm-usage')
+}
 import { writeFileSync, mkdirSync, appendFileSync, rmSync, readFileSync, existsSync } from 'node:fs'
 import { join, dirname, relative, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'

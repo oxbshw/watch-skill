@@ -103,21 +103,25 @@ const CORE = packedCore()
 const skip = CORE.path === null ? `packed Watch Core unavailable: ${CORE.why}` : false
 
 /**
- * On a developer's machine this suite may skip. On CI it may not.
+ * On a developer's machine this suite may skip. Where a job promised an
+ * engine, it may not.
  *
  * A skip is the right answer to "this laptop has no packed wheel" and the
  * wrong answer to "the workflow step that provisions one stopped working".
  * The two are indistinguishable from the outside, and the second kind stayed
  * green for a whole release: the matrix reported success for a suite that ran
- * nowhere. So the environment decides which it is. This is the only assertion
- * in the file that runs when the engine is missing, and it is the reason the
- * rest of them can be trusted to have run at all.
+ * nowhere.
+ *
+ * The signal is the workflow's own promise rather than `CI`. Several jobs run
+ * this suite without provisioning anything — they are testing other things and
+ * a skip there is correct — so keying on `CI` failed the wrong ones. The
+ * platform matrix, which does the provisioning, sets the flag below.
  */
-test('CI provisions the packed engine this suite exists to exercise', () => {
-  if (process.env['CI'] === undefined || process.env['CI'] === '') return
+test('a job that promised the packed engine actually provisioned one', () => {
+  if (process.env['WATCH_CORE_PACKED_REQUIRED'] !== '1') return
   assert.equal(CORE.path === null ? CORE.why : null, null,
-    'CI reached the packed-Core suite with no engine to run it against; '
-    + 'a skip here is a workflow defect, not a machine without a wheel')
+    'this job set WATCH_CORE_PACKED_REQUIRED and the suite still had no engine '
+    + 'to run against; a skip here is a workflow defect, not a machine without a wheel')
 })
 
 /** Mount the Bridge against the packed engine. */

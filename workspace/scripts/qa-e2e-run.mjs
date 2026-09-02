@@ -289,6 +289,16 @@ async function main() {
       },
     })
     status = run.status ?? 1
+    if (status !== 0) {
+      // Otherwise a browser pass that never started is indistinguishable from
+      // one that started and proved nothing: the job log showed a stub with
+      // zero requests and no reason for it. Electron's own diagnostics go to
+      // the streams this captured, and they are the only place the reason is.
+      const tail = text => text.split('\n').slice(-40).join('\n').trim()
+      process.stderr.write(`electron exited ${String(status)}\n`)
+      if (run.stdout.trim() !== '') process.stderr.write(`stdout:\n${tail(run.stdout)}\n`)
+      if (run.stderr.trim() !== '') process.stderr.write(`stderr:\n${tail(run.stderr)}\n`)
+    }
 
     // One prompt, through the binding the browser just made.
     //

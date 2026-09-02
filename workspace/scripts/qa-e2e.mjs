@@ -26,6 +26,16 @@
  */
 
 import { app, BrowserWindow } from 'electron'
+
+// Chromium's setuid sandbox helper is not installed on a hosted Linux runner,
+// and Electron exits before `whenReady` rather than starting without it. The
+// pass renders a loopback page it built itself, under xvfb, in a throwaway
+// container — there is nothing here for the sandbox to protect. Applied before
+// anything touches `app`, because a switch appended after that is ignored.
+if (process.platform === 'linux') {
+  app.commandLine.appendSwitch('no-sandbox')
+  app.commandLine.appendSwitch('disable-dev-shm-usage')
+}
 import { writeFileSync, mkdirSync, appendFileSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'

@@ -451,6 +451,8 @@ jobs:
             echo "WATCH_CORE_COMMAND=$(exe "$root/.venv-core")"
             echo "WATCH_CORE_PACKED=$(exe "$outside/packed")"
             echo "WATCH_CORE_NO_BRIDGE=$(exe "$outside/nobridge")"
+            # This job provisions the engine, so its packed suite may not skip.
+            echo "WATCH_CORE_PACKED_REQUIRED=1"
           } >> "$GITHUB_ENV"
 
           # Verify the provisioning, loudly.
