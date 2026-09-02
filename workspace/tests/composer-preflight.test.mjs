@@ -91,8 +91,8 @@ function recorder() {
 }
 
 /** A loaded store over one shape of the world. */
-async function loaded(options) {
-  const store = new BindingStore(api(options))
+async function loaded(options, providerTester) {
+  const store = new BindingStore(api(options), providerTester)
   await store.load()
   return store
 }
@@ -136,7 +136,7 @@ describe('an unconfigured Chat closes the composer', () => {
 
   test('the reason names the capability and the next step', () => {
     const reason = blockReason('Choose a provider and a model, then assign one to Chat.')
-    assert.ok(reason.startsWith('Chat is not configured'))
+    assert.ok(reason.startsWith('Chat is not ready'))
     assert.ok(reason.includes('assign one to Chat'))
   })
 
@@ -164,23 +164,31 @@ describe('an unconfigured Chat closes the composer', () => {
   })
 })
 
-describe('a configured Chat is left alone', () => {
-  test('a bound, credentialled, served route renders no card', async () => {
+describe('only a provider-tested Chat is left alone', () => {
+  test('a bound, credentialled, served route asks for its explicit test', async () => {
     const store = await loaded({ credentialConfigured: true, bindings: BOUND })
-    assert.equal(mount(store, recorder()), '')
+    const markup = mount(store, recorder())
+    assert.ok(markup.includes('Chat provider has not been tested'))
+    assert.ok(markup.includes('Run provider test'))
   })
 
-  test('the block is lifted once the binding lands', async () => {
+  test('the block is lifted once the exact provider test succeeds', async () => {
     // The property that matters more than raising one: a product that blocks
     // and never unblocks is a product nobody can use after fixing it.
     const blocks = recorder()
-    const store = await loaded({ credentialConfigured: true })
+    const store = await loaded({ credentialConfigured: true }, async (provider, model) => ({
+      provider, model, ok: true, credential: 'verified', reachability: 'reachable',
+      message: 'Provider request succeeded. This exact binding is ready.',
+    }))
     mount(store, blocks)
     assert.notEqual(blocks.standing('session-1'), undefined, 'nothing was blocked to begin with')
 
     await store.bind('agent_model', 'openrouter', 'm1')
     const chat = store.getSnapshot().roles.find(row => row.role === 'agent_model')
-    assert.equal(chat.readiness.status, 'executable')
+    assert.equal(chat.readiness.status, 'bound_unverified')
+    await store.testRole('agent_model')
+    assert.equal(store.getSnapshot().roles.find(
+      row => row.role === 'agent_model').readiness.status, 'executable')
     mount(store, blocks)
     assert.equal(blocks.standing('session-1'), undefined, 'the composer stayed closed')
   })
@@ -202,7 +210,7 @@ describe('what the gate must never do', () => {
     const store = await loaded({ credentialConfigured: true })
     mount(store, blocks)
     assert.deepEqual(blocks.standing('session-1'), blockFor(store.getSnapshot()))
-    assert.match(blocks.standing('session-1').reason, /^Chat is not configured/)
+    assert.match(blocks.standing('session-1').reason, /^Chat is not ready/)
   })
 
   test('it renders no absolute path and no route id', async () => {

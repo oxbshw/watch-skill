@@ -78,7 +78,7 @@ export interface ChatGateProps {
  * to prevent.
  */
 export function blockReason(detail: string): string {
-  return `${ROLE_LABEL[PRIMARY_ROLE]} is not configured — ${detail}`
+  return `${ROLE_LABEL[PRIMARY_ROLE]} is not ready — ${detail}`
 }
 
 /**
@@ -143,11 +143,12 @@ export function ChatGate({ sessionId, store, blocks }: ChatGateProps): ReactNode
     <section
       aria-label={`${ROLE_LABEL[PRIMARY_ROLE]} setup`}
       style={{
-        border: '1px solid var(--watch-accent)',
-        borderRadius: '10px',
-        padding: '12px 14px',
+        border: '1px solid color-mix(in srgb, var(--watch-accent) 68%, var(--dsw-alias-border-l2))',
+        borderRadius: '14px',
+        padding: '15px 17px',
         margin: '0 0 8px',
-        background: 'var(--dsw-alias-bg-base)',
+        background: 'linear-gradient(145deg, color-mix(in srgb, var(--watch-accent) 7%, var(--dsw-alias-bg-layer-2)), var(--dsw-alias-bg-base))',
+        boxShadow: '0 10px 30px color-mix(in srgb, var(--watch-accent) 9%, transparent)',
       }}
     >
       <div style={{
@@ -157,7 +158,9 @@ export function ChatGate({ sessionId, store, blocks }: ChatGateProps): ReactNode
       >
         <h3 style={{ fontSize: '13px', fontWeight: 600, margin: 0 }}>{card.title}</h3>
         {/* The word, then the chip. Nothing here is carried by colour. */}
-        <StatusChip tone="neutral">Not configured</StatusChip>
+        <StatusChip tone="neutral">
+          {chat.status === 'bound_unverified' ? 'Configured · not tested' : 'Not ready'}
+        </StatusChip>
       </div>
       <p style={{
         fontSize: '12px', lineHeight: 1.55, margin: '6px 0 0',
@@ -189,10 +192,13 @@ export function ChatGate({ sessionId, store, blocks }: ChatGateProps): ReactNode
               <button
                 type="button"
                 style={CONTROL.primary}
-                disabled={!snapshot.writable}
-                onClick={() => { setOpen(true) }}
+                disabled={!snapshot.writable || snapshot.testingRole !== null}
+                onClick={() => {
+                  if (chat.primaryBlocker === 'provider_untested') void store.testRole(PRIMARY_ROLE)
+                  else setOpen(true)
+                }}
               >
-                {card.action}
+                {snapshot.testingRole === PRIMARY_ROLE ? 'Testing provider…' : card.action}
               </button>
               <span style={{ fontSize: '12px', color: 'var(--dsw-alias-label-tertiary)' }}>
                 {/* Named rather than linked: the settings panel's open state is

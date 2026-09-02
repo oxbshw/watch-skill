@@ -14,7 +14,7 @@
  * @module @deepwatch/dsh-client-settings/client
  */
 
-import { useCallback, useEffect, useState, useSyncExternalStore } from 'react'
+import { useEffect, useSyncExternalStore } from 'react'
 import type { ReactNode } from 'react'
 import type { Context } from '@deepseek-ai/cordis'
 import type { CoreHealthReport } from '@deepwatch/dsh-contracts/query/wire'
@@ -27,11 +27,13 @@ import {
   VerificationSection,
 } from './components.js'
 import { WatchOnboarding } from './onboarding.js'
+import type { OnboardingProps } from './onboarding.js'
 import { BindingStore } from './binding-state.js'
 import { RoleBindings } from './role-bindings.js'
 import { ChatGate } from './chat-gate.js'
 import type { ComposerBlocks } from './chat-gate.js'
 import type { HostApi } from './binding-state.js'
+import type { ProviderTestFacts } from './binding-state.js'
 
 export * from './components.js'
 export * from './onboarding.js'
@@ -87,6 +89,83 @@ type CoreHealthReader = (
   signal?: AbortSignal,
 ) => Promise<{ ok: true, value: unknown } | { ok: false }>
 
+type ProviderTestReader = (
+  request: {
+    protocol: number
+    requestId: string
+    deadlineMs: number
+    provider: string
+    model: string
+  },
+  signal?: AbortSignal,
+) => Promise<{ ok: true, value: unknown } | { ok: false }>
+
+interface HealthSnapshot {
+  readonly health: CoreHealth | null
+  readonly reading: boolean
+  readonly loaded: boolean
+}
+
+/** One live Core reading shared by onboarding and Diagnostics. */
+class CoreHealthStore {
+  private snapshot: HealthSnapshot = { health: null, reading: true, loaded: false }
+  private readonly listeners = new Set<() => void>()
+  private generation = 0
+  private inFlight: Promise<void> | null = null
+
+  constructor(private readonly reader: () => CoreHealthReader | null) {}
+
+  getSnapshot = (): HealthSnapshot => this.snapshot
+  subscribe = (listener: () => void): (() => void) => {
+    this.listeners.add(listener)
+    return () => { this.listeners.delete(listener) }
+  }
+
+  private publish(snapshot: HealthSnapshot): void {
+    this.snapshot = snapshot
+    for (const listener of this.listeners) listener()
+  }
+
+  /**
+   * Read once, however many surfaces ask.
+   *
+   * Onboarding and Diagnostics mount independently and both need the same
+   * reading. Firing a second Core handshake because a second surface appeared
+   * is two readings that can disagree, and the one a person is looking at
+   * would be whichever landed last.
+   */
+  ensureLoaded(): void {
+    if (this.snapshot.loaded || this.inFlight !== null) return
+    this.inFlight = this.refresh().finally(() => { this.inFlight = null })
+  }
+
+  async refresh(): Promise<void> {
+    const generation = ++this.generation
+    this.publish({ ...this.snapshot, reading: true })
+    const reader = this.reader()
+    if (reader === null) {
+      this.publish({ health: null, reading: false, loaded: true })
+      return
+    }
+    try {
+      const result = await reader({
+        protocol: 1, requestId: `req_${Date.now().toString(36)}`, deadlineMs: 15_000,
+      }, new AbortController().signal)
+      if (generation !== this.generation) return
+      const report = result.ok ? result.value as CoreHealth | null | undefined : null
+      this.publish({
+        health: report?.outcome === 'core_health' ? report : null,
+        reading: false,
+        loaded: true,
+      })
+    } catch {
+      if (generation === this.generation) {
+        this.publish({ health: null, reading: false, loaded: true })
+      }
+    }
+  }
+}
+
 interface ConversationService {
   readonly blocks: ComposerBlocks
 }
@@ -97,8 +176,6 @@ export function apply(ctx: Context): void {
   // One store for the whole panel. Two would be two answers to "is Chat
   // ready?", and the screen that showed a stale one would be the screen
   // somebody trusted.
-  const store = new BindingStore((ctx.get('connection') as { api: HostApi }).api)
-  const RoleBindingsSection = (): ReactNode => RoleBindings({ store })
   // Diagnostics reads the same store, so "Agent Model — Not configured" cannot
   // sit beside a Role Bindings screen saying Chat is ready. One store, one
   // answer, on every surface that asks.
@@ -123,6 +200,29 @@ export function apply(ctx: Context): void {
     }).remote
     return remote?.watchQuery?.coreHealth ?? null
   }
+  const runProviderTest = async (
+    provider: string, model: string, signal: AbortSignal,
+  ): Promise<ProviderTestFacts> => {
+    const method = (ctx as unknown as {
+      remote?: { watchQuery?: { providerTest?: ProviderTestReader } }
+    }).remote?.watchQuery?.providerTest
+    if (method === undefined) throw new Error('provider test remote unavailable')
+    const result = await method({
+      protocol: 1, requestId: `req_provider_${Date.now().toString(36)}`,
+      deadlineMs: 15_000, provider, model,
+    }, signal)
+    if (!result.ok) throw new Error('provider test remote refused the request')
+    const value = result.value as ProviderTestFacts & { outcome?: string }
+    if (value.outcome !== 'provider_test' || value.provider !== provider || value.model !== model) {
+      throw new Error('provider test returned a mismatched response')
+    }
+    return value
+  }
+  const store = new BindingStore(
+    (ctx.get('connection') as { api: HostApi }).api, runProviderTest,
+  )
+  const RoleBindingsSection = (): ReactNode => RoleBindings({ store })
+  const healthStore = new CoreHealthStore(readHealth)
 
   const DiagnosticsWithRoles = (): ReactNode => {
     // Subscribed, not sampled: a Diagnostics page that read the snapshot once
@@ -131,41 +231,26 @@ export function apply(ctx: Context): void {
     const snapshot = useSyncExternalStore(store.subscribe, store.getSnapshot, store.getSnapshot)
     useEffect(() => { void store.load() }, [])
 
-    // Read once per visit, and again on demand. Health is a *reading*, so it
-    // is fetched when somebody opens the screen rather than held in a store —
-    // a cached one would be the stale-number problem this panel was rewritten
-    // to remove, wearing a fresher-looking chip.
-    const [health, setHealth] = useState<CoreHealth | null>(null)
-    const [reading, setReading] = useState(true)
-    const refresh = useCallback(() => {
-      setReading(true)
-      const controller = new AbortController()
-      const coreHealth = readHealth()
-      if (coreHealth === null) { setHealth(null); setReading(false); return }
-      void coreHealth(
-        { protocol: 1, requestId: `req_${Date.now().toString(36)}`, deadlineMs: 15_000 },
-        controller.signal,
-      ).then((result) => {
-        // A refusal is not a reading. Anything that is not a health report
-        // leaves `health` null, and the panel says it could not read rather
-        // than rendering the shape of an answer it did not get.
-        // `value`, not `data`: upstream's RemoteResult carries the payload
-        // under `value`, and reading the wrong field is indistinguishable from
-        // a host that answered nothing — the panel said "could not be read"
-        // while the host was answering correctly every time.
-        const value = result.ok ? result.value : null
-        const report = value as CoreHealth | null | undefined
-        setHealth(
-          report !== null && report !== undefined && report.outcome === 'core_health'
-            ? report
-            : null,
-        )
-        setReading(false)
-      }, () => { setHealth(null); setReading(false) })
-    }, [])
-    useEffect(refresh, [refresh])
+    const core = useSyncExternalStore(
+      healthStore.subscribe, healthStore.getSnapshot, healthStore.getSnapshot,
+    )
+    useEffect(() => { healthStore.ensureLoaded() }, [])
 
-    return DiagnosticsSection({ roles: snapshot.roles, health, reading, onRefresh: refresh })
+    return DiagnosticsSection({
+      roles: snapshot.roles, health: core.health, reading: core.reading,
+      onRefresh: () => { void healthStore.refresh() },
+    })
+  }
+
+  const OnboardingWithReadiness = (props: OnboardingProps): ReactNode => {
+    const snapshot = useSyncExternalStore(store.subscribe, store.getSnapshot, store.getSnapshot)
+    const core = useSyncExternalStore(
+      healthStore.subscribe, healthStore.getSnapshot, healthStore.getSnapshot,
+    )
+    useEffect(() => { void store.load(); healthStore.ensureLoaded() }, [])
+    return WatchOnboarding({
+      ...props, roles: snapshot.roles, health: core.health, reading: core.reading,
+    })
   }
 
   const section = (id: string, label: string, order: number, component: unknown): void => {
@@ -246,7 +331,7 @@ export function apply(ctx: Context): void {
   slots.inject('settings.onboarding', () => {
     slots.register(
       { name: 'settings.onboarding', id: 'watch-welcome', order: -50 },
-      WatchOnboarding,
+      OnboardingWithReadiness,
     )
   })
 }

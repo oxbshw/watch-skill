@@ -155,14 +155,17 @@ describe('the upstream notice is answered, not disabled', () => {
  */
 const ONBOARDING = readFileSync(
   join(ROOT, 'packages', 'watch', 'client-settings', 'src', 'client', 'onboarding.tsx'), 'utf8')
+const ONBOARDING_CSS = readFileSync(
+  join(ROOT, 'packages', 'watch', 'client-settings', 'src', 'client', 'onboarding.module.css'),
+  'utf8')
 
 describe('one DeepWatch onboarding, and it says what to do next', () => {
   test('it is titled as a welcome, not as a bare product name', () => {
-    assert.match(ONBOARDING, /Welcome to \$\{PRODUCT_NAME\}/)
+    assert.match(ONBOARDING, /title=\{'Welcome to ' \+ PRODUCT_NAME\}/)
   })
 
   test('it explains the product in one sentence', () => {
-    assert.match(ONBOARDING, /watches what happens on your machine/)
+    assert.match(ONBOARDING, /local evidence workspace is ready to begin/)
   })
 
   test('it offers the three actions, and exactly one is primary', () => {
@@ -172,10 +175,11 @@ describe('one DeepWatch onboarding, and it says what to do next', () => {
     assert.match(ONBOARDING, /Explore offline/)
     assert.match(ONBOARDING, /View diagnostics/)
 
-    const ghosts = [...ONBOARDING.matchAll(/variant="ghost"/g)].length
     const buttons = [...ONBOARDING.matchAll(/<Button\b/g)].length
     assert.equal(buttons, 3)
-    assert.equal(ghosts, 2, 'exactly one action carries the primary styling')
+    assert.equal([...ONBOARDING.matchAll(/variant="primary"/g)].length, 1)
+    assert.equal([...ONBOARDING.matchAll(/variant="outline"/g)].length, 1)
+    assert.equal([...ONBOARDING.matchAll(/variant="ghost"/g)].length, 1)
   })
 
   test('readiness is two facts, not one fraction', () => {
@@ -188,12 +192,12 @@ describe('one DeepWatch onboarding, and it says what to do next', () => {
   })
 
   test('it distinguishes local readiness from model configuration', () => {
-    assert.match(ONBOARDING, /need no provider and no network/)
-    assert.match(ONBOARDING, /No provider is\s*\n?\s*configured yet/)
+    assert.match(ONBOARDING, /need no provider\s+and no network/)
+    assert.match(ONBOARDING, /Saved is\s*\n?\s*never presented as tested/)
   })
 
   test('it still says a provider is not a media consent', () => {
-    assert.match(ONBOARDING, /separate consent/)
+    assert.match(ONBOARDING, /Media access is separate and stays off/)
   })
 
   test('the mark is large enough to be an identity', () => {
@@ -203,8 +207,9 @@ describe('one DeepWatch onboarding, and it says what to do next', () => {
   })
 
   test('the card is readable and does not overflow a narrow window', () => {
-    assert.match(ONBOARDING, /min\(560px, calc\(100vw - 48px\)\)/)
-    assert.match(ONBOARDING, /maxWidth: '65ch'/)
+    assert.match(ONBOARDING_CSS, /min\(720px, calc\(100vw - 40px\)\)/)
+    assert.match(ONBOARDING_CSS, /@media \(max-width: 620px\)/)
+    assert.match(ONBOARDING_CSS, /grid-template-columns: 1fr;/)
   })
 
   test('the heading is the accessible name of the section', () => {
@@ -213,13 +218,14 @@ describe('one DeepWatch onboarding, and it says what to do next', () => {
   })
 
   test('the decorative mark is hidden from a screen reader', () => {
-    assert.match(ONBOARDING, /alt="" aria-hidden="true"/)
+    assert.match(ONBOARDING, /className=\{css\.markFrame\} aria-hidden="true"/)
+    assert.match(ONBOARDING, /alt="" className=\{css\.mark\}/)
   })
 
   test('it wraps in DSH\'s own Modal rather than a hand-rolled overlay', () => {
     // A private overlay would duplicate the dimming, the focus trap and the
     // inert root that already exist, and would drift from them.
-    assert.match(ONBOARDING, /<Modal open title=/)
+    assert.match(ONBOARDING, /<Modal\s+[\s\S]*?\bopen\b[\s\S]*?\btitle=/)
     assert.doesNotMatch(ONBOARDING, /position: 'fixed'/)
   })
 })

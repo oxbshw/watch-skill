@@ -1,106 +1,56 @@
 /**
- * The first thing a person sees.
+ * DeepWatch's first-run product surface.
  *
- * What they saw before was "Add an API key to get started — configure the
- * official DeepSeek provider to start building". Reasonable for upstream, and
- * wrong twice over for this product: it implies the workspace does nothing
- * until a cloud provider is connected, and that the only thing worth
- * configuring is a chat model. Perception, memory, evidence and verification
- * run on this machine, and the agent model is one role among nine.
+ * The settings.onboarding slot renders from a narrow sidebar seat, so this
+ * component owns a real modal. DSH's Modal keeps the focus, Escape and mask
+ * behavior; this component only owns the product layout inside it.
  *
- * The first version of this replacement was a serious mistake, and the shape of
- * it is worth recording so it is not repeated. `settings.onboarding` is not a
- * modal seat. It renders inside the sidebar's foot area — 256 pixels wide — and
- * the content is expected to wrap *itself* in a modal, which is exactly what
- * upstream's own `WelcomeNotice` does. Rendering a twelve-row, 2400-pixel
- * readiness dashboard straight into it did not merely look wrong: it spilled
- * two thousand pixels out of a clipped 280px column and destroyed the sidebar.
- *
- * The second version was too small in the other direction. A 420-pixel column
- * with a 40-pixel mark, a bare product name as its title, and two ghost text
- * links reading "Set up capabilities" and "Continue" — a person could not tell
- * which was the way forward, the identity was a thumbnail, and "4 of 12
- * capabilities are ready" read as a warning about a broken installation rather
- * than an honest description of a local-first product nobody had pointed at a
- * model yet.
- *
- * So the rules are now three, and all of them are load-bearing:
- *
- *   1. Wrap in DSH's own `Modal`, the way upstream does. Not a hand-rolled
- *      overlay — that would duplicate the dimming, the focus handling and the
- *      inert root that already exist.
- *   2. Keep it short. A first-run notice is a sentence, a readiness statement
- *      and three actions. The full capability list lives in Diagnostics, where
- *      there is width for it and where somebody goes to look things up.
- *   3. Say which action is the way forward. One primary button, two quiet
- *      ones, and enough space between them to tell them apart.
+ * Both counts come from the same normalized runtime snapshot as Diagnostics.
+ * Nothing is shown ready while it loads, and a saved credential is not a
+ * successful provider test.
  *
  * @module @deepwatch/dsh-client-settings/onboarding
  */
 
-import type { CSSProperties, ReactNode } from 'react'
-import { Button, Modal } from '@deepseek-ai/dsh-client-ui-primitives'
-import { PRODUCT_NAME, WATCH_MARK_PNG, tokenFor } from '@deepwatch/dsh-client-brand'
-import { READINESS } from './readiness.js'
+import type { ReactNode } from 'react'
+import {
+  Button,
+  IconCheckOutline16,
+  IconRightUpOutline16,
+  IconSettingsOutline16,
+  Modal,
+} from '@deepseek-ai/dsh-client-ui-primitives'
+import { PRODUCT_NAME, WATCH_MARK_PNG } from '@deepwatch/dsh-client-brand'
+import type { CoreHealthReport } from '@deepwatch/dsh-contracts/query/wire'
+import { deriveReadiness } from './readiness.js'
+import type { RoleRow } from './binding-state.js'
+import css from './onboarding.module.css'
 
 /** What DSH hands an onboarding step. */
 export interface OnboardingProps {
   readonly stepId?: string
   readonly complete?: () => void
   readonly openSection?: (id: string) => void
+  readonly roles?: readonly RoleRow[]
+  readonly health?: CoreHealthReport | null
+  readonly reading?: boolean
 }
 
-/**
- * Layout, kept out of the markup so the structure reads as structure.
- *
- * `min(560px, …)` rather than a fixed width: this renders from a seat inside
- * the sidebar, and a 560-pixel card in a 380-pixel viewport is a horizontal
- * scrollbar. `65ch` caps the prose where the viewport is wide, which is the
- * other half of readable.
- */
-const S = {
-  card: {
-    width: 'min(560px, calc(100vw - 48px))',
-    maxWidth: '100%',
-    padding: '4px 2px',
-    boxSizing: 'border-box',
-  },
-  head: { display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '18px' },
-  mark: { width: '64px', height: '64px', objectFit: 'contain', flexShrink: 0 },
-  title: { fontSize: '22px', fontWeight: 600, margin: 0, lineHeight: 1.25 },
-  tagline: { fontSize: '14px', margin: '4px 0 0', color: tokenFor('active') },
-  prose: {
-    fontSize: '14px', lineHeight: 1.65, margin: '0 0 16px', maxWidth: '65ch',
-    color: 'var(--dsw-alias-label-secondary)',
-  },
-  status: {
-    display: 'flex', flexDirection: 'column', gap: '8px',
-    padding: '12px 14px', marginBottom: '18px',
-    border: '1px solid var(--dsw-alias-separator)', borderRadius: '8px',
-  },
-  statusRow: {
-    display: 'flex', gap: '10px', alignItems: 'baseline', fontSize: '13.5px',
-    lineHeight: 1.55, margin: 0, flexWrap: 'wrap',
-  },
-  statusWord: { flexShrink: 0, minWidth: '92px', fontWeight: 600 },
-  actions: { display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' },
-  note: {
-    fontSize: '12.5px', lineHeight: 1.6, margin: '18px 0 0', maxWidth: '65ch',
-    color: 'var(--dsw-alias-label-tertiary)',
-  },
-} satisfies Record<string, CSSProperties>
+/** A human list that stays useful at zero, one and many items. */
+function names(items: readonly { readonly name: string }[]): string {
+  if (items.length === 0) return 'None yet'
+  if (items.length <= 3) return items.map(item => item.name).join(' · ')
+  return items.slice(0, 2).map(item => item.name).join(' · ')
+    + ' · +' + String(items.length - 2) + ' more'
+}
 
-/**
- * The DeepWatch first-run notice.
- *
- * Readiness is stated as two facts rather than one fraction, because they are
- * two different things and collapsing them is what made "4 of 12" read as a
- * fault: what runs on this machine is ready *now*, and what needs a model is
- * waiting for a decision nobody has made yet. The count still comes from the
- * same table Diagnostics renders, so the two cannot disagree.
- */
-export function WatchOnboarding({ complete, openSection }: OnboardingProps): ReactNode {
-  const local = READINESS.filter(item => item.tone === 'active')
+/** The truthful, intentional first impression of DeepWatch. */
+export function WatchOnboarding(
+  { complete, openSection, roles, health, reading }: OnboardingProps,
+): ReactNode {
+  const readiness = deriveReadiness({ roles, health, reading })
+  const ready = readiness.filter(item => item.status === 'ready')
+  const pending = readiness.filter(item => item.status !== 'ready')
   const finish = (): void => { complete?.() }
   const go = (section: string): void => {
     openSection?.(section)
@@ -108,59 +58,114 @@ export function WatchOnboarding({ complete, openSection }: OnboardingProps): Rea
   }
 
   return (
-    <Modal open title={`Welcome to ${PRODUCT_NAME}`} onClose={finish} headless>
-      <section style={S.card} aria-labelledby="watch-welcome-title">
-        <header style={S.head}>
-          {/* Decorative: the heading beside it says the name, and announcing
-              it twice helps nobody using a screen reader. */}
-          <img
-            src={WATCH_MARK_PNG} width={64} height={64} alt="" aria-hidden="true" style={S.mark}
-          />
-          <div>
-            <h2 id="watch-welcome-title" style={S.title}>{`Welcome to ${PRODUCT_NAME}`}</h2>
-            <p style={S.tagline}>See. Remember. Act. Verify.</p>
+    <Modal
+      open
+      title={'Welcome to ' + PRODUCT_NAME}
+      onClose={finish}
+      headless
+      className={css.dialog ?? ''}
+    >
+      <section className={css.card} aria-labelledby="watch-welcome-title">
+        <header className={css.hero}>
+          <div className={css.identity}>
+            <div className={css.markFrame} aria-hidden="true">
+              <img src={WATCH_MARK_PNG} width={58} height={58} alt="" className={css.mark} />
+            </div>
+            <div className={css.titleBlock}>
+              <span className={css.eyebrow}>DEEPWATCH / INTO THE KNOW</span>
+              <h2 id="watch-welcome-title" className={css.title}>
+                See what happened.<br />
+                Prove what worked.
+              </h2>
+              <p className={css.tagline}>See · Remember · Act · Verify</p>
+            </div>
           </div>
+          <p className={css.lead}>
+            Your local evidence workspace is ready to begin. Connect a model
+            when you want conversation; local capabilities need no provider
+            and no network.
+          </p>
         </header>
 
-        <p style={S.prose}>
-          DeepWatch is an agent that watches what happens on your machine,
-          remembers it with provenance, and can prove what actually worked.
-        </p>
+        <div className={css.statusSection}>
+          <div className={css.statusHeading}>
+            <span className={css.eyebrow}>INSTALLATION STATUS</span>
+            <span className={css.liveLabel} aria-live="polite">
+              <span
+                className={[css.liveDot, reading === true ? css.checkingDot : '']
+                  .filter(Boolean).join(' ')}
+                aria-hidden="true"
+              />
+              {reading === true ? 'Checking runtime' : 'Runtime checked'}
+            </span>
+          </div>
 
-        {/* Two facts, not one fraction. Colour is never the only signal: each
-            row is led by a word, so the meaning survives without it. */}
-        <div style={S.status} role="group" aria-label="What is ready now">
-          <p style={S.statusRow}>
-            <span style={{ ...S.statusWord, color: tokenFor('active') }}>Ready now</span>
-            <span>
-              {`Watch Core, memory, verification and the browser — ${String(local.length)} local `}
-              capabilities that need no provider and no network.
-            </span>
-          </p>
-          <p style={S.statusRow}>
-            <span style={{ ...S.statusWord, color: 'var(--dsw-alias-label-secondary)' }}>
-              Needs setup
-            </span>
-            <span>
-              Chat, and anything else that calls a model. No provider is
-              configured yet, so nothing is sent anywhere until you choose one.
-            </span>
-          </p>
+          <div className={css.statusGrid} role="group" aria-label="What is ready now">
+            <article
+              className={[css.metricCard, css.readyCard].filter(Boolean).join(' ')}
+              data-watch-readiness="ready"
+            >
+              <div className={css.metricTop}>
+                <span className={css.metricLabel}>
+                  <IconCheckOutline16 size={16} />
+                  Ready now
+                </span>
+                <strong className={css.metricValue} data-watch-count>
+                  {reading === true ? '—' : ready.length}
+                </strong>
+              </div>
+              <p className={css.metricCopy}>
+                {reading === true
+                  ? 'Checking this installation. Nothing is assumed ready.'
+                  : names(ready) + ' passed ' + (ready.length === 1 ? 'its' : 'their')
+                    + ' runtime gates.'}
+              </p>
+            </article>
+
+            <article className={css.metricCard} data-watch-readiness="pending">
+              <div className={css.metricTop}>
+                <span className={css.metricLabel}>
+                  <IconSettingsOutline16 size={16} />
+                  Needs setup
+                </span>
+                <strong className={css.metricValue} data-watch-count>{pending.length}</strong>
+              </div>
+              <p className={css.metricCopy}>
+                Configure, test or repair these when you need them. Saved is
+                never presented as tested.
+              </p>
+            </article>
+          </div>
         </div>
 
-        <div style={S.actions}>
-          <Button onClick={() => { go('watch-roles') }}>Finish setup</Button>
-          <Button variant="ghost" onClick={finish}>Explore offline</Button>
-          <Button variant="ghost" onClick={() => { go('watch-diagnostics') }}>
+        <div className={css.consent}>
+          <span className={css.consentIcon} aria-hidden="true">
+            <IconCheckOutline16 size={14} />
+          </span>
+          <div>
+            <strong>Private by default</strong>
+            <p>
+              Connecting a model does not permit uploading frames, audio,
+              transcripts or evidence. Media access is separate and stays off.
+            </p>
+          </div>
+        </div>
+
+        <footer className={css.footer}>
+          <Button
+            variant="ghost"
+            icon={<IconRightUpOutline16 size={16} />}
+            onClick={() => { go('watch-diagnostics') }}
+          >
             View diagnostics
           </Button>
-        </div>
-
-        <p style={S.note}>
-          Connecting a provider connects a model. It does not permit uploading
-          frames, audio, transcripts or evidence — that is a separate consent,
-          and it is off.
-        </p>
+          <div className={css.primaryActions}>
+            <Button variant="outline" onClick={finish}>Explore offline</Button>
+            <Button variant="primary" onClick={() => { go('watch-roles') }}>
+              Finish setup
+            </Button>
+          </div>
+        </footer>
       </section>
     </Modal>
   )

@@ -33,7 +33,7 @@ const SETTINGS = join(ROOT, 'packages', 'watch', 'client-settings')
 
 const {
   BindingStore, DEFAULT_MODEL_NAMESPACE, chatReadiness, credentialRefOf, credentialStatusOf,
-  roleRowOf,
+  providerTestKey, roleRowOf,
 } = await import(pathToFileURL(join(SETTINGS, 'lib', 'client', 'binding-state.js')).href)
 const { RoleBindings } = await import(
   pathToFileURL(join(SETTINGS, 'lib', 'client', 'role-bindings.js')).href)
@@ -123,9 +123,9 @@ function host({
 }
 
 /** A loaded store, which is what every case here starts from. */
-async function loaded(options) {
+async function loaded(options, providerTester) {
   const stub = host(options)
-  const store = new BindingStore(stub.api)
+  const store = new BindingStore(stub.api, providerTester)
   await store.load()
   return { store, stub }
 }
@@ -173,7 +173,7 @@ describe('a saved credential is not a configured product', () => {
     const markup = screen(store)
     assert.ok(markup.includes('Choose models and roles'),
       'there is no way forward from a saved credential')
-    assert.ok(markup.includes('Chat is not configured yet'))
+    assert.ok(markup.includes('Chat is not ready yet'))
   })
 
   test('saving a credential contacts nobody', async () => {
@@ -183,7 +183,8 @@ describe('a saved credential is not a configured product', () => {
     const { store } = await loaded({ credentialConfigured: true })
     const chat = chatReadiness(store.getSnapshot())
     assert.equal(chat.blockers.includes('credential_rejected'), false)
-    assert.equal(screen(store).includes('Not tested'), true)
+    assert.equal(screen(store).includes('Credential saved · not yet assigned'), true)
+    assert.equal(screen(store).includes('Run provider test'), false)
   })
 })
 
@@ -215,11 +216,57 @@ describe('nothing is selected on somebody’s behalf', () => {
   })
 })
 
-describe('binding Chat is what makes Chat runnable', () => {
-  test('a bound, credentialled, served route is executable', async () => {
+describe('binding and a successful provider test make Chat runnable', () => {
+  test('a bound, credentialled, served route is still not tested', async () => {
     const { store } = await loaded({ credentialConfigured: true, bindings: BOUND })
+    assert.equal(isExecutable(chatReadiness(store.getSnapshot())), false)
+    assert.equal(chatReadiness(store.getSnapshot()).status, 'bound_unverified')
+    assert.ok(screen(store).includes('Run provider test'))
+  })
+
+  test('a successful stub provider request makes the exact binding executable', async () => {
+    const calls = []
+    const tester = async (provider, model) => {
+      calls.push({ provider, model })
+      return {
+        provider, model, ok: true, credential: 'verified', reachability: 'reachable',
+        message: 'Provider request succeeded. This exact binding is ready.',
+      }
+    }
+    const { store } = await loaded(
+      { credentialConfigured: true, bindings: BOUND }, tester)
+    await store.testRole('agent_model')
+    assert.deepEqual(calls, [{ provider: 'openrouter', model: 'openai/gpt-4o-mini' }])
     assert.equal(isExecutable(chatReadiness(store.getSnapshot())), true)
     assert.ok(screen(store).includes('Chat can run.'))
+  })
+
+  test('a rejected provider test stays blocked and names the credential', async () => {
+    const tester = async (provider, model) => ({
+      provider, model, ok: false, credential: 'rejected', reachability: 'unauthorized',
+      message: 'The provider rejected the saved credential.',
+    })
+    const { store } = await loaded(
+      { credentialConfigured: true, bindings: BOUND }, tester)
+    await store.testRole('agent_model')
+    assert.equal(chatReadiness(store.getSnapshot()).primaryBlocker, 'credential_rejected')
+    assert.equal(isExecutable(chatReadiness(store.getSnapshot())), false)
+  })
+
+  test('a provider test can be cancelled and remains explicitly untested', async () => {
+    const tester = (_provider, _model, signal) => new Promise((_resolve, reject) => {
+      signal.addEventListener('abort', () => { reject(new Error('cancelled')) }, { once: true })
+    })
+    const { store } = await loaded(
+      { credentialConfigured: true, bindings: BOUND }, tester)
+    const pending = store.testRole('agent_model')
+    await Promise.resolve()
+    assert.ok(screen(store).includes('Cancel provider test'))
+    store.cancelProviderTest()
+    await pending
+    assert.equal(chatReadiness(store.getSnapshot()).primaryBlocker, 'provider_untested')
+    assert.match(store.getSnapshot().testMessage, /cancelled.*not tested/i)
+    assert.ok(screen(store).includes('Run provider test'))
   })
 
   test('the same binding without a credential is blocked, not ready', async () => {
@@ -400,7 +447,27 @@ describe('the pieces the store is assembled from', () => {
     const bound = roleRowOf('agent_model', withBinding(EMPTY_BINDINGS, 'agent_model', {
       provider: 'openrouter', model: 'm', credentialRef: 'OPENROUTER_API_KEY', boundAt: '',
     }), providers)
-    assert.equal(bound.readiness.status, 'executable')
+    assert.equal(bound.readiness.status, 'bound_unverified')
+
+    const binding = withBinding(EMPTY_BINDINGS, 'agent_model', {
+      provider: 'openrouter', model: 'm', credentialRef: 'OPENROUTER_API_KEY', boundAt: '',
+    })
+    const pass = {
+      provider: 'openrouter', model: 'm', ok: true,
+      credential: 'verified', reachability: 'reachable', message: 'ok',
+    }
+    const tested = roleRowOf('agent_model', binding, providers, new Map([
+      [providerTestKey('openrouter', 'm', 'OPENROUTER_API_KEY'), pass],
+    ]))
+    assert.equal(tested.readiness.status, 'executable')
+
+    // The same route, served through a different credential, is a route
+    // nobody has tested. Inheriting the verdict here would be the green dot
+    // again, one indirection further out.
+    const rotated = roleRowOf('agent_model', binding, [
+      { ...providers[0], credentialRef: 'OPENROUTER_API_KEY_2' },
+    ], new Map([[providerTestKey('openrouter', 'm', 'OPENROUTER_API_KEY'), pass]]))
+    assert.equal(rotated.readiness.status, 'bound_unverified')
   })
 })
 
@@ -504,7 +571,12 @@ describe('every surface that reports readiness reports the same readiness', () =
     // because one screen asked the store and the other read a table written
     // before the store existed. Two answers to one question is the defect this
     // whole subsystem was built to remove, and it had grown a new instance.
-    const { store } = await loaded({ credentialConfigured: true, bindings: BOUND })
+    const { store } = await loaded(
+      { credentialConfigured: true, bindings: BOUND }, async (provider, model) => ({
+        provider, model, ok: true, credential: 'verified', reachability: 'reachable',
+        message: 'Provider request succeeded. This exact binding is ready.',
+      }))
+    await store.testRole('agent_model')
     const roles = store.getSnapshot().roles
     const diagnostics = renderToStaticMarkup(createElement(ReadinessList, { roles }))
     assert.match(chatRow(diagnostics), />Ready</,

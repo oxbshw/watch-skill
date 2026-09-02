@@ -69,21 +69,22 @@ function credentialTone(status: string): ChipTone {
 
 export const CONTROL = {
   select: {
-    font: 'inherit', fontSize: '13px', padding: '5px 8px', borderRadius: '7px',
-    border: '1px solid var(--dsw-alias-border-l2)',
-    background: 'var(--dsw-alias-bg-base)', color: 'var(--dsw-alias-label-primary)',
+    font: 'inherit', fontSize: '13px', padding: '7px 10px', borderRadius: '10px',
+    border: '1px solid color-mix(in srgb, var(--watch-accent) 12%, var(--dsw-alias-border-l2))',
+    background: 'var(--dsw-alias-bg-layer-2)', color: 'var(--dsw-alias-label-primary)',
     minWidth: '180px', maxWidth: '100%',
   },
   primary: {
-    font: 'inherit', fontSize: '13px', fontWeight: 500, padding: '6px 14px',
-    borderRadius: '7px', cursor: 'pointer',
+    font: 'inherit', fontSize: '13px', fontWeight: 600, padding: '8px 15px',
+    borderRadius: '10px', cursor: 'pointer',
     border: '1px solid var(--watch-accent)',
-    background: 'var(--watch-accent)', color: 'var(--dsw-alias-bg-base)',
+    background: 'var(--watch-accent)', color: 'white',
+    boxShadow: '0 6px 18px color-mix(in srgb, var(--watch-accent) 22%, transparent)',
   },
   quiet: {
-    font: 'inherit', fontSize: '13px', padding: '6px 12px', borderRadius: '7px',
+    font: 'inherit', fontSize: '13px', padding: '8px 13px', borderRadius: '10px',
     cursor: 'pointer', border: '1px solid var(--dsw-alias-border-l2)',
-    background: 'transparent', color: 'var(--dsw-alias-label-secondary)',
+    background: 'color-mix(in srgb, var(--dsw-alias-bg-layer-2) 80%, transparent)', color: 'var(--dsw-alias-label-secondary)',
   },
   field: {
     display: 'flex', flexDirection: 'column' as const, gap: '4px', minWidth: 0,
@@ -290,6 +291,21 @@ function RoleCard(
                     <button
                       type="button"
                       style={CONTROL.quiet}
+                      disabled={(snapshot.testingRole !== null && snapshot.testingRole !== row.role) || snapshot.saving}
+                      onClick={() => {
+                        if (snapshot.testingRole === row.role) store.cancelProviderTest()
+                        else void store.testRole(row.role)
+                      }}
+                    >
+                      {snapshot.testingRole === row.role ? 'Cancel provider test' : 'Run provider test'}
+                    </button>
+                  )}
+              {row.model === null
+                ? null
+                : (
+                    <button
+                      type="button"
+                      style={CONTROL.quiet}
                       disabled={!snapshot.writable || snapshot.saving}
                       onClick={() => { void store.unbind(row.role) }}
                     >
@@ -372,10 +388,10 @@ function ProviderList({ providers }: { readonly providers: readonly ProviderRow[
                   ? 'None advertised.'
                   : String(entry.models.length)}
             </span>
-            <span style={T.key}>Checked</span>
+            <span style={T.key}>Credential save</span>
             <span style={T.value}>
-              Not tested. Saving a credential does not contact the provider, so
-              nothing here has spent a request.
+              Does not contact the provider. Tests are explicit and apply to
+              one exact provider/model binding.
             </span>
           </div>
         </div>
@@ -442,7 +458,7 @@ export function RoleBindings({ store }: RoleBindingsProps): ReactNode {
         ? (
             <div style={{ ...T.card, borderColor: 'var(--watch-accent)' }}>
               <div style={T.cardHead}>
-                <h3 style={T.title}>Chat is not configured yet</h3>
+                <h3 style={T.title}>Chat is not ready yet</h3>
                 <StatusChip tone="neutral">{BINDING_STATUS_LABEL[chat.readiness.status]}</StatusChip>
               </div>
               <p style={{ ...T.lead, margin: '8px 0 0' }}>
@@ -476,6 +492,10 @@ export function RoleBindings({ store }: RoleBindingsProps): ReactNode {
       >
         {snapshot.saving
           ? 'Saving the assignment…'
+          : snapshot.testingRole !== null
+            ? `Testing ${ROLE_LABEL[snapshot.testingRole]} with one bounded provider request…`
+            : snapshot.testMessage !== null
+              ? snapshot.testMessage
           : snapshot.error !== null
             ? snapshot.error
             : ''}

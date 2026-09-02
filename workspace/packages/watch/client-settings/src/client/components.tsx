@@ -43,23 +43,27 @@ export interface SectionProps {
  * how a panel starts looking like two products.
  */
 export const T = {
-  page: { padding: '4px 2px 24px', maxWidth: '860px' },
+  page: {
+    padding: '6px 4px 30px', maxWidth: '880px',
+    background: 'radial-gradient(circle at 0 0, color-mix(in srgb, var(--watch-accent) 5%, transparent), transparent 34%)',
+  },
   lead: {
-    fontSize: '13px', lineHeight: 1.6,
-    color: 'var(--dsw-alias-label-secondary)', margin: '0 0 18px',
+    fontSize: '13.5px', lineHeight: 1.65,
+    color: 'var(--dsw-alias-label-secondary)', margin: '0 0 20px', maxWidth: '72ch',
   },
   card: {
-    border: '1px solid var(--dsw-alias-border-l2)',
-    borderRadius: '10px',
-    padding: '14px 16px',
-    marginBottom: '10px',
-    background: 'var(--dsw-alias-bg-base)',
+    border: '1px solid color-mix(in srgb, var(--watch-accent) 9%, var(--dsw-alias-border-l2))',
+    borderRadius: '14px',
+    padding: '16px 18px',
+    marginBottom: '12px',
+    background: 'linear-gradient(145deg, color-mix(in srgb, var(--watch-accent) 3%, var(--dsw-alias-bg-layer-2)), var(--dsw-alias-bg-base))',
+    boxShadow: '0 10px 28px color-mix(in srgb, black 8%, transparent)',
   },
   cardHead: {
     display: 'flex', alignItems: 'baseline', gap: '10px',
     justifyContent: 'space-between', flexWrap: 'wrap' as const,
   },
-  title: { fontSize: '14px', fontWeight: 600, margin: 0 },
+  title: { fontSize: '14px', fontWeight: 620, margin: 0, letterSpacing: '-0.01em' },
   meta: {
     display: 'grid',
     gridTemplateColumns: 'max-content 1fr',
@@ -71,10 +75,10 @@ export const T = {
   note: {
     fontSize: '12px', lineHeight: 1.55,
     color: 'var(--dsw-alias-label-tertiary)',
-    borderLeft: '2px solid var(--watch-accent)',
-    paddingLeft: '10px', margin: '14px 0 0',
+    borderInlineStart: '2px solid var(--watch-accent)',
+    paddingInlineStart: '10px', margin: '14px 0 0',
   },
-  h2: { fontSize: '12px', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' as const, color: 'var(--dsw-alias-label-tertiary)', margin: '22px 0 8px' },
+  h2: { fontSize: '11px', fontWeight: 700, letterSpacing: '0.11em', textTransform: 'uppercase' as const, color: 'var(--watch-accent)', margin: '24px 0 9px' },
 }
 
 /**
@@ -107,7 +111,8 @@ export function StatusChip(
       display: 'inline-flex', alignItems: 'center', gap: '5px',
       fontSize: '11px', lineHeight: 1.4, padding: '2px 8px',
       borderRadius: '999px', whiteSpace: 'nowrap',
-      border: `1px solid ${colour}`, color: colour,
+      border: `1px solid color-mix(in srgb, ${colour} 60%, transparent)`, color: colour,
+      background: `color-mix(in srgb, ${colour} 8%, transparent)`,
     }}
     >
       {children}
@@ -515,7 +520,7 @@ export function DiagnosticsSection(
         default.
       </p>
       <h2 style={T.h2}>Capability readiness</h2>
-      <ReadinessList openSection={openSection} roles={roles} />
+      <ReadinessList openSection={openSection} roles={roles} health={health} reading={reading} />
 
       <h2 style={T.h2}>Versions</h2>
       <div style={T.card}>

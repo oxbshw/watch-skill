@@ -104,6 +104,17 @@ describe('a role is executable only when every requirement holds', () => {
     assert.match(blockerMessage(readiness), /Choose a model/)
   })
 
+  test('a complete binding with a saved but untested credential is not ready', () => {
+    const readiness = roleReadiness('agent_model', ready({
+      credential: 'configured_unverified',
+      reachability: 'unknown',
+    }))
+    assert.equal(readiness.status, 'bound_unverified')
+    assert.deepEqual(readiness.blockers, ['provider_untested'])
+    assert.equal(BINDING_STATUS_LABEL[readiness.status], 'Configured · not tested')
+    assert.ok(!isExecutable(readiness))
+  })
+
   for (const [label, overrides, blocker] of [
     ['no binding at all', { binding: null }, 'no_binding'],
     ['an unknown provider', { route: null }, 'provider_unknown'],
@@ -111,6 +122,8 @@ describe('a role is executable only when every requirement holds', () => {
     ['an unreadable credential store', { credential: 'inaccessible' }, 'credential_inaccessible'],
     ['a rejected credential', { credential: 'rejected' }, 'credential_rejected'],
     ['an unauthorized probe', { reachability: 'unauthorized' }, 'credential_rejected'],
+    ['a provider that did not answer', { reachability: 'unreachable' }, 'provider_unreachable'],
+    ['a provider that rate limited the test', { reachability: 'rate_limited' }, 'provider_rate_limited'],
     ['a model the provider dropped', { model: 'unavailable' }, 'model_unavailable'],
     ['a malformed model id', { model: 'invalid' }, 'model_invalid'],
     ['a contract this build cannot speak', { contractMatches: false }, 'contract_mismatch'],

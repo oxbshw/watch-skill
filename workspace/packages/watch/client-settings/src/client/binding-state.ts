@@ -34,7 +34,8 @@ import {
   withBinding, withoutBinding,
 } from '@deepwatch/dsh-contracts'
 import type {
-  BindableRole, ProviderCredentialStatus, RoleReadiness, RouteCapability, WatchBindings,
+  BindableRole, ProviderCredentialStatus, ProviderReachability, RoleReadiness,
+  RouteCapability, WatchBindings,
 } from '@deepwatch/dsh-contracts'
 
 /**
@@ -123,6 +124,41 @@ export interface HostApi {
   }
 }
 
+/**
+ * The identity a provider test result belongs to.
+ *
+ * Provider and model alone are not enough. Rebinding a role to a route served
+ * through a different credential must not inherit the previous verdict — that
+ * is the same "saved means working" claim this whole file exists to remove,
+ * wearing a route it was never asked about. So the credential *reference* is
+ * part of the key.
+ *
+ * What it deliberately cannot see: a value rotated behind a reference that
+ * did not change. No credential value crosses this boundary, so the browser
+ * half has nothing to compare. A result therefore lives only as long as the
+ * session that produced it, and is never persisted or restored — an untested
+ * binding after a reload reads as untested, which is the truthful answer.
+ */
+export function providerTestKey(
+  provider: string, model: string, credentialRef: string | null,
+): string {
+  return [provider, model, credentialRef ?? ''].join('\u0000')
+}
+
+/** Provider-neutral result of the explicit, user-triggered one-token test. */
+export interface ProviderTestFacts {
+  readonly provider: string
+  readonly model: string
+  readonly ok: boolean
+  readonly credential: 'configured_unverified' | 'verified' | 'rejected'
+  readonly reachability: Exclude<ProviderReachability, 'unknown'>
+  readonly message: string
+}
+
+export type ProviderTester = (
+  provider: string, model: string, signal: AbortSignal,
+) => Promise<ProviderTestFacts>
+
 /* ── what a surface renders from ────────────────────────────────────────── */
 
 /** One provider, with everything a setup screen needs to talk about it. */
@@ -161,6 +197,8 @@ export interface BindingSnapshot {
   readonly bindings: WatchBindings
   /** True while a write is in flight, so a form can disable itself. */
   readonly saving: boolean
+  readonly testingRole: BindableRole | null
+  readonly testMessage: string | null
 }
 
 const EMPTY: BindingSnapshot = {
@@ -171,6 +209,8 @@ const EMPTY: BindingSnapshot = {
   roles: [],
   bindings: EMPTY_BINDINGS,
   saving: false,
+  testingRole: null,
+  testMessage: null,
 }
 
 /* ── deriving the four facts ────────────────────────────────────────────── */
@@ -238,6 +278,7 @@ function routeOf(row: ProviderRow | undefined, role: BindableRole): RouteCapabil
 /** Everything known about one role, folded through the single readiness gate. */
 export function roleRowOf(
   role: BindableRole, bindings: WatchBindings, providers: readonly ProviderRow[],
+  tests: ReadonlyMap<string, ProviderTestFacts> = new Map(),
 ): RoleRow {
   const binding = bindingFor(bindings, role)
   const row = binding === null
@@ -245,12 +286,15 @@ export function roleRowOf(
     : providers.find(entry => entry.provider === binding.provider)
   const route = routeOf(row, role)
   const known = route?.models ?? null
+  const tested = binding === null
+    ? undefined
+    : tests.get(providerTestKey(binding.provider, binding.model, row?.credentialRef ?? null))
   const readiness = roleReadiness(role, {
     binding,
-    credential: row?.credential ?? 'absent',
+    credential: tested?.credential ?? row?.credential ?? 'absent',
     // Never probed from a settings page. A person asks for a check; opening a
     // screen is not asking.
-    reachability: 'unknown',
+    reachability: tested?.reachability ?? 'unknown',
     model: binding === null
       ? 'none'
       : known === null || known.includes(binding.model) ? 'selected' : 'unavailable',
@@ -284,8 +328,13 @@ export class BindingStore {
   private generation = 0
   private revision: number | undefined
   private defaultRevision: number | undefined
+  private readonly providerTests = new Map<string, ProviderTestFacts>()
+  private providerTestAbort: AbortController | null = null
 
-  constructor(private readonly api: HostApi) {}
+  constructor(
+    private readonly api: HostApi,
+    private readonly providerTester?: ProviderTester,
+  ) {}
 
   /** @returns the current snapshot; stable between changes. */
   getSnapshot = (): BindingSnapshot => this.snapshot
@@ -390,7 +439,7 @@ export class BindingStore {
       writable,
       providers: rows,
       bindings,
-      roles: BINDABLE_ROLES.map(role => roleRowOf(role, bindings, rows)),
+      roles: BINDABLE_ROLES.map(role => roleRowOf(role, bindings, rows, this.providerTests)),
     })
 
     // The binding is the authority; the Harness selection is a projection of
@@ -445,6 +494,53 @@ export class BindingStore {
   /** Remove one role's binding. The role becomes unbound, never inherited. */
   async unbind(role: BindableRole): Promise<void> {
     await this.write(withoutBinding(this.snapshot.bindings, role))
+  }
+
+  /** Run the exact bound route once; saving a credential never calls this. */
+  async testRole(role: BindableRole): Promise<void> {
+    const binding = bindingFor(this.snapshot.bindings, role)
+    if (binding === null || this.providerTester === undefined) {
+      this.publish({ testMessage: 'Assign a provider and model before running the test.' })
+      return
+    }
+    const credentialRef = this.snapshot.providers
+      .find(entry => entry.provider === binding.provider)?.credentialRef ?? null
+    const controller = new AbortController()
+    this.providerTestAbort?.abort()
+    this.providerTestAbort = controller
+    this.publish({ testingRole: role, testMessage: null })
+    try {
+      const facts = await this.providerTester(binding.provider, binding.model, controller.signal)
+      if (controller.signal.aborted) return
+      this.providerTests.set(
+        providerTestKey(binding.provider, binding.model, credentialRef), facts)
+      this.publish({
+        testingRole: null,
+        testMessage: facts.message,
+        roles: BINDABLE_ROLES.map(current => roleRowOf(
+          current, this.snapshot.bindings, this.snapshot.providers, this.providerTests,
+        )),
+      })
+    } catch {
+      if (controller.signal.aborted) return
+      this.publish({
+        testingRole: null,
+        testMessage: 'The provider test could not be started. Check Diagnostics and try again.',
+      })
+    } finally {
+      if (this.providerTestAbort === controller) this.providerTestAbort = null
+    }
+  }
+
+  /** Cancel only the explicit provider probe; no Chat turn is involved. */
+  cancelProviderTest(): void {
+    if (this.providerTestAbort === null) return
+    this.providerTestAbort.abort()
+    this.providerTestAbort = null
+    this.publish({
+      testingRole: null,
+      testMessage: 'Provider test cancelled. This binding remains not tested.',
+    })
   }
 
   /**
@@ -514,7 +610,9 @@ export class BindingStore {
       this.publish({
         saving: false,
         bindings,
-        roles: BINDABLE_ROLES.map(role => roleRowOf(role, bindings, this.snapshot.providers)),
+        roles: BINDABLE_ROLES.map(role => roleRowOf(
+          role, bindings, this.snapshot.providers, this.providerTests,
+        )),
       })
     } catch (error) {
       this.publish({

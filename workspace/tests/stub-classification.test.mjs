@@ -61,6 +61,16 @@ test('the toolless title call is named, not merely tolerated', () => {
   assert.equal(classifyCompletion(title(), PROMPT, STUB_API_KEY).kind, 'session-title')
 })
 
+test('the bounded provider probe is named in both OpenAI token-field shapes', () => {
+  for (const tokenField of ['max_tokens', 'max_completion_tokens']) {
+    const probe = entry({
+      model: 'stub/echo-small', stream: true, [tokenField]: 1,
+      messages: [{ role: 'user', content: [{ type: 'text', text: 'Reply with OK.' }] }],
+    })
+    assert.equal(classifyCompletion(probe, PROMPT, STUB_API_KEY).kind, 'provider-test')
+  }
+})
+
 test('the title call is not mistaken for a second turn', () => {
   // It quotes the prompt inside its JSON argument, so a classifier that looked
   // for the text anywhere in the payload would count two turns and the browser
