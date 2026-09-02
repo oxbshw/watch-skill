@@ -48,6 +48,27 @@ fallback, a missing package, or an order that differs from the manifest graph.
 The state report is `.release-artifacts/first-publish-state.json` and always
 lists `created`, `skipped`, `failed`, and `remaining` packages.
 
+### A digest belongs to one pack
+
+Packing twice from the same commit does not produce the same bytes.
+`@deepwatch/dsh-bundle` declares its siblings through the `workspace:`
+protocol, pnpm resolves those to concrete ranges while packing, and the
+rewritten `dependencies` object comes out in a different key order each time
+-- so that one archive's size and SHA-256 move, and the totals with them. The
+dependency *set* is identical; only its order is not.
+
+What follows from that, exactly. `packed-artifacts.json` is the record of the
+pack that produced the archives beside it, not a claim about what a later pack
+would produce, and `workspace/inventory/packed-artifacts.json` in the
+repository is a snapshot of one such pack rather than a digest anybody can
+reproduce from the source. Every check that compares an archive to a digest --
+`verify:packed`, `verify:packed-contents`, the profile builder and the
+first-publish bootstrap -- reads the inventory written *by the same pack*, so
+each is a real check and none of them depends on cross-run reproducibility.
+
+Publish the archives a pack produced, from the directory that pack wrote. Do
+not pack again between verifying and publishing.
+
 The release owner may check identity and `@deepwatch` organisation access
 without printing either credentials or the npm user name:
 

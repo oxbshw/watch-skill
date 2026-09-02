@@ -115,6 +115,7 @@ def test_queue_storage_survives_a_new_process(
     assert (marker_dir / "output").read_text(encoding="utf-8").strip() == job.job_id
 
 
+@pytest.mark.timeout(600)
 def test_a_killed_worker_is_recovered_without_duplicating_the_artifact(
     tmp_path: Path, isolated_settings: Path
 ) -> None:
@@ -156,8 +157,14 @@ def test_a_killed_worker_is_recovered_without_duplicating_the_artifact(
 
     second = _spawn_worker(tmp_path, isolated_settings, ["test_slow"], lease=60.0)
     try:
-        # Shrink the remaining work so the second run finishes quickly.
-        second.wait(timeout=120)
+        # Recovery re-queues the job, so the second worker runs the whole
+        # twenty seconds of it again from the start -- there is no partial
+        # progress to resume, which is the point: the artifact still has to
+        # appear exactly once. The budget is for that whole second run plus a
+        # cold Python start, on a hosted runner that is sometimes several times
+        # slower than a developer's machine. At 120s it was not, and the suite
+        # failed for a reason that had nothing to do with durability.
+        second.wait(timeout=300)
     finally:
         if second.poll() is None:
             second.kill()
