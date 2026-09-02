@@ -1,6 +1,6 @@
 # Changelog
 
-## v1.4.0rc1 — 2026-09-02 (release candidate)
+## v1.4.0rc1 — 2026-09-03 (release candidate)
 
 The 1.4 candidate closes the real DeepWatch authority path: supervised browser
 operations now return stable Core-owned evidence and receipts, Node talks to the
@@ -37,6 +37,50 @@ the window around each probe.
 The scorer, ground truth and report are transport-independent, so a future
 direct-API adapter reuses all of it. Results and method:
 [`benchmarks/video_backends/`](benchmarks/video_backends/).
+
+### Release engineering
+
+The documented path to a first npm publication could not be walked. `npm run
+release:artifacts` wrote digests, a date and an output directory into the
+tracked inventory, and `npm run first-publish:dry-run` — the next command the
+release guide gives — refuses a dirty tree. Packing now writes per-run facts
+beside the tarballs and leaves the tracked inventory to what a pack of the
+source is expected to produce, and `verify:release-sequence` runs the guide's
+commands in order and checks the worktree between them.
+
+Packing is reproducible. `@deepwatch/dsh-bundle` declares thirteen siblings
+through pnpm's `workspace:` protocol, and pnpm wrote the ranges it resolved
+back in a different key order on each run, so one archive's digest moved for a
+reason unrelated to its contents. The pack stages a canonical manifest for the
+length of one `pnpm pack`; two packs of one commit now produce twenty identical
+archives.
+
+A release-surface gate reads the documents, package descriptions, CLI help, the
+documents inside all twenty tarballs, and the built wheel and sdist, refusing
+unresolved template tokens, stale scopes and package counts, personal paths and
+unfinished product claims. Both halves read one rule table, and every exemption
+is one file, one rule and a reason.
+
+### Changed
+
+- `adapters/agents-md/AGENTS.md` is now
+  `templates/agent-integration/AGENTS.example.md`. It is a template for a
+  user's own project, it was named exactly like the file coding agents treat as
+  policy for the repository they are in, and it shipped in the source
+  distribution. The repository's own `AGENTS.md` is not published.
+- The doc skeleton's holes are `{{AGENT_NAME}}`-style tokens rather than
+  `YOUR-AGENT`, and `scripts/validate_agent_docs.py` refuses any page outside
+  the template that still carries one.
+- Two agent pages pointed at `adapters/claude-skill/skills`, which no longer
+  exists; both now name `skills/`.
+- ADR-003 and `architecture.md` described a `watch-workspace` repository that
+  does not exist. Both halves live in `oxbshw/watch-skill`, on separate
+  release trains.
+- Records of past runs moved to `workspace/docs/history/`, with the commit each
+  measured in its filename.
+- Role Bindings and the Chat gate say why their controls are disabled when the
+  Harness will not accept a settings write. Four controls were greyed out with
+  the reason nowhere on either surface.
 
 ### Fixed
 
