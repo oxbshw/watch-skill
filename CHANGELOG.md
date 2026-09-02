@@ -68,14 +68,15 @@ is one file, one rule and a reason.
   user's own project, it was named exactly like the file coding agents treat as
   policy for the repository they are in, and it shipped in the source
   distribution. The repository's own `AGENTS.md` is not published.
-- The doc skeleton's holes are `{{AGENT_NAME}}`-style tokens rather than
-  `YOUR-AGENT`, and `scripts/validate_agent_docs.py` refuses any page outside
-  the template that still carries one.
+- The doc skeleton's holes are double-brace tokens in a syntax nothing else
+  in the tree uses, rather than words that read like prose, and
+  `scripts/validate_agent_docs.py` refuses any page outside the template that
+  still carries one.
 - Two agent pages pointed at `adapters/claude-skill/skills`, which no longer
   exists; both now name `skills/`.
-- ADR-003 and `architecture.md` described a `watch-workspace` repository that
-  does not exist. Both halves live in `oxbshw/watch-skill`, on separate
-  release trains.
+- ADR-003 and `architecture.md` described a second repository that does not
+  exist. Both halves live in `oxbshw/watch-skill`, on separate release trains,
+  and what the ADR decides is the boundary between them.
 - Records of past runs moved to `workspace/docs/history/`, with the commit each
   measured in its filename.
 - Role Bindings and the Chat gate say why their controls are disabled when the

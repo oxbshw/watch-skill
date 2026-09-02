@@ -84,6 +84,20 @@ ALLOW: tuple[bytes, ...] = (
 # leak arrives in a file that already had a reason to be quiet. A match in any
 # other file, or a different rule in one of these, still fails.
 DELIBERATE: dict[tuple[str, str], str] = {
+    ("release-surface-rules.json", "stale npm scope"):
+        "the release-surface rule table, which states the scope it forbids",
+    ("tests/test_release_surface.py", "stale npm scope"):
+        "a control proving the release-surface gate fires on the old scope",
+    ("tests/test_release_surface.py", "maintainer home"):
+        "a control proving the release-surface gate fires on a personal path",
+    ("tests/test_release_surface.py", "maintainer drive"):
+        "a control proving the release-surface gate fires on a maintainer drive",
+    ("workspace/tests/release-surface.test.mjs", "stale npm scope"):
+        "the same controls, on the half of the gate that reads the documents",
+    ("workspace/tests/release-surface.test.mjs", "maintainer home"):
+        "the same controls, on the half of the gate that reads the documents",
+    ("workspace/tests/release-surface.test.mjs", "maintainer drive"):
+        "the same controls, on the half of the gate that reads the documents",
     ("tests/bench/test_video_backend_adapter.py", "bearer authorization header"):
         "a parametrised fixture proving the redactor catches an Authorization header",
     ("workspace/tests/tenancy.test.mjs", "private key block"):
