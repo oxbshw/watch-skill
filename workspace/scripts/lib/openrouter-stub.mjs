@@ -161,10 +161,14 @@ export function classifyCompletion(entry, promptText, credential) {
   const titled = messages.some(
     message => message.role === 'system'
       && /concise title/i.test(asText(message)))
+  const providerTest = messages.some(
+    message => message.role === 'user' && asText(message).includes('Reply with OK.'))
+    && (body.max_tokens === 1 || body.max_completion_tokens === 1)
 
   let kind = 'unrecognised'
   if (toolCount > 0 && carriesPromptVerbatim) kind = 'turn'
   else if (toolCount === 0 && titled) kind = 'session-title'
+  else if (toolCount === 0 && providerTest) kind = 'provider-test'
 
   const whole = entry.raw ?? ''
   return {
@@ -215,7 +219,11 @@ export async function startOpenRouterStub({ failWith = null, models = STUB_MODEL
       // without OpenRouter's `/api` in front. Matching on the tail rather than
       // the whole path means a client that spells the base URL either way is
       // still talking to the same provider.
-      const path = (request.url ?? '/').replace(/^\/api/, '').split('?')[0]
+      const originalPath = (request.url ?? '/').split('?')[0]
+      const scenario = /\/scenario\/(402|429|timeout)(?:\/|$)/.exec(originalPath)?.[1] ?? null
+      const path = originalPath
+        .replace(/\/scenario\/(?:402|429|timeout)/, '')
+        .replace(/^\/api/, '')
 
       if (path === '/v1/models') {
         // The catalogue is readable without a credential, which is what makes
@@ -231,10 +239,20 @@ export async function startOpenRouterStub({ failWith = null, models = STUB_MODEL
           })
           return
         }
-        if (failWith !== null) {
-          json(response, failWith, {
-            error: { message: `stub refused with ${String(failWith)}`, code: failWith },
+        const scenarioStatus = scenario === '402' || scenario === '429' ? Number(scenario) : failWith
+        if (scenarioStatus !== null) {
+          json(response, scenarioStatus, {
+            error: { message: `stub refused with ${String(scenarioStatus)}`, code: scenarioStatus },
           })
+          return
+        }
+        if (scenario === 'timeout') {
+          const timer = setTimeout(() => {
+            if (!response.writableEnded) {
+              json(response, 504, { error: { message: 'stub timeout completed', code: 504 } })
+            }
+          }, 20_000)
+          request.once('close', () => { clearTimeout(timer) })
           return
         }
         const model = typeof entry.body?.model === 'string' ? entry.body.model : 'stub/echo-small'
@@ -269,6 +287,7 @@ export async function startOpenRouterStub({ failWith = null, models = STUB_MODEL
   return {
     /** What a provider profile's `baseURL` is set to. */
     baseURL: `http://127.0.0.1:${String(port)}/api/v1`,
+    scenarioURL: scenario => `http://127.0.0.1:${String(port)}/scenario/${scenario}/api/v1`,
     port,
     /** Every request the stub received, in order. */
     requests,

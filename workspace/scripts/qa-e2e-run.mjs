@@ -25,7 +25,7 @@
  * credential from the environment.
  */
 
-import { spawnSync } from 'node:child_process'
+import { spawn, spawnSync } from 'node:child_process'
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
@@ -41,6 +41,20 @@ const { startOpenRouterStub, STUB_API_KEY, classifyCompletion } = await import(
 function option(name, fallback = null) {
   const at = process.argv.indexOf(`--${name}`)
   return at === -1 ? fallback : process.argv[at + 1]
+}
+
+/**
+ * The version this candidate builds.
+ *
+ * Read from the source of truth rather than restated: the wheel the profile
+ * installs is built from this `pyproject.toml`, so what Diagnostics shows has
+ * to equal it. A number typed into the harness proves only that somebody
+ * remembered to update the harness.
+ */
+function candidateCoreVersion() {
+  const pyproject = join(WORKSPACE, '..', 'pyproject.toml')
+  if (!existsSync(pyproject)) return ''
+  return /^version\s*=\s*"([^"]+)"/m.exec(readFileSync(pyproject, 'utf8'))?.[1] ?? ''
 }
 
 const URL = option('url', 'http://127.0.0.1:8931')
@@ -126,6 +140,76 @@ function electron() {
  */
 const PROMPT_TEXT = 'Say hello.'
 
+/** How long the browser pass may take before it is treated as wedged. */
+const BROWSER_BUDGET_MS = 15 * 60_000
+
+/**
+ * End an Electron run, including one that will not end itself.
+ *
+ * `child.kill()` signals the launcher. Electron's renderer and GPU processes
+ * are its children, they keep the inherited stdio pipes open, and on Windows
+ * they are not signalled at all — so `close` never fires and the watchdog
+ * that exists to bound this run waits with it. A wedged renderer once held a
+ * local pass for three hours past its fifteen-minute budget, which in CI is a
+ * job that burns to its own ceiling and reports nothing.
+ */
+function endElectron(child) {
+  if (child.pid === undefined) return
+  if (process.platform === 'win32') {
+    spawnSync('taskkill', ['/pid', String(child.pid), '/T', '/F'], { stdio: 'ignore' })
+  } else {
+    try { process.kill(-child.pid, 'SIGKILL') } catch { child.kill('SIGKILL') }
+  }
+}
+
+/** Run Electron without blocking the loopback stub's event loop. */
+function runElectron(command, args, options) {
+  return new Promise((resolveRun) => {
+    const child = spawn(command, args, {
+      ...options,
+      stdio: ['ignore', 'pipe', 'pipe'],
+      ...process.platform === 'win32' ? {} : { detached: true },
+    })
+    let stdout = ''
+    let stderr = ''
+    let settled = false
+    child.stdout.on('data', chunk => { stdout += chunk.toString('utf8') })
+    child.stderr.on('data', chunk => { stderr += chunk.toString('utf8') })
+    const finish = (result) => {
+      if (settled) return
+      settled = true
+      clearTimeout(timer)
+      resolveRun(result)
+    }
+    // Settled here rather than from `close`: the point of a budget is that it
+    // holds even when the thing it is bounding cannot report.
+    const timer = setTimeout(() => {
+      endElectron(child)
+      finish({
+        status: 124,
+        stdout,
+        stderr: `${stderr}\nqa-e2e-run: the browser pass exceeded `
+          + `${String(BROWSER_BUDGET_MS)}ms and was terminated`,
+      })
+    }, BROWSER_BUDGET_MS)
+    child.once('error', error => {
+      finish({ status: 1, stdout, stderr: `${stderr}\n${error.name}` })
+    })
+    child.once('close', code => { finish({ status: code ?? 1, stdout, stderr }) })
+  })
+}
+
+/** The browser pass's named claims, by id. Empty when it never wrote one. */
+function readClaims(path) {
+  if (!existsSync(path)) return new Map()
+  try {
+    const report = JSON.parse(readFileSync(path, 'utf8'))
+    return new Map((report.claims ?? []).map(entry => [entry.id, entry]))
+  } catch {
+    return new Map()
+  }
+}
+
 /** One RPC against the running Host, in the shape its API expects. */
 async function rpc(base, method, payload) {
   const response = await fetch(`${base}/api/${method}`, {
@@ -176,7 +260,12 @@ async function promptOnce(base, cwd) {
 }
 
 async function main() {
+  const beganAt = Date.now()
   mkdirSync(OUT, { recursive: true })
+  // A report from an earlier pass is worse than none: the accounting below
+  // reads it back, and a run that never wrote one would otherwise be described
+  // by its predecessor's claims.
+  rmSync(join(OUT, 'e2e-report.json'), { force: true })
   resetProviders(HOME)
 
   const stub = await startOpenRouterStub()
@@ -185,16 +274,18 @@ async function main() {
   let status = 1
   let promptOutcome = null
   try {
-    const run = spawnSync(electron(), [join(WORKSPACE, 'scripts', 'qa-e2e.mjs')], {
+    const run = await runElectron(electron(), [join(WORKSPACE, 'scripts', 'qa-e2e.mjs')], {
       cwd: WORKSPACE,
-      encoding: 'utf8',
-      timeout: 15 * 60_000,
       env: {
         ...process.env,
         WATCH_E2E_URL: URL,
         WATCH_E2E_OUT: OUT,
         WATCH_E2E_STUB: stub.baseURL,
+        WATCH_E2E_STUB_402: stub.scenarioURL('402'),
+        WATCH_E2E_STUB_429: stub.scenarioURL('429'),
+        WATCH_E2E_STUB_TIMEOUT: stub.scenarioURL('timeout'),
         WATCH_E2E_STUB_KEY: STUB_API_KEY,
+        WATCH_E2E_CORE_VERSION: candidateCoreVersion(),
       },
     })
     status = run.status ?? 1
@@ -293,6 +384,57 @@ async function main() {
     if (leaks.length > 0) {
       fail(`${String(leaks.length)} request(s) carried the credential in the body`)
     }
+    const providerTests = completions.filter(entry => entry.kind === 'provider-test')
+
+    // Everything below is read back from the browser pass rather than
+    // restated. The Core connection in particular: a report that says
+    // `connected` because the file says `connected` is the same class of
+    // claim as the green dot, and it feeds the screenshot manifest's
+    // Diagnostics verdict.
+    const browser = readClaims(join(OUT, 'e2e-report.json'))
+    const observed = id => browser.get(id) ?? null
+    const passed = id => observed(id)?.ok === true
+    const FAILURE_CLAIMS = [
+      ['invalid_credential', 'invalid-credential-reported'],
+      ['payment_required', 'payment-required-reported'],
+      ['rate_limited', 'rate-limited-reported'],
+      ['timeout', 'timeout-reported'],
+      ['cancelled', 'cancelled-reported'],
+    ]
+    const safeReport = {
+      schemaVersion: 1,
+      sha: process.env['GITHUB_SHA'] ?? 'local-uncommitted',
+      platform: process.platform,
+      scenario: 'provider-bind-first-prompt',
+      result: status === 0 ? 'passed' : 'failed',
+      provider: 'openrouter-e2e',
+      providerLabel: 'OpenRouter QA (local stub)',
+      model: bound,
+      modelLabel: bound === 'stub/echo-small' ? 'Stub Echo Small' : null,
+      core: browser.size === 0
+        ? 'not_observed'
+        : passed('diagnostics-core-connected') ? 'connected' : 'not_connected',
+      coreTransport: observed('diagnostics-transport-stdio')?.observed?.transport ?? 'not_observed',
+      coreVersion: observed('diagnostics-real-version')?.observed?.shown ?? 'not_observed',
+      requestClassification: {
+        catalogue: accounting.catalogueReads,
+        providerTest: providerTests.length,
+        chatTurn: turns.length,
+        sessionTitle: completions.filter(entry => entry.kind === 'session-title').length,
+        unexpected: unrecognised.length,
+      },
+      durationMs: Date.now() - beganAt,
+      errorCategories: [
+        ...status === 0 ? [] : ['browser_journey_failed'],
+        ...[...browser.values()].filter(entry => entry.ok === false)
+          .map(entry => `claim:${entry.id}`),
+      ],
+      // The scenarios this pass actually exercised and saw reported honestly,
+      // not the list of scenarios somebody intended to write.
+      failureScenarios: FAILURE_CLAIMS
+        .filter(([, id]) => passed(id)).map(([name]) => name),
+    }
+    writeFileSync(join(OUT, 'ci-report.json'), `${JSON.stringify(safeReport, null, 2)}\n`, 'utf8')
     await stub.stop()
   }
   process.exit(status)

@@ -33,9 +33,17 @@ import { fileURLToPath } from 'node:url'
 const HERE = dirname(fileURLToPath(import.meta.url))
 const URL = process.env['WATCH_E2E_URL'] ?? 'http://127.0.0.1:8931'
 const STUB = process.env['WATCH_E2E_STUB'] ?? ''
+const STUB_402 = process.env['WATCH_E2E_STUB_402'] ?? ''
+const STUB_429 = process.env['WATCH_E2E_STUB_429'] ?? ''
+const STUB_TIMEOUT = process.env['WATCH_E2E_STUB_TIMEOUT'] ?? ''
 /** The fake credential the stub accepts. Never a real one, by construction. */
 const STUB_KEY = process.env['WATCH_E2E_STUB_KEY'] ?? 'sk-stub-not-a-real-key-0000'
+/** Fixture-only OpenRouter-compatible route; it can never name the public provider. */
+const STUB_PROVIDER = 'openrouter-e2e'
+const STUB_PROVIDER_NAME = 'OpenRouter QA (local stub)'
 const OUT = process.env['WATCH_E2E_OUT'] ?? join(HERE, '..', 'qa', 'e2e')
+/** The Watch Core version this candidate builds, supplied by the runner. */
+const CORE_VERSION = process.env['WATCH_E2E_CORE_VERSION'] ?? ''
 const LOG = join(OUT, 'e2e.log')
 
 mkdirSync(OUT, { recursive: true })
@@ -122,10 +130,69 @@ export const TYPE_INTO = `(function (selector, value) {
 
 const wait = ms => new Promise(done => { setTimeout(done, ms) })
 
+/**
+ * Ask the page something, and give up rather than wait for a wedged renderer.
+ *
+ * `executeJavaScript` returns a promise that a stalled renderer never settles.
+ * Every poll in this file awaits one, so a single wedged frame stops the pass
+ * *inside* a loop that has a deadline it can no longer reach — which is how a
+ * fifteen-minute budget turned into a three-hour silence with no report. A
+ * rejection here becomes a failed claim, which is a thing somebody can read.
+ */
+function ask(win, code, timeoutMs = 20_000) {
+  return Promise.race([
+    win.webContents.executeJavaScript(code),
+    new Promise((_resolve, reject) => {
+      setTimeout(() => { reject(new Error('the renderer did not answer in time')) }, timeoutMs)
+    }),
+  ])
+}
+
 /** Read visible text after letting the app settle. */
 async function text(win, settle = 900) {
   await wait(settle)
-  return win.webContents.executeJavaScript(TEXT)
+  return ask(win, TEXT)
+}
+
+/**
+ * The page text once it settles, rather than after a fixed sleep.
+ *
+ * A fixed wait is a guess about a machine, and this pass runs on machines with
+ * very different amounts of it. `provider-test-succeeds` flaked exactly that
+ * way: a bounded provider request that usually settles in two seconds took
+ * longer on a loaded runner, and the claim recorded "not ready" about a product
+ * that became ready a second afterwards. Failing on the deadline is still a
+ * failure — what stops is calling a slow machine a broken product.
+ */
+async function textWhen(win, settled, timeoutMs, floor = 400) {
+  await wait(floor)
+  const deadline = Date.now() + timeoutMs
+  let value = await ask(win, TEXT)
+  while (!settled(value) && Date.now() < deadline) {
+    await wait(300)
+    value = await ask(win, TEXT)
+  }
+  return value
+}
+
+/** Exact status row, without mistaking "Chat is not ready yet" for Ready. */
+function chatIsReady(value) {
+  return /(?:^|\n)Chat\r?\nReady(?:\r?\n|$)/m.test(value)
+}
+
+/** Write whatever has been established so far, and return it. */
+function writeReport() {
+  const report = {
+    url: URL,
+    stub: STUB === '' ? null : STUB,
+    capturedAt: new Date().toISOString(),
+    claims,
+    shots,
+    passed: claims.filter(entry => entry.ok).length,
+    failed: claims.filter(entry => !entry.ok).length,
+  }
+  writeFileSync(join(OUT, 'e2e-report.json'), `${JSON.stringify(report, null, 2)}\n`)
+  return report
 }
 
 /** Capture a named screenshot beside the report. */
@@ -150,9 +217,9 @@ async function click(win, needle) {
   // fold the rectangle is the one from *before* the scroll and the click lands
   // on whatever now occupies those coordinates. The navigation targets this was
   // first written against are always on screen, which is why it looked right.
-  await win.webContents.executeJavaScript(`${LOCATE}(${JSON.stringify(needle)})`)
+  await ask(win, `${LOCATE}(${JSON.stringify(needle)})`)
   await wait(350)
-  const at = await win.webContents.executeJavaScript(`${LOCATE}(${JSON.stringify(needle)})`)
+  const at = await ask(win, `${LOCATE}(${JSON.stringify(needle)})`)
   if (at === null) return false
   for (const type of ['mouseDown', 'mouseUp']) {
     win.webContents.sendInputEvent({ type, x: at.x, y: at.y, button: 'left', clickCount: 1 })
@@ -186,7 +253,7 @@ const CLICK_DIRECT = `(function (needle) {
 
 /** Click by DOM, for a control whose handler is on the element itself. */
 function clickDirect(win, needle) {
-  return win.webContents.executeJavaScript(`${CLICK_DIRECT}(${JSON.stringify(needle)})`)
+  return ask(win, `${CLICK_DIRECT}(${JSON.stringify(needle)})`)
 }
 
 /**
@@ -200,7 +267,7 @@ function clickDirect(win, needle) {
 async function navigate(win, needle, expect, tries = 20) {
   await click(win, needle)
   for (let attempt = 0; attempt < tries; attempt += 1) {
-    const seen = await win.webContents.executeJavaScript(TEXT)
+    const seen = await ask(win, TEXT)
     if (seen.includes(expect)) return true
     await wait(400)
     // Re-click once midway: the settings dialog animates in, and a click
@@ -221,7 +288,7 @@ async function navigate(win, needle, expect, tries = 20) {
 async function navigateTo(win, needle, selector, { tries = 20, retry = true } = {}) {
   await click(win, needle)
   for (let attempt = 0; attempt < tries; attempt += 1) {
-    const there = await win.webContents.executeJavaScript(
+    const there = await ask(win, 
       `document.querySelector(${JSON.stringify(selector)}) !== null`)
     if (there) return true
     await wait(400)
@@ -240,7 +307,9 @@ async function navigateTo(win, needle, selector, { tries = 20, retry = true } = 
 /** Dismiss the DeepWatch onboarding, counting how many dialogs appeared. */
 async function dismissOnboarding(win) {
   const before = await text(win, 1800)
-  const onboardings = (before.match(/Welcome to DeepWatch/g) ?? []).length
+  const onboardings = await ask(win, 
+    "document.querySelectorAll('[role=\"dialog\"][aria-label=\"Welcome to DeepWatch\"]').length",
+  )
   await shot(win, 'onboarding', 'the first-run dialog, exactly once')
   claim('one-onboarding', onboardings === 1,
     { welcomeCount: onboardings })
@@ -286,14 +355,14 @@ const FILL = `(function (match, value) {
 
 /** Log what is on screen, so a stuck step names what it could not find. */
 async function inventory(win, label) {
-  const found = JSON.parse(await win.webContents.executeJavaScript(`${INVENTORY}()`))
+  const found = JSON.parse(await ask(win, `${INVENTORY}()`))
   log(`inventory ${label} :: ${JSON.stringify(found)}`)
   return found
 }
 
 /** Fill a field by any of its identifying strings. */
 function fill(win, match, value) {
-  return win.webContents.executeJavaScript(
+  return ask(win, 
     `${FILL}(${JSON.stringify(match)}, ${JSON.stringify(value)})`)
 }
 
@@ -314,53 +383,46 @@ async function providerPhase(win) {
   await shot(win, 'models-screen', 'the Models screen before anything is configured')
   if (!reachedList) return
 
-  // A fresh profile has no providers, so one is added rather than edited.
-  // That is the flow a person follows, and the flow the first manual run took.
-  const opened = await navigateTo(win, 'Add provider', 'select[aria-label*="Provider" i]')
+  // The built-in OpenRouter route owns a bundled catalogue, so its Fetch
+  // action correctly performs no network request. The gate must prove the
+  // wire: use DSH's supported custom-provider path for a fixture-only
+  // OpenRouter-compatible route whose endpoint is the loopback stub.
+  const opened = await navigateTo(
+    win, 'Add a custom provider', 'input[aria-label*="Provider ID" i]')
   claim('provider-form-opens', opened, { reached: opened })
   const form = await inventory(win, 'provider-form')
   await shot(win, 'provider-form', 'the add-provider form, before anything is entered')
   if (!opened) return
 
-  // The catalogue lists providers that are *not yet configured*, so a profile
-  // that already has one offers a shorter list. That is correct behaviour and
-  // it makes this phase order-dependent: it must run against a profile nobody
-  // has configured, which is what `WATCH_E2E_URL` is expected to point at.
-  //
-  // Saying so is the point. A run that silently adapted to a configured
-  // profile would report "provider saved" without having saved anything, and
-  // this whole file exists because a green report was trusted once already.
-  const picked = await choose(win, 'Provider', 'openrouter')
-  if (!picked.ok && Array.isArray(picked.options) && !picked.options.includes('openrouter')) {
-    claim('provider-phase-needs-fresh-profile', false, {
-      why: 'openrouter is already configured in this profile, so the add-provider '
-        + 'catalogue no longer offers it; point WATCH_E2E_URL at a fresh profile',
-      offered: picked.options,
-    })
-    return
-  }
-  claim('provider-openrouter-offered', picked.ok, picked)
-  if (!picked.ok) return
-
   // The stub, never a public host. Each fill reports whether the field was
   // found, so a renamed label is a named failure rather than a silent no-op.
-  // `STUB` is already a full base URL including its version segment — the
-  // stub hands one out rather than a host, so appending anything produces a
-  // path it does not serve.
+  const setRoute = await fill(win, 'provider id', STUB_PROVIDER)
+  const setName = await fill(win, 'display name', STUB_PROVIDER_NAME)
   const setUrl = await fill(win, 'base url', STUB)
   const setKey = await fill(win, 'api key', STUB_KEY)
-  claim('provider-fields-filled', setUrl && setKey,
-    { baseUrl: setUrl, apiKey: setKey, fields: form.fields.length })
+  const setProtocol = await choose(win, 'API protocol', 'openai-completions')
+  claim('provider-fields-filled', setRoute && setName && setUrl && setKey && setProtocol.ok,
+    {
+      providerId: setRoute, displayName: setName, baseUrl: setUrl,
+      apiKey: setKey, protocol: setProtocol.chose ?? null, fields: form.fields.length,
+    })
 
-  // "Apply", not "Save": the form's own word, discovered by inventorying it
-  // rather than assumed. A harness that guesses a button label fails in a way
-  // that reads as a product defect.
+  await clickDirect(win, 'Fetch available models')
+  const discovered = await text(win, 4000)
+  claim('provider-models-fetched',
+    discovered.includes('stub/echo-small') && discovered.includes('stub/echo-large'), {
+      small: discovered.includes('stub/echo-small'), large: discovered.includes('stub/echo-large'),
+    })
+  await shot(win, 'models-fetched', 'models returned by the loopback provider')
+  await clickDirect(win, 'Add selected')
+  await wait(700)
+
+  // A custom route is created; later edits use Apply.
   await inventory(win, 'provider-form-filled')
-  await click(win, 'Apply')
+  await clickDirect(win, 'Create')
   const afterSave = await text(win, 3000)
+  const providerVisible = afterSave.includes(STUB_PROVIDER_NAME)
   await shot(win, 'provider-saved', 'the provider saved, and not yet assigned to a role')
-  claim('credential-saved', /Saved openrouter/i.test(afterSave),
-    { sawSaved: /Saved openrouter/i.test(afterSave) })
 
   // Where the distinction actually has to appear. The Models screen says the
   // credential was stored; Role Bindings is the screen that must refuse to
@@ -374,8 +436,8 @@ async function providerPhase(win) {
   claim('saved-not-assigned',
     /not (yet )?assigned|Nothing assigned|Choose models and roles|Not configured/i.test(rolesAfter),
     { sample: rolesAfter.slice(rolesAfter.indexOf('Chat'), rolesAfter.indexOf('Chat') + 320) })
-  claim('credential-alone-is-not-ready', !/Chat[\s\S]{0,120}Ready/i.test(rolesAfter),
-    { chatClaimedReady: /Chat[\s\S]{0,120}Ready/i.test(rolesAfter) })
+  claim('credential-alone-is-not-ready', !chatIsReady(rolesAfter),
+    { chatClaimedReady: chatIsReady(rolesAfter) })
 
   // ── choosing a model, and assigning it to Chat ──────────────────────────
   //
@@ -386,27 +448,19 @@ async function providerPhase(win) {
   claim('model-chooser-opens', editorOpen, { reached: editorOpen })
   if (!editorOpen) return
 
-  const chosenProvider = await choose(win, 'Provider', 'openrouter')
+  const chosenProvider = await choose(win, 'Provider', STUB_PROVIDER_NAME)
   claim('binding-provider-offered', chosenProvider.ok, chosenProvider)
+  claim('credential-saved', providerVisible
+    && String(chosenProvider.chose ?? '').includes('Credential saved'), {
+    providerVisible,
+    rolePickerState: chosenProvider.chose ?? null,
+  })
 
-  // The model list is DSH's bundled catalogue, not a read of the endpoint this
-  // provider is pointed at.
-  //
-  // Worth stating plainly, because the first version of this step assumed
-  // otherwise and looked for the stub's own model: with a custom base URL the
-  // list still shows OpenRouter's shipped catalogue, and the stub receives no
-  // request while it is drawn. That is a finding about the product, not about
-  // the harness, and it is why nothing here asserts live discovery.
-  //
-  // Which model is chosen does not matter to what this step is for. The
-  // question is *where the request goes*, the stub answers for any model id,
-  // and the runner counts what arrives.
   await wait(3000)
-  const catalogue = await choose(win, 'Model', '*')
+  const catalogue = await choose(win, 'Model', 'Stub Echo Small')
   claim('binding-model-offered', catalogue.ok, {
     chose: catalogue.chose ?? null,
-    note: 'from the bundled catalogue; this build does not read models from '
-      + 'the configured base URL',
+    source: 'loopback provider discovery',
   })
   await shot(win, 'model-selection', 'the model list offered for the provider')
   if (!catalogue.ok) return
@@ -417,6 +471,13 @@ async function providerPhase(win) {
   claim('chat-bound', !/Chat is not configured yet/i.test(bound), {
     sample: bound.slice(bound.indexOf('Chat'), bound.indexOf('Chat') + 260),
   })
+
+  await clickDirect(win, 'Run provider test')
+  const tested = await textWhen(win, chatIsReady, 60_000)
+  claim('provider-test-succeeds', chatIsReady(tested), {
+    ready: chatIsReady(tested),
+  })
+  await shot(win, 'provider-tested', 'the exact Chat binding after a bounded provider test')
 
   // Persistence is what a reload tests: the Host writes the binding to the
   // profile, so a binding that only lived in this tab's store would vanish.
@@ -431,23 +492,6 @@ async function providerPhase(win) {
     sample: afterReload.slice(afterReload.indexOf('Chat'), afterReload.indexOf('Chat') + 260),
   })
 
-  // What this harness does not yet cover, stated rather than implied.
-  //
-  // The pass ends here: everything above proves the product refuses to
-  // pretend — a credential is stored and Chat still says it is not configured.
-  // The other half is still driven by hand: opening a capability's "Choose a
-  // model" editor, picking a provider and model, "Assign to Chat", and then
-  // one prompt whose request count the runner would check.
-  //
-  // The obstacle is this harness, not the product. That button did not open
-  // its editor under `sendInputEvent` while every navigation above works; the
-  // row sits inside the settings dialog's own scroll container and the
-  // coordinates reaching the page do not land on it. Both fixes found on the
-  // way are kept above, and the editor still did not open.
-  //
-  // Leaving a red assertion here would be worse than saying so: nobody reads
-  // one by the third run. `tests/stub-routing.test.mjs` covers the request
-  // counting at the routing layer in the meantime.
 }
 
 /**
@@ -480,10 +524,79 @@ const CHOOSE = `(function (aria, label) {
 
 /** Choose an option and report what the page offered when it could not. */
 async function choose(win, aria, label) {
-  const outcome = JSON.parse(await win.webContents.executeJavaScript(
+  const outcome = JSON.parse(await ask(win, 
     `JSON.stringify(${CHOOSE}(${JSON.stringify(aria)}, ${JSON.stringify(label)}))`))
   if (!outcome.ok) log(`choose failed :: ${JSON.stringify(outcome)}`)
   return outcome
+}
+
+/** Change only the already-configured loopback provider through Models. */
+async function editProvider(win, baseUrl, key) {
+  const reached = await navigate(win, 'Models', 'Add provider')
+  if (!reached) return false
+  await clickDirect(win, 'Edit')
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    const open = await ask(win, 
+      'document.querySelector(\'input[aria-label*="Base" i]\') !== null')
+    if (open) break
+    await wait(250)
+  }
+  const urlSet = await fill(win, 'base url', baseUrl)
+  const keySet = await fill(win, 'api key', key)
+  await clickDirect(win, 'Apply')
+  await wait(2200)
+  return urlSet && keySet
+}
+
+/** One visible failure and the recovery control after it. */
+async function providerFailureScenario(win, id, baseUrl, key, expected) {
+  const edited = await editProvider(win, baseUrl, key)
+  claim(`${id}-provider-edited`, edited, { edited })
+  await navigate(win, 'Role Bindings', 'Chat')
+  await clickDirect(win, 'Run provider test')
+  const result = await textWhen(
+    win, value => expected.test(value), id === 'timeout' ? 90_000 : 45_000)
+  const honest = expected.test(result)
+  claim(`${id}-reported`, honest, { category: id, matched: honest })
+  claim(`${id}-recoverable`, result.includes('Run provider test'), {
+    retryAvailable: result.includes('Run provider test'),
+  })
+  await shot(win, `provider-${id}`, `the ${id} provider failure and retry control`)
+}
+
+async function providerFailurePhase(win) {
+  if ([STUB_402, STUB_429, STUB_TIMEOUT].some(value => value === '')) return
+  await providerFailureScenario(
+    win, 'invalid-credential', STUB, 'invalid-fixture-credential', /rejected the saved credential/i)
+  await providerFailureScenario(
+    win, 'payment-required', STUB_402, STUB_KEY, /did not complete|route and network/i)
+  await providerFailureScenario(
+    win, 'rate-limited', STUB_429, STUB_KEY, /rate-limited/i)
+  await providerFailureScenario(
+    win, 'timeout', STUB_TIMEOUT, STUB_KEY, /did not complete|route and network/i)
+
+  const edited = await editProvider(win, STUB_TIMEOUT, STUB_KEY)
+  await navigate(win, 'Role Bindings', 'Chat')
+  await clickDirect(win, 'Run provider test')
+  await wait(500)
+  await clickDirect(win, 'Cancel provider test')
+  const cancelled = await textWhen(win, value => /cancelled/i.test(value), 30_000)
+  claim('cancelled-reported', /cancelled.*not tested/i.test(cancelled), {
+    cancelled: /cancelled/i.test(cancelled), notTested: /not tested/i.test(cancelled),
+  })
+  claim('cancelled-recoverable', edited && cancelled.includes('Run provider test'), {
+    retryAvailable: cancelled.includes('Run provider test'),
+  })
+  await shot(win, 'provider-cancelled', 'a cancelled provider test remains retryable and not tested')
+
+  // Leave the deterministic run healthy for the prompt and Diagnostics.
+  await editProvider(win, STUB, STUB_KEY)
+  await navigate(win, 'Role Bindings', 'Chat')
+  await clickDirect(win, 'Run provider test')
+  const restored = await textWhen(win, chatIsReady, 60_000)
+  claim('provider-recovers-after-failures', chatIsReady(restored), {
+    ready: chatIsReady(restored),
+  })
 }
 
 async function main() {
@@ -542,6 +655,7 @@ async function main() {
     { sawNothingAssigned: roles.includes('Nothing assigned') })
 
   await providerPhase(win)
+  await providerFailurePhase(win)
 
   // ── Diagnostics reads the running system ────────────────────────────────
   const reachedDiagnostics = await navigate(win, 'Diagnostics', 'CAPABILITY READINESS')
@@ -551,8 +665,14 @@ async function main() {
 
   claim('diagnostics-core-connected', /Watch Core[\s\S]{0,80}Connected/.test(diagnostics),
     { connected: /Watch Core[\s\S]{0,80}Connected/.test(diagnostics) })
-  claim('diagnostics-real-version', /1\.3\.0rc2/.test(diagnostics),
-    { version: (diagnostics.match(/\d+\.\d+\.\d+rc\d+/) ?? ['(none)'])[0] })
+  // The candidate's own version, handed in by the runner from
+  // `pyproject.toml`. It used to be typed here, which meant a version bump
+  // turned a green claim red for a reason that had nothing to do with the
+  // product — and, worse, that the claim proved nothing about *this* build.
+  const shown = (/Watch Core[\s\S]{0,240}?(\d+\.\d+\.\d+(?:[abcr]+\d*)?)/.exec(diagnostics)
+    ?? [null, '(none)'])[1]
+  claim('diagnostics-real-version', CORE_VERSION !== '' && diagnostics.includes(CORE_VERSION),
+    { expected: CORE_VERSION === '' ? '(not supplied)' : CORE_VERSION, shown })
   claim('diagnostics-not-mock', !/mock/i.test(diagnostics),
     { mockMentioned: /mock/i.test(diagnostics) })
   claim('diagnostics-transport-stdio', /stdio/.test(diagnostics),
@@ -563,22 +683,36 @@ async function main() {
 
   await shot(win, 'about', 'the About screen')
 
-  const report = {
-    url: URL,
-    stub: STUB === '' ? null : STUB,
-    capturedAt: new Date().toISOString(),
-    claims,
-    shots,
-    passed: claims.filter(entry => entry.ok).length,
-    failed: claims.filter(entry => !entry.ok).length,
-  }
-  writeFileSync(join(OUT, 'e2e-report.json'), `${JSON.stringify(report, null, 2)}\n`)
+  const report = writeReport()
   log(`done: ${String(report.passed)} passed, ${String(report.failed)} failed`)
+  clearTimeout(budget)
   win.destroy()
   app.exit(report.failed === 0 ? 0 : 1)
 }
 
+/**
+ * The pass's own ceiling.
+ *
+ * The runner has one too, and this is not redundant with it: reaching this one
+ * still writes the report, so a run that ran out of time is distinguishable
+ * from a run that never started. Reaching the runner's means this process
+ * could not even do that.
+ */
+const RUN_BUDGET_MS = Number(process.env['WATCH_E2E_BUDGET_MS'] ?? 12 * 60_000)
+
+const budget = setTimeout(() => {
+  claim('the pass finished inside its budget', false, {
+    budgetMs: RUN_BUDGET_MS, claimsRecorded: claims.length,
+  })
+  writeReport()
+  log('budget exceeded: wrote a partial report and stopped')
+  app.exit(1)
+}, RUN_BUDGET_MS)
+budget.unref?.()
+
 app.whenReady().then(main).catch((cause) => {
   log(`crashed: ${cause instanceof Error ? cause.stack ?? cause.message : String(cause)}`)
+  claim('the pass ran to completion', false, { crashed: true })
+  writeReport()
   app.exit(2)
 })
