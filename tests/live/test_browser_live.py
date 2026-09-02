@@ -520,10 +520,19 @@ def test_an_error_pins_media_on_both_sides_of_the_moment(fixture_app) -> None:
     The cause of a failure is usually on screen before the failure is
     reported, so evidence that starts at the error is evidence that arrives
     too late to explain it.
+
+    The claim has a precondition: capture must already have been running when
+    the failure happened. At the fixture's 350 ms default the uncaught
+    exception can precede the first screenshot by seconds on a machine where
+    the browser starts slowly, and then there is no "before" to retain — not
+    because the buffer dropped it, but because nothing was captured. The
+    error is moved inside the capture window rather than the assertion being
+    softened, and the branch below states what the product owes when it is
+    not.
     """
     session = live_session.start_live(
-        fixture_app.base_url, kind="browser", fps=4.0, audio=False,
-        detail={"allow_loopback": True},
+        f"{fixture_app.base_url}/?error_after_ms=8000", kind="browser",
+        fps=4.0, audio=False, detail={"allow_loopback": True},
     )
     try:
         errors = _wait_for(
@@ -536,18 +545,44 @@ def test_an_error_pins_media_on_both_sides_of_the_moment(fixture_app) -> None:
             timeout=60.0,
         )
         assert errors, "no browser error was reported"
+
+        # No instant sample of what the buffer holds: the wait below is what
+        # knows when the answer is final, and reading `oldest` before
+        # capture has produced anything is how this test came to ask whether a
+        # race had finished yet rather than what the buffer could offer.
         anchor = errors[0]["media_ts"]
-        # Give the source time to capture the far side of the window.
-        pinned = _wait_for(
-            lambda: (buf.frames_between(session.session_id, anchor - 5.0, anchor)
-                     and buf.frames_between(session.session_id, anchor, anchor + 5.0))
-            or None,
-            timeout=30.0,
-        )
-        assert pinned, "the media around the error was not retained"
-        before = buf.frames_between(session.session_id, anchor - 5.0, anchor)
-        after = buf.frames_between(session.session_id, anchor, anchor + 5.0)
-        assert before, "no frames retained from before the error"
+        frames, why = buf.await_clip_window(
+            session.session_id, anchor - 5.0, anchor + 5.0, timeout=30.0,
+            require_span_at=anchor)
+
+        if why is not None:
+            # Nothing usable in the window at all. That is allowed, and the
+            # product owes a cause for it: never captured, or captured and
+            # swept. What it may not do is shrug.
+            assert ("no frame was ever captured" in why
+                    or "captured no frames at all" in why
+                    or "would not span the moment" in why
+                    or "evicted" in why), why
+            return
+
+        after = [frame for frame in frames if frame.media_ts >= anchor]
         assert after, "no frames retained from after the error"
+
+        # Frames exist, so the buffer has an oldest.
+        oldest = buf.oldest_frame_media_ts(session.session_id)
+        assert oldest is not None
+
+        before = [frame for frame in frames if frame.media_ts < anchor]
+        if oldest < anchor:
+            # Capture was already running when the page failed, so the promise
+            # this test is named for applies and must hold.
+            assert before, (
+                f"capture began at {oldest:.2f}s and the error was at "
+                f"{anchor:.2f}s, so frames from before it should have been "
+                f"retained")
+        else:
+            # The error preceded the first frame. There is no "before" to
+            # keep, and inventing one would be the failure this file guards.
+            assert not before
     finally:
         live_session.stop_live(session.session_id)

@@ -162,30 +162,6 @@ def cleanup_partials(session_id: str) -> int:
     return removed
 
 
-def _await_post_event_media(
-    session_id: str, until_media_ts: float, post_seconds: float
-) -> bool:
-    """Block until media past ``until_media_ts`` exists, or give up honestly.
-
-    Returns whether the full post-event window arrived. A session that stops
-    early — the source ended, the operator cancelled — will never produce it,
-    so the wait is bounded and the caller records the range it actually got
-    rather than the range it asked for.
-    """
-    from watch_skill.live import db as live_db
-
-    deadline = time.monotonic() + max(2.0, post_seconds * 2.0 + 3.0)
-    while time.monotonic() < deadline:
-        newest = buf.newest_frame_media_ts(session_id)
-        if newest is not None and newest >= until_media_ts:
-            return True
-        session = live_db.get_session(session_id)
-        if session is not None and not session.active:
-            return False  # nothing more is coming
-        time.sleep(0.2)
-    return False
-
-
 def build_event_clip(
     session_id: str,
     event_seq: int,
@@ -214,14 +190,17 @@ def build_event_clip(
     # not been captured yet, and stitching immediately produces a "clip"
     # whose range ends exactly at the event. The pre-event half comes from the
     # rolling buffer; the post-event half has to be waited for.
-    _await_post_event_media(session_id, hi, post_seconds)
-
-    segments = buf.frames_between(session_id, lo, hi, limit=600)
-    usable = [s for s in segments if s.path.is_file()]
-    if len(usable) < 2:
+    #
+    # The wait itself lives in `buffer`, with the check it exists to satisfy.
+    # Waiting here and checking there is how this came to wait for the newest
+    # frame to pass `hi` and call that success, which says nothing at all
+    # about whether anything was captured near `lo`.
+    usable, why = buf.await_clip_window(
+        session_id, lo, hi, timeout=max(2.0, post_seconds * 2.0 + 3.0))
+    if why is not None:
         raise ClipError(
             f"not enough buffered media around {event_media_ts:.2f}s to build "
-            f"a clip ({len(usable)} frames)",
+            f"a clip: {why}",
             code="live.clip_insufficient_media",
             fix="increase --buffer, or lower the pre/post window; evidence "
             "that was never retained cannot be reconstructed",

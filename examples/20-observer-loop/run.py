@@ -38,6 +38,7 @@ def main() -> int:
     from watch_skill.live import buffer as buf
     from watch_skill.live import observe, start_live, stop_live
     from watch_skill.live.capabilities import capability_for
+    from watch_skill.live.clips import ClipError
     from watch_skill.live.fixture_app import BROKEN_STATUS, FIXED_STATUS, FixtureApp
     from watch_skill.observer import (
         Budgets,
@@ -148,16 +149,17 @@ def main() -> int:
                   f"applied {app.state.fix_attempts} time(s)")
 
             if anchor is not None:
-                deadline = time.monotonic() + 40
-                while time.monotonic() < deadline:
-                    newest = buf.newest_frame_media_ts(session.session_id) or 0.0
-                    if newest > anchor + 3.5:
-                        break
-                    time.sleep(0.3)
-                clip = buf.clip_around(session.session_id, anchor,
-                                       before=3.0, after=3.0)
-                if clip:
+                # No wait here: `clip_around` waits for the far side of the
+                # window itself, and stops the moment the answer is final.
+                try:
+                    clip = buf.clip_around(session.session_id, anchor,
+                                           before=3.0, after=3.0)
                     print(f"  evidence clip spanning the failure: {clip.name}")
+                except ClipError as exc:
+                    # Printed rather than swallowed. "no clip" and "no clip
+                    # because capture started after the failure" send a reader
+                    # to different places.
+                    print(f"  no evidence clip: {exc}")
         finally:
             stop_live(session.session_id)
 
