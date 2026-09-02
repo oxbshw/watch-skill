@@ -10,13 +10,13 @@ page.
 1. **Find the surface.** Your agent's CURRENT docs (not memory, not a
    blog from last year): does it have MCP config? A skills directory?
    Neither → it gets the `AGENTS.md` or REST recipe.
-2. **Copy the skeleton.** `docs-skeleton.md` → `docs/agents/your-agent.md`.
+2. **Copy the skeleton.** `agent-docs.template.md` → `docs/agents/your-agent.md`.
    Fill in the config paths and the exact block. Keep the fence language
    tag accurate (`json`/`jsonc`/`toml`/`yaml`).
 3. **Validate.**
 
    ```powershell
-   python templates/agent-adapter/validate.py docs/agents/your-agent.md
+   python scripts/validate_agent_docs.py docs/agents/your-agent.md
    ```
 
    Zero broken blocks or the PR check fails.

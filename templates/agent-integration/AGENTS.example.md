@@ -1,8 +1,14 @@
 # Watch Skill — video input for this agent
 
-Copy this file (or its relevant section) into a project's `AGENTS.md` /
-`.cursorrules` / rules file to teach any coding agent to use Watch Skill.
-Everything is a plain CLI call — no harness-specific features required.
+**This is a template, not policy.** Copy this file — or the part of it you
+want — into *your own* project's root `AGENTS.md`, `.cursorrules` or rules
+file. It is not this repository's contributor guidance and nothing here
+applies to the checkout it ships in; that is why it is named `.example.md`
+and lives under `templates/`. Watch Skill's own contributor guidance is the
+`AGENTS.md` at the repository root, which is deliberately not published in
+the source distribution.
+
+Everything below is a plain CLI call — no harness-specific features required.
 
 This file IS the integration for agents without an MCP client or plugin
 format — Pi, Hermes Agent, aider-style tools, homegrown harnesses: if it

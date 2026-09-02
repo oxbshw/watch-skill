@@ -1,7 +1,7 @@
 """The agent matrix keeps its promises: every fenced config block in
 docs/agents/*.md parses, every page is in the matrix, every matrix link
 resolves. This is the same check contributors run via
-templates/agent-adapter/validate.py.
+scripts/validate_agent_docs.py.
 """
 from __future__ import annotations
 
@@ -15,7 +15,7 @@ AGENTS_DIR = ROOT / "docs" / "agents"
 
 def _load_validator():
     spec = importlib.util.spec_from_file_location(
-        "agent_validate", ROOT / "templates" / "agent-adapter" / "validate.py"
+        "agent_validate", ROOT / "scripts" / "validate_agent_docs.py"
     )
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
@@ -52,7 +52,7 @@ def test_matrix_links_resolve() -> None:
 
 def test_template_skeleton_validates_too() -> None:
     validate = _load_validator()
-    skeleton = ROOT / "templates" / "agent-adapter" / "docs-skeleton.md"
+    skeleton = ROOT / "templates" / "agent-integration" / "agent-docs.template.md"
     assert not validate.check_file(skeleton)
 
 

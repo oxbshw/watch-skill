@@ -80,7 +80,7 @@ gate. Do not add network calls to the offline suite.
   write no request code. Add the model defaults to
   `health/vision_setup.py` and a price to `vision/prices.json` — moving that
   file's `as_of` date is part of the edit.
-- **An agent**: start from `templates/agent-adapter/`. One config block, one
+- **An agent**: start from `templates/agent-integration/`. One config block, one
   page in `docs/agents/`, one validation run.
 - **A skill**: a directory under `skills/` with a `SKILL.md`. The
   `description` is a trigger surface — write the phrasings a user would

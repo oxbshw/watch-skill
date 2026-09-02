@@ -45,7 +45,6 @@ EXPECTED_SDIST_TOP_LEVEL = {
     "skills",
     "templates",
     "commands",
-    "adapters",
     "app",
     "scripts",
 }
@@ -123,16 +122,42 @@ class TestSdist:
         ]:
             assert [n for n in names if pattern in n] == [], f"the sdist carries {why}"
 
-    def test_the_only_agents_md_is_a_shipped_template(self, built) -> None:
-        """`adapters/agents-md/AGENTS.md` is product content, not governance.
+    def test_the_repository_agents_md_is_not_shipped(self, built) -> None:
+        """This repository's contributor guidance is not product content.
 
-        The adapter's whole purpose is to emit that file for a user's project,
-        so it ships as a template. This repository's own contributor guidance
-        is not in the distribution, and that distinction is worth pinning.
+        `AGENTS.md` at the root is instructions for people working *on* Watch
+        Skill. A copy of it inside a source distribution reads, to a tool that
+        looks for one, as instructions for the project that installed the
+        package -- which is how a governance file becomes somebody else's
+        agent policy by accident.
         """
         _wheel, sdist = built
-        found = [n for n in sdist_names(sdist) if n.endswith("AGENTS.md")]
-        assert found == [f"{sdist.name.removesuffix('.tar.gz')}/adapters/agents-md/AGENTS.md"]
+        prefix = sdist.name.removesuffix(".tar.gz")
+        assert f"{prefix}/AGENTS.md" not in sdist_names(sdist)
+
+    def test_the_agent_template_ships_and_says_it_is_one(self, built) -> None:
+        """The template a user copies into their own project is product content.
+
+        It ships under `.example.md`, which is what keeps a tool that scans for
+        `AGENTS.md` from finding it, and the file says in its first lines that
+        it is copied into a project rather than obeyed where it sits.
+        """
+        _wheel, sdist = built
+        prefix = sdist.name.removesuffix(".tar.gz")
+        name = f"{prefix}/templates/agent-integration/AGENTS.example.md"
+        names = sdist_names(sdist)
+        assert name in names
+
+        with tarfile.open(sdist) as archive:
+            member = archive.extractfile(name)
+            assert member is not None
+            text = member.read().decode("utf-8")
+        head = "\n".join(text.splitlines()[:12])
+        assert "Copy this file" in head
+        assert "not this repository" in head
+
+        # And nothing else in the distribution is named AGENTS.md.
+        assert [n for n in names if n.endswith("/AGENTS.md")] == []
 
 
 class TestWheel:

@@ -52,5 +52,5 @@ args = ["--from", "watch-skill[standard]", "watch-skill", "serve"]
 ## Notes
 
 - Codex consumes the text report (frame paths + transcript). The
-  `adapters/agents-md/AGENTS.md` block teaches Codex when to reach for
+  `templates/agent-integration/AGENTS.example.md` block teaches Codex when to reach for
   each tool — paste it into your repo's `AGENTS.md`.

@@ -12,7 +12,7 @@ agent supports; the underlying index, tools, and privacy settings are identical.
 | **Documentation-verified** | The configuration matches the agent's published documentation and every fenced config block passes the repository validator. It has not been executed here. |
 
 These labels describe integration evidence, not product quality. Run
-`python templates/agent-adapter/validate.py` to check the examples in this directory.
+`python scripts/validate_agent_docs.py` to check the examples in this directory.
 
 ## MCP clients
 
@@ -56,7 +56,7 @@ work.
 | [OpenClaw](openclaw.md) | `SKILL.md` discovery | Documentation-verified |
 | [Pi](pi.md) | Skills directory and CLI | Documentation-verified |
 | [Hermes Agent and similar harnesses](hermes.md) | Skills, `AGENTS.md`, or REST | Documentation-verified |
-| Any instruction-following coding agent | [`AGENTS.md`](../../adapters/agents-md/AGENTS.md) | Machine-tested in this repository |
+| Any instruction-following coding agent | [`AGENTS.example.md`](../../templates/agent-integration/AGENTS.example.md) | Machine-tested in this repository |
 
 ## Frameworks and HTTP clients
 
@@ -97,6 +97,6 @@ Each linked guide supplies the exact configuration and client-specific verificat
 
 ## Add another agent
 
-Start with the [adapter template](../../templates/agent-adapter/README.md). A complete row
+Start with the [agent integration template](../../templates/agent-integration/README.md). A complete row
 needs one working config block, one three-step smoke test, and an honest status label. See
 [CONTRIBUTING.md](../../CONTRIBUTING.md#add-your-agent) for the review checklist.

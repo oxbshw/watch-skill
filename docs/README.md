@@ -97,4 +97,4 @@ Runnable counterparts live in the [example catalog](../examples/README.md).
 Commands should run from the repository root unless a guide says otherwise. Integration
 statuses must use the definitions in the [agent matrix](agents/README.md). Measured claims
 need a dated benchmark or reproducible example, and configuration blocks must parse under
-`templates/agent-adapter/validate.py`.
+`scripts/validate_agent_docs.py`.

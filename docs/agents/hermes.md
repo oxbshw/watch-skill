@@ -30,7 +30,7 @@ skills/  →  your hermes skills dir
 ```
 
 **AGENTS.md.** Hermes-style harnesses read repo instructions. Drop
-[`adapters/agents-md/AGENTS.md`](../../adapters/agents-md/AGENTS.md)
+[`AGENTS.example.md`](../../templates/agent-integration/AGENTS.example.md)
 into the project root — it teaches any instruction-following agent the
 full CLI contract (watch → ask → loop) with no client support needed at
 all.

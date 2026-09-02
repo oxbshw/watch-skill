@@ -294,7 +294,7 @@ npx skills add oxbshw/watch-skill --list
 
 The [full compatibility matrix](docs/agents/README.md) separates machine-tested,
 machine-configured, and documentation-verified integrations. If your agent is missing,
-the [adapter template](templates/agent-adapter/README.md) provides a short contribution
+the [agent integration template](templates/agent-integration/README.md) provides a short contribution
 path.
 
 ## Browser Runtime
@@ -543,7 +543,7 @@ uv run ruff check .
 ```
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for test tiers, documentation standards, and the
-agent-adapter checklist. Security and privacy reports are covered by
+agent-integration checklist. Security and privacy reports are covered by
 [SECURITY.md](SECURITY.md).
 
 ## Listed on

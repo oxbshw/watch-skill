@@ -1,13 +1,25 @@
 """Validate every fenced config block in the agent docs.
 
 Usage:
-    python templates/agent-adapter/validate.py [docs/agents/your-agent.md ...]
+    python scripts/validate_agent_docs.py [docs/agents/your-agent.md ...]
 
-With no arguments it sweeps all of docs/agents/*.md. Every fenced block
-tagged json / jsonc / toml / yaml must parse; a matrix row whose config
-can't even parse is a lie. Exit code is the number of broken blocks.
+With no arguments it sweeps all of docs/agents/*.md. Two things must hold
+for every page, and each of them has been wrong in a shipped file.
 
-This is also the checker for new adapter contributions: run it on your
+Every fenced block tagged json / jsonc / toml / yaml must parse. A matrix
+row whose config cannot even parse is a lie about a config somebody will
+paste.
+
+And no page may still carry a template token. `agent-docs.template.md` is
+written with `{{AGENT_NAME}}`-style holes precisely so that a half-filled
+copy is detectable: a page that says "Watch Skill in {{AGENT_NAME}}" is
+obviously unfinished, whereas the old `YOUR-AGENT` spelling looked enough
+like prose to survive review. The template itself is the one file allowed
+to contain them.
+
+Exit code is the number of problems.
+
+This is also the checker for new integration contributions: run it on your
 page before opening the PR.
 """
 from __future__ import annotations
@@ -18,8 +30,14 @@ import sys
 import tomllib
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[1]
 FENCE = re.compile(r"^```(\w+)\n(.*?)^```", re.MULTILINE | re.DOTALL)
+
+# The template's own holes, in the one syntax nothing else in the tree uses.
+TOKEN = re.compile(r"\{\{[A-Z][A-Z0-9_]*\}\}")
+
+# The file the tokens belong to. Anything else carrying one is unfinished.
+TEMPLATE = ROOT / "templates" / "agent-integration" / "agent-docs.template.md"
 
 
 def _strip_jsonc(text: str) -> str:
@@ -68,6 +86,13 @@ def check_file(path: Path) -> list[str]:
         if error:
             line = text[: match.start()].count("\n") + 1
             failures.append(f"{path.name}:{line} [{lang}] {error}")
+
+    if path.resolve() != TEMPLATE.resolve():
+        for match in TOKEN.finditer(text):
+            line = text[: match.start()].count("\n") + 1
+            failures.append(
+                f"{path.name}:{line} unresolved template token {match.group(0)}"
+            )
     return failures
 
 

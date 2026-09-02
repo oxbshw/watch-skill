@@ -1,6 +1,10 @@
-# Watch Skill in YOUR-AGENT
+<!-- Copy this file to docs/agents/<your-agent>.md and replace every
+     {{TOKEN}} below. `python scripts/validate_agent_docs.py` fails on any
+     that are left, so a half-filled page cannot be merged. -->
 
-**Status: doc-verified ☑** — config matches YOUR-AGENT's official docs;
+# Watch Skill in {{AGENT_NAME}}
+
+**Status: doc-verified ☑** — config matches {{AGENT_NAME}}'s official docs;
 not executed here.
 <!-- Grades: machine-tested ✅ (you ran a chat session end-to-end) /
      machine-configured ◐ (config written + agent's own tooling accepts it)
@@ -17,16 +21,19 @@ uv run watch-skill doctor
 
 ## Configure
 
-<!-- Where does the config live? User-level AND project-level paths if
-     both exist. Then the exact block. Keep the fence language tag right
-     (json/jsonc/toml/yaml) — validate.py parses it by that tag. -->
+Config lives at `{{CONFIG_PATH}}`.
+
+<!-- Give the user-level AND project-level paths if both exist. Then the
+     exact block. Keep the fence language tag right (json/jsonc/toml/yaml)
+     — validate_agent_docs.py parses it by that tag, and the block below
+     must still parse once your values are in it. -->
 
 ```json
 {
   "mcpServers": {
     "watch-skill": {
       "command": "uv",
-      "args": ["--directory", "C:\\path\\to\\watch-skill", "run", "watch-skill", "serve"]
+      "args": ["--directory", "{{WATCH_SKILL_CHECKOUT}}", "run", "watch-skill", "serve"]
     }
   }
 }
@@ -34,7 +41,7 @@ uv run watch-skill doctor
 
 ## Smoke test (3 steps)
 
-1. Open YOUR-AGENT's chat: *"Watch
+1. Open {{AGENT_NAME}}'s chat: *"Watch
    https://www.youtube.com/watch?v=aqz-KE-bpKQ and tell me what happens
    at 0:10."*
 2. Approve the `watch_video` tool call.

@@ -88,7 +88,6 @@ include = [
     "/scripts",
     "/docs",
     "/examples",
-    "/adapters",
     "/skills",
     "/commands",
     "/templates",
@@ -136,10 +135,12 @@ exclude = [
 # `src` and `pyproject.toml` build the package. `README`, `LICENSE`,
 # `CHANGELOG`, `SECURITY`, `CONTRIBUTING` and `llms.txt` are the documents a
 # source release is expected to carry. `docs`, `examples`, `skills`,
-# `templates`, `commands` and `adapters` are product content the package
-# refers to -- `adapters/agents-md/AGENTS.md` is a *template the adapter
-# ships*, not this repository's contributor guide. `app` is the workspace
-# viewer's source. `scripts` are the maintenance entry points the docs name.
+# `templates` and `commands` are product content the package refers to --
+# `templates/agent-integration/AGENTS.example.md` is a file a user copies into
+# *their* project, not this repository's contributor guide, and the `.example`
+# in its name is what keeps the two from being read as one thing. `app` is the
+# workspace viewer's source. `scripts` are the maintenance entry points the
+# docs name.
 #
 # What is deliberately absent, each for its own reason: `workspace` is a
 # separate product, `upstream` is a vendored third party git does not track,
