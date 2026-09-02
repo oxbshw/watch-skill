@@ -23,7 +23,7 @@
  * and every other boundary — sandbox, context isolation, no Node integration,
  * the navigation allowlist, the window-open handler, deny-by-default
  * permissions and IPC sender validation — is enforced exactly as tested. That
- * trade is recorded in docs/release-candidate-audit.md rather than left
+ * trade is recorded in docs/history/release-candidate-audit-02343ca.md rather than left
  * implicit here.
  */
 

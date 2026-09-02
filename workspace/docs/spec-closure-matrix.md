@@ -307,7 +307,7 @@ Tests: `scripts/install-smoke.mjs`
 
 Full Python suite green against the repository-equivalent configuration.
 
-Tests: `docs/release-candidate-audit.md`
+Tests: `docs/history/release-candidate-audit-02343ca.md`
 
 Limitations:
 

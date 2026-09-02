@@ -385,8 +385,8 @@ signed distribution.
 | [docs/platform-support.md](docs/platform-support.md) | what was run where |
 | [docs/upstream-hero-extension-request.md](docs/upstream-hero-extension-request.md) | the one remaining upstream visual seam |
 | [docs/signing.md](docs/signing.md) | what a signed release still needs |
-| [docs/release-candidate-audit.md](docs/release-candidate-audit.md) | immutable historical audit of commit `02343ca` |
 | [docs/adr/](docs/adr/) | decisions that need a superseding ADR to change |
+| [docs/history/](docs/history/) | records of past runs, kept out of current navigation |
 
 ## Attribution
 

@@ -66,4 +66,6 @@ value, and a test holds that over the whole tree.
 
 Against the cold build, all six dispositions were reached by cases constructed
 to produce each one, and two calls over the same pair produced byte-identical
-results. See [validation-matrix.md](validation-matrix.md).
+results. One run of them is recorded in
+[history/validation-matrix-71300c0.md](history/validation-matrix-71300c0.md);
+the current numbers come from the exact-head CI jobs.

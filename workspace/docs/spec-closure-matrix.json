@@ -528,7 +528,7 @@
         "upstream/deepseek-harness.lock"
       ],
       "tests": [
-        "docs/release-candidate-audit.md"
+        "docs/history/release-candidate-audit-02343ca.md"
       ],
       "limitations": [
         "Run in the watch-skill repository; the count and exit code are recorded in the audit."

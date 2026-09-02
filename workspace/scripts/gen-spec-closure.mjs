@@ -257,7 +257,7 @@ const REQUIREMENTS = [
   R('foundation.03-core-regression', '39.5.3',
     'Watch Core passes its regression gates and legacy surfaces are not broken.',
     'PASS', 'Full Python suite green against the repository-equivalent configuration.',
-    ['upstream/deepseek-harness.lock'], ['docs/release-candidate-audit.md'],
+    ['upstream/deepseek-harness.lock'], ['docs/history/release-candidate-audit-02343ca.md'],
     ['Run in the watch-skill repository; the count and exit code are recorded in the audit.'], true),
 
   R('foundation.04-first-journey', '39.5.4',
