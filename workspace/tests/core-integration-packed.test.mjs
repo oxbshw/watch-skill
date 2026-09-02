@@ -27,6 +27,7 @@
 import { test, describe, before, after } from 'node:test'
 import assert from 'node:assert/strict'
 import { spawn, spawnSync } from 'node:child_process'
+import { createServer } from 'node:http'
 import { existsSync, readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join, resolve, sep } from 'node:path'
@@ -42,20 +43,16 @@ const REPO = resolve(HERE, '..', '..')
 const CORE_VERSION = readFileSync(join(REPO, 'pyproject.toml'), 'utf8')
   .match(/^version\s*=\s*"([^"]+)"/m)?.[1] ?? ''
 
-/**
- * The three contract operations this Core deliberately cannot perform.
- *
- * Named here, once, so the assertions below and the documentation gate in
- * `docs-claims.test.mjs` cannot drift apart about which three they are.
- */
-export const UNAVAILABLE_METHODS = Object.freeze([
+/** Browser/Evidence operations that must cross the packed process boundary. */
+export const BROWSER_METHODS = Object.freeze([
   'watch.browser.observe',
   'watch.browser.act',
+  'watch.browser.receipt',
   'watch.evidence.get',
 ])
 
-/** The capabilities the handshake must report unavailable, for the same reason. */
-export const UNAVAILABLE_CAPABILITIES = Object.freeze([
+/** Browser/Evidence capabilities the packed Core must implement or probe. */
+export const BROWSER_CAPABILITIES = Object.freeze([
   'watch.browser.observe',
   'watch.browser.operate',
   'watch.evidence.resolve',
@@ -104,6 +101,24 @@ function packedCore() {
 
 const CORE = packedCore()
 const skip = CORE.path === null ? `packed Watch Core unavailable: ${CORE.why}` : false
+
+/**
+ * On a developer's machine this suite may skip. On CI it may not.
+ *
+ * A skip is the right answer to "this laptop has no packed wheel" and the
+ * wrong answer to "the workflow step that provisions one stopped working".
+ * The two are indistinguishable from the outside, and the second kind stayed
+ * green for a whole release: the matrix reported success for a suite that ran
+ * nowhere. So the environment decides which it is. This is the only assertion
+ * in the file that runs when the engine is missing, and it is the reason the
+ * rest of them can be trusted to have run at all.
+ */
+test('CI provisions the packed engine this suite exists to exercise', () => {
+  if (process.env['CI'] === undefined || process.env['CI'] === '') return
+  assert.equal(CORE.path === null ? CORE.why : null, null,
+    'CI reached the packed-Core suite with no engine to run it against; '
+    + 'a skip here is a workflow defect, not a machine without a wheel')
+})
 
 /** Mount the Bridge against the packed engine. */
 async function mount(overrides = {}) {
@@ -277,8 +292,32 @@ describe('the packed Watch Core, driven by the real Node Bridge', { skip }, () =
       if (!result.ok) {
         assert.equal(result.error.error, 'bridge.deadline_exceeded')
         assert.match(result.error.fix, /receipt|retry/i)
+        // And it is Core's deadline, not a stopwatch on this side. The
+        // distinction is not academic: while the frame carried no deadline,
+        // Core applied its own 30-second default to every request and a
+        // caller asking for ninety seconds got thirty — which is how a first
+        // browser observation on a cold machine failed for a reason that had
+        // nothing to do with the browser. Core's sentence and this side's
+        // differ, so which of them answered is readable.
+        assert.match(result.error.message, /did not return within 1ms/)
+        assert.match(result.error.fix, /work already dispatched may still complete/,
+          'the deadline was enforced by this process, so it never reached Core')
       }
     })
+  })
+
+  test('the deadline this side waits on is the one Core is given', async () => {
+    // The pair that has to stay in step. A backstop shorter than the deadline
+    // would settle the request here while Core was still honouring it, and the
+    // caller would be told a bounded operation timed out by the side that
+    // cannot see what it had already done.
+    const source = readFileSync(
+      join(REPO, 'workspace', 'packages', 'watch', 'core-bridge', 'src', 'transport', 'stdio.ts'),
+      'utf8')
+    assert.match(source, /deadlineMs: request\.deadlineMs/,
+      'the frame does not carry the deadline, so Core falls back to its own default')
+    assert.match(source, /request\.deadlineMs \+ DEADLINE_BACKSTOP_MS/,
+      'this side would time out before the engine it is waiting on')
   })
 
   test('cancellation crosses the boundary and reports itself as requested', async () => {
@@ -391,50 +430,89 @@ describe('the packed Watch Core, driven by the real Node Bridge', { skip }, () =
       'a drifted family must name the capabilities it takes offline')
   })
 
-  // ── the three operations this Core cannot perform ────────────────────────
+  // ── real Browser/Evidence boundary ───────────────────────────────────────
 
-  describe('the operations this Core honestly cannot perform', () => {
-    test('each refuses with capability_unavailable, not a plausible answer', async () => {
-      await withCore(async (ctx) => {
-        await ctx.watchCore.connect()
-        for (const method of UNAVAILABLE_METHODS) {
-          const result = await ctx.watchCore.request(method, { sessionId: 's', evidenceId: 'e' })
-          assert.equal(result.ok, false, `${method} answered something`)
-          assert.equal(result.error.error, 'bridge.capability_unavailable',
-            `${method}: ${result.error.error}`)
-          assert.ok(result.error.fix.length > 0, `${method} refused with no fix`)
-        }
-      })
-    })
-
-    test('the handshake reports their capabilities unavailable, with a reason', () => {
+  describe('Browser and Evidence are owned by the packed Core', () => {
+    test('the handshake reports every boundary capability present', () => {
       const byId = new Map(handshake.capabilities.map(c => [c.capabilityId, c]))
-      for (const id of UNAVAILABLE_CAPABILITIES) {
+      for (const id of BROWSER_CAPABILITIES) {
         const truth = byId.get(id)
-        assert.ok(truth !== undefined, `${id} is not in the capability report at all`)
-        assert.equal(truth.status, 'unavailable', `${id} is reported ${truth.status}`)
-        assert.ok(truth.missing.length > 0, `${id} is unavailable and says nothing is missing`)
-        assert.ok(truth.fixes.length > 0, `${id} is unavailable with no fix`)
+        assert.ok(truth !== undefined, `${id} is absent from the capability report`)
+        assert.notEqual(truth.status, 'unavailable', `${id}: ${truth.fixes.join('; ')}`)
       }
     })
 
-    test('no surface may offer them: isCapable is false for every one', async () => {
-      await withCore(async (ctx) => {
-        await ctx.watchCore.connect()
-        for (const id of UNAVAILABLE_CAPABILITIES) {
-          assert.equal(ctx.watchCore.isCapable(id), false, `${id} was offered as usable`)
-        }
+    test('observe, approval, action, receipt and evidence cross Node↔Python', async () => {
+      const server = createServer((_request, response) => {
+        response.writeHead(200, { 'content-type': 'text/html; charset=utf-8' })
+        response.end('<!doctype html><title>Packed Bridge Fixture</title>'
+          + '<button onclick="document.querySelector(\'#result\').textContent=\'Done\'">Run</button>'
+          + '<p id="result">Waiting</p>')
       })
-    })
+      await new Promise(resolveListen => server.listen(0, '127.0.0.1', resolveListen))
+      const address = server.address()
+      assert.equal(typeof address, 'object')
+      const url = `http://127.0.0.1:${String(address.port)}/`
+      try {
+        await withCore(async (ctx) => {
+          await ctx.watchCore.connect()
+          const started = await ctx.watchCore.request('watch.live.start', {
+            target: url, kind: 'browser', allowLocal: true, allowedHosts: ['127.0.0.1'],
+          }, { deadlineMs: 75_000 })
+          assert.equal(started.ok, true, JSON.stringify(started.error ?? {}))
+          const sessionId = started.value.session_id
+          try {
+            const observed = await ctx.watchCore.request('watch.browser.observe', { sessionId })
+            assert.equal(observed.ok, true, JSON.stringify(observed.error ?? {}))
+            assert.equal(observed.value.authority, 'watch-core')
+            assert.equal(observed.value.observation.title, 'Packed Bridge Fixture')
 
-    test('no mock fills the gap: the refusal is the same with no fallback available', async () => {
-      await withCore(async (ctx) => {
-        await ctx.watchCore.connect()
-        assert.equal(ctx.watchCore.health().isTestOnlyMock, false)
-        assert.equal(ctx.watchCore.health().transport, 'stdio')
-        const result = await ctx.watchCore.request('watch.evidence.get', { evidenceId: 'e_1' })
-        assert.equal(result.ok, false)
-      })
+            const command = {
+              sessionId,
+              operationId: 'op_packed_click',
+              idempotencyKey: 'idem_packed_click',
+              inputDigest: 'sha256:packed-click',
+              action: {
+                kind: 'click', intent: 'run the local fixture',
+                target: { role: 'button', name: 'Run' },
+                expect: { text_present: 'Done' },
+              },
+            }
+            const refused = await ctx.watchCore.request('watch.browser.act', command)
+            assert.equal(refused.ok, false)
+            assert.equal(refused.error.error, 'bridge.approval_required')
+
+            const acted = await ctx.watchCore.request('watch.browser.act', {
+              ...command, approvalId: 'host-approved-once',
+            })
+            assert.equal(acted.ok, true, JSON.stringify(acted.error ?? {}))
+            assert.equal(acted.value.completed, true)
+            assert.equal(acted.value.verified, true)
+            assert.equal(acted.value.authority, 'watch-core')
+
+            const replay = await ctx.watchCore.request('watch.browser.act', {
+              ...command, approvalId: 'host-approved-once',
+            })
+            assert.deepEqual(replay, acted, 'same idempotency key dispatched twice')
+
+            const receipt = await ctx.watchCore.request('watch.browser.receipt', {
+              idempotencyKey: 'idem_packed_click',
+            })
+            assert.equal(receipt.ok, true)
+            assert.equal(receipt.value.status, 'completed')
+
+            const evidence = await ctx.watchCore.request('watch.evidence.get', {
+              evidenceId: acted.value.evidenceId,
+            })
+            assert.equal(evidence.ok, true, JSON.stringify(evidence.error ?? {}))
+            assert.equal(evidence.value.producer, 'watch-core-browser-runtime')
+          } finally {
+            await ctx.watchCore.request('watch.live.stop', { sessionId, reason: 'packed test complete' })
+          }
+        })
+      } finally {
+        await new Promise(resolveClose => server.close(resolveClose))
+      }
     })
   })
 

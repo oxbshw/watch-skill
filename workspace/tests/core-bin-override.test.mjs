@@ -69,7 +69,7 @@ describe('the Bridge is pointed at the executable a person named', () => {
 
   test('it keeps `auto`, so a Core that cannot speak Bridge is reported honestly', () => {
     // Pinning `stdio` looked right and was wrong. Naming the binary is not the
-    // same as asserting it speaks the Bridge protocol -- Watch Skill 1.3.0rc2
+    // same as asserting it speaks the Bridge protocol -- Watch Skill 1.4.0rc1
     // ships `serve` and no `bridge` subcommand -- and pinning it turned an
     // honest "running on the mock backend" into a spawn that fails every time,
     // which the health panel then reported as a connection.

@@ -42,6 +42,16 @@ interface Pending {
 const HEADER_TERMINATOR = '\r\n\r\n'
 
 /**
+ * How long this side waits *after* the deadline it sent Core.
+ *
+ * Core owns the deadline and answers with what it had already dispatched.
+ * This side only needs to notice a child that cannot answer at all, so it
+ * gives the engine room to report its own timeout first. Small enough that a
+ * wedged process is still caught promptly.
+ */
+const DEADLINE_BACKSTOP_MS = 2_000
+
+/**
  * The largest frame this transport will wait for.
  *
  * Without a bound, a Content-Length of a gigabyte parks the stream forever:
@@ -196,6 +206,17 @@ export class StdioTransport implements Transport {
         settle: null,
       }
 
+      // The backstop, not the deadline.
+      //
+      // The deadline itself travels in the frame and Core enforces it, which
+      // is what makes it a *boundary* deadline: the engine knows when to stop
+      // and can say what it had already dispatched. This timer exists for the
+      // case Core cannot answer at all — a wedged or dead child — so it waits
+      // a grace period longer than the deadline it is backing up. Without the
+      // frame field Core fell back to its own 30-second default and silently
+      // overrode every longer deadline a caller asked for; a first browser
+      // observation on a cold machine takes more than that, and the caller's
+      // 90 seconds counted for nothing.
       const timer = setTimeout(() => {
         // A deadline is not evidence that the work did not happen. For a
         // side-effecting method the caller must inspect the receipt; the error
@@ -206,7 +227,7 @@ export class StdioTransport implements Transport {
           'Inspect the operation receipt before retrying; a dispatched side effect may still have run.',
           { details: { method: request.method }, retryable: false, correlationId: request.correlationId },
         ))
-      }, request.deadlineMs)
+      }, request.deadlineMs + DEADLINE_BACKSTOP_MS)
 
       const onAbort = (): void => {
         // Ask Core to stop, then report *requested*, never "did not happen".
@@ -231,6 +252,9 @@ export class StdioTransport implements Transport {
         id,
         method: request.method,
         params: request.params,
+        // The caller's deadline, so Core enforces the same one this side is
+        // waiting on rather than its own default.
+        deadlineMs: request.deadlineMs,
         // Correlation travels in the envelope so Core stamps it onto its own
         // logs, receipts and Trajectory records without the caller restating it.
         correlationId: request.correlationId,
