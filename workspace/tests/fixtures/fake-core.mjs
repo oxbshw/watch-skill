@@ -51,7 +51,7 @@ function sendSplit(message) {
 /** The handshake a protocol fixture is entitled to answer. */
 function handshake() {
   return {
-    coreVersion: '1.3.0rc2-fixture',
+    coreVersion: '1.4.0rc1-fixture',
     coreBuild: 'fixture',
     protocolVersion: 1,
     capabilities: [{

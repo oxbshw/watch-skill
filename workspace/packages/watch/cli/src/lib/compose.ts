@@ -191,7 +191,7 @@ const CORE_BIN_END = '# deepwatch: end of Watch Core binary override'
  * right -- somebody who names the engine has said it is there, so a failure to
  * start it should be a fault rather than a fallback. But naming the *binary* is
  * not the same as asserting it speaks the Bridge protocol, and that difference
- * is not hypothetical: Watch Skill 1.3.0rc2 ships `serve`, `api` and a CLI, and
+ * is not hypothetical: Watch Skill 1.4.0rc1 ships `serve`, `api` and a CLI, and
  * no `bridge` subcommand at all. Pinning `stdio` against it turned an honest
  * "running on the mock backend" into a spawn that fails every time, which the
  * health panel then reported as a connection. `auto` keeps the fallback, and

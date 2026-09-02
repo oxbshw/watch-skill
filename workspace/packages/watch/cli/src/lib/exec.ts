@@ -199,6 +199,7 @@ export function resolveNodeCli(
   const nodeDir = dirname(process.execPath)
   for (const candidate of [
     join(nodeDir, 'node_modules', tool, relative),
+    join(dirname(nodeDir), 'node_modules', tool, relative),
     join(dirname(nodeDir), 'lib', 'node_modules', tool, relative),
   ]) {
     if (existsSync(candidate)) return candidate

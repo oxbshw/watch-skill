@@ -209,17 +209,17 @@ Five installable shapes, install/upgrade/uninstall against stock DSH, and the sa
 
 Tests: `scripts/verify-bundle.mjs`, `scripts/install-smoke.mjs`, `scripts/upgrade-smoke.mjs`
 
-### `dod.provider-experience` — PASS
+### `dod.provider-experience` — PASS · release-blocking
 
 > One provider experience for all external connections, one Technology Center for local engines, unified Role Bindings for every capability.
 
 Role bindings sit over DSH Models and Providers with no second credential store; the Technology Center owns local engine descriptors and lifecycle.
 
-Tests: `tests/technology.test.mjs`
+Tests: `tests/technology.test.mjs`, `tests/binding-flow.test.mjs`, `scripts/qa-e2e.mjs`
 
 Limitations:
 
-- The DSH Settings surface that edits bindings is inherited from upstream; Watch adds no editor of its own, and none was exercised in a browser here.
+- The provider form remains DSH-owned; DeepWatch contributes the unified Role Bindings editor and tests it in the required browser journey.
 
 ### `dod.ocr-optional` — PASS
 

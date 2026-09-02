@@ -384,15 +384,18 @@
       "status": "PASS",
       "evidence": "Role bindings sit over DSH Models and Providers with no second credential store; the Technology Center owns local engine descriptors and lifecycle.",
       "source_paths": [
-        "packages/watch/technology/src/descriptor.ts"
+        "packages/watch/technology/src/descriptor.ts",
+        "packages/watch/client-settings/src/client/role-bindings.tsx"
       ],
       "tests": [
-        "tests/technology.test.mjs"
+        "tests/technology.test.mjs",
+        "tests/binding-flow.test.mjs",
+        "scripts/qa-e2e.mjs"
       ],
       "limitations": [
-        "The DSH Settings surface that edits bindings is inherited from upstream; Watch adds no editor of its own, and none was exercised in a browser here."
+        "The provider form remains DSH-owned; DeepWatch contributes the unified Role Bindings editor and tests it in the required browser journey."
       ],
-      "blocking_release": false
+      "blocking_release": true
     },
     {
       "id": "dod.ocr-optional",

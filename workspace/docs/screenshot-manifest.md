@@ -7,10 +7,10 @@ saw on opening the file — not what the tool reported about it.
 
 | | |
 | --- | --- |
-| Shots | 36 |
-| Captured | 35 |
-| Not captured | 1 |
-| Pass | 36 |
+| Shots | 57 |
+| Captured | 57 |
+| Not captured | 0 |
+| Pass | 57 |
 | Blocked | 0 |
 | Fail | 0 |
 | Duplicate groups | 0 |
@@ -22,50 +22,67 @@ which nothing in the capture changes.
 
 | Shot | File | Viewport | State | Expected | Observed | Verdict |
 | --- | --- | --- | --- | --- | --- | --- |
-| wide-01-onboarding | docs/screenshots/wide-01-onboarding.png | wide | captured | the Watch first-run notice: orca mark, the four verbs, an honest readiness count, and two ways out | the Watch notice, with "4 of 12 capabilities are ready" and the consent separation stated below the buttons | pass |
-| wide-03-workspace | docs/screenshots/wide-03-workspace.png | wide | captured | the workspace entered without configuring anything, with the mark and attribution in place | empty workspace, orca mark on the hero and in the sidebar, attribution in the sidebar foot | pass |
-| wide-05-mode-chat | docs/screenshots/wide-05-mode-chat.png | wide | captured | DSH's own conversation view, unchanged, as one tab among seven | a completed turn: prompt, context injections, assistant reply, feedback controls and the turn stats bar | pass |
-| wide-05-mode-trajectory | docs/screenshots/wide-05-mode-trajectory.png | wide | captured | DSH's own trajectory view, unchanged | the upstream timeline with the turn expanded: system prompt, user, two context injections, assistant | pass |
-| wide-05-mode-watch | docs/screenshots/wide-05-mode-watch.png | wide | captured | the verification surface, with completed and verified kept apart | "Agent completed ≠ Verified" stated; empty state names three ways to get a record | pass |
-| wide-05-mode-live | docs/screenshots/wide-05-mode-live.png | wide | captured | every source with the permission it would ask for, and nothing started by opening the page | seven sources listed; "Opening this page starts nothing and asks for nothing"; Browser Operator marked as able to act | pass |
-| wide-05-mode-memory | docs/screenshots/wide-05-mode-memory.png | wide | captured | the memory ledger, correctable and with provenance | heading, lead, empty state naming Settings and the agent, and the not-encrypted note | pass |
-| wide-05-mode-library | docs/screenshots/wide-05-mode-library.png | wide | captured | a working search box over the local index, with filters and index health | search field, Type/Verification/Sort filters, Search and Rebuild index, "0 record(s) indexed" | pass |
-| wide-05-mode-compare | docs/screenshots/wide-05-mode-compare.png | wide | captured | two records side by side, with output differences separate from verification differences | "computed, not reasoned about"; empty state names how to get two records | pass |
-| wide-06-settings-general | docs/screenshots/wide-06-settings-general.png | wide | captured | DSH General kept above the Watch sections, unmodified | General, Models, Plugins and Agent presets sit above the seven Watch sections | pass |
-| wide-07-settings-roles | docs/screenshots/wide-07-settings-roles.png | wide | captured | nine roles, each showing what it is bound to, with unbound stated plainly | per-role cards; every role reads "Nothing bound on this machine", "Last tested: Never" | pass |
-| wide-07-settings-engines | docs/screenshots/wide-07-settings-engines.png | wide | captured | every engine with runtime, hardware, egress and offline behaviour, and no invented accuracy figure | RapidOCR reads "Measured on this machine"; Tesseract and DeepSeek-OCR read "Not measured on this machine" | pass |
-| wide-07-settings-sources | docs/screenshots/wide-07-settings-sources.png | wide | captured | every source with the permission it would ask for, and nothing requested by opening the page | all sources "Not requested"; the header states that opening the page requests nothing | pass |
-| wide-07-settings-memory-settings | docs/screenshots/wide-07-settings-memory-settings.png | wide | captured | the memory scope and retention rules, with the shipped default visible | scope and retention rendered; the manual profile has memory at local_personal | pass |
-| wide-07-settings-verification | docs/screenshots/wide-07-settings-verification.png | wide | captured | the four verdicts defined, and green reserved for VERIFIED alone | "Agent completed ≠ Verified" leads; all four verdicts defined; green reserved for VERIFIED explicitly | pass |
-| wide-07-settings-diagnostics | docs/screenshots/wide-07-settings-diagnostics.png | wide | captured | what this installation consists of, saying so where a value cannot be read | 12 capabilities with Ready / Local / Not configured / Not tested — matching the onboarding count of 4 | pass |
-| wide-07-settings-about | docs/screenshots/wide-07-settings-about.png | wide | captured | versions, the DSH commit, honest attribution, and licences including the weights position | all present; "Model weights: Distributed with none. A code licence is not a weights licence." | pass |
-| wide-08-sidebar-collapsed | docs/screenshots/wide-08-sidebar-collapsed.png | wide | captured | the 56px rail with the mark visible and the attribution not reflowed into it | rail correct at 56px, mark and attribution glyph both present — but the Settings dialog stayed open over it, so the shot does not isolate the rail | pass with note |
-| narrow-01-onboarding | — | narrow | not captured | the Watch first-run notice: orca mark, the four verbs, an honest readiness count, and two ways out | no first-run dialog: already dismissed in this profile | pass |
-| narrow-03-workspace | docs/screenshots/narrow-03-workspace.png | narrow | captured | the workspace entered without configuring anything, with the mark and attribution in place | empty workspace, orca mark on the hero and in the sidebar, attribution in the sidebar foot | pass |
-| narrow-05-mode-chat | docs/screenshots/narrow-05-mode-chat.png | narrow | captured | DSH's own conversation view, unchanged, as one tab among seven | a completed turn: prompt, context injections, assistant reply, feedback controls and the turn stats bar | pass |
-| narrow-05-mode-trajectory | docs/screenshots/narrow-05-mode-trajectory.png | narrow | captured | DSH's own trajectory view, unchanged | the upstream timeline with the turn expanded: system prompt, user, two context injections, assistant | pass |
-| narrow-05-mode-watch | docs/screenshots/narrow-05-mode-watch.png | narrow | captured | the verification surface, with completed and verified kept apart | "Agent completed ≠ Verified" stated; empty state names three ways to get a record | pass |
-| narrow-05-mode-live | docs/screenshots/narrow-05-mode-live.png | narrow | captured | every source with the permission it would ask for, and nothing started by opening the page | seven sources listed; "Opening this page starts nothing and asks for nothing"; Browser Operator marked as able to act | pass |
-| narrow-05-mode-memory | docs/screenshots/narrow-05-mode-memory.png | narrow | captured | the memory ledger, correctable and with provenance | heading, lead, empty state naming Settings and the agent, and the not-encrypted note | pass |
-| narrow-05-mode-library | docs/screenshots/narrow-05-mode-library.png | narrow | captured | a working search box over the local index, with filters and index health | search field, Type/Verification/Sort filters, Search and Rebuild index, "0 record(s) indexed" | pass |
-| narrow-05-mode-compare | docs/screenshots/narrow-05-mode-compare.png | narrow | captured | two records side by side, with output differences separate from verification differences | "computed, not reasoned about"; empty state names how to get two records | pass |
-| narrow-06-settings-general | docs/screenshots/narrow-06-settings-general.png | narrow | captured | DSH General kept above the Watch sections, unmodified | General, Models, Plugins and Agent presets sit above the seven Watch sections | pass |
-| narrow-07-settings-roles | docs/screenshots/narrow-07-settings-roles.png | narrow | captured | nine roles, each showing what it is bound to, with unbound stated plainly | per-role cards; every role reads "Nothing bound on this machine", "Last tested: Never" | pass |
-| narrow-07-settings-engines | docs/screenshots/narrow-07-settings-engines.png | narrow | captured | every engine with runtime, hardware, egress and offline behaviour, and no invented accuracy figure | RapidOCR reads "Measured on this machine"; Tesseract and DeepSeek-OCR read "Not measured on this machine" | pass |
-| narrow-07-settings-sources | docs/screenshots/narrow-07-settings-sources.png | narrow | captured | every source with the permission it would ask for, and nothing requested by opening the page | all sources "Not requested"; the header states that opening the page requests nothing | pass |
-| narrow-07-settings-memory-settings | docs/screenshots/narrow-07-settings-memory-settings.png | narrow | captured | the memory scope and retention rules, with the shipped default visible | scope and retention rendered; the manual profile has memory at local_personal | pass |
-| narrow-07-settings-verification | docs/screenshots/narrow-07-settings-verification.png | narrow | captured | the four verdicts defined, and green reserved for VERIFIED alone | "Agent completed ≠ Verified" leads; all four verdicts defined; green reserved for VERIFIED explicitly | pass |
-| narrow-07-settings-diagnostics | docs/screenshots/narrow-07-settings-diagnostics.png | narrow | captured | what this installation consists of, saying so where a value cannot be read | 12 capabilities with Ready / Local / Not configured / Not tested — matching the onboarding count of 4 | pass |
-| narrow-07-settings-about | docs/screenshots/narrow-07-settings-about.png | narrow | captured | versions, the DSH commit, honest attribution, and licences including the weights position | all present; "Model weights: Distributed with none. A code licence is not a weights licence." | pass |
-| narrow-08-sidebar-collapsed | docs/screenshots/narrow-08-sidebar-collapsed.png | narrow | captured | the 56px rail with the mark visible and the attribution not reflowed into it | rail correct at 56px, mark and attribution glyph both present — but the Settings dialog stayed open over it, so the shot does not isolate the rail | pass with note |
+| wide-01-onboarding | docs/screenshots/wide-01-onboarding.png | wide | captured | the Watch first-run notice: orca mark, the four verbs, an honest readiness count, and two ways out | Watch notice visible=false; readiness={"summaryReady":1,"summaryTotal":12,"ready":0,"degraded":0,"unconfigured":0,"unavailable":0,"notTested":0,"error":0} | pass |
+| narrow-01-onboarding | docs/screenshots/narrow-01-onboarding.png | narrow | captured | the Watch first-run notice: orca mark, the four verbs, an honest readiness count, and two ways out | Watch notice visible=false; readiness={"summaryReady":1,"summaryTotal":12,"ready":0,"degraded":0,"unconfigured":0,"unavailable":0,"notTested":0,"error":0} | pass |
+| compact-01-onboarding | docs/screenshots/compact-01-onboarding.png | compact | captured | the Watch first-run notice: orca mark, the four verbs, an honest readiness count, and two ways out | Watch notice visible=false; readiness={"summaryReady":1,"summaryTotal":12,"ready":0,"degraded":0,"unconfigured":0,"unavailable":0,"notTested":0,"error":0} | pass |
+| wide-03-workspace | docs/screenshots/wide-03-workspace.png | wide | captured | the workspace entered without configuring anything, with the mark and attribution in place | the workspace, entered without configuring any provider; active section=n/a | pass |
+| wide-05-mode-chat | docs/screenshots/wide-05-mode-chat.png | wide | captured | DSH's own conversation view, unchanged, as one tab among seven | selected=Chat; deterministic stub reply visible=true | pass |
+| wide-05-mode-trajectory | docs/screenshots/wide-05-mode-trajectory.png | wide | captured | DSH's own trajectory view, unchanged | selected mode=Trajectory | pass |
+| wide-05-mode-watch | docs/screenshots/wide-05-mode-watch.png | wide | captured | the verification surface, with completed and verified kept apart | selected=Watch; completed-not-verified boundary visible=true | pass |
+| wide-05-mode-live | docs/screenshots/wide-05-mode-live.png | wide | captured | every source with the permission it would ask for, and nothing started by opening the page | selected mode=Live | pass |
+| wide-05-mode-memory | docs/screenshots/wide-05-mode-memory.png | wide | captured | the memory ledger, correctable and with provenance | selected=Memory; correctable ledger language visible=false | pass |
+| wide-05-mode-library | docs/screenshots/wide-05-mode-library.png | wide | captured | a working search box over the local index, with filters and index health | selected=Library; index controls visible=false | pass |
+| wide-05-mode-compare | docs/screenshots/wide-05-mode-compare.png | wide | captured | two records side by side, with output differences separate from verification differences | selected=Compare; computed-vs-reasoned boundary visible=true | pass |
+| wide-06-settings-general | docs/screenshots/wide-06-settings-general.png | wide | captured | DSH General kept above the Watch sections, unmodified | DSH General kept above the Watch sections; active section=General | pass |
+| wide-06-settings-models | docs/screenshots/wide-06-settings-models.png | wide | captured | the configured deterministic provider in the upstream Models surface | scenario provider openrouter-e2e matched=true | pass |
+| wide-07-settings-roles | docs/screenshots/wide-07-settings-roles.png | wide | captured | nine roles, each showing what it is bound to, with unbound stated plainly | bound scenario model stub/echo-small matched=true; active section=Role Bindings | pass |
+| wide-07-settings-engines | docs/screenshots/wide-07-settings-engines.png | wide | captured | every engine with runtime, hardware, egress and offline behaviour, and no invented accuracy figure | Perception section; active section=Perception | pass |
+| wide-07-settings-sources | docs/screenshots/wide-07-settings-sources.png | wide | captured | every source with the permission it would ask for, and nothing requested by opening the page | Sources section; active section=Sources | pass |
+| wide-07-settings-memory-settings | docs/screenshots/wide-07-settings-memory-settings.png | wide | captured | the memory scope and retention rules, with the shipped default visible | Memory section; active section=Memory | pass |
+| wide-07-settings-verification | docs/screenshots/wide-07-settings-verification.png | wide | captured | the four verdicts defined, and green reserved for VERIFIED alone | Verification section; active section=Verification | pass |
+| wide-07-settings-diagnostics | docs/screenshots/wide-07-settings-diagnostics.png | wide | captured | what this installation consists of, saying so where a value cannot be read | Core connected=true via stdio; readiness={"summaryReady":null,"summaryTotal":null,"ready":1,"degraded":2,"unconfigured":6,"unavailable":0,"notTested":2,"error":0} | pass |
+| wide-07-settings-about | docs/screenshots/wide-07-settings-about.png | wide | captured | versions, the DSH commit, honest attribution, and licences including the weights position | About section; active section=About | pass |
+| wide-08-sidebar-collapsed | docs/screenshots/wide-08-sidebar-collapsed.png | wide | captured | the 56px rail with the mark visible and the attribution not reflowed into it | the collapsed rail: mark visible, attribution not reflowed; active section=About | pass with note |
+| narrow-03-workspace | docs/screenshots/narrow-03-workspace.png | narrow | captured | the workspace entered without configuring anything, with the mark and attribution in place | the workspace, entered without configuring any provider; active section=n/a | pass |
+| narrow-05-mode-chat | docs/screenshots/narrow-05-mode-chat.png | narrow | captured | DSH's own conversation view, unchanged, as one tab among seven | selected=Chat; deterministic stub reply visible=true | pass |
+| narrow-05-mode-trajectory | docs/screenshots/narrow-05-mode-trajectory.png | narrow | captured | DSH's own trajectory view, unchanged | selected mode=Trajectory | pass |
+| narrow-05-mode-watch | docs/screenshots/narrow-05-mode-watch.png | narrow | captured | the verification surface, with completed and verified kept apart | selected=Watch; completed-not-verified boundary visible=true | pass |
+| narrow-05-mode-live | docs/screenshots/narrow-05-mode-live.png | narrow | captured | every source with the permission it would ask for, and nothing started by opening the page | selected mode=Live | pass |
+| narrow-05-mode-memory | docs/screenshots/narrow-05-mode-memory.png | narrow | captured | the memory ledger, correctable and with provenance | selected=Memory; correctable ledger language visible=false | pass |
+| narrow-05-mode-library | docs/screenshots/narrow-05-mode-library.png | narrow | captured | a working search box over the local index, with filters and index health | selected=Library; index controls visible=false | pass |
+| narrow-05-mode-compare | docs/screenshots/narrow-05-mode-compare.png | narrow | captured | two records side by side, with output differences separate from verification differences | selected=Compare; computed-vs-reasoned boundary visible=true | pass |
+| narrow-06-settings-general | docs/screenshots/narrow-06-settings-general.png | narrow | captured | DSH General kept above the Watch sections, unmodified | DSH General kept above the Watch sections; active section=General | pass |
+| narrow-06-settings-models | docs/screenshots/narrow-06-settings-models.png | narrow | captured | the configured deterministic provider in the upstream Models surface | scenario provider openrouter-e2e matched=true | pass |
+| narrow-07-settings-roles | docs/screenshots/narrow-07-settings-roles.png | narrow | captured | nine roles, each showing what it is bound to, with unbound stated plainly | bound scenario model stub/echo-small matched=true; active section=Role Bindings | pass |
+| narrow-07-settings-engines | docs/screenshots/narrow-07-settings-engines.png | narrow | captured | every engine with runtime, hardware, egress and offline behaviour, and no invented accuracy figure | Perception section; active section=Perception | pass |
+| narrow-07-settings-sources | docs/screenshots/narrow-07-settings-sources.png | narrow | captured | every source with the permission it would ask for, and nothing requested by opening the page | Sources section; active section=Sources | pass |
+| narrow-07-settings-memory-settings | docs/screenshots/narrow-07-settings-memory-settings.png | narrow | captured | the memory scope and retention rules, with the shipped default visible | Memory section; active section=Memory | pass |
+| narrow-07-settings-verification | docs/screenshots/narrow-07-settings-verification.png | narrow | captured | the four verdicts defined, and green reserved for VERIFIED alone | Verification section; active section=Verification | pass |
+| narrow-07-settings-diagnostics | docs/screenshots/narrow-07-settings-diagnostics.png | narrow | captured | what this installation consists of, saying so where a value cannot be read | Core connected=true via stdio; readiness={"summaryReady":null,"summaryTotal":null,"ready":1,"degraded":2,"unconfigured":6,"unavailable":0,"notTested":2,"error":0} | pass |
+| narrow-07-settings-about | docs/screenshots/narrow-07-settings-about.png | narrow | captured | versions, the DSH commit, honest attribution, and licences including the weights position | About section; active section=About | pass |
+| narrow-08-sidebar-collapsed | docs/screenshots/narrow-08-sidebar-collapsed.png | narrow | captured | the 56px rail with the mark visible and the attribution not reflowed into it | the collapsed rail: mark visible, attribution not reflowed; active section=About | pass with note |
+| compact-03-workspace | docs/screenshots/compact-03-workspace.png | compact | captured | the workspace entered without configuring anything, with the mark and attribution in place | the workspace, entered without configuring any provider; active section=n/a | pass |
+| compact-05-mode-chat | docs/screenshots/compact-05-mode-chat.png | compact | captured | DSH's own conversation view, unchanged, as one tab among seven | selected=Chat; deterministic stub reply visible=true | pass |
+| compact-05-mode-trajectory | docs/screenshots/compact-05-mode-trajectory.png | compact | captured | DSH's own trajectory view, unchanged | selected mode=Trajectory | pass |
+| compact-05-mode-watch | docs/screenshots/compact-05-mode-watch.png | compact | captured | the verification surface, with completed and verified kept apart | selected=Watch; completed-not-verified boundary visible=true | pass |
+| compact-05-mode-live | docs/screenshots/compact-05-mode-live.png | compact | captured | every source with the permission it would ask for, and nothing started by opening the page | selected mode=Live | pass |
+| compact-05-mode-memory | docs/screenshots/compact-05-mode-memory.png | compact | captured | the memory ledger, correctable and with provenance | selected=Memory; correctable ledger language visible=false | pass |
+| compact-05-mode-library | docs/screenshots/compact-05-mode-library.png | compact | captured | a working search box over the local index, with filters and index health | selected=Library; index controls visible=false | pass |
+| compact-05-mode-compare | docs/screenshots/compact-05-mode-compare.png | compact | captured | two records side by side, with output differences separate from verification differences | selected=Compare; computed-vs-reasoned boundary visible=true | pass |
+| compact-06-settings-general | docs/screenshots/compact-06-settings-general.png | compact | captured | DSH General kept above the Watch sections, unmodified | DSH General kept above the Watch sections; active section=General | pass |
+| compact-06-settings-models | docs/screenshots/compact-06-settings-models.png | compact | captured | the configured deterministic provider in the upstream Models surface | scenario provider openrouter-e2e matched=true | pass |
+| compact-07-settings-roles | docs/screenshots/compact-07-settings-roles.png | compact | captured | nine roles, each showing what it is bound to, with unbound stated plainly | bound scenario model stub/echo-small matched=true; active section=Role Bindings | pass |
+| compact-07-settings-engines | docs/screenshots/compact-07-settings-engines.png | compact | captured | every engine with runtime, hardware, egress and offline behaviour, and no invented accuracy figure | Perception section; active section=Perception | pass |
+| compact-07-settings-sources | docs/screenshots/compact-07-settings-sources.png | compact | captured | every source with the permission it would ask for, and nothing requested by opening the page | Sources section; active section=Sources | pass |
+| compact-07-settings-memory-settings | docs/screenshots/compact-07-settings-memory-settings.png | compact | captured | the memory scope and retention rules, with the shipped default visible | Memory section; active section=Memory | pass |
+| compact-07-settings-verification | docs/screenshots/compact-07-settings-verification.png | compact | captured | the four verdicts defined, and green reserved for VERIFIED alone | Verification section; active section=Verification | pass |
+| compact-07-settings-diagnostics | docs/screenshots/compact-07-settings-diagnostics.png | compact | captured | what this installation consists of, saying so where a value cannot be read | Core connected=true via stdio; readiness={"summaryReady":null,"summaryTotal":null,"ready":1,"degraded":2,"unconfigured":6,"unavailable":0,"notTested":2,"error":0} | pass |
+| compact-07-settings-about | docs/screenshots/compact-07-settings-about.png | compact | captured | versions, the DSH commit, honest attribution, and licences including the weights position | About section; active section=About | pass |
+| compact-08-sidebar-collapsed | docs/screenshots/compact-08-sidebar-collapsed.png | compact | captured | the 56px rail with the mark visible and the attribution not reflowed into it | the collapsed rail: mark visible, attribution not reflowed; active section=About | pass with note |
 
-## Why the mode shots are blocked
+## Evidence contract
 
-DSH hides the session header while a session is blank — `blank &&
-composerPhase === 'blank'` in `ConversationSession.tsx`. The mode tabs live in
-that header, so they cannot be reached until a session has had a turn, and a
-turn needs a provider and a key.
-
-The capture creates a real session through DSH's own `session.create` API, so
-it gets as far as it can without one. It does not photograph the workspace and
-call it a mode.
+A missing precondition produces no PNG and is always `blocked`. Provider,
+model and Core claims are compared with the sanitized E2E scenario report; a
+contradiction is `fail`. The structured facts contain booleans and normalized
+status counts only — never credentials, host paths, or raw conversation text.

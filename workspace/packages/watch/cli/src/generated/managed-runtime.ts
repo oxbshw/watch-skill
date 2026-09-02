@@ -18,10 +18,10 @@
 export const CLOSURE_DIGEST = 'sha256:06cd30dc117f92c04966e4bf9225dc9092962a7e4715e2bc658ee7426052e5b3'
 
 /** The digest of the generated manifest itself. */
-export const MANIFEST_DIGEST = 'sha256:7b9c7fd27eb8c21e9d10cafa5f90bff9ac734fa74008c60129894a29b37d0411'
+export const MANIFEST_DIGEST = 'sha256:daebefc8ace7e66f67f319b63ae6c3db8a6989ecce7a4e16c5e67e7be23c79e1'
 
 /** How many of the entries below are required peers rather than the Harness. */
-export const REQUIRED_PEER_COUNT = 29
+export const REQUIRED_PEER_COUNT = 30
 
 /** Exact package versions the managed runtime is installed from. */
 export const MANAGED_DEPENDENCIES: Readonly<Record<string, string>> = {
@@ -51,6 +51,7 @@ export const MANAGED_DEPENDENCIES: Readonly<Record<string, string>> = {
   '@deepseek-ai/dsh-timeout': '0.1.1-rc.2',
   '@deepseek-ai/dsh-tools': '0.1.1-rc.2',
   '@deepseek-ai/dsh-typert-protocol': '0.1.1-rc.2',
+  '@deepseek-ai/dsh-user-approval': '0.1.1-rc.2',
   '@deepseek-ai/dsh-workflow': '0.1.1-rc.2',
   '@deepseek-ai/schemastery': '3.18.2',
   'react': '18.3.1',

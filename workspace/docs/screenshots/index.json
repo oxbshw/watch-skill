@@ -2,217 +2,1768 @@
   {
     "name": "wide-01-onboarding",
     "file": "docs/screenshots/wide-01-onboarding.png",
-    "note": "first-run dialog: Welcome to DeepWatch",
-    "captured": true
+    "note": "first-run dialog: DEEPWATCH / INTO THE KNOW",
+    "captured": true,
+    "facts": {
+      "dialogOpen": true,
+      "watchOnboarding": false,
+      "selectedMode": null,
+      "settingsSection": null,
+      "providerMatch": false,
+      "providerIdMatch": false,
+      "modelMatch": false,
+      "stubReplyVisible": false,
+      "coreConnected": false,
+      "completedNotVerified": false,
+      "libraryIndexVisible": false,
+      "memoryLedgerVisible": false,
+      "compareBoundaryVisible": false,
+      "readiness": {
+        "summaryReady": 1,
+        "summaryTotal": 12,
+        "ready": 0,
+        "degraded": 0,
+        "unconfigured": 0,
+        "unavailable": 0,
+        "notTested": 0,
+        "error": 0
+      }
+    }
+  },
+  {
+    "name": "narrow-01-onboarding",
+    "file": "docs/screenshots/narrow-01-onboarding.png",
+    "note": "first-run dialog: DEEPWATCH / INTO THE KNOW",
+    "captured": true,
+    "facts": {
+      "dialogOpen": true,
+      "watchOnboarding": false,
+      "selectedMode": null,
+      "settingsSection": null,
+      "providerMatch": false,
+      "providerIdMatch": false,
+      "modelMatch": false,
+      "stubReplyVisible": false,
+      "coreConnected": false,
+      "completedNotVerified": false,
+      "libraryIndexVisible": false,
+      "memoryLedgerVisible": false,
+      "compareBoundaryVisible": false,
+      "readiness": {
+        "summaryReady": 1,
+        "summaryTotal": 12,
+        "ready": 0,
+        "degraded": 0,
+        "unconfigured": 0,
+        "unavailable": 0,
+        "notTested": 0,
+        "error": 0
+      }
+    }
+  },
+  {
+    "name": "compact-01-onboarding",
+    "file": "docs/screenshots/compact-01-onboarding.png",
+    "note": "first-run dialog: DEEPWATCH / INTO THE KNOW",
+    "captured": true,
+    "facts": {
+      "dialogOpen": true,
+      "watchOnboarding": false,
+      "selectedMode": null,
+      "settingsSection": null,
+      "providerMatch": false,
+      "providerIdMatch": false,
+      "modelMatch": false,
+      "stubReplyVisible": false,
+      "coreConnected": false,
+      "completedNotVerified": false,
+      "libraryIndexVisible": false,
+      "memoryLedgerVisible": false,
+      "compareBoundaryVisible": false,
+      "readiness": {
+        "summaryReady": 1,
+        "summaryTotal": 12,
+        "ready": 0,
+        "degraded": 0,
+        "unconfigured": 0,
+        "unavailable": 0,
+        "notTested": 0,
+        "error": 0
+      }
+    }
   },
   {
     "name": "wide-03-workspace",
     "file": "docs/screenshots/wide-03-workspace.png",
     "note": "the workspace, entered without configuring any provider",
-    "captured": true
+    "captured": true,
+    "facts": {
+      "dialogOpen": false,
+      "watchOnboarding": false,
+      "selectedMode": null,
+      "settingsSection": null,
+      "providerMatch": false,
+      "providerIdMatch": false,
+      "modelMatch": false,
+      "stubReplyVisible": false,
+      "coreConnected": false,
+      "completedNotVerified": false,
+      "libraryIndexVisible": false,
+      "memoryLedgerVisible": false,
+      "compareBoundaryVisible": false,
+      "readiness": {
+        "summaryReady": null,
+        "summaryTotal": null,
+        "ready": 0,
+        "degraded": 0,
+        "unconfigured": 0,
+        "unavailable": 0,
+        "notTested": 0,
+        "error": 0
+      }
+    }
   },
   {
     "name": "wide-05-mode-chat",
     "file": "docs/screenshots/wide-05-mode-chat.png",
     "note": "Chat mode",
-    "captured": true
+    "captured": true,
+    "facts": {
+      "dialogOpen": false,
+      "watchOnboarding": false,
+      "selectedMode": "Chat",
+      "settingsSection": null,
+      "providerMatch": false,
+      "providerIdMatch": false,
+      "modelMatch": true,
+      "stubReplyVisible": true,
+      "coreConnected": false,
+      "completedNotVerified": false,
+      "libraryIndexVisible": false,
+      "memoryLedgerVisible": false,
+      "compareBoundaryVisible": false,
+      "readiness": {
+        "summaryReady": null,
+        "summaryTotal": null,
+        "ready": 0,
+        "degraded": 0,
+        "unconfigured": 0,
+        "unavailable": 0,
+        "notTested": 0,
+        "error": 0
+      }
+    }
   },
   {
     "name": "wide-05-mode-trajectory",
     "file": "docs/screenshots/wide-05-mode-trajectory.png",
     "note": "Trajectory mode",
-    "captured": true
+    "captured": true,
+    "facts": {
+      "dialogOpen": false,
+      "watchOnboarding": false,
+      "selectedMode": "Trajectory",
+      "settingsSection": null,
+      "providerMatch": false,
+      "providerIdMatch": false,
+      "modelMatch": true,
+      "stubReplyVisible": true,
+      "coreConnected": false,
+      "completedNotVerified": false,
+      "libraryIndexVisible": false,
+      "memoryLedgerVisible": false,
+      "compareBoundaryVisible": false,
+      "readiness": {
+        "summaryReady": null,
+        "summaryTotal": null,
+        "ready": 0,
+        "degraded": 0,
+        "unconfigured": 0,
+        "unavailable": 0,
+        "notTested": 0,
+        "error": 0
+      }
+    }
   },
   {
     "name": "wide-05-mode-watch",
     "file": "docs/screenshots/wide-05-mode-watch.png",
     "note": "Watch mode",
-    "captured": true
+    "captured": true,
+    "facts": {
+      "dialogOpen": false,
+      "watchOnboarding": false,
+      "selectedMode": "Watch",
+      "settingsSection": null,
+      "providerMatch": false,
+      "providerIdMatch": false,
+      "modelMatch": true,
+      "stubReplyVisible": true,
+      "coreConnected": false,
+      "completedNotVerified": true,
+      "libraryIndexVisible": false,
+      "memoryLedgerVisible": false,
+      "compareBoundaryVisible": false,
+      "readiness": {
+        "summaryReady": null,
+        "summaryTotal": null,
+        "ready": 0,
+        "degraded": 0,
+        "unconfigured": 0,
+        "unavailable": 0,
+        "notTested": 0,
+        "error": 0
+      }
+    }
   },
   {
     "name": "wide-05-mode-live",
     "file": "docs/screenshots/wide-05-mode-live.png",
     "note": "Live mode",
-    "captured": true
+    "captured": true,
+    "facts": {
+      "dialogOpen": false,
+      "watchOnboarding": false,
+      "selectedMode": "Live",
+      "settingsSection": null,
+      "providerMatch": false,
+      "providerIdMatch": false,
+      "modelMatch": true,
+      "stubReplyVisible": true,
+      "coreConnected": false,
+      "completedNotVerified": false,
+      "libraryIndexVisible": false,
+      "memoryLedgerVisible": false,
+      "compareBoundaryVisible": false,
+      "readiness": {
+        "summaryReady": null,
+        "summaryTotal": null,
+        "ready": 0,
+        "degraded": 0,
+        "unconfigured": 0,
+        "unavailable": 0,
+        "notTested": 0,
+        "error": 0
+      }
+    }
   },
   {
     "name": "wide-05-mode-memory",
     "file": "docs/screenshots/wide-05-mode-memory.png",
     "note": "Memory mode",
-    "captured": true
+    "captured": true,
+    "facts": {
+      "dialogOpen": false,
+      "watchOnboarding": false,
+      "selectedMode": "Memory",
+      "settingsSection": "Memory",
+      "providerMatch": false,
+      "providerIdMatch": false,
+      "modelMatch": true,
+      "stubReplyVisible": true,
+      "coreConnected": false,
+      "completedNotVerified": false,
+      "libraryIndexVisible": false,
+      "memoryLedgerVisible": false,
+      "compareBoundaryVisible": false,
+      "readiness": {
+        "summaryReady": null,
+        "summaryTotal": null,
+        "ready": 0,
+        "degraded": 0,
+        "unconfigured": 0,
+        "unavailable": 0,
+        "notTested": 0,
+        "error": 0
+      }
+    }
   },
   {
     "name": "wide-05-mode-library",
     "file": "docs/screenshots/wide-05-mode-library.png",
     "note": "Library mode",
-    "captured": true
+    "captured": true,
+    "facts": {
+      "dialogOpen": false,
+      "watchOnboarding": false,
+      "selectedMode": "Library",
+      "settingsSection": null,
+      "providerMatch": false,
+      "providerIdMatch": false,
+      "modelMatch": true,
+      "stubReplyVisible": true,
+      "coreConnected": false,
+      "completedNotVerified": false,
+      "libraryIndexVisible": false,
+      "memoryLedgerVisible": false,
+      "compareBoundaryVisible": false,
+      "readiness": {
+        "summaryReady": null,
+        "summaryTotal": null,
+        "ready": 0,
+        "degraded": 0,
+        "unconfigured": 0,
+        "unavailable": 0,
+        "notTested": 0,
+        "error": 0
+      }
+    }
   },
   {
     "name": "wide-05-mode-compare",
     "file": "docs/screenshots/wide-05-mode-compare.png",
     "note": "Compare mode",
-    "captured": true
+    "captured": true,
+    "facts": {
+      "dialogOpen": false,
+      "watchOnboarding": false,
+      "selectedMode": "Compare",
+      "settingsSection": null,
+      "providerMatch": false,
+      "providerIdMatch": false,
+      "modelMatch": true,
+      "stubReplyVisible": true,
+      "coreConnected": false,
+      "completedNotVerified": false,
+      "libraryIndexVisible": false,
+      "memoryLedgerVisible": false,
+      "compareBoundaryVisible": true,
+      "readiness": {
+        "summaryReady": null,
+        "summaryTotal": null,
+        "ready": 0,
+        "degraded": 0,
+        "unconfigured": 0,
+        "unavailable": 0,
+        "notTested": 0,
+        "error": 0
+      }
+    }
   },
   {
     "name": "wide-06-settings-general",
     "file": "docs/screenshots/wide-06-settings-general.png",
     "note": "DSH General kept above the Watch sections",
-    "captured": true
+    "captured": true,
+    "facts": {
+      "dialogOpen": true,
+      "watchOnboarding": false,
+      "selectedMode": "Compare",
+      "settingsSection": "General",
+      "providerMatch": false,
+      "providerIdMatch": false,
+      "modelMatch": false,
+      "stubReplyVisible": false,
+      "coreConnected": false,
+      "completedNotVerified": false,
+      "libraryIndexVisible": false,
+      "memoryLedgerVisible": false,
+      "compareBoundaryVisible": false,
+      "readiness": {
+        "summaryReady": null,
+        "summaryTotal": null,
+        "ready": 0,
+        "degraded": 0,
+        "unconfigured": 0,
+        "unavailable": 0,
+        "notTested": 0,
+        "error": 0
+      }
+    }
+  },
+  {
+    "name": "wide-06-settings-models",
+    "file": "docs/screenshots/wide-06-settings-models.png",
+    "note": "upstream Models with the configured deterministic provider",
+    "captured": true,
+    "facts": {
+      "dialogOpen": true,
+      "watchOnboarding": false,
+      "selectedMode": "Compare",
+      "settingsSection": "Models",
+      "providerMatch": true,
+      "providerIdMatch": false,
+      "modelMatch": false,
+      "stubReplyVisible": false,
+      "coreConnected": false,
+      "completedNotVerified": false,
+      "libraryIndexVisible": false,
+      "memoryLedgerVisible": false,
+      "compareBoundaryVisible": false,
+      "readiness": {
+        "summaryReady": null,
+        "summaryTotal": null,
+        "ready": 0,
+        "degraded": 0,
+        "unconfigured": 0,
+        "unavailable": 0,
+        "notTested": 0,
+        "error": 0
+      }
+    }
   },
   {
     "name": "wide-07-settings-roles",
     "file": "docs/screenshots/wide-07-settings-roles.png",
     "note": "Role Bindings section",
-    "captured": true
+    "captured": true,
+    "facts": {
+      "dialogOpen": true,
+      "watchOnboarding": false,
+      "selectedMode": "Compare",
+      "settingsSection": "Role Bindings",
+      "providerMatch": true,
+      "providerIdMatch": false,
+      "modelMatch": true,
+      "stubReplyVisible": false,
+      "coreConnected": false,
+      "completedNotVerified": false,
+      "libraryIndexVisible": false,
+      "memoryLedgerVisible": false,
+      "compareBoundaryVisible": false,
+      "readiness": {
+        "summaryReady": null,
+        "summaryTotal": null,
+        "ready": 0,
+        "degraded": 0,
+        "unconfigured": 4,
+        "unavailable": 0,
+        "notTested": 0,
+        "error": 0
+      }
+    }
   },
   {
     "name": "wide-07-settings-engines",
     "file": "docs/screenshots/wide-07-settings-engines.png",
     "note": "Perception section",
-    "captured": true
+    "captured": true,
+    "facts": {
+      "dialogOpen": true,
+      "watchOnboarding": false,
+      "selectedMode": "Compare",
+      "settingsSection": "Perception",
+      "providerMatch": false,
+      "providerIdMatch": false,
+      "modelMatch": false,
+      "stubReplyVisible": false,
+      "coreConnected": false,
+      "completedNotVerified": false,
+      "libraryIndexVisible": false,
+      "memoryLedgerVisible": false,
+      "compareBoundaryVisible": false,
+      "readiness": {
+        "summaryReady": null,
+        "summaryTotal": null,
+        "ready": 0,
+        "degraded": 0,
+        "unconfigured": 0,
+        "unavailable": 0,
+        "notTested": 5,
+        "error": 0
+      }
+    }
   },
   {
     "name": "wide-07-settings-sources",
     "file": "docs/screenshots/wide-07-settings-sources.png",
     "note": "Sources section",
-    "captured": true
+    "captured": true,
+    "facts": {
+      "dialogOpen": true,
+      "watchOnboarding": false,
+      "selectedMode": "Compare",
+      "settingsSection": "Sources",
+      "providerMatch": false,
+      "providerIdMatch": false,
+      "modelMatch": false,
+      "stubReplyVisible": false,
+      "coreConnected": false,
+      "completedNotVerified": false,
+      "libraryIndexVisible": false,
+      "memoryLedgerVisible": false,
+      "compareBoundaryVisible": false,
+      "readiness": {
+        "summaryReady": null,
+        "summaryTotal": null,
+        "ready": 0,
+        "degraded": 0,
+        "unconfigured": 0,
+        "unavailable": 0,
+        "notTested": 0,
+        "error": 0
+      }
+    }
   },
   {
     "name": "wide-07-settings-memory-settings",
     "file": "docs/screenshots/wide-07-settings-memory-settings.png",
     "note": "Memory section",
-    "captured": true
+    "captured": true,
+    "facts": {
+      "dialogOpen": true,
+      "watchOnboarding": false,
+      "selectedMode": "Compare",
+      "settingsSection": "Memory",
+      "providerMatch": false,
+      "providerIdMatch": false,
+      "modelMatch": false,
+      "stubReplyVisible": false,
+      "coreConnected": false,
+      "completedNotVerified": false,
+      "libraryIndexVisible": false,
+      "memoryLedgerVisible": false,
+      "compareBoundaryVisible": false,
+      "readiness": {
+        "summaryReady": null,
+        "summaryTotal": null,
+        "ready": 0,
+        "degraded": 0,
+        "unconfigured": 0,
+        "unavailable": 0,
+        "notTested": 0,
+        "error": 0
+      }
+    }
   },
   {
     "name": "wide-07-settings-verification",
     "file": "docs/screenshots/wide-07-settings-verification.png",
     "note": "Verification section",
-    "captured": true
+    "captured": true,
+    "facts": {
+      "dialogOpen": true,
+      "watchOnboarding": false,
+      "selectedMode": "Compare",
+      "settingsSection": "Verification",
+      "providerMatch": false,
+      "providerIdMatch": false,
+      "modelMatch": false,
+      "stubReplyVisible": false,
+      "coreConnected": false,
+      "completedNotVerified": true,
+      "libraryIndexVisible": false,
+      "memoryLedgerVisible": false,
+      "compareBoundaryVisible": false,
+      "readiness": {
+        "summaryReady": null,
+        "summaryTotal": null,
+        "ready": 0,
+        "degraded": 0,
+        "unconfigured": 0,
+        "unavailable": 0,
+        "notTested": 0,
+        "error": 0
+      }
+    }
   },
   {
     "name": "wide-07-settings-diagnostics",
     "file": "docs/screenshots/wide-07-settings-diagnostics.png",
     "note": "Diagnostics section",
-    "captured": true
+    "captured": true,
+    "facts": {
+      "dialogOpen": true,
+      "watchOnboarding": false,
+      "selectedMode": "Compare",
+      "settingsSection": "Diagnostics",
+      "providerMatch": false,
+      "providerIdMatch": false,
+      "modelMatch": false,
+      "stubReplyVisible": false,
+      "coreConnected": true,
+      "completedNotVerified": false,
+      "libraryIndexVisible": false,
+      "memoryLedgerVisible": true,
+      "compareBoundaryVisible": false,
+      "readiness": {
+        "summaryReady": null,
+        "summaryTotal": null,
+        "ready": 1,
+        "degraded": 2,
+        "unconfigured": 6,
+        "unavailable": 0,
+        "notTested": 2,
+        "error": 0
+      }
+    }
   },
   {
     "name": "wide-07-settings-about",
     "file": "docs/screenshots/wide-07-settings-about.png",
     "note": "About section",
-    "captured": true
+    "captured": true,
+    "facts": {
+      "dialogOpen": true,
+      "watchOnboarding": false,
+      "selectedMode": "Compare",
+      "settingsSection": "About",
+      "providerMatch": false,
+      "providerIdMatch": false,
+      "modelMatch": false,
+      "stubReplyVisible": false,
+      "coreConnected": false,
+      "completedNotVerified": false,
+      "libraryIndexVisible": false,
+      "memoryLedgerVisible": false,
+      "compareBoundaryVisible": false,
+      "readiness": {
+        "summaryReady": null,
+        "summaryTotal": null,
+        "ready": 0,
+        "degraded": 0,
+        "unconfigured": 0,
+        "unavailable": 0,
+        "notTested": 0,
+        "error": 0
+      }
+    }
   },
   {
     "name": "wide-08-sidebar-collapsed",
     "file": "docs/screenshots/wide-08-sidebar-collapsed.png",
     "note": "the collapsed rail: mark visible, attribution not reflowed",
-    "captured": true
-  },
-  {
-    "name": "narrow-01-onboarding",
-    "file": null,
-    "note": "no first-run dialog: already dismissed in this profile",
-    "captured": false
+    "captured": true,
+    "facts": {
+      "dialogOpen": true,
+      "watchOnboarding": false,
+      "selectedMode": "Compare",
+      "settingsSection": "About",
+      "providerMatch": false,
+      "providerIdMatch": false,
+      "modelMatch": false,
+      "stubReplyVisible": false,
+      "coreConnected": false,
+      "completedNotVerified": false,
+      "libraryIndexVisible": false,
+      "memoryLedgerVisible": false,
+      "compareBoundaryVisible": false,
+      "readiness": {
+        "summaryReady": null,
+        "summaryTotal": null,
+        "ready": 0,
+        "degraded": 0,
+        "unconfigured": 0,
+        "unavailable": 0,
+        "notTested": 0,
+        "error": 0
+      }
+    }
   },
   {
     "name": "narrow-03-workspace",
     "file": "docs/screenshots/narrow-03-workspace.png",
     "note": "the workspace, entered without configuring any provider",
-    "captured": true
+    "captured": true,
+    "facts": {
+      "dialogOpen": false,
+      "watchOnboarding": false,
+      "selectedMode": null,
+      "settingsSection": null,
+      "providerMatch": false,
+      "providerIdMatch": false,
+      "modelMatch": false,
+      "stubReplyVisible": true,
+      "coreConnected": false,
+      "completedNotVerified": false,
+      "libraryIndexVisible": false,
+      "memoryLedgerVisible": false,
+      "compareBoundaryVisible": false,
+      "readiness": {
+        "summaryReady": null,
+        "summaryTotal": null,
+        "ready": 0,
+        "degraded": 0,
+        "unconfigured": 0,
+        "unavailable": 0,
+        "notTested": 0,
+        "error": 0
+      }
+    }
   },
   {
     "name": "narrow-05-mode-chat",
     "file": "docs/screenshots/narrow-05-mode-chat.png",
     "note": "Chat mode",
-    "captured": true
+    "captured": true,
+    "facts": {
+      "dialogOpen": false,
+      "watchOnboarding": false,
+      "selectedMode": "Chat",
+      "settingsSection": null,
+      "providerMatch": false,
+      "providerIdMatch": false,
+      "modelMatch": true,
+      "stubReplyVisible": true,
+      "coreConnected": false,
+      "completedNotVerified": false,
+      "libraryIndexVisible": false,
+      "memoryLedgerVisible": false,
+      "compareBoundaryVisible": false,
+      "readiness": {
+        "summaryReady": null,
+        "summaryTotal": null,
+        "ready": 0,
+        "degraded": 0,
+        "unconfigured": 0,
+        "unavailable": 0,
+        "notTested": 0,
+        "error": 0
+      }
+    }
   },
   {
     "name": "narrow-05-mode-trajectory",
     "file": "docs/screenshots/narrow-05-mode-trajectory.png",
     "note": "Trajectory mode",
-    "captured": true
+    "captured": true,
+    "facts": {
+      "dialogOpen": false,
+      "watchOnboarding": false,
+      "selectedMode": "Trajectory",
+      "settingsSection": null,
+      "providerMatch": false,
+      "providerIdMatch": false,
+      "modelMatch": true,
+      "stubReplyVisible": true,
+      "coreConnected": false,
+      "completedNotVerified": false,
+      "libraryIndexVisible": false,
+      "memoryLedgerVisible": false,
+      "compareBoundaryVisible": false,
+      "readiness": {
+        "summaryReady": null,
+        "summaryTotal": null,
+        "ready": 0,
+        "degraded": 0,
+        "unconfigured": 0,
+        "unavailable": 0,
+        "notTested": 0,
+        "error": 0
+      }
+    }
   },
   {
     "name": "narrow-05-mode-watch",
     "file": "docs/screenshots/narrow-05-mode-watch.png",
     "note": "Watch mode",
-    "captured": true
+    "captured": true,
+    "facts": {
+      "dialogOpen": false,
+      "watchOnboarding": false,
+      "selectedMode": "Watch",
+      "settingsSection": null,
+      "providerMatch": false,
+      "providerIdMatch": false,
+      "modelMatch": true,
+      "stubReplyVisible": true,
+      "coreConnected": false,
+      "completedNotVerified": true,
+      "libraryIndexVisible": false,
+      "memoryLedgerVisible": false,
+      "compareBoundaryVisible": false,
+      "readiness": {
+        "summaryReady": null,
+        "summaryTotal": null,
+        "ready": 0,
+        "degraded": 0,
+        "unconfigured": 0,
+        "unavailable": 0,
+        "notTested": 0,
+        "error": 0
+      }
+    }
   },
   {
     "name": "narrow-05-mode-live",
     "file": "docs/screenshots/narrow-05-mode-live.png",
     "note": "Live mode",
-    "captured": true
+    "captured": true,
+    "facts": {
+      "dialogOpen": false,
+      "watchOnboarding": false,
+      "selectedMode": "Live",
+      "settingsSection": null,
+      "providerMatch": false,
+      "providerIdMatch": false,
+      "modelMatch": true,
+      "stubReplyVisible": true,
+      "coreConnected": false,
+      "completedNotVerified": false,
+      "libraryIndexVisible": false,
+      "memoryLedgerVisible": false,
+      "compareBoundaryVisible": false,
+      "readiness": {
+        "summaryReady": null,
+        "summaryTotal": null,
+        "ready": 0,
+        "degraded": 0,
+        "unconfigured": 0,
+        "unavailable": 0,
+        "notTested": 0,
+        "error": 0
+      }
+    }
   },
   {
     "name": "narrow-05-mode-memory",
     "file": "docs/screenshots/narrow-05-mode-memory.png",
     "note": "Memory mode",
-    "captured": true
+    "captured": true,
+    "facts": {
+      "dialogOpen": false,
+      "watchOnboarding": false,
+      "selectedMode": "Memory",
+      "settingsSection": "Memory",
+      "providerMatch": false,
+      "providerIdMatch": false,
+      "modelMatch": true,
+      "stubReplyVisible": true,
+      "coreConnected": false,
+      "completedNotVerified": false,
+      "libraryIndexVisible": false,
+      "memoryLedgerVisible": false,
+      "compareBoundaryVisible": false,
+      "readiness": {
+        "summaryReady": null,
+        "summaryTotal": null,
+        "ready": 0,
+        "degraded": 0,
+        "unconfigured": 0,
+        "unavailable": 0,
+        "notTested": 0,
+        "error": 0
+      }
+    }
   },
   {
     "name": "narrow-05-mode-library",
     "file": "docs/screenshots/narrow-05-mode-library.png",
     "note": "Library mode",
-    "captured": true
+    "captured": true,
+    "facts": {
+      "dialogOpen": false,
+      "watchOnboarding": false,
+      "selectedMode": "Library",
+      "settingsSection": null,
+      "providerMatch": false,
+      "providerIdMatch": false,
+      "modelMatch": true,
+      "stubReplyVisible": true,
+      "coreConnected": false,
+      "completedNotVerified": false,
+      "libraryIndexVisible": false,
+      "memoryLedgerVisible": false,
+      "compareBoundaryVisible": false,
+      "readiness": {
+        "summaryReady": null,
+        "summaryTotal": null,
+        "ready": 0,
+        "degraded": 0,
+        "unconfigured": 0,
+        "unavailable": 0,
+        "notTested": 0,
+        "error": 0
+      }
+    }
   },
   {
     "name": "narrow-05-mode-compare",
     "file": "docs/screenshots/narrow-05-mode-compare.png",
     "note": "Compare mode",
-    "captured": true
+    "captured": true,
+    "facts": {
+      "dialogOpen": false,
+      "watchOnboarding": false,
+      "selectedMode": "Compare",
+      "settingsSection": null,
+      "providerMatch": false,
+      "providerIdMatch": false,
+      "modelMatch": true,
+      "stubReplyVisible": true,
+      "coreConnected": false,
+      "completedNotVerified": false,
+      "libraryIndexVisible": false,
+      "memoryLedgerVisible": false,
+      "compareBoundaryVisible": true,
+      "readiness": {
+        "summaryReady": null,
+        "summaryTotal": null,
+        "ready": 0,
+        "degraded": 0,
+        "unconfigured": 0,
+        "unavailable": 0,
+        "notTested": 0,
+        "error": 0
+      }
+    }
   },
   {
     "name": "narrow-06-settings-general",
     "file": "docs/screenshots/narrow-06-settings-general.png",
     "note": "DSH General kept above the Watch sections",
-    "captured": true
+    "captured": true,
+    "facts": {
+      "dialogOpen": true,
+      "watchOnboarding": false,
+      "selectedMode": "Compare",
+      "settingsSection": "General",
+      "providerMatch": false,
+      "providerIdMatch": false,
+      "modelMatch": false,
+      "stubReplyVisible": false,
+      "coreConnected": false,
+      "completedNotVerified": false,
+      "libraryIndexVisible": false,
+      "memoryLedgerVisible": false,
+      "compareBoundaryVisible": false,
+      "readiness": {
+        "summaryReady": null,
+        "summaryTotal": null,
+        "ready": 0,
+        "degraded": 0,
+        "unconfigured": 0,
+        "unavailable": 0,
+        "notTested": 0,
+        "error": 0
+      }
+    }
+  },
+  {
+    "name": "narrow-06-settings-models",
+    "file": "docs/screenshots/narrow-06-settings-models.png",
+    "note": "upstream Models with the configured deterministic provider",
+    "captured": true,
+    "facts": {
+      "dialogOpen": true,
+      "watchOnboarding": false,
+      "selectedMode": "Compare",
+      "settingsSection": "Models",
+      "providerMatch": true,
+      "providerIdMatch": false,
+      "modelMatch": false,
+      "stubReplyVisible": false,
+      "coreConnected": false,
+      "completedNotVerified": false,
+      "libraryIndexVisible": false,
+      "memoryLedgerVisible": false,
+      "compareBoundaryVisible": false,
+      "readiness": {
+        "summaryReady": null,
+        "summaryTotal": null,
+        "ready": 0,
+        "degraded": 0,
+        "unconfigured": 0,
+        "unavailable": 0,
+        "notTested": 0,
+        "error": 0
+      }
+    }
   },
   {
     "name": "narrow-07-settings-roles",
     "file": "docs/screenshots/narrow-07-settings-roles.png",
     "note": "Role Bindings section",
-    "captured": true
+    "captured": true,
+    "facts": {
+      "dialogOpen": true,
+      "watchOnboarding": false,
+      "selectedMode": "Compare",
+      "settingsSection": "Role Bindings",
+      "providerMatch": true,
+      "providerIdMatch": false,
+      "modelMatch": true,
+      "stubReplyVisible": false,
+      "coreConnected": false,
+      "completedNotVerified": false,
+      "libraryIndexVisible": false,
+      "memoryLedgerVisible": false,
+      "compareBoundaryVisible": false,
+      "readiness": {
+        "summaryReady": null,
+        "summaryTotal": null,
+        "ready": 0,
+        "degraded": 0,
+        "unconfigured": 4,
+        "unavailable": 0,
+        "notTested": 0,
+        "error": 0
+      }
+    }
   },
   {
     "name": "narrow-07-settings-engines",
     "file": "docs/screenshots/narrow-07-settings-engines.png",
     "note": "Perception section",
-    "captured": true
+    "captured": true,
+    "facts": {
+      "dialogOpen": true,
+      "watchOnboarding": false,
+      "selectedMode": "Compare",
+      "settingsSection": "Perception",
+      "providerMatch": false,
+      "providerIdMatch": false,
+      "modelMatch": false,
+      "stubReplyVisible": false,
+      "coreConnected": false,
+      "completedNotVerified": false,
+      "libraryIndexVisible": false,
+      "memoryLedgerVisible": false,
+      "compareBoundaryVisible": false,
+      "readiness": {
+        "summaryReady": null,
+        "summaryTotal": null,
+        "ready": 0,
+        "degraded": 0,
+        "unconfigured": 0,
+        "unavailable": 0,
+        "notTested": 5,
+        "error": 0
+      }
+    }
   },
   {
     "name": "narrow-07-settings-sources",
     "file": "docs/screenshots/narrow-07-settings-sources.png",
     "note": "Sources section",
-    "captured": true
+    "captured": true,
+    "facts": {
+      "dialogOpen": true,
+      "watchOnboarding": false,
+      "selectedMode": "Compare",
+      "settingsSection": "Sources",
+      "providerMatch": false,
+      "providerIdMatch": false,
+      "modelMatch": false,
+      "stubReplyVisible": false,
+      "coreConnected": false,
+      "completedNotVerified": false,
+      "libraryIndexVisible": false,
+      "memoryLedgerVisible": false,
+      "compareBoundaryVisible": false,
+      "readiness": {
+        "summaryReady": null,
+        "summaryTotal": null,
+        "ready": 0,
+        "degraded": 0,
+        "unconfigured": 0,
+        "unavailable": 0,
+        "notTested": 0,
+        "error": 0
+      }
+    }
   },
   {
     "name": "narrow-07-settings-memory-settings",
     "file": "docs/screenshots/narrow-07-settings-memory-settings.png",
     "note": "Memory section",
-    "captured": true
+    "captured": true,
+    "facts": {
+      "dialogOpen": true,
+      "watchOnboarding": false,
+      "selectedMode": "Compare",
+      "settingsSection": "Memory",
+      "providerMatch": false,
+      "providerIdMatch": false,
+      "modelMatch": false,
+      "stubReplyVisible": false,
+      "coreConnected": false,
+      "completedNotVerified": false,
+      "libraryIndexVisible": false,
+      "memoryLedgerVisible": false,
+      "compareBoundaryVisible": false,
+      "readiness": {
+        "summaryReady": null,
+        "summaryTotal": null,
+        "ready": 0,
+        "degraded": 0,
+        "unconfigured": 0,
+        "unavailable": 0,
+        "notTested": 0,
+        "error": 0
+      }
+    }
   },
   {
     "name": "narrow-07-settings-verification",
     "file": "docs/screenshots/narrow-07-settings-verification.png",
     "note": "Verification section",
-    "captured": true
+    "captured": true,
+    "facts": {
+      "dialogOpen": true,
+      "watchOnboarding": false,
+      "selectedMode": "Compare",
+      "settingsSection": "Verification",
+      "providerMatch": false,
+      "providerIdMatch": false,
+      "modelMatch": false,
+      "stubReplyVisible": false,
+      "coreConnected": false,
+      "completedNotVerified": true,
+      "libraryIndexVisible": false,
+      "memoryLedgerVisible": false,
+      "compareBoundaryVisible": false,
+      "readiness": {
+        "summaryReady": null,
+        "summaryTotal": null,
+        "ready": 0,
+        "degraded": 0,
+        "unconfigured": 0,
+        "unavailable": 0,
+        "notTested": 0,
+        "error": 0
+      }
+    }
   },
   {
     "name": "narrow-07-settings-diagnostics",
     "file": "docs/screenshots/narrow-07-settings-diagnostics.png",
     "note": "Diagnostics section",
-    "captured": true
+    "captured": true,
+    "facts": {
+      "dialogOpen": true,
+      "watchOnboarding": false,
+      "selectedMode": "Compare",
+      "settingsSection": "Diagnostics",
+      "providerMatch": false,
+      "providerIdMatch": false,
+      "modelMatch": false,
+      "stubReplyVisible": false,
+      "coreConnected": true,
+      "completedNotVerified": false,
+      "libraryIndexVisible": false,
+      "memoryLedgerVisible": true,
+      "compareBoundaryVisible": false,
+      "readiness": {
+        "summaryReady": null,
+        "summaryTotal": null,
+        "ready": 1,
+        "degraded": 2,
+        "unconfigured": 6,
+        "unavailable": 0,
+        "notTested": 2,
+        "error": 0
+      }
+    }
   },
   {
     "name": "narrow-07-settings-about",
     "file": "docs/screenshots/narrow-07-settings-about.png",
     "note": "About section",
-    "captured": true
+    "captured": true,
+    "facts": {
+      "dialogOpen": true,
+      "watchOnboarding": false,
+      "selectedMode": "Compare",
+      "settingsSection": "About",
+      "providerMatch": false,
+      "providerIdMatch": false,
+      "modelMatch": false,
+      "stubReplyVisible": false,
+      "coreConnected": false,
+      "completedNotVerified": false,
+      "libraryIndexVisible": false,
+      "memoryLedgerVisible": false,
+      "compareBoundaryVisible": false,
+      "readiness": {
+        "summaryReady": null,
+        "summaryTotal": null,
+        "ready": 0,
+        "degraded": 0,
+        "unconfigured": 0,
+        "unavailable": 0,
+        "notTested": 0,
+        "error": 0
+      }
+    }
   },
   {
     "name": "narrow-08-sidebar-collapsed",
     "file": "docs/screenshots/narrow-08-sidebar-collapsed.png",
     "note": "the collapsed rail: mark visible, attribution not reflowed",
-    "captured": true
+    "captured": true,
+    "facts": {
+      "dialogOpen": true,
+      "watchOnboarding": false,
+      "selectedMode": "Compare",
+      "settingsSection": "About",
+      "providerMatch": false,
+      "providerIdMatch": false,
+      "modelMatch": false,
+      "stubReplyVisible": false,
+      "coreConnected": false,
+      "completedNotVerified": false,
+      "libraryIndexVisible": false,
+      "memoryLedgerVisible": false,
+      "compareBoundaryVisible": false,
+      "readiness": {
+        "summaryReady": null,
+        "summaryTotal": null,
+        "ready": 0,
+        "degraded": 0,
+        "unconfigured": 0,
+        "unavailable": 0,
+        "notTested": 0,
+        "error": 0
+      }
+    }
+  },
+  {
+    "name": "compact-03-workspace",
+    "file": "docs/screenshots/compact-03-workspace.png",
+    "note": "the workspace, entered without configuring any provider",
+    "captured": true,
+    "facts": {
+      "dialogOpen": false,
+      "watchOnboarding": false,
+      "selectedMode": null,
+      "settingsSection": null,
+      "providerMatch": false,
+      "providerIdMatch": false,
+      "modelMatch": false,
+      "stubReplyVisible": true,
+      "coreConnected": false,
+      "completedNotVerified": false,
+      "libraryIndexVisible": false,
+      "memoryLedgerVisible": false,
+      "compareBoundaryVisible": false,
+      "readiness": {
+        "summaryReady": null,
+        "summaryTotal": null,
+        "ready": 0,
+        "degraded": 0,
+        "unconfigured": 0,
+        "unavailable": 0,
+        "notTested": 0,
+        "error": 0
+      }
+    }
+  },
+  {
+    "name": "compact-05-mode-chat",
+    "file": "docs/screenshots/compact-05-mode-chat.png",
+    "note": "Chat mode",
+    "captured": true,
+    "facts": {
+      "dialogOpen": false,
+      "watchOnboarding": false,
+      "selectedMode": "Chat",
+      "settingsSection": null,
+      "providerMatch": false,
+      "providerIdMatch": false,
+      "modelMatch": true,
+      "stubReplyVisible": true,
+      "coreConnected": false,
+      "completedNotVerified": false,
+      "libraryIndexVisible": false,
+      "memoryLedgerVisible": false,
+      "compareBoundaryVisible": false,
+      "readiness": {
+        "summaryReady": null,
+        "summaryTotal": null,
+        "ready": 0,
+        "degraded": 0,
+        "unconfigured": 0,
+        "unavailable": 0,
+        "notTested": 0,
+        "error": 0
+      }
+    }
+  },
+  {
+    "name": "compact-05-mode-trajectory",
+    "file": "docs/screenshots/compact-05-mode-trajectory.png",
+    "note": "Trajectory mode",
+    "captured": true,
+    "facts": {
+      "dialogOpen": false,
+      "watchOnboarding": false,
+      "selectedMode": "Trajectory",
+      "settingsSection": null,
+      "providerMatch": false,
+      "providerIdMatch": false,
+      "modelMatch": true,
+      "stubReplyVisible": true,
+      "coreConnected": false,
+      "completedNotVerified": false,
+      "libraryIndexVisible": false,
+      "memoryLedgerVisible": false,
+      "compareBoundaryVisible": false,
+      "readiness": {
+        "summaryReady": null,
+        "summaryTotal": null,
+        "ready": 0,
+        "degraded": 0,
+        "unconfigured": 0,
+        "unavailable": 0,
+        "notTested": 0,
+        "error": 0
+      }
+    }
+  },
+  {
+    "name": "compact-05-mode-watch",
+    "file": "docs/screenshots/compact-05-mode-watch.png",
+    "note": "Watch mode",
+    "captured": true,
+    "facts": {
+      "dialogOpen": false,
+      "watchOnboarding": false,
+      "selectedMode": "Watch",
+      "settingsSection": null,
+      "providerMatch": false,
+      "providerIdMatch": false,
+      "modelMatch": true,
+      "stubReplyVisible": true,
+      "coreConnected": false,
+      "completedNotVerified": true,
+      "libraryIndexVisible": false,
+      "memoryLedgerVisible": false,
+      "compareBoundaryVisible": false,
+      "readiness": {
+        "summaryReady": null,
+        "summaryTotal": null,
+        "ready": 0,
+        "degraded": 0,
+        "unconfigured": 0,
+        "unavailable": 0,
+        "notTested": 0,
+        "error": 0
+      }
+    }
+  },
+  {
+    "name": "compact-05-mode-live",
+    "file": "docs/screenshots/compact-05-mode-live.png",
+    "note": "Live mode",
+    "captured": true,
+    "facts": {
+      "dialogOpen": false,
+      "watchOnboarding": false,
+      "selectedMode": "Live",
+      "settingsSection": null,
+      "providerMatch": false,
+      "providerIdMatch": false,
+      "modelMatch": true,
+      "stubReplyVisible": true,
+      "coreConnected": false,
+      "completedNotVerified": false,
+      "libraryIndexVisible": false,
+      "memoryLedgerVisible": false,
+      "compareBoundaryVisible": false,
+      "readiness": {
+        "summaryReady": null,
+        "summaryTotal": null,
+        "ready": 0,
+        "degraded": 0,
+        "unconfigured": 0,
+        "unavailable": 0,
+        "notTested": 0,
+        "error": 0
+      }
+    }
+  },
+  {
+    "name": "compact-05-mode-memory",
+    "file": "docs/screenshots/compact-05-mode-memory.png",
+    "note": "Memory mode",
+    "captured": true,
+    "facts": {
+      "dialogOpen": false,
+      "watchOnboarding": false,
+      "selectedMode": "Memory",
+      "settingsSection": "Memory",
+      "providerMatch": false,
+      "providerIdMatch": false,
+      "modelMatch": true,
+      "stubReplyVisible": true,
+      "coreConnected": false,
+      "completedNotVerified": false,
+      "libraryIndexVisible": false,
+      "memoryLedgerVisible": false,
+      "compareBoundaryVisible": false,
+      "readiness": {
+        "summaryReady": null,
+        "summaryTotal": null,
+        "ready": 0,
+        "degraded": 0,
+        "unconfigured": 0,
+        "unavailable": 0,
+        "notTested": 0,
+        "error": 0
+      }
+    }
+  },
+  {
+    "name": "compact-05-mode-library",
+    "file": "docs/screenshots/compact-05-mode-library.png",
+    "note": "Library mode",
+    "captured": true,
+    "facts": {
+      "dialogOpen": false,
+      "watchOnboarding": false,
+      "selectedMode": "Library",
+      "settingsSection": null,
+      "providerMatch": false,
+      "providerIdMatch": false,
+      "modelMatch": true,
+      "stubReplyVisible": true,
+      "coreConnected": false,
+      "completedNotVerified": false,
+      "libraryIndexVisible": false,
+      "memoryLedgerVisible": false,
+      "compareBoundaryVisible": false,
+      "readiness": {
+        "summaryReady": null,
+        "summaryTotal": null,
+        "ready": 0,
+        "degraded": 0,
+        "unconfigured": 0,
+        "unavailable": 0,
+        "notTested": 0,
+        "error": 0
+      }
+    }
+  },
+  {
+    "name": "compact-05-mode-compare",
+    "file": "docs/screenshots/compact-05-mode-compare.png",
+    "note": "Compare mode",
+    "captured": true,
+    "facts": {
+      "dialogOpen": false,
+      "watchOnboarding": false,
+      "selectedMode": "Compare",
+      "settingsSection": null,
+      "providerMatch": false,
+      "providerIdMatch": false,
+      "modelMatch": true,
+      "stubReplyVisible": true,
+      "coreConnected": false,
+      "completedNotVerified": false,
+      "libraryIndexVisible": false,
+      "memoryLedgerVisible": false,
+      "compareBoundaryVisible": true,
+      "readiness": {
+        "summaryReady": null,
+        "summaryTotal": null,
+        "ready": 0,
+        "degraded": 0,
+        "unconfigured": 0,
+        "unavailable": 0,
+        "notTested": 0,
+        "error": 0
+      }
+    }
+  },
+  {
+    "name": "compact-06-settings-general",
+    "file": "docs/screenshots/compact-06-settings-general.png",
+    "note": "DSH General kept above the Watch sections",
+    "captured": true,
+    "facts": {
+      "dialogOpen": true,
+      "watchOnboarding": false,
+      "selectedMode": "Compare",
+      "settingsSection": "General",
+      "providerMatch": false,
+      "providerIdMatch": false,
+      "modelMatch": false,
+      "stubReplyVisible": false,
+      "coreConnected": false,
+      "completedNotVerified": false,
+      "libraryIndexVisible": false,
+      "memoryLedgerVisible": false,
+      "compareBoundaryVisible": false,
+      "readiness": {
+        "summaryReady": null,
+        "summaryTotal": null,
+        "ready": 0,
+        "degraded": 0,
+        "unconfigured": 0,
+        "unavailable": 0,
+        "notTested": 0,
+        "error": 0
+      }
+    }
+  },
+  {
+    "name": "compact-06-settings-models",
+    "file": "docs/screenshots/compact-06-settings-models.png",
+    "note": "upstream Models with the configured deterministic provider",
+    "captured": true,
+    "facts": {
+      "dialogOpen": true,
+      "watchOnboarding": false,
+      "selectedMode": "Compare",
+      "settingsSection": "Models",
+      "providerMatch": true,
+      "providerIdMatch": false,
+      "modelMatch": false,
+      "stubReplyVisible": false,
+      "coreConnected": false,
+      "completedNotVerified": false,
+      "libraryIndexVisible": false,
+      "memoryLedgerVisible": false,
+      "compareBoundaryVisible": false,
+      "readiness": {
+        "summaryReady": null,
+        "summaryTotal": null,
+        "ready": 0,
+        "degraded": 0,
+        "unconfigured": 0,
+        "unavailable": 0,
+        "notTested": 0,
+        "error": 0
+      }
+    }
+  },
+  {
+    "name": "compact-07-settings-roles",
+    "file": "docs/screenshots/compact-07-settings-roles.png",
+    "note": "Role Bindings section",
+    "captured": true,
+    "facts": {
+      "dialogOpen": true,
+      "watchOnboarding": false,
+      "selectedMode": "Compare",
+      "settingsSection": "Role Bindings",
+      "providerMatch": true,
+      "providerIdMatch": false,
+      "modelMatch": true,
+      "stubReplyVisible": false,
+      "coreConnected": false,
+      "completedNotVerified": false,
+      "libraryIndexVisible": false,
+      "memoryLedgerVisible": false,
+      "compareBoundaryVisible": false,
+      "readiness": {
+        "summaryReady": null,
+        "summaryTotal": null,
+        "ready": 0,
+        "degraded": 0,
+        "unconfigured": 4,
+        "unavailable": 0,
+        "notTested": 0,
+        "error": 0
+      }
+    }
+  },
+  {
+    "name": "compact-07-settings-engines",
+    "file": "docs/screenshots/compact-07-settings-engines.png",
+    "note": "Perception section",
+    "captured": true,
+    "facts": {
+      "dialogOpen": true,
+      "watchOnboarding": false,
+      "selectedMode": "Compare",
+      "settingsSection": "Perception",
+      "providerMatch": false,
+      "providerIdMatch": false,
+      "modelMatch": false,
+      "stubReplyVisible": false,
+      "coreConnected": false,
+      "completedNotVerified": false,
+      "libraryIndexVisible": false,
+      "memoryLedgerVisible": false,
+      "compareBoundaryVisible": false,
+      "readiness": {
+        "summaryReady": null,
+        "summaryTotal": null,
+        "ready": 0,
+        "degraded": 0,
+        "unconfigured": 0,
+        "unavailable": 0,
+        "notTested": 5,
+        "error": 0
+      }
+    }
+  },
+  {
+    "name": "compact-07-settings-sources",
+    "file": "docs/screenshots/compact-07-settings-sources.png",
+    "note": "Sources section",
+    "captured": true,
+    "facts": {
+      "dialogOpen": true,
+      "watchOnboarding": false,
+      "selectedMode": "Compare",
+      "settingsSection": "Sources",
+      "providerMatch": false,
+      "providerIdMatch": false,
+      "modelMatch": false,
+      "stubReplyVisible": false,
+      "coreConnected": false,
+      "completedNotVerified": false,
+      "libraryIndexVisible": false,
+      "memoryLedgerVisible": false,
+      "compareBoundaryVisible": false,
+      "readiness": {
+        "summaryReady": null,
+        "summaryTotal": null,
+        "ready": 0,
+        "degraded": 0,
+        "unconfigured": 0,
+        "unavailable": 0,
+        "notTested": 0,
+        "error": 0
+      }
+    }
+  },
+  {
+    "name": "compact-07-settings-memory-settings",
+    "file": "docs/screenshots/compact-07-settings-memory-settings.png",
+    "note": "Memory section",
+    "captured": true,
+    "facts": {
+      "dialogOpen": true,
+      "watchOnboarding": false,
+      "selectedMode": "Compare",
+      "settingsSection": "Memory",
+      "providerMatch": false,
+      "providerIdMatch": false,
+      "modelMatch": false,
+      "stubReplyVisible": false,
+      "coreConnected": false,
+      "completedNotVerified": false,
+      "libraryIndexVisible": false,
+      "memoryLedgerVisible": false,
+      "compareBoundaryVisible": false,
+      "readiness": {
+        "summaryReady": null,
+        "summaryTotal": null,
+        "ready": 0,
+        "degraded": 0,
+        "unconfigured": 0,
+        "unavailable": 0,
+        "notTested": 0,
+        "error": 0
+      }
+    }
+  },
+  {
+    "name": "compact-07-settings-verification",
+    "file": "docs/screenshots/compact-07-settings-verification.png",
+    "note": "Verification section",
+    "captured": true,
+    "facts": {
+      "dialogOpen": true,
+      "watchOnboarding": false,
+      "selectedMode": "Compare",
+      "settingsSection": "Verification",
+      "providerMatch": false,
+      "providerIdMatch": false,
+      "modelMatch": false,
+      "stubReplyVisible": false,
+      "coreConnected": false,
+      "completedNotVerified": true,
+      "libraryIndexVisible": false,
+      "memoryLedgerVisible": false,
+      "compareBoundaryVisible": false,
+      "readiness": {
+        "summaryReady": null,
+        "summaryTotal": null,
+        "ready": 0,
+        "degraded": 0,
+        "unconfigured": 0,
+        "unavailable": 0,
+        "notTested": 0,
+        "error": 0
+      }
+    }
+  },
+  {
+    "name": "compact-07-settings-diagnostics",
+    "file": "docs/screenshots/compact-07-settings-diagnostics.png",
+    "note": "Diagnostics section",
+    "captured": true,
+    "facts": {
+      "dialogOpen": true,
+      "watchOnboarding": false,
+      "selectedMode": "Compare",
+      "settingsSection": "Diagnostics",
+      "providerMatch": false,
+      "providerIdMatch": false,
+      "modelMatch": false,
+      "stubReplyVisible": false,
+      "coreConnected": true,
+      "completedNotVerified": false,
+      "libraryIndexVisible": false,
+      "memoryLedgerVisible": true,
+      "compareBoundaryVisible": false,
+      "readiness": {
+        "summaryReady": null,
+        "summaryTotal": null,
+        "ready": 1,
+        "degraded": 2,
+        "unconfigured": 6,
+        "unavailable": 0,
+        "notTested": 2,
+        "error": 0
+      }
+    }
+  },
+  {
+    "name": "compact-07-settings-about",
+    "file": "docs/screenshots/compact-07-settings-about.png",
+    "note": "About section",
+    "captured": true,
+    "facts": {
+      "dialogOpen": true,
+      "watchOnboarding": false,
+      "selectedMode": "Compare",
+      "settingsSection": "About",
+      "providerMatch": false,
+      "providerIdMatch": false,
+      "modelMatch": false,
+      "stubReplyVisible": false,
+      "coreConnected": false,
+      "completedNotVerified": false,
+      "libraryIndexVisible": false,
+      "memoryLedgerVisible": false,
+      "compareBoundaryVisible": false,
+      "readiness": {
+        "summaryReady": null,
+        "summaryTotal": null,
+        "ready": 0,
+        "degraded": 0,
+        "unconfigured": 0,
+        "unavailable": 0,
+        "notTested": 0,
+        "error": 0
+      }
+    }
+  },
+  {
+    "name": "compact-08-sidebar-collapsed",
+    "file": "docs/screenshots/compact-08-sidebar-collapsed.png",
+    "note": "the collapsed rail: mark visible, attribution not reflowed",
+    "captured": true,
+    "facts": {
+      "dialogOpen": true,
+      "watchOnboarding": false,
+      "selectedMode": "Compare",
+      "settingsSection": "About",
+      "providerMatch": false,
+      "providerIdMatch": false,
+      "modelMatch": false,
+      "stubReplyVisible": false,
+      "coreConnected": false,
+      "completedNotVerified": false,
+      "libraryIndexVisible": false,
+      "memoryLedgerVisible": false,
+      "compareBoundaryVisible": false,
+      "readiness": {
+        "summaryReady": null,
+        "summaryTotal": null,
+        "ready": 0,
+        "degraded": 0,
+        "unconfigured": 0,
+        "unavailable": 0,
+        "notTested": 0,
+        "error": 0
+      }
+    }
   }
 ]
