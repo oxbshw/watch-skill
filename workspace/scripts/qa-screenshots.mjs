@@ -23,10 +23,14 @@
 
 import { app, BrowserWindow } from 'electron'
 
-// See `qa-e2e.mjs`: a hosted Linux runner has no usable setuid sandbox helper,
-// and Electron exits rather than starting without one.
+// Chromium aborts at startup on a hosted Linux runner: its setuid sandbox
+// helper ships without the ownership and mode it requires, and it refuses to
+// run unsandboxed rather than quietly weakening itself. That decision is made
+// before this module is evaluated, so a switch appended here is too late for
+// it — the launcher passes `--no-sandbox` on the command line instead. What
+// remains here is the one that does apply from the main process: a hosted
+// container's /dev/shm is 64MB, which Chromium exhausts and then crashes.
 if (process.platform === 'linux') {
-  app.commandLine.appendSwitch('no-sandbox')
   app.commandLine.appendSwitch('disable-dev-shm-usage')
 }
 import { writeFileSync, mkdirSync, appendFileSync, rmSync, readFileSync, existsSync } from 'node:fs'

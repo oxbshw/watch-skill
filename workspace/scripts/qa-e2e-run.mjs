@@ -162,10 +162,25 @@ function endElectron(child) {
   }
 }
 
+/**
+ * Electron's own options, ahead of the entry it is being asked to run.
+ *
+ * `--no-sandbox` on Linux, and only there. A hosted runner ships Chromium's
+ * setuid helper without the ownership and mode it requires, and Chromium
+ * aborts at startup rather than run unsandboxed: "The SUID sandbox helper
+ * binary was found, but is not configured correctly." That happens before the
+ * app's main module is evaluated, so it cannot be asked for from inside. This
+ * pass renders a loopback page it built itself, in a throwaway container, so
+ * there is nothing here for the sandbox to be protecting.
+ */
+function electronOptions() {
+  return process.platform === 'linux' ? ['--no-sandbox'] : []
+}
+
 /** Run Electron without blocking the loopback stub's event loop. */
 function runElectron(command, args, options) {
   return new Promise((resolveRun) => {
-    const child = spawn(command, args, {
+    const child = spawn(command, [...electronOptions(), ...args], {
       ...options,
       stdio: ['ignore', 'pipe', 'pipe'],
       ...process.platform === 'win32' ? {} : { detached: true },
