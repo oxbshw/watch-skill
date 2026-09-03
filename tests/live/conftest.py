@@ -40,7 +40,8 @@ def stop_live_sessions():
 
 
 def _draw_frames(out_dir: Path, halves: list[tuple[str, str]], seconds: float,
-                 fps: int, size: tuple[int, int]) -> None:
+                 fps: int, size: tuple[int, int],
+                 tail_seconds: float | None = None) -> None:
     """Render the frame sequence with Pillow.
 
     Not ffmpeg's ``drawtext``: it needs a font file, and this machine's build
@@ -52,8 +53,10 @@ def _draw_frames(out_dir: Path, halves: list[tuple[str, str]], seconds: float,
 
     font = ImageFont.load_default(size=110)
     index = 0
-    for colour, text in halves:
-        for _ in range(int(seconds * fps)):
+    for position, (colour, text) in enumerate(halves):
+        last = position == len(halves) - 1
+        span = tail_seconds if (last and tail_seconds is not None) else seconds
+        for _ in range(int(span * fps)):
             index += 1
             image = Image.new("RGB", size, colour)
             draw = ImageDraw.Draw(image)
@@ -109,13 +112,24 @@ def audiovisual_clip(tmp_path_factory: pytest.TempPathFactory) -> Path:
 
 @pytest.fixture(scope="session")
 def state_change_clip(tmp_path_factory: pytest.TempPathFactory) -> Path:
-    """A 14 s clip that says READY for 7 s, then ERROR 502 for 7 s.
+    """READY for 7 s, then ERROR 502 for 20 s.
 
     Two halves with different colours AND different text, so both the scene
     detector and the OCR detector have something unambiguous to find. The
-    change sits in the middle, leaving seven seconds of stream after it — the
-    margin that lets a test distinguish "reported while playing" from
-    "reported once the file was fully read" on a loaded machine.
+    change sits at seven seconds, and everything after it is margin: the test
+    it serves distinguishes "reported while playing" from "reported once the
+    file was fully read", and it can only do that while the source is still
+    playing when the report arrives.
+
+    Seven seconds of margin was not enough. A loaded Windows runner reported
+    the change at 13.5 s — correctly, and after the source had finished — and
+    the test read that as batch processing. Twenty seconds is chosen for the
+    slow machine rather than the fast one.
+
+    Lengthening the tail cannot make a batch pipeline pass. A pipeline that
+    ingests the whole file before reporting still reports after the source
+    ends, whatever the file's length; the margin only removes the case where a
+    genuinely streaming pipeline is too far behind to be observed streaming.
     """
     pytest.importorskip("PIL", reason="Pillow renders the fixture's on-screen text")
     out_dir = tmp_path_factory.mktemp("live clips")
@@ -123,7 +137,7 @@ def state_change_clip(tmp_path_factory: pytest.TempPathFactory) -> Path:
     frames_dir.mkdir()
     fps = 10
     _draw_frames(frames_dir, [("darkgreen", "READY"), ("darkred", "ERROR 502")],
-                 seconds=7.0, fps=fps, size=(640, 360))
+                 seconds=7.0, fps=fps, size=(640, 360), tail_seconds=20.0)
 
     combined = out_dir / "state change.mp4"
     subprocess.run(
