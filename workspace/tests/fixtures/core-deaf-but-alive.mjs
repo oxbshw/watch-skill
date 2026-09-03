@@ -1,12 +1,16 @@
 /**
- * A Watch Core that closes its stdin and then keeps running.
+ * A Watch Core that stops listening and then keeps running.
  *
- * The counterfactual for the wait a broken pipe now does: a write that fails
- * because the child is gone can ask the child's exit why, but a write that
- * fails because the child stopped listening is owed no exit at all. This
- * fixture never provides one, so the bound on that wait is the only thing that
- * ends it — and if the bound were removed, the request here would sit until its
- * deadline instead of failing in well under a second.
+ * An engine that has gone silent owes no exit, so nothing can wait for one:
+ * whatever ends a connect against this has to end it without a verdict, and
+ * has to end it at all. That is the property the test using this asserts, and
+ * it holds however the ending is reached.
+ *
+ * Measured, not assumed: destroying stdin in a Node child has not reached the
+ * writer on any platform tested, so in practice the Host's frame lands in a
+ * buffer nobody reads and the startup budget settles it rather than a broken
+ * pipe. The fixture is kept as the silent-engine case, and the test names both
+ * endings so a change in that behaviour is visible rather than silent.
  */
 process.stdin.destroy()
 // Stay alive, and stay silent. The timer is the process's only reason to live.

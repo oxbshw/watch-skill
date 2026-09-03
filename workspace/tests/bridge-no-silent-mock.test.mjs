@@ -124,12 +124,18 @@ describe('an engine present but without the Bridge surface', () => {
   })
 
   test('the diagnosis survives a pipe that breaks before the exit lands', async () => {
-    // The ordering above, pinned rather than hoped for. This fixture closes its
-    // stdin before it exits, so the handshake write always fails with EPIPE
-    // while `close` — the event carrying the exit code and the engine's own
-    // usage error — is still in flight. Reporting the write instead of waiting
-    // for the exit is what published `handshake_failed` on macOS and nowhere
-    // else, and told the caller to retry an engine that will never be newer.
+    // The ordering above, made likelier and asserted harder — not pinned. Read
+    // the timings before believing otherwise: this fixture closes its stdin and
+    // then waits before exiting, which holds the window between "the read end
+    // is gone" and "`close` has been delivered" open for far longer than an
+    // immediate exit does. Whether the Host's handshake write lands inside that
+    // window still depends on when the `spawn` event reaches it, and on macOS
+    // and Linux alike it has so far landed before the fixture's stdin closes.
+    //
+    // So the value here is the assertions, which the case above does not make:
+    // that the error handed back to the *caller* is the specific one and is not
+    // retryable. Under the defect the caller was told a transient write failed
+    // and to try again, about an engine that will never be newer.
     await withBridge({
       transport: 'auto',
       command: process.execPath,
@@ -151,9 +157,15 @@ describe('an engine present but without the Bridge surface', () => {
   })
 
   test('a child that stops listening and stays alive still fails on its own', async () => {
-    // The counterfactual for that wait. This engine closes stdin and keeps
-    // running, so no exit is ever coming: whatever ends the connect has to end
-    // it without an exit verdict, and has to end it at all.
+    // An engine that closes stdin and keeps running owes no exit verdict, so
+    // whatever ends this connect has to end it without one — and has to end it.
+    //
+    // Measured rather than assumed: on macOS this takes the deadline, not the
+    // broken pipe. Destroying stdin inside a Node child does not reach the
+    // writer on any platform tested, so the frame lands in a buffer nobody
+    // reads and the startup budget is what settles it. The branch below is
+    // therefore about which of two honest endings happened, and the assertion
+    // that matters in both is that the connect ended and stayed unready.
     const started = Date.now()
     await withBridge({
       transport: 'auto',
@@ -169,17 +181,17 @@ describe('an engine present but without the Bridge surface', () => {
       assert.notEqual(ctx.watchCore.health().phase, 'ready')
 
       if (result.error.error === 'bridge.write_failed') {
-        // POSIX reports the closed read end to the writer, so this is the case
-        // the bound exists for — and it ended well inside the startup budget
-        // rather than waiting out an exit that is never coming.
+        // The write did reach a closed read end. This is the case the bound
+        // exists for, and it ended well inside the startup budget rather than
+        // waiting out an exit that is never coming.
         assert.ok(elapsed < 2_500,
           `an exit that is not coming was waited on for ${String(elapsed)}ms`)
         return
       }
-      // Windows does not surface a closed read end to the writer at all: the
-      // frame lands in a buffer nobody reads, there is no broken pipe to bound,
-      // and the deadline is what ends it. Asserted rather than skipped, so the
-      // day that changes it is visible here.
+      // The ending observed on every platform so far: the frame lands in a
+      // buffer nobody reads, there is no broken pipe to bound, and the deadline
+      // is what settles it. Named rather than skipped, so the day that changes
+      // is visible here.
       assert.equal(result.error.error, 'bridge.deadline_exceeded')
     })
   })

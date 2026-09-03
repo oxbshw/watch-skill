@@ -1,20 +1,22 @@
 /**
- * An older Watch Core whose pipe breaks before its exit is delivered.
+ * An older Watch Core that holds the broken-pipe window open.
  *
  * Same engine as `core-without-bridge.mjs` — a usage error and a non-zero exit
- * — with the one ordering that used to change the diagnosis pinned rather than
- * left to the scheduler. Closing stdin first makes the Host's handshake write
- * fail with EPIPE while `close` is still in flight, which is the sequence that
- * happened on macOS and on neither other platform: the write reported
- * `bridge.write_failed`, the Bridge published `handshake_failed`, and a reader
- * was sent to look for a timeout instead of an engine too old to have the
- * command.
+ * — with the gap the defect lives in made as wide as a fixture can make it.
+ * Closing stdin first removes the read end early; waiting before exiting keeps
+ * `close`, the event carrying the exit code and the argument parser's own
+ * words, from arriving for another 150ms. In between, a write from the Host
+ * has nothing to write to and no verdict to quote.
  *
- * The delay before exiting is what makes that ordering certain. Without it the
- * test only reproduces the defect on a machine that happens to schedule it.
+ * It widens that window; it cannot guarantee the Host writes inside it. When
+ * the handshake write happens is decided by when Node delivers `spawn`, and on
+ * every platform measured so far that has been early enough for the write to
+ * land before this fixture closes anything. The reproduction on macOS was a
+ * loaded runner delivering `spawn` late, which is not something a fixture can
+ * ask for.
  */
 process.stderr.write("Usage: watch-skill [OPTIONS] COMMAND [ARGS]...\n")
 process.stderr.write("Error: No such command 'bridge'.\n")
-// Break the parent's write end, so anything it sends fails at once.
+// Drop the read end early, so a write in the window has nowhere to go.
 process.stdin.destroy()
 setTimeout(() => { process.exit(2) }, 150)
