@@ -558,19 +558,23 @@ describe('the packed Watch Core, driven by the real Node Bridge', { skip }, () =
   })
 
   test('disposing the Bridge leaves no Watch Core process behind', async () => {
-    const before = coreProcessIds()
+    const before = new Set(coreProcessIds())
     const { ctx, fiber } = await mount()
     await ctx.watchCore.connect()
-    const during = coreProcessIds()
-    assert.ok(during.length > before.length, 'connecting must actually start an engine')
+    // By identity, not by count. A count says something changed; the pids say
+    // *which* engine, and only a pid this connect brought into being is one
+    // this disposal is answerable for.
+    const started = coreProcessIds().filter((pid) => !before.has(pid))
+    assert.ok(started.length > 0, 'connecting must actually start an engine')
 
     await fiber.dispose()
     // Give the child a moment to exit after SIGTERM.
     await new Promise((done) => setTimeout(done, 3_000))
 
-    const after = coreProcessIds()
-    assert.ok(after.length <= before.length,
-      `disposal left ${String(after.length - before.length)} engine process(es) behind`)
+    const alive = new Set(coreProcessIds())
+    const survivors = started.filter((pid) => alive.has(pid))
+    assert.deepEqual(survivors, [],
+      `disposal left engine process(es) behind: ${survivors.join(', ')}`)
   })
 
   // ── the two properties only a process can show ───────────────────────────
@@ -697,14 +701,37 @@ function rawSession(payloads) {
   })
 }
 
-/** Watch Core processes currently running, by pid. */
+/**
+ * Watch Core processes *this* test process started, by pid.
+ *
+ * Parented deliberately, and it has to be. This used to list every
+ * `watch-skill bridge` on the machine, which is a machine-global reading taken
+ * while `node --test` runs test files in parallel — and
+ * `core-integration.test.mjs` drives a real engine of its own. So a sibling
+ * file spawning an engine anywhere in the window between two readings here was
+ * counted as an engine this file had failed to clean up: a red macOS platform
+ * job reporting `disposal left 1 engine process(es) behind` about a process no
+ * disposal here had ever owned.
+ *
+ * The engine is a direct child of the process that spawned it, so a parent
+ * filter is exact rather than merely narrower: it cannot see a sibling's
+ * engine, and it cannot miss one of ours.
+ */
 function coreProcessIds() {
-  const name = process.platform === 'win32' ? 'watch-skill.exe' : 'watch-skill'
-  const listing = process.platform === 'win32'
-    ? spawnSync('tasklist', ['/FI', `IMAGENAME eq ${name}`, '/FO', 'CSV', '/NH'], { encoding: 'utf8' })
-    : spawnSync('pgrep', ['-f', 'watch-skill bridge'], { encoding: 'utf8' })
+  if (process.platform === 'win32') {
+    // tasklist has no parent column at all, so this asks CIM instead.
+    const filter = `Name='watch-skill.exe' AND ParentProcessId=${String(process.pid)}`
+    const listing = spawnSync('powershell', [
+      '-NoProfile', '-NonInteractive', '-Command',
+      `Get-CimInstance Win32_Process -Filter "${filter}" | ForEach-Object { $_.ProcessId }`,
+    ], { encoding: 'utf8' })
+    const text = listing.stdout ?? ''
+    return text.split('\n').map(line => line.trim()).filter(line => /^\d+$/.test(line))
+  }
+  const listing = spawnSync('pgrep', ['-P', String(process.pid), '-f', 'watch-skill bridge'],
+    { encoding: 'utf8' })
   const text = listing.stdout ?? ''
-  return text.split('\n').map(line => line.trim()).filter(line => line !== '' && !/^INFO:/.test(line))
+  return text.split('\n').map(line => line.trim()).filter(line => /^\d+$/.test(line))
 }
 
 // A skip that reads as a pass is how the Bridge came to be described by the
