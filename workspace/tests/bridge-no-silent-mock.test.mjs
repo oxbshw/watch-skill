@@ -122,6 +122,67 @@ describe('an engine present but without the Bridge surface', () => {
         'a later, vaguer failure overwrote the diagnosis')
     })
   })
+
+  test('the diagnosis survives a pipe that breaks before the exit lands', async () => {
+    // The ordering above, pinned rather than hoped for. This fixture closes its
+    // stdin before it exits, so the handshake write always fails with EPIPE
+    // while `close` — the event carrying the exit code and the engine's own
+    // usage error — is still in flight. Reporting the write instead of waiting
+    // for the exit is what published `handshake_failed` on macOS and nowhere
+    // else, and told the caller to retry an engine that will never be newer.
+    await withBridge({
+      transport: 'auto',
+      command: process.execPath,
+      args: [join(FIXTURES, 'core-without-bridge-broken-pipe.mjs'), 'bridge'],
+    }, async (ctx) => {
+      const result = await ctx.watchCore.connect()
+
+      assert.equal(result.ok, false)
+      assert.equal(result.error.error, 'bridge.bridge_surface_missing',
+        'the caller was told the pipe broke rather than why it broke')
+      assert.equal(result.error.retryable, false,
+        'an engine too old for the command does not become new by retrying')
+
+      const health = ctx.watchCore.health()
+      assert.equal(health.blocker, 'bridge_surface_missing')
+      assert.equal(health.isTestOnlyMock, false)
+      assert.notEqual(health.phase, 'ready')
+    })
+  })
+
+  test('a child that stops listening and stays alive still fails on its own', async () => {
+    // The counterfactual for that wait. This engine closes stdin and keeps
+    // running, so no exit is ever coming: whatever ends the connect has to end
+    // it without an exit verdict, and has to end it at all.
+    const started = Date.now()
+    await withBridge({
+      transport: 'auto',
+      command: process.execPath,
+      args: [join(FIXTURES, 'core-deaf-but-alive.mjs'), 'bridge'],
+      startupTimeoutMs: 3_000,
+    }, async (ctx) => {
+      const result = await ctx.watchCore.connect()
+      const elapsed = Date.now() - started
+
+      assert.equal(result.ok, false)
+      assert.equal(ctx.watchCore.health().isTestOnlyMock, false)
+      assert.notEqual(ctx.watchCore.health().phase, 'ready')
+
+      if (result.error.error === 'bridge.write_failed') {
+        // POSIX reports the closed read end to the writer, so this is the case
+        // the bound exists for — and it ended well inside the startup budget
+        // rather than waiting out an exit that is never coming.
+        assert.ok(elapsed < 2_500,
+          `an exit that is not coming was waited on for ${String(elapsed)}ms`)
+        return
+      }
+      // Windows does not surface a closed read end to the writer at all: the
+      // frame lands in a buffer nobody reads, there is no broken pipe to bound,
+      // and the deadline is what ends it. Asserted rather than skipped, so the
+      // day that changes it is visible here.
+      assert.equal(result.error.error, 'bridge.deadline_exceeded')
+    })
+  })
 })
 
 describe('an engine that starts and cannot handshake', () => {

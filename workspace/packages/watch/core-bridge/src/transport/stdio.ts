@@ -87,9 +87,39 @@ const MAY_DISPATCH: ReadonlySet<string> = new Set([
  */
 const MAX_FRAME_BYTES = 64 * 1024 * 1024
 
+/**
+ * How long a broken pipe waits for the child's own account of why it broke.
+ *
+ * This is a bound, not a mechanism. The wait ends on the child's `close`
+ * event, which is where the exit code and the engine's last words are
+ * readable; the timer only covers the case that event never comes, because a
+ * child may close its stdin and keep running. Half a second is far longer than
+ * the delivery of an event for a process that has already gone, and far
+ * shorter than the deadline a caller would otherwise sit through.
+ */
+const EXIT_VERDICT_GRACE_MS = 500
+
 /** Turn an unexpected value into a reportable error without losing its text. */
 function describe(cause: unknown): string {
   return cause instanceof Error ? cause.message : String(cause)
+}
+
+/**
+ * Whether a write failed because the pipe on the far end is gone.
+ *
+ * A write to a child that has already quit fails before that child's `close`
+ * event is delivered, and the two know different things: the write knows only
+ * that the pipe broke, while `close` carries the exit code and the stderr that
+ * tells an engine too old to have a `bridge` command apart from one that
+ * crashed. Reporting whichever arrived first is how an older Watch Core came
+ * to be described as a transient write failure — retryable, and never going to
+ * succeed — on the one platform whose scheduling put the write first.
+ */
+function isBrokenPipe(cause: unknown): boolean {
+  const code = (cause as { code?: unknown } | null)?.code
+  return code === 'EPIPE'
+    || code === 'ERR_STREAM_DESTROYED'
+    || code === 'ERR_STREAM_WRITE_AFTER_END'
 }
 
 /**
@@ -298,14 +328,39 @@ export class StdioTransport implements Transport {
       // unhandled 'error' and took the process down with `write EPIPE`
       // instead of failing the request. `settle` removes the pending entry,
       // so being called from both writes reports once.
-      const onWriteError = (cause: Error | null | undefined): void => {
-        if (cause == null) return
+      const writeFailed = (cause: Error | null | undefined): void => {
         this.settle(id, watchError(
           'bridge.write_failed',
           `Could not send "${request.method}" to Watch Core: ${describe(cause)}`,
           'Reconnect Watch Core and retry.',
           { retryable: true, correlationId: request.correlationId },
         ))
+      }
+      const onWriteError = (cause: Error | null | undefined): void => {
+        if (cause == null) return
+        // A broken pipe is a symptom. The diagnosis is one event away.
+        //
+        // `handleExit` settles everything pending with the classified reason —
+        // an old engine, a crash — and it runs on `close`, which waits for the
+        // child's stderr to drain. Announcing `write_failed` first buried that:
+        // an engine with no `bridge` command was reported as a retryable write
+        // error, and the health a screen read straight after `connect` said
+        // `handshake_failed` where the fix is "upgrade Watch Core".
+        //
+        // So the write yields to the exit it is a symptom of. The timer is only
+        // for a child that closed its stdin and stayed alive, which owes no
+        // exit verdict at all.
+        if (!isBrokenPipe(cause) || this.child === null || this.disposed) {
+          writeFailed(cause)
+          return
+        }
+        const dying = this.child
+        const onVerdict = (): void => { clearTimeout(giveUp); writeFailed(cause) }
+        const giveUp = setTimeout(() => {
+          dying.removeListener('close', onVerdict)
+          writeFailed(cause)
+        }, EXIT_VERDICT_GRACE_MS)
+        dying.once('close', onVerdict)
       }
       child.stdin.write(
         `Content-Length: ${String(body.byteLength)}${HEADER_TERMINATOR}`,
