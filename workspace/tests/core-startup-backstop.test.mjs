@@ -117,6 +117,37 @@ describe('a first cold start is not reported as a dead engine', () => {
       + 'inherits a budget a first cold start has already exceeded')
   })
 
+  test('nothing else in the repository composes a smaller budget', () => {
+    // The patches above are not the only things that write a Bridge row.
+    // `deepwatch setup` writes one, and so does the manual-profile script — and
+    // a Loader patch replaces the targeted row's whole config, so whichever is
+    // written last is the value that governs. The manual profile carried 20
+    // seconds long after the bundle moved to 45, which left the one profile a
+    // person actually clicks around in still able to call a healthy first start
+    // a dead engine.
+    //
+    // So the rule is checked where profiles are *generated*, not only where
+    // they are declared. A generator that names the key at all must name a
+    // value above the floor; the supported answer is to omit it and inherit the
+    // schema default.
+    const generators = [
+      join(ROOT, 'scripts', 'manual-profile.mjs'),
+      join(ROOT, 'packages', 'watch', 'cli', 'src', 'lib', 'compose.ts'),
+    ]
+    for (const path of generators) {
+      const text = readFileSync(path, 'utf8')
+      // Emitted values only. A line that is prose about the key, or the comment
+      // explaining why it is absent, is not a composed value.
+      const emitted = [...text.matchAll(/^(?![^\n]*[#*])[^\n]*startupTimeoutMs:\s*(\d[\d_]*)/gm)]
+        .map(m => Number(m[1].replace(/_/g, '')))
+      for (const value of emitted) {
+        assert.ok(value >= MINIMUM_STARTUP_MS,
+          `${path} composes a profile with ${String(value)}ms, below the floor that a `
+          + 'first cold start has already exceeded')
+      }
+    }
+  })
+
   test('the documented default matches what is composed', () => {
     const readme = readFileSync(join(BUNDLE, 'README.md'), 'utf8')
     const row = /\|\s*`startupTimeoutMs`\s*\|\s*`(\d+)`/.exec(readme)

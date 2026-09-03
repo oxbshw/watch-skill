@@ -365,14 +365,20 @@ function writeOverlay(corePath, memoryDir, evidenceRoot) {
     libraryRoots:
       - ${evidenceRoot}
 
+# The timeouts are deliberately absent, and this is the third place that has
+# had to learn it. A patch replaces the row's whole \`config\`, so restating a
+# boundary here makes this the copy that wins — and this overlay is written for
+# the one profile a person actually clicks around in. It carried 20s, which is
+# below the 30s floor a first cold start on a clean Windows machine has already
+# exceeded: the manual acceptance profile was the last place still able to
+# report a healthy engine as a dead one. Omitted, the service schema governs,
+# and its defaults are the values the bundle ships.
 - id: watch-core-bridge
   config:
     transport: auto
     command: ${JSON.stringify(corePath)}
     args: [bridge]
     cwd: ''
-    startupTimeoutMs: 20000
-    requestTimeoutMs: 60000
     autoConnect: true
 
 - id: watch-memory
