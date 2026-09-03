@@ -16,7 +16,8 @@
         command: watch-skill
         args: [bridge]
         cwd: ''
-        startupTimeoutMs: 10000
+        # See cordis.patch.yml: a first cold start outruns 10s.
+        startupTimeoutMs: 45000
         requestTimeoutMs: 30000
         autoConnect: true
 

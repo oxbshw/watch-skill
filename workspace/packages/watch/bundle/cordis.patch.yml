@@ -40,7 +40,7 @@
     #       command: watch-skill
     #       args: [bridge]
     #       cwd: ''
-    #       startupTimeoutMs: 10000
+    #       startupTimeoutMs: 45000
     #       requestTimeoutMs: 30000
     #       autoConnect: true
     - id: watch-core-bridge
@@ -50,7 +50,22 @@
         command: watch-skill
         args: [bridge]
         cwd: ''
-        startupTimeoutMs: 10000
+        # 45s, not 10s. This is the backstop for "the engine cannot answer at
+        # all", and 10 seconds could not tell that apart from "the engine is
+        # starting for the first time". A fresh `deepwatch setup` creates the
+        # Core virtualenv moments earlier; the first `watch-skill bridge` then
+        # pays for a cold Python import of thousands of files a Windows
+        # security scanner has never seen, and exceeded 10s on a clean machine.
+        #
+        # The product called that failure: Diagnostics reported Watch Core
+        # failed with `core_timeout`, the reconnect breaker opened, and the
+        # session never recovered — on an installation that was completely
+        # healthy and connected in under three seconds on its second start.
+        #
+        # A generous backstop costs nothing when the engine is well, because
+        # the handshake resolves as soon as it lands. It is paid only when the
+        # engine is genuinely dead, which is already a degraded case.
+        startupTimeoutMs: 45000
         requestTimeoutMs: 30000
         autoConnect: true
 

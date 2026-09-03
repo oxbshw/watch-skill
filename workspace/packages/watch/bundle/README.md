@@ -59,7 +59,7 @@ ask will ever be answered.
 | `transport` | `auto` | `auto` connects the engine, and reports it unavailable when it is absent or broken — it never selects the mock. `stdio` is the same transport named explicitly. `mock` is the test-only in-process backend and must be asked for by name. |
 | `command` | `watch-skill` | the executable that starts Watch Core in Bridge mode |
 | `args` | `[bridge]` | its arguments |
-| `startupTimeoutMs` | `10000` | how long the engine has to start |
+| `startupTimeoutMs` | `45000` | how long the engine has to start. Generous on purpose: a first spawn against a freshly created virtualenv pays for a cold import that a 10s backstop reported as a dead engine. |
 | `requestTimeoutMs` | `30000` | deadline for a request that carries none |
 | `autoConnect` | `true` | connect during activation rather than on first use |
 

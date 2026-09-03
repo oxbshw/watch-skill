@@ -52,6 +52,28 @@ const HEADER_TERMINATOR = '\r\n\r\n'
 const DEADLINE_BACKSTOP_MS = 2_000
 
 /**
+ * The methods that can leave something behind when they time out.
+ *
+ * A deadline is not evidence that the work did not happen — but only where
+ * the work could have *done* something. Telling a reader that "a dispatched
+ * side effect may still have run" after a health handshake describes an
+ * action nobody requested, and it appears on the one screen whose whole job
+ * is to be believed: a first-run cold start on Windows showed Watch Core,
+ * Memory, Verification and Browser all in Error, each advising the reader to
+ * inspect the receipt of an operation that had never been dispatched.
+ *
+ * Listed rather than inferred from the name. A future `watch.memory.forget`
+ * is side-effecting and would not be caught by a rule about prefixes, and the
+ * cost of guessing wrong here is telling somebody their evidence might have
+ * changed when it did not.
+ */
+const MAY_DISPATCH: ReadonlySet<string> = new Set([
+  'watch.browser.operate',
+  'watch.live.session',
+  'watch.verification.run',
+])
+
+/**
  * The largest frame this transport will wait for.
  *
  * Without a bound, a Content-Length of a gigabyte parks the stream forever:
@@ -219,13 +241,23 @@ export class StdioTransport implements Transport {
       // 90 seconds counted for nothing.
       const timer = setTimeout(() => {
         // A deadline is not evidence that the work did not happen. For a
-        // side-effecting method the caller must inspect the receipt; the error
-        // says so rather than inviting a blind retry.
+        // side-effecting method the caller must inspect the receipt; for a
+        // read there is no receipt and nothing to inspect, and saying
+        // otherwise invents an action.
+        const dispatches = MAY_DISPATCH.has(request.method)
         this.settle(id, watchError(
           'bridge.deadline_exceeded',
           `"${request.method}" did not return within ${String(request.deadlineMs)}ms.`,
-          'Inspect the operation receipt before retrying; a dispatched side effect may still have run.',
-          { details: { method: request.method }, retryable: false, correlationId: request.correlationId },
+          dispatches
+            ? 'Inspect the operation receipt before retrying; a dispatched side '
+              + 'effect may still have run.'
+            : 'Nothing was dispatched, so this is safe to retry. If it keeps '
+              + 'timing out, check that Watch Core is running and not blocked.',
+          {
+            details: { method: request.method },
+            retryable: !dispatches,
+            correlationId: request.correlationId,
+          },
         ))
       }, request.deadlineMs + DEADLINE_BACKSTOP_MS)
 

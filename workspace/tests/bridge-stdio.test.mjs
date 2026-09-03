@@ -134,18 +134,43 @@ describe('errors from the engine', () => {
 })
 
 describe('deadlines and cancellation', () => {
-  test('a deadline does not claim the work did not happen', async () => {
+  test('a deadline on a side-effecting call does not claim it did not happen', async () => {
     await withFixture({ requestTimeoutMs: 300 }, async (ctx) => {
       await ctx.watchCore.connect()
-      const result = await ctx.watchCore.request('fixture.silent', {})
+      const result = await ctx.watchCore.request('watch.browser.operate', {})
       assert.equal(result.ok, false)
       assert.equal(result.error.error, 'bridge.deadline_exceeded')
       assert.equal(
         result.error.retryable,
         false,
-        'a timed-out call must not be marked safe to retry',
+        'a timed-out operation must not be marked safe to retry',
       )
       assert.match(result.error.fix, /receipt/i)
+    })
+  })
+
+  test('a deadline on a read says nothing was dispatched', async () => {
+    // The other half, and the one that was wrong. Every timeout carried the
+    // side-effect wording, so a first-run cold start on Windows produced a
+    // Diagnostics screen where Watch Core, Memory, Verification and Browser
+    // were all in Error, each advising the reader to inspect the receipt of
+    // an operation that had never been dispatched. A read has no receipt.
+    await withFixture({ requestTimeoutMs: 300 }, async (ctx) => {
+      await ctx.watchCore.connect()
+      const result = await ctx.watchCore.request('fixture.silent', {})
+      assert.equal(result.ok, false)
+      assert.equal(result.error.error, 'bridge.deadline_exceeded')
+      assert.doesNotMatch(
+        result.error.fix,
+        /receipt|side effect/i,
+        'a read that timed out invented a dispatched action',
+      )
+      assert.match(result.error.fix, /nothing was dispatched/i)
+      assert.equal(
+        result.error.retryable,
+        true,
+        'a read that dispatched nothing is safe to retry',
+      )
     })
   })
 

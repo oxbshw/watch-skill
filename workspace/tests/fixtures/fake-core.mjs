@@ -12,7 +12,11 @@
  *
  * Behaviors are selected by method name so one fixture covers every case:
  *   fixture.echo       → returns its params
- *   fixture.silent     → never answers (exercises the deadline)
+ *   fixture.silent     → never answers (exercises the deadline on a read)
+ *   watch.browser.operate → never answers, and is side-effecting, so the
+ *                        deadline's other half can be exercised: a method
+ *                        that may have dispatched something gets different
+ *                        advice from one that provably did not
  *   fixture.slow       → answers after 500ms
  *   fixture.fail       → returns a Watch error contract in `data`
  *   fixture.rawFail    → returns a bare JSON-RPC error with no contract
@@ -99,6 +103,8 @@ function handle(message) {
       reply({ params: message.params, correlationId: message.correlationId })
       return
     case 'fixture.silent':
+      return
+    case 'watch.browser.operate':
       return
     case 'fixture.slow':
       setTimeout(() => {
