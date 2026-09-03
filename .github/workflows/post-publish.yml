@@ -1,0 +1,78 @@
+name: Post-publish
+
+# What can only be checked after something has been published.
+#
+# `uvx --from "watch-skill[standard]"` resolves from PyPI. Before a release
+# lands there is nothing on PyPI for this candidate to resolve *to*, so the
+# job used to sit in the ordinary pull-request check list permanently skipped
+# — a required-looking context that never ran, next to jobs that did. A check
+# that is always grey teaches a reader to ignore grey.
+#
+# So the published smoke lives here, where it can only run when there is
+# something published to smoke: after a release publishes, or on an explicit
+# dispatch by whoever just published. The candidate equivalent — the same
+# assertions against the wheel this commit builds — stays in `Install`, where
+# it runs on every pull request.
+#
+# This workflow publishes nothing. It reads what is already on PyPI.
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: >-
+          The published version to verify, e.g. 1.4.0rc1. Leave empty to take
+          whatever PyPI currently resolves as newest.
+        required: false
+        type: string
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  uvx:
+    name: uvx from PyPI
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.11"
+
+      # No checkout. The point is that a person with nothing but uv can run
+      # the published package, so a source tree on disk would weaken it.
+      - name: uvx resolves and runs the published package
+        shell: bash
+        run: |
+          set -euo pipefail
+          requested="${{ inputs.version }}"
+          if [ -n "$requested" ]; then
+            spec="watch-skill[standard]==$requested"
+          else
+            spec="watch-skill[standard]"
+          fi
+          echo "resolving $spec"
+          reported=$(uvx --from "$spec" watch-skill --version)
+          echo "reported: $reported"
+          test -n "$reported"
+          if [ -n "$requested" ]; then
+            test "$reported" = "$requested"
+          fi
+
+      - name: The published package carries the Bridge surface
+        shell: bash
+        run: |
+          set -euo pipefail
+          requested="${{ inputs.version }}"
+          spec="watch-skill[standard]${requested:+==$requested}"
+          uvx --from "$spec" watch-skill bridge --help > bridge-help.txt
+          grep -qi "bridge" bridge-help.txt

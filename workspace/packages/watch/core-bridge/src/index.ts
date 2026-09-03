@@ -160,7 +160,10 @@ export class WatchCoreService extends Service {
     command: s.string().default('watch-skill'),
     args: s.array(s.string()).default(['bridge']),
     cwd: s.string().default(''),
-    startupTimeoutMs: s.number().step(1).min(100).default(10_000),
+    // 45s, matching the composed patches. A profile that omits the value
+    // must not silently get the ten seconds that reported a healthy first
+    // start as a dead engine; the default is the one a bare config inherits.
+    startupTimeoutMs: s.number().step(1).min(100).default(45_000),
     requestTimeoutMs: s.number().step(1).min(100).default(30_000),
     autoConnect: s.boolean().default(true),
     failuresBeforeOpen: s.number().step(1).min(1).default(3),

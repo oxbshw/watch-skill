@@ -28,8 +28,15 @@ name: workspace
 # forever with nothing to explain the wait. The filtering moved into `changes`
 # below, which always runs.
 on:
+  # `main` only, deliberately. This used to be `['**']`, which produced a
+  # second full suite for every branch commit that already had a pull request
+  # — two runs emitting the same required context, `workspace-required`, for
+  # one SHA. Two conclusions for one context is a check nobody can read, and
+  # it is what made a cancelled push run sit beside a successful pull-request
+  # run for the same commit. The pull request is the canonical execution;
+  # `workflow_dispatch` is how a full run is forced without one.
   push:
-    branches: ['**']
+    branches: [main]
   pull_request:
   workflow_dispatch:
 
@@ -42,9 +49,27 @@ env:
   NODE_VERSION: '22.19.0'
   PNPM_VERSION: '10.29.1'
 
+# Two runs of one workflow may only cancel each other when they are the same
+# kind of run for the same thing, and never on a release branch.
+#
+# This was one line, `${{ github.workflow }}-${{ github.ref }}`, with
+# `cancel-in-progress: true`. For a branch push and a `workflow_dispatch` on
+# that same branch `github.ref` is identical, so both landed in one group and
+# the later run killed the earlier one. On 2026-09-03 a dispatch created at
+# 11:48:51 cancelled the push run created at 11:48:33 for the same commit:
+# eight release-critical jobs went to `cancelled` mid-flight and
+# `workspace-required` failed, correctly, on dependencies that never finished.
+# The pull_request run survived only because its ref is `refs/pull/N/merge`.
+#
+# `github.event_name` in the group keeps the three kinds apart. The guard
+# below then removes automatic cancellation entirely on a release branch,
+# where a half-finished matrix is not evidence and a queued one costs only
+# time. Manual cancellation is unaffected.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: >-
+    ${{ !startsWith(github.ref, 'refs/heads/release/')
+        && !startsWith(github.head_ref, 'release/') }}
 
 jobs:
   # Which half changed. Always runs, so `workspace-required` always has

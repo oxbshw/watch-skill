@@ -12,13 +12,12 @@ on:
   # installs, so the whole tree is the trigger.
   push:
     branches: [main]
+  # No path filter here either, and for the reason stated above plus one
+  # more: this workflow now builds and smokes the candidate wheel, and the
+  # wheel is built from the whole tree. A filter naming scripts/ and
+  # pyproject.toml would skip the candidate smoke for exactly the changes
+  # most likely to break it -- an engine edit under src/watch_skill/.
   pull_request:
-    paths:
-      - "scripts/**"
-      - "src/watch_skill/health/**"
-      - "pyproject.toml"
-      - "uv.lock"
-      - ".github/workflows/install.yml"
   schedule:
     # Installers break from the outside — a new uv, a moved ffmpeg package.
     # Catch that on a Monday, not from a bug report.
@@ -28,6 +27,28 @@ on:
 # Least privilege, stated rather than inherited. The repository default is
 # read today, so this changes nothing now -- it is what keeps a future
 # change to that default from silently handing this workflow write access.
+# Two runs of one workflow may only cancel each other when they are the same
+# kind of run for the same thing, and never on a release branch.
+#
+# This was one line, `${{ github.workflow }}-${{ github.ref }}`, with
+# `cancel-in-progress: true`. For a branch push and a `workflow_dispatch` on
+# that same branch `github.ref` is identical, so both landed in one group and
+# the later run killed the earlier one. On 2026-09-03 a dispatch created at
+# 11:48:51 cancelled the push run created at 11:48:33 for the same commit:
+# eight release-critical jobs went to `cancelled` mid-flight and
+# `workspace-required` failed, correctly, on dependencies that never finished.
+# The pull_request run survived only because its ref is `refs/pull/N/merge`.
+#
+# `github.event_name` in the group keeps the three kinds apart. The guard
+# below then removes automatic cancellation entirely on a release branch,
+# where a half-finished matrix is not evidence and a queued one costs only
+# time. Manual cancellation is unaffected.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: >-
+    ${{ !startsWith(github.ref, 'refs/heads/release/')
+        && !startsWith(github.head_ref, 'release/') }}
+
 permissions:
   contents: read
 
@@ -126,19 +147,91 @@ jobs:
           $report = Get-Content doctor.json -Raw | ConvertFrom-Json
           if (-not $report.ok) { exit 1 }
 
-  # Proves the claim the README makes about zero-install usage. Runs only
-  # after a release has actually landed on PyPI.
-  uvx:
-    name: uvx from PyPI
-    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+  # Proves the claim the README makes about zero-install usage, against the
+  # wheel *this commit* builds.
+  #
+  # The published equivalent — `uvx --from "watch-skill[standard]"`, resolving
+  # from PyPI — used to live here behind
+  # `if: schedule || workflow_dispatch`, which meant it was permanently
+  # skipped on every pull request. There is nothing on PyPI for a candidate to
+  # resolve to, so the job could not have passed; it sat grey in the check list
+  # beside jobs that ran, which is how a reader learns to stop reading grey.
+  # It now lives in `post-publish.yml`, where it runs when there is something
+  # published to verify.
+  #
+  # What a pre-publication run can honestly assert is that the artifact this
+  # commit produces installs and runs the same way, so that is what this does.
+  uvx-candidate:
+    name: uvx from the candidate wheel
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
+      - uses: actions/checkout@v4
+
       - uses: astral-sh/setup-uv@v5
         with:
           python-version: "3.11"
-      - name: uvx must resolve and run the published package
-        run: uvx --from "watch-skill[standard]" watch-skill --version
+
+      - name: Build the candidate wheel
+        run: uv build --wheel --out-dir "${{ runner.temp }}/candidate"
+
+      # Run from outside the checkout. Inside it, `src/watch_skill` is
+      # importable and a broken wheel would still appear to work — which is
+      # the failure this job exists to make impossible.
+      - name: uvx runs the candidate, and it is the candidate that runs
+        shell: bash
+        working-directory: ${{ runner.temp }}
+        run: |
+          set -euo pipefail
+          wheel=$(find "${{ runner.temp }}/candidate" -maxdepth 1 -name '*.whl' -print -quit)
+          test -n "$wheel"
+          echo "candidate: $wheel"
+
+          declared=$(grep -m1 '^version' "$GITHUB_WORKSPACE/pyproject.toml" | sed -E 's/.*"(.*)".*/\1/')
+          echo "pyproject declares: $declared"
+
+          reported=$(uvx --from "$wheel" watch-skill --version)
+          echo "wheel reports:      $reported"
+          test "$reported" = "$declared"
+
+      - name: The candidate carries the Bridge surface and a doctor
+        shell: bash
+        working-directory: ${{ runner.temp }}
+        run: |
+          set -euo pipefail
+          wheel=$(find "${{ runner.temp }}/candidate" -maxdepth 1 -name '*.whl' -print -quit)
+          uvx --from "$wheel" watch-skill bridge --help > bridge-help.txt
+          grep -qi "bridge" bridge-help.txt
+          uvx --from "$wheel" watch-skill --help > help.txt
+          grep -qi "doctor" help.txt
+
+      # The origin check, stated as a fact rather than inferred from the
+      # working directory: the module that answers must live inside the
+      # installed artifact, not in the repository this job checked out.
+      - name: Execution resolves from the artifact, not the checkout
+        shell: bash
+        working-directory: ${{ runner.temp }}
+        run: |
+          set -euo pipefail
+          wheel=$(find "${{ runner.temp }}/candidate" -maxdepth 1 -name '*.whl' -print -quit)
+          uv venv "${{ runner.temp }}/origin-check"
+          uv pip install --python "${{ runner.temp }}/origin-check" --quiet "$wheel"
+          if [ -x "${{ runner.temp }}/origin-check/bin/python" ]; then
+            py="${{ runner.temp }}/origin-check/bin/python"
+          else
+            py="${{ runner.temp }}/origin-check/Scripts/python.exe"
+          fi
+          origin=$("$py" -c "import watch_skill, pathlib; print(pathlib.Path(watch_skill.__file__).resolve())")
+          echo "watch_skill resolved from: $origin"
+          case "$origin" in
+            *"origin-check"*) echo "ok: inside the installed artifact" ;;
+            *) echo "::error::watch_skill resolved from outside the artifact: $origin"; exit 1 ;;
+          esac
+          workspace_real=$(cd "$GITHUB_WORKSPACE" && pwd -P)
+          case "$origin" in
+            "$workspace_real"*) echo "::error::resolved from the source checkout"; exit 1 ;;
+            *) echo "ok: not the source checkout" ;;
+          esac

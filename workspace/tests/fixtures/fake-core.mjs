@@ -23,6 +23,15 @@
  *   fixture.split      → answers in two writes split inside the header
  *   fixture.crash      → exits the process without answering
  *   fixture.event      → pushes a notification, then answers
+ *
+ * Startup is controlled by the environment rather than the method name,
+ * because the handshake happens before any method can be chosen:
+ *
+ *   WATCH_FIXTURE_HANDSHAKE_DELAY_MS  answer the handshake this much later,
+ *                                     which is a slow but healthy engine
+ *   WATCH_FIXTURE_HANDSHAKE_NEVER     never answer it, which is a hung one
+ *   WATCH_FIXTURE_EXIT_AT_START       exit with this code before answering,
+ *                                     which is an engine that died starting
  */
 
 import { Buffer } from 'node:buffer'
@@ -94,9 +103,17 @@ function handle(message) {
   const reply = result => send({ jsonrpc: '2.0', id: message.id, result })
 
   switch (message.method) {
-    case 'watch.handshake':
+    case 'watch.handshake': {
+      // A hung engine: the process is alive and the handshake never lands.
+      if (process.env.WATCH_FIXTURE_HANDSHAKE_NEVER === '1') return
+      const delay = Number(process.env.WATCH_FIXTURE_HANDSHAKE_DELAY_MS ?? '0')
+      if (Number.isFinite(delay) && delay > 0) {
+        setTimeout(() => { reply(handshake()) }, delay)
+        return
+      }
       reply(handshake())
       return
+    }
     case 'fixture.echo':
       // The envelope's correlationId is echoed back so the test can prove it
       // travels with the request rather than being invented by the client.
@@ -145,6 +162,10 @@ function handle(message) {
     default:
       send({ jsonrpc: '2.0', id: message.id, error: { code: -32601, message: `unknown ${message.method}` } })
   }
+}
+
+if (process.env.WATCH_FIXTURE_EXIT_AT_START !== undefined) {
+  process.exit(Number(process.env.WATCH_FIXTURE_EXIT_AT_START))
 }
 
 process.stdin.on('data', (chunk) => {
