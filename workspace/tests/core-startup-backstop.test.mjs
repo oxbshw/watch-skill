@@ -100,6 +100,23 @@ describe('a first cold start is not reported as a dead engine', () => {
     }
   })
 
+  test('the schema default is what an omitted key inherits, and it is generous', () => {
+    // The core-bin override deliberately omits the timeouts so the bundle's
+    // value governs. A Loader patch replaces the row's whole config, so what
+    // actually applies is the service schema default — which therefore has to
+    // be the same generous budget, or omitting the key would quietly restore
+    // the ten seconds this file exists to prevent.
+    const service = readFileSync(
+      join(ROOT, 'packages', 'watch', 'core-bridge', 'src', 'index.ts'), 'utf8')
+    const declared = /startupTimeoutMs:\s*s\.number\(\)[^\n]*?default\((\d[\d_]*)\)/
+      .exec(service)?.[1]
+    assert.ok(declared !== undefined, 'the service schema declares no startup default')
+    const value = Number(declared.replace(/_/g, ''))
+    assert.ok(value >= MINIMUM_STARTUP_MS,
+      `the schema default is ${String(value)}ms, so a config that omits the key `
+      + 'inherits a budget a first cold start has already exceeded')
+  })
+
   test('the documented default matches what is composed', () => {
     const readme = readFileSync(join(BUNDLE, 'README.md'), 'utf8')
     const row = /\|\s*`startupTimeoutMs`\s*\|\s*`(\d+)`/.exec(readme)

@@ -79,15 +79,25 @@ describe('the Bridge is pointed at the executable a person named', () => {
     assert.doesNotMatch(read(dir), /transport: stdio/)
   })
 
-  test('the row’s whole config is restated', () => {
-    // A Loader patch replaces the targeted row's whole `config`, so an overlay
-    // naming only `command` would silently drop the timeouts with it.
+  test('the row states what it is for, and not the timeouts', () => {
+    // A Loader patch replaces the targeted row's whole `config`, so this used
+    // to restate every key including the timeouts — which made it a second
+    // copy of a boundary the bundle patch already declares, and the copy that
+    // wins, because it is written last.
+    //
+    // That is not hypothetical. Raising the startup budget to 45s in the
+    // bundle changed nothing for any profile built by `deepwatch setup`: the
+    // clean room kept the ten seconds that reported a healthy first start as
+    // a dead engine, and the fix looked applied while the composed profile
+    // disagreed. Omitted, the service schema governs, and its defaults are
+    // the values the bundle declares.
     const patch = (() => { const dir = profile(); writeCoreBinOverride(dir, 'x'); return read(dir) })()
-    for (const key of [
-      'transport', 'command', 'args', 'cwd',
-      'startupTimeoutMs', 'requestTimeoutMs', 'autoConnect',
-    ]) {
+    for (const key of ['transport', 'command', 'args', 'cwd', 'autoConnect']) {
       assert.ok(patch.includes(`${key}:`), `the override drops ${key}`)
+    }
+    for (const key of ['startupTimeoutMs', 'requestTimeoutMs']) {
+      assert.ok(!patch.includes(`${key}:`),
+        `the override restates ${key}, so the bundle's value cannot govern`)
     }
   })
 })
