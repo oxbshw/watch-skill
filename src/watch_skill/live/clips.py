@@ -195,8 +195,13 @@ def build_event_clip(
     # Waiting here and checking there is how this came to wait for the newest
     # frame to pass `hi` and call that success, which says nothing at all
     # about whether anything was captured near `lo`.
+    # Spanning, not merely stitchable. This function promises a clip with
+    # media on both sides of the event, and two frames that both land before
+    # it satisfy "enough to stitch" while making a manifest whose media_end
+    # does not reach the moment it is named for.
     usable, why = buf.await_clip_window(
-        session_id, lo, hi, timeout=max(2.0, post_seconds * 2.0 + 3.0))
+        session_id, lo, hi, timeout=max(2.0, post_seconds * 2.0 + 3.0),
+        require_span_at=event_media_ts)
     if why is not None:
         raise ClipError(
             f"not enough buffered media around {event_media_ts:.2f}s to build "

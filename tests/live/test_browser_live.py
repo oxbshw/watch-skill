@@ -565,7 +565,7 @@ def test_an_error_pins_media_on_both_sides_of_the_moment(fixture_app) -> None:
                     or "evicted" in why), why
             return
 
-        after = [frame for frame in frames if frame.media_ts >= anchor]
+        after = [frame for frame in frames if frame.media_ts > anchor]
         assert after, "no frames retained from after the error"
 
         # Frames exist, so the buffer has an oldest.

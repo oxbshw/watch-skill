@@ -284,9 +284,15 @@ def explain_window(
 
 
 def _spans(frames: list[Segment], moment: float) -> bool:
-    """Whether these frames have something on each side of a moment."""
+    """Whether these frames have something on each side of a moment.
+
+    Strictly on each side. A frame captured at the exact instant of an event
+    is evidence *of* it, not evidence of what followed, and counting it as the
+    far side produces a clip whose range ends where the event begins — which
+    is the "no post-event evidence" a caller then has to discover for itself.
+    """
     return (any(frame.media_ts < moment for frame in frames)
-            and any(frame.media_ts >= moment for frame in frames))
+            and any(frame.media_ts > moment for frame in frames))
 
 
 def _explain_unsatisfied(
@@ -295,8 +301,8 @@ def _explain_unsatisfied(
 ) -> str:
     """Why the window is not usable, including a span that never closed."""
     if len(frames) >= 2 and require_span_at is not None:
-        side = ("at or after" if not any(f.media_ts >= require_span_at
-                                         for f in frames) else "before")
+        side = ("after" if not any(frame.media_ts > require_span_at
+                                   for frame in frames) else "before")
         return (
             f"{len(frames)} frame(s) are buffered in {start:.2f}s–{end:.2f}s "
             f"but none {side} {require_span_at:.2f}s, so a clip built from "

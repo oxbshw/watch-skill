@@ -322,7 +322,7 @@ def test_a_window_missing_the_far_side_names_that_side() -> None:
         session.session_id, 1.0, 9.0, timeout=1.0, require_span_at=5.0)
 
     assert why is not None
-    assert "none at or after 5.00s" in why, why
+    assert "none after 5.00s" in why, why
 
 
 # --- the condition these replaced --------------------------------------------
@@ -414,3 +414,28 @@ def test_clip_around_is_cancellable() -> None:
                         timeout=30.0, cancel=cancel)
 
     assert "cancelled" in str(caught.value)
+
+
+def test_a_frame_at_the_exact_moment_is_not_the_far_side() -> None:
+    """Evidence *of* an event is not evidence of what followed it.
+
+    Counting the frame captured at the instant of an event as the far side
+    produces a manifest whose range ends exactly where the event begins, and
+    the caller discovers it as "no post-event evidence" one layer up.
+    """
+    session = make_session()
+    add_frames(session.session_id, [3.0, 4.0, 5.0, 20.0])
+
+    frames, why = buf.await_clip_window(
+        session.session_id, 1.0, 9.0, timeout=1.0, require_span_at=5.0)
+
+    assert len(frames) == 3
+    assert why is not None
+    assert "none after 5.00s" in why, why
+
+    # One frame past it is enough, and it must be strictly past.
+    add_frames(session.session_id, [5.5])
+    frames, why = buf.await_clip_window(
+        session.session_id, 1.0, 9.0, timeout=1.0, require_span_at=5.0)
+    assert why is None
+    assert max(frame.media_ts for frame in frames) > 5.0
