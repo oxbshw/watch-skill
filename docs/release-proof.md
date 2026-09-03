@@ -16,15 +16,24 @@ memory figures are measured, because those are hardware-bound.
 
 ### Continuous integration
 
-Every push runs the offline suite on a four-way matrix:
+Every pull request, and every push to `main`, runs the offline suite on a
+six-way matrix:
 
-| | Python 3.11 | Python 3.12 |
-|---|---|---|
-| `ubuntu-latest` | pass | pass |
-| `windows-latest` | pass | pass |
+| | Python 3.11 | Python 3.12 | Python 3.13 |
+|---|---|---|---|
+| `ubuntu-latest` | pass | pass | pass |
+| `windows-latest` | pass | pass | pass |
 
-Plus lint, an install check on Linux, macOS and Windows, and a multi-arch
-Docker build with an SBOM and a signed provenance attestation.
+3.13 is in the matrix because `pyproject.toml` claims it. It was advertised
+and never executed for a while, which is the same unverified claim as a
+documented integration nobody tests.
+
+Beside that suite: Ruff; the Workspace gate, whose own matrix runs on Linux,
+macOS and Windows and carries a browser end-to-end pass, a cold build and the
+packed artifacts; the two installer scripts on all three platforms; and a
+`uvx` smoke of the candidate wheel on all three. A multi-arch Docker build with
+an SBOM and a signed provenance attestation runs when the image's own inputs
+change.
 
 This matters more than a local run, and it was added to this page only after
 it caught three defects a Windows-only workflow could not see: a verification
@@ -33,10 +42,22 @@ hardware on every call, and a server that accepted connections before it could
 answer them. A suite that passes on one platform through one invocation is a
 narrower claim than it looks.
 
-### Local host
+It is still catching them. Three of the last four defects surfaced on exactly
+one cell of the matrix and would have shipped without it: an engine too old to
+have the `bridge` command reported on macOS as a failed handshake, a disposal
+check that read the whole machine's process table while sibling test files ran
+in parallel, and a live cursor asserted to return the same batch twice against
+a stream that was still producing. The fourth — a manual-profile overlay still
+composing a twenty-second startup budget after the product moved to forty-five —
+no matrix would have found, because no job builds that profile. It was found by
+reading what the profile composes, and the gate that now checks it reads the
+generators rather than only the declarations.
 
-Timing and memory figures below are measured here, so the class of machine is
-part of the result.
+### Reference host
+
+Timing and memory figures — *Browser runtime*, *Benchmark* and *Local model
+latency* below — were measured here, so the class of machine is part of the
+result.
 
 | | |
 |---|---|
@@ -52,6 +73,20 @@ actually scarce; on a generous host every admission check passes and proves
 nothing. Expect faster numbers on modern hardware, and read the latency figures
 as an upper bound rather than a target.
 
+The candidate's own local suite ran on a different, larger Windows 11 laptop —
+16 threads, 16 GiB, Python 3.12 — which is why its skip count is lower than the
+reference host's would be. Where a figure below comes from that run it says so.
+Nothing is averaged across the two.
+
+The *Browser runtime*, *Benchmark*, *Local model latency* and SBOM figures were
+measured on the reference host on 2026-08-20 and are carried forward. They are
+that measurement, not a fresh one, and they say so rather than being restated as
+if they were. `src/watch_skill/operate/` — everything the browser figures
+describe — has not changed since. The vision client and three `perceive` modules
+have, in one commit that added an external-backend benchmark and fixed a
+`KeyError` on circled digits, so read the latency figures as the same order of
+magnitude rather than as a re-measurement.
+
 ## Method
 
 Test counts come from the JUnit XML pytest writes, read by
@@ -66,16 +101,16 @@ uv run python scripts/test_report.py results.xml --skips
 
 ## Test results
 
-The suite is run the way CI runs it — `pytest`, not `python -m pytest`. The
-distinction is not cosmetic: `python -m pytest` puts the working directory on
-`sys.path` and a bare `pytest` does not, and for a while that difference was
-the only reason five modules imported at all.
+`pytest` and `python -m pytest` used to disagree here: the second puts the
+working directory on `sys.path` and the first does not, and for a while that
+difference was the only reason five modules imported at all. `pythonpath = ["."]`
+in `pyproject.toml` settles it, so both invocations now collect the same suite.
 
 | | Collected | Passed | Failed | Skipped |
 |---|---|---|---|---|
-| Local, most recent | 1516 | 1491 | 0 | 25 |
+| Local snapshot, 2026-09-03 | 4642 | 4618 | 0 | 24 |
 
-CI runs the same suite on all four matrix jobs and every one passes; the counts
+CI runs the same suite on all six matrix jobs and every one passes; the counts
 there differ from the local run because the Linux jobs execute tests a Windows
 host skips, and vice versa.
 
@@ -85,28 +120,33 @@ when the machine cannot afford one, and say by how much.
 A pass count alone would not say much, because the resource-sensitive
 scenarios can skip rather than fail. What matters is that they ran: the live
 browser capability receipt, the workspace first-render budget, the two-browser
-workspace scenarios, and all 24 browser runtime tests.
+workspace scenarios, and the seventeen browser runtime tests.
 
 ### Skips
 
-Twenty-two skips are fixed and deliberate; the rest vary with free memory.
-Twenty of the fixed ones are opt-in gates for real models, off by default
-because a suite that silently downloads several hundred megabytes is not a
-suite that can be trusted to be offline. See [testing tiers](testing.md).
+Twenty-three of the twenty-four are fixed and deliberate; one varied with free
+memory. Eighteen of the fixed ones are opt-in gates for real models, off by
+default because a suite that silently downloads several hundred megabytes is
+not a suite that can be trusted to be offline. See
+[testing tiers](testing.md).
 
-| Count | Reason |
-|---|---|
-| 8 | live VLM gate (`WATCHSKILL_TEST_REAL_VLM_LIVE`) |
-| 7 | ASR gate (`WATCHSKILL_TEST_REAL_ASR`) |
-| 3 | no local vision model reachable |
-| 1 | VLM gate (`WATCHSKILL_TEST_REAL_VLM`) |
-| 1 | local ASR recognition (`WATCHSKILL_TEST_LOCAL_ASR`) |
-| 1 | rendered VLM gate (`WATCHSKILL_TEST_REAL_VLM_LIVE`) |
-| 1 | POSIX permission bits — skipped on Windows, and executed by the `ubuntu-latest` jobs |
+| Count | Reason | Runs where |
+|---|---|---|
+| 8 | live VLM gate (`WATCHSKILL_TEST_REAL_VLM_LIVE`) | opt-in, with an interpreter carrying torch |
+| 7 | ASR gate (`WATCHSKILL_TEST_REAL_ASR`) | opt-in |
+| 3 | no local Ollama vision model reachable, and no provider named | a machine running one |
+| 1 | VLM gate (`WATCHSKILL_TEST_REAL_VLM`) | opt-in |
+| 1 | local ASR recognition (`WATCHSKILL_TEST_LOCAL_ASR`) | opt-in, with faster-whisper |
+| 1 | rendered VLM gate (`WATCHSKILL_TEST_REAL_VLM_LIVE`) | opt-in |
+| 1 | POSIX permission bits | the `ubuntu-latest` jobs |
+| 1 | external benchmark fixtures deliberately not generated | a run that generates them first |
+| 1 | resource skip: two governed browsers, 2550 MB wanted and 2520 MB free | see below |
 
-Anything beyond those is a resource skip: a scenario holding a governed
-browser that the machine could not afford, reported with the shortfall in
-megabytes rather than passing quietly. Three appeared in the run above.
+No skip here hides a test this machine could have run. The resource skip is the
+one that could, so it was re-run on its own with the machine quiet and it
+passed. That is recorded as a separate isolated run, not folded into the
+snapshot above: the suite skipped it, and a rerun proving it works does not
+change what the suite did.
 
 ## Browser runtime
 
@@ -197,17 +237,22 @@ success and a correctly rejected false success.
 
 ## Distribution
 
-Every channel below was checked against the live service on 2026-08-22 rather
+Every channel below was checked against the live service on 2026-09-03 rather
 than copied from an earlier report.
 
 | Channel | State |
 |---|---|
-| PyPI `watch-skill` | `1.2.0` is the only published version. The source is `1.4.0rc1` and is not installable from PyPI. |
-| Agent Skills (skills.sh) | Badge endpoint returns HTTP 200, `Skills: 1.1K`. Ten `SKILL.md` files in the repository. |
+| PyPI `watch-skill` | Two published versions: `1.2.0`, which carries the `latest` tag, and the `1.3.0rc2` pre-release. The source here is `1.4.0rc1` and is not installable from PyPI. |
+| Agent Skills (skills.sh) | Badge endpoint returns HTTP 200, `Skills: 2.1K`; the project page returns HTTP 200. Ten `SKILL.md` files in the repository. |
 | GHCR `ghcr.io/oxbshw/watch-skill` | OCI index with `linux/amd64` and `linux/arm64`, plus two attestation manifests. |
-| GitHub release `v1.2.0` | Wheel, sdist and `watch-skill.skill`. |
-| npm | Nothing published. `watch-skill`, `@oxbshw/watch-skill` and `watch-skill-mcp` all return 404; `npx skills` runs Vercel's CLI. See [DECISIONS](DECISIONS.md). |
+| GitHub releases | `v1.2.0` is the latest release and `v1.3.0rc2` the newest pre-release; each carries a wheel, an sdist and `watch-skill.skill`. Nothing is tagged for `1.4.0rc1`. |
+| npm | Nothing published, under any name. `watch-skill`, `@oxbshw/watch-skill` and `watch-skill-mcp` return 404, and a scope search for `@deepwatch` returns zero packages, so the twenty DeepWatch tarballs exist only as verified archives. `npx skills` runs Vercel's CLI. See [DECISIONS](DECISIONS.md). |
 | MCP Registry | `server.json` committed and schema-validated; not yet published. |
+
+A published version is not a claim about this candidate. `uvx --from
+"watch-skill[standard]"` resolves `1.2.0` today, so the pre-publication checks
+below run against the wheel built from this commit and never against the
+registry — testing what PyPI already has would say nothing about `1.4.0rc1`.
 
 The README states PyPI as the install channel and no longer reads as though
 `npx skills add` were installing an npm package.
@@ -219,7 +264,7 @@ The README states PyPI as the install channel and no longer reads as though
 | `watch-skill --version` | `1.4.0rc1` |
 | `watch-skill doctor --no-fix --json` | valid JSON, 16 checks |
 | MCP `initialize` over real stdio | ok |
-| `tools/list` over real stdio | 37 tools |
+| `tools/list` over real stdio | 39 tools |
 | PyPI description carries the `mcp-name` marker | yes, survives the README rewrite |
 | sdist / wheel hygiene | no `node_modules`, `.next`, caches or build junk |
 
@@ -267,8 +312,10 @@ one field is not.
 ## Known limitations
 
 - **Two-browser scenarios need headroom.** Scenarios holding a live source and
-  a verifier at once require roughly 2550 MB free. On an 8 GiB host they skip
-  when the machine is busy, with the shortfall named.
+  a verifier at once require roughly 2550 MB free, and skip with the shortfall
+  named when the machine cannot afford it. That is about what else is running,
+  not about how much the machine has: the 2026-09-03 snapshot skipped one on a
+  16 GiB host with 2520 MB free, and it passed when re-run on its own.
 - **Local VLM inference is slow on CPU-only hardware.** Tens of seconds per
   inference. It is asynchronous evidence, not an interactive path.
 - **The workspace first-render budget assumes an idle host.** The gate measures

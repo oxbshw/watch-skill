@@ -90,6 +90,22 @@ is one file, one rule and a reason.
   ASCII spelling table does not hold. Found on OCR text lifted from a real
   slide.
 
+- A Watch Core too old to have the `bridge` command could be reported as a
+  failed handshake, with advice to retry it. The Bridge resolves its connection
+  as soon as the engine is spawned, so the handshake write can reach a pipe
+  whose engine has already quit — and that write knows only that the pipe
+  broke, while the engine's exit carries the usage error saying what is
+  actually wrong. Whichever arrived first was published, so one build diagnosed
+  this correctly on Linux and Windows and misleadingly on macOS. A broken pipe
+  now waits for the exit that explains it, and the reader gets the fix that
+  works: upgrade Watch Core.
+
+- The manual profile composed a twenty-second startup budget, below the
+  forty-five seconds the product ships and below the floor a first cold start on
+  a clean Windows machine has already exceeded. A profile built that way could
+  still report a healthy engine as a dead one. The overlay now names only the
+  binary, the transport and the argv, and inherits the shipped budget.
+
 ## v1.3.0rc2 — 2026-08-22 (pre-release)
 
 A release candidate, published so the 1.3.0 line gets real use before it
