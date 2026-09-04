@@ -54,6 +54,7 @@ import { Service } from '@deepseek-ai/cordis'
 import type { Context } from '@deepseek-ai/cordis'
 import {
   EXECUTION_RECORD_VERSION, boundSummary, executionKey, redactSecrets,
+  reconcileExecutionRecords,
 } from '@deepwatch/dsh-contracts'
 import type {
   ScopeDecision, SideEffectClass, ToolExecutionRecord, WorkspaceScope,
@@ -78,6 +79,16 @@ export const OBSERVATION_SERVICE = 'watchObservation'
  * session is still inspectable.
  */
 export const LEDGER_LIMIT = 2_000
+
+/**
+ * The ceiling on per-call tracking, which outlives the calls themselves.
+ *
+ * Entries are kept after a call settles so a late or duplicated result can
+ * reconcile onto the record it already wrote. That is the point, and it is also
+ * why the map needs a bound: without one, "kept" means "kept forever" on a Host
+ * that runs for weeks.
+ */
+export const TRACKING_LIMIT = 4_000
 
 /**
  * How long the Host waits for Core to answer one automatic attestation.
@@ -414,6 +425,16 @@ interface OpenCall {
   readonly identity: { sessionId: string, turnId: string, callId: string, attempt: number }
   readonly startedAt: number
   readonly toolName: string
+  /**
+   * Whether this call's result has already been settled.
+   *
+   * Kept rather than deleted, because deleting it is what lets a late or
+   * duplicated result mint a *second* record: with no entry to find, settling
+   * numbers the attempt from scratch and lands on a different key. An entry
+   * that outlives its call is how a replay reconciles onto the record it
+   * already wrote, and how a genuine retry is told apart from a duplicate.
+   */
+  settled: boolean
 }
 
 /**
@@ -422,10 +443,37 @@ interface OpenCall {
  * Mounted once by {@link apply}; everything else injects it. Holds settled
  * records and the calls currently in flight, and answers the read plane.
  */
+/**
+ * The key an in-flight call is remembered under.
+ *
+ * A call id alone is not unique: providers number tool calls per request, so
+ * two open sessions produce `call_1` at the same time. The session id is length
+ * prefixed rather than joined by a separator, so no session id or call id
+ * containing the separator can be made to collide with another pair.
+ */
+function callKey(sessionId: string, callId: string): string {
+  return `${String(sessionId.length)}:${sessionId}:${callId}`
+}
+
 export class WatchObservation extends Service {
-  /** Settled records, oldest first, bounded by {@link LEDGER_LIMIT}. */
-  private readonly records: ToolExecutionRecord[] = []
-  /** In-flight calls, by the upstream call id. */
+  /**
+   * The canonical record per execution, oldest first, bounded by
+   * {@link LEDGER_LIMIT}.
+   *
+   * Keyed by idempotency key rather than appended, because an execution has one
+   * story and two producers tell it: the containment screen and the settling of
+   * a result. An array let both write, and left whichever wrote last as the
+   * version an owner read -- which, for a refused call, was the one that had no
+   * way to know it had been refused.
+   */
+  private readonly records = new Map<string, ToolExecutionRecord>()
+  /**
+   * Calls seen this session, by session *and* call id.
+   *
+   * Scoped by session because a call id is only unique within one: providers
+   * number tool calls per request, so two sessions routinely produce the same
+   * `call_1`, and a single-keyed map silently merges them.
+   */
   private readonly open = new Map<string, OpenCall>()
   /** Attempts already seen per action, so a retry is numbered rather than duplicated. */
   private readonly attempts = new Map<string, number>()
@@ -516,14 +564,22 @@ export class WatchObservation extends Service {
     const callId = typeof exec.callId === 'string' ? exec.callId : 'unknown-call'
     const toolName = typeof exec.name === 'string' ? exec.name : 'unknown-tool'
     const { turnId } = this.turnOf()
+    const key = callKey(sessionId, callId)
+    const existing = this.open.get(key)
+    // A second `begin` for a call still in flight is the same dispatch observed
+    // twice, not a retry. Only a call that already settled can be attempted
+    // again, and only that case takes a new attempt number.
+    if (existing !== undefined && !existing.settled) return callId
     const action = `${sessionId}/${turnId}/${callId}`
     const attempt = (this.attempts.get(action) ?? 0) + 1
-    this.attempts.set(action, attempt)
-    this.open.set(callId, {
+    this.remember(this.attempts, action, attempt)
+    this.open.set(key, {
       identity: { sessionId, turnId, callId, attempt },
       startedAt: Date.now(),
       toolName,
+      settled: false,
     })
+    this.evict(this.open, TRACKING_LIMIT)
     return callId
   }
 
@@ -537,8 +593,11 @@ export class WatchObservation extends Service {
    */
   settle(exec: ExecutionLike, result: ResultLike, sessionId: string): ToolExecutionRecord {
     const callId = typeof exec.callId === 'string' ? exec.callId : 'unknown-call'
-    const opened = this.open.get(callId)
-    this.open.delete(callId)
+    // Kept, not deleted: a duplicated or reordered result has to reconcile onto
+    // the record this call already wrote, and it can only find it by landing on
+    // the same identity.
+    const opened = this.open.get(callKey(sessionId, callId))
+    if (opened !== undefined) opened.settled = true
     const { turnId, authorisedBy } = this.turnOf()
     const identity = opened?.identity ?? { sessionId, turnId, callId, attempt: 1 }
     const toolName = opened?.toolName
@@ -592,8 +651,15 @@ export class WatchObservation extends Service {
     const { turnId, authorisedBy } = this.turnOf()
     const action = `${sessionId}/${turnId}/${callId}`
     const attempt = (this.attempts.get(action) ?? 0) + 1
-    this.attempts.set(action, attempt)
+    this.remember(this.attempts, action, attempt)
     const identity = { sessionId, turnId, callId, attempt }
+    // Registered like any other call, so the denial's result -- which the
+    // dispatch layer still delivers -- reconciles onto this record instead of
+    // minting a second one beside it.
+    this.open.set(callKey(sessionId, callId), {
+      identity, startedAt: Date.now(), toolName, settled: false,
+    })
+    this.evict(this.open, TRACKING_LIMIT)
     const at = new Date().toISOString()
 
     const record: ToolExecutionRecord = {
@@ -637,13 +703,46 @@ export class WatchObservation extends Service {
   }
 
   private push(record: ToolExecutionRecord): void {
-    this.records.push(record)
-    while (this.records.length > LEDGER_LIMIT) this.records.shift()
+    const existing = this.records.get(record.idempotencyKey)
+    const canonical = existing === undefined
+      ? record
+      : reconcileExecutionRecords(existing, record)
+
+    // Nothing moved: the same ending observed twice, or a late observation that
+    // knew less than the record already does. Re-announcing it would replace a
+    // truthful receipt in the Library with a stale copy of itself, and re-add it
+    // to the index as though it were new.
+    if (existing !== undefined && canonical === existing) return
+
+    this.records.set(record.idempotencyKey, canonical)
+    this.evict(this.records, LEDGER_LIMIT)
     // Announced so the Library can index a receipt as it is minted rather than
     // waiting for somebody to press Refresh. The event is the whole reason the
-    // index can be caught up instead of behind.
+    // index can be caught up instead of behind. It carries the canonical record
+    // -- never the raw observation -- so the Library holds what the ledger does.
     const events = this.ctx as unknown as { emit(name: string, ...args: unknown[]): void }
-    events.emit('watch/execution-recorded', record)
+    events.emit('watch/execution-recorded', canonical)
+  }
+
+  /**
+   * Record a value in a tracking map, bounded.
+   *
+   * Every map here is keyed by something a session can produce without limit --
+   * a call id, an action -- so every one of them needs a ceiling. A long-lived
+   * Host is the ordinary case, not the exceptional one.
+   */
+  private remember<K, V>(map: Map<K, V>, key: K, value: V): void {
+    map.set(key, value)
+    this.evict(map, TRACKING_LIMIT)
+  }
+
+  /** Drop the oldest entries until a map is within its ceiling. */
+  private evict<K, V>(map: Map<K, V>, limit: number): void {
+    if (map.size <= limit) return
+    for (const key of map.keys()) {
+      if (map.size <= limit) break
+      map.delete(key)
+    }
   }
 
   /**
@@ -735,22 +834,35 @@ export class WatchObservation extends Service {
 
   /** Every settled record, oldest first. */
   all(): readonly ToolExecutionRecord[] {
-    return this.records
+    return [...this.records.values()]
   }
 
   /** The records for one session. */
   forSession(sessionId: string): readonly ToolExecutionRecord[] {
-    return this.records.filter(record => record.sessionId === sessionId)
+    return this.all().filter(record => record.sessionId === sessionId)
   }
 
-  /** How many calls are in flight. */
+  /**
+   * How many calls are in flight.
+   *
+   * Counted rather than taken from the map's size: entries outlive their calls
+   * so a late result can reconcile onto the record it already wrote, and a
+   * settled entry is not an open call.
+   */
   openCount(): number {
+    let open = 0
+    for (const call of this.open.values()) if (!call.settled) open += 1
+    return open
+  }
+
+  /** How many calls are being tracked at all, settled ones included. */
+  trackedCount(): number {
     return this.open.size
   }
 
   /** Forget everything. For a profile teardown, and for tests that want a clean ledger. */
   clear(): void {
-    this.records.length = 0
+    this.records.clear()
     this.open.clear()
     this.attempts.clear()
     this.attestations.clear()

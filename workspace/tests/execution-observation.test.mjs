@@ -342,6 +342,53 @@ describe('the workspace boundary refuses rather than reports', () => {
       'the refused path was written into the record it refused')
   })
 
+  test('a refusal is recorded once, and is not overwritten by its own result', async () => {
+    // The dispatch layer turns a denial into an error result and reports it
+    // like any other outcome. Settling that result mints a *second* record for
+    // the same execution -- `state: 'failed'`, `scopeDecision: 'allowed'` --
+    // because settling cannot tell a call that failed from a call that never
+    // ran. Both records carry the same idempotency key, so a consumer that
+    // reads the newest one is told the boundary allowed a call the boundary
+    // refused.
+    //
+    // Every earlier test here read `all()[0]` and so never saw the second row.
+    const host = await contained()
+    const result = await host.run({
+      callId: 'c1', name: 'read', arguments: { path: OUTSIDE } })
+    assert.equal(result.isError, true)
+    assert.deepEqual(host.dispatched(), [])
+
+    const records = host.observation.all()
+    assert.equal(records.length, 1,
+      'one refused call produced more than one record')
+    // Read from the end, which is what a consumer taking "the latest" sees.
+    const latest = records[records.length - 1]
+    assert.equal(latest.scopeDecision, 'denied',
+      'the newest record says the refused call was allowed')
+    assert.equal(latest.state, 'cancelled')
+    assert.equal(latest.exitStatus, 'denied')
+    assert.equal(
+      records.some(record => record.scopeDecision === 'allowed'), false,
+      'a record claims containment allowed a call it denied')
+  })
+
+  test('the allow path still settles normally after a refusal', async () => {
+    // The fix must not swallow the next call's result: a refusal remembered
+    // per call id has to be forgotten when that call is settled, or an
+    // ordinary call reusing the id would inherit somebody else's denial.
+    const host = await contained()
+    await host.run({ callId: 'c1', name: 'read', arguments: { path: OUTSIDE } })
+    const ok = await host.run({
+      callId: 'c2', name: 'read', arguments: { path: `${WORKSPACE}/src/index.ts` } })
+    assert.equal(ok.isError, false)
+
+    const records = host.observation.all()
+    assert.equal(records.length, 2)
+    assert.equal(records[0].scopeDecision, 'denied')
+    assert.equal(records[1].scopeDecision, 'allowed')
+    assert.equal(records[1].state, 'completed')
+  })
+
   test('a shell write outside the workspace is refused too', async () => {
     // Including the system temporary directory, which the evaluation wrote to
     // and nobody saw.

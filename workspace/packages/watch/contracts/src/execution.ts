@@ -193,6 +193,101 @@ export function isSameAction(a: ExecutionIdentity, b: ExecutionIdentity): boolea
  * copy of it. Long enough to identify what happened, short enough that a
  * thousand records stay readable and indexable.
  */
+/**
+ * The states a record can no longer leave.
+ *
+ * A dispatch that finished, failed or was refused has an answer. Anything
+ * arriving afterwards is a second observation of the same event -- a retried
+ * emit, a late listener, an out-of-order post-execute -- and not a new outcome.
+ */
+export const TERMINAL_STATES: readonly AgentExecutionState[] = ['completed', 'failed', 'cancelled']
+
+/** Whether a state is the end of an execution's story. */
+export function isTerminalState(state: AgentExecutionState): boolean {
+  return TERMINAL_STATES.includes(state)
+}
+
+/**
+ * How far through its life an execution is, so progress can be compared.
+ *
+ * Ranked rather than ordered by name because the only question ever asked of
+ * it is "is this observation older than the one already recorded", and a
+ * comparison that answers that in one place cannot answer it differently in
+ * another.
+ */
+export function stateRank(state: AgentExecutionState): number {
+  if (state === 'queued') return 0
+  if (state === 'running') return 1
+  return 2
+}
+
+/**
+ * How firmly a scope decision is held.
+ *
+ * `denied` outranks everything, and that is the whole point. A call the
+ * boundary refused is refused; a later observation that did not know about the
+ * refusal must not be able to describe it as permitted. This is the single
+ * asymmetry in the record, and it is deliberate: softening a denial is the one
+ * error that turns a boundary into a label.
+ */
+export function scopeDecisionRank(decision: ScopeDecision): number {
+  if (decision === 'denied') return 3
+  if (decision === 'approved') return 2
+  if (decision === 'allowed') return 1
+  return 0
+}
+
+/**
+ * Merge two observations of one execution into the single canonical record.
+ *
+ * Both producers of a record -- the containment screen and the settling of a
+ * result -- write through here, so neither can overwrite the other by arriving
+ * second. The rules are few and each exists because breaking it produced a
+ * record that lied:
+ *
+ *   - A denial is permanent. A refused call still travels back through the
+ *     dispatch layer as an error, and settling that error as an ordinary
+ *     outcome once rewrote `denied` into `allowed`.
+ *   - A terminal state is final. Two terminal observations of one execution
+ *     are the same ending seen twice, not two endings.
+ *   - Progress only moves forward. A late `running` cannot un-finish a call.
+ *
+ * Returns `existing` unchanged -- by identity, so a caller can test whether
+ * anything moved -- when the incoming observation adds nothing.
+ */
+export function reconcileExecutionRecords(
+  existing: ToolExecutionRecord, incoming: ToolExecutionRecord,
+): ToolExecutionRecord {
+  // Two records that are not the same execution must never be merged; the
+  // caller keyed them wrongly and silently blending them would hide that.
+  if (existing.idempotencyKey !== incoming.idempotencyKey) return existing
+
+  const scopeDecision = scopeDecisionRank(existing.scopeDecision)
+    >= scopeDecisionRank(incoming.scopeDecision)
+    ? existing.scopeDecision
+    : incoming.scopeDecision
+
+  const settled = isTerminalState(existing.state)
+    || stateRank(incoming.state) <= stateRank(existing.state)
+
+  if (settled) {
+    return scopeDecision === existing.scopeDecision ? existing : { ...existing, scopeDecision }
+  }
+
+  // The incoming observation is genuinely further along. It carries the newer
+  // outcome, but identity and origin belong to the record that opened.
+  return {
+    ...incoming,
+    sessionId: existing.sessionId,
+    turnId: existing.turnId,
+    callId: existing.callId,
+    attempt: existing.attempt,
+    idempotencyKey: existing.idempotencyKey,
+    startedAt: existing.startedAt,
+    scopeDecision,
+  }
+}
+
 export const SUMMARY_LIMIT = 512
 
 /**
