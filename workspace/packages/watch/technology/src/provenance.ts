@@ -421,8 +421,19 @@ export const name = 'watch-provenance'
 export function apply(ctx: Context): void {
   const provenance = new WatchProvenance(ctx)
 
-  const events = ctx as unknown as {
-    on(name: string, listener: (...args: unknown[]) => void): void
+  // Upstream's event declarations are not merged into this package's `Events`
+  // — it depends on `dsh-llm` and `dsh-settings` and not on the agent loop or
+  // the credentials seam — so registration goes through a described surface.
+  // Two shapes, because the loop has two: an observer, and a waterfall link
+  // that is handed `next` and must return it.
+  const observe = ctx as unknown as {
+    on(name: string, listener: (payload: unknown) => void): void
+  }
+  const link = ctx as unknown as {
+    on(
+      name: string,
+      listener: (payload: unknown, next: () => Promise<unknown>) => Promise<unknown>,
+    ): void
   }
 
   // A rewritten credential is the one change to a route that leaves no trace
@@ -436,21 +447,36 @@ export function apply(ctx: Context): void {
   // sounded conservative and was not: it also cleared them on the write that
   // binds a role, so the product's own configure–test–bind–prompt order ended
   // at a refusal, and the browser pass caught it.
-  events.on('credentials/reference-updated', (ref) => {
+  observe.on('credentials/reference-updated', (ref) => {
     if (typeof ref === 'string') provenance.noteCredentialWrite(ref)
   })
-  events.on('credentials/record-updated', (key) => {
+  observe.on('credentials/record-updated', (key) => {
     if (typeof key === 'string') provenance.noteCredentialWrite(key)
   })
 
   // A turn is open only while the agent loop says so. An event that never
   // fires leaves no turn open, and no turn open refuses — so a rename upstream
   // fails closed rather than silently permitting.
-  events.on('agent/pre-step', (payload) => { provenance.openTurn(turnIdOf(payload)) })
-  events.on('agent/turn-stopping', (payload) => { provenance.closeTurn(turnIdOf(payload)) })
-  events.on('agent/error', () => { provenance.closeAllTurns() })
-  events.on('agent/disposed', () => { provenance.closeAllTurns() })
-  events.on('agent/session-start', () => { provenance.closeAllTurns() })
+  //
+  // `agent/pre-step` is a *waterfall*, and that is not a detail. Its listeners
+  // are handed the loop's own `next` and are expected to return a step
+  // decision; a listener that takes only the payload and returns nothing does
+  // not observe the step, it answers it — with `undefined`, in place of the
+  // decision the loop was about to make. Registered that way, this opened the
+  // turn correctly and then ended it: the browser pass reported the provider
+  // seeing seven provider tests and no turn at all, and the same signature
+  // survived turning the guard itself off, which is what finally located it.
+  // Only this one event is a waterfall; `agent/turn-stopping` is serial and
+  // the other three are plain emits, so their listeners are observers and
+  // return nothing on purpose.
+  link.on('agent/pre-step', async (payload, next) => {
+    provenance.openTurn(turnIdOf(payload))
+    return next()
+  })
+  observe.on('agent/turn-stopping', (payload) => { provenance.closeTurn(turnIdOf(payload)) })
+  observe.on('agent/error', () => { provenance.closeAllTurns() })
+  observe.on('agent/disposed', () => { provenance.closeAllTurns() })
+  observe.on('agent/session-start', () => { provenance.closeAllTurns() })
 }
 
 /**

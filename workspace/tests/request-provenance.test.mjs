@@ -194,6 +194,25 @@ describe('one service, mounted once, injected by both halves', () => {
     await host.dispose()
   })
 
+  test('the pre-step waterfall still reaches the loop that owns it', async () => {
+    // The listener that opens a turn sits in the middle of the decision the
+    // agent loop is about to make. Registered as an observer it returned
+    // `undefined` in place of that decision and the turn silently never ran, so
+    // this drives the real waterfall and checks both halves: the turn opens,
+    // and the loop's own answer comes back untouched.
+    const host = await mount()
+    const decision = await host.ctx.waterfall(
+      'agent/pre-step',
+      { agent: { id: 'agent-1' }, messages: [], turn: 4, step: 1 },
+      () => Promise.resolve({ kind: 'enter', messages: ['the loop’s own decision'] }))
+    assert.deepEqual(decision, { kind: 'enter', messages: ['the loop’s own decision'] },
+      'the listener answered the waterfall instead of passing it on')
+    assert.equal(host.provenance.activeTurn(), 'agent-1#4')
+    host.ctx.emit('agent/turn-stopping', { agent: { id: 'agent-1' }, turn: 4 })
+    assert.equal(host.provenance.activeTurn(), null)
+    await host.dispose()
+  })
+
   test('the bundle mounts it as its own row, ahead of what injects it', () => {
     const patch = readFileSync(
       join(ROOT, 'packages', 'watch', 'bundle', 'cordis.patch.yml'), 'utf8')
@@ -515,6 +534,46 @@ describe('the upstream events this relies on still exist', () => {
       'settings changes would stop reaching the binding source')
   })
 
+  test('every agent event is listened to in the mode upstream declares', (t) => {
+    // The bug this exists for: `agent/pre-step` is a waterfall, and a listener
+    // written as an observer does not watch the step, it answers it. The loop
+    // received `undefined` where a decision belonged, no turn ever ran, and the
+    // same signature survived switching the guard off — which is what finally
+    // located it.
+    //
+    // Read from upstream's own `@mode` annotations rather than restated, so a
+    // mode that changes there fails here instead of in a browser pass.
+    const source = agentRuntimeTypes()
+    if (source === null) {
+      t.skip('the pinned Harness baseline is not checked out; run scripts/upstream-sync.mjs')
+      return
+    }
+    const lines = source.split('\n')
+    /** The mode upstream annotates one event's declaration with. */
+    const modeOf = (event) => {
+      const at = lines.findIndex(line => line.includes(`'${event}'(this`))
+      if (at === -1) return null
+      for (let above = at - 1; above >= 0 && above > at - 40; above -= 1) {
+        const found = /@mode (\w+)/.exec(lines[above] ?? '')
+        if (found !== null) return found[1]
+        // Stop at the previous declaration, so an event without an annotation
+        // never inherits its neighbour's.
+        if ((lines[above] ?? '').includes("'(this")) return null
+      }
+      return null
+    }
+    const provenanceSource = readFileSync(
+      join(ROOT, 'packages', 'watch', 'technology', 'src', 'provenance.ts'), 'utf8')
+    const listened = [...provenanceSource.matchAll(/(observe|link)\.on\('(agent\/[a-z-]+)'/g)]
+    assert.ok(listened.length >= 5, 'the agent listeners moved; this check no longer reads them')
+    for (const [, shape, event] of listened) {
+      const mode = modeOf(event)
+      assert.notEqual(mode, null, `upstream no longer declares a mode for ${event}`)
+      assert.equal(shape, mode === 'waterfall' ? 'link' : 'observe',
+        `${event} is @mode ${mode} upstream and is registered here as a ${shape}`)
+    }
+  })
+
   test('the credentials service still announces a committed write', (t) => {
     const source = credentialsSource()
     if (source === null) {
@@ -554,3 +613,4 @@ ${agent}`
 }
 const settingsSource = () => pinned('settings', 'settings', 'src', 'index.ts')
 const credentialsSource = () => pinned('credentials', 'credentials', 'src', 'types.ts')
+const agentRuntimeTypes = () => pinned('core', 'agent', 'src', 'runtime-types.ts')
