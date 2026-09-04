@@ -54,7 +54,7 @@ import type {
   CapabilityTally, CoreBlocker, CoreHealthRequest, CoreHealthResponse,
   LibraryGetRequest, LibraryGetResponse, LibraryIndexGeneration,
   LibraryRecord, LibraryRefreshRequest, LibraryRefreshResponse,
-  LibrarySearchRequest, LibrarySearchResponse,
+  LibraryIndexState, LibrarySearchRequest, LibrarySearchResponse,
   ProviderTestRequest, ProviderTestResponse,
   RouteReadinessRequest, RouteReadinessResponse,
 } from '@deepwatch/dsh-contracts/query/wire'
@@ -463,8 +463,37 @@ export function searchLibrary(
     records: found.results.map(result => toWireRecord(result, index)),
     nextCursor: null,
     total: found.total,
-    indexState: found.health === 'ready' ? 'ready' : 'stale',
+    indexState: wireIndexState(found.health, index.size),
   }
+}
+
+/**
+ * The wire state for one index, without collapsing four answers into two.
+ *
+ * The defect this replaces was a single conditional: anything that was not
+ * `ready` became `stale`, so an index over an empty store reported "Index is
+ * behind the store". A person looking at a fresh profile was told their
+ * Library was out of date with respect to nothing, and the only honest reading
+ * of that screen — something is wrong — was the wrong one.
+ *
+ * `empty` and `stale` are opposite claims. Empty says the index agrees with a
+ * store that holds nothing. Stale says the store moved and the index has not
+ * caught up. Reporting the first as the second turns "there is nothing here
+ * yet" into "you are missing something", which is the difference between a
+ * quiet first run and a bug report.
+ */
+export function wireIndexState(
+  health: LibraryIndex['health'], size: number,
+): LibraryIndexState {
+  // Emptiness first: an index with nothing in it is caught up with a store
+  // that has nothing in it, whatever else it has been through.
+  if (size === 0) return health === 'indexing' ? 'rebuilding' : 'empty'
+  if (health === 'ready') return 'ready'
+  if (health === 'indexing') return 'rebuilding'
+  // `stale` and `corrupt` both mean the index does not describe the store. They
+  // are different repairs, and the wire vocabulary has one word; `stale` is the
+  // one that sends somebody to Refresh, which is right for both.
+  return 'stale'
 }
 
 /**
@@ -621,7 +650,7 @@ function describeIndex(index: LibraryIndex): LibraryIndexGeneration {
     completedAt: null,
     sourceCount: 0,
     recordCount: index.size,
-    indexState: index.size === 0 ? 'empty' : (index.health === 'ready' ? 'ready' : 'stale'),
+    indexState: wireIndexState(index.health, index.size),
   }
 }
 

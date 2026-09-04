@@ -346,6 +346,70 @@ export function apply(ctx: Context, config: Config): void {
     generations,
   })
 
+  /**
+   * Index an execution receipt the moment the Host records one.
+   *
+   * The gap this closes: the evaluation produced 76 tool actions and a Library
+   * with nothing in it. Not because indexing failed — because nothing indexed a
+   * receipt until somebody pressed Refresh, and Refresh reads evidence roots on
+   * disk that did not contain an in-memory receipt from four seconds ago. A
+   * feature reachable only by winning that race is not reachable.
+   *
+   * A receipt is filed as a `document`, which is the least-wrong kind the
+   * source vocabulary already has for something textual, and tagged so it stays
+   * filterable without widening a closed union that the client's filters and
+   * the wire contract both depend on.
+   *
+   * `verdict` is deliberately null. A receipt is what happened; whether it was
+   * right is Core's answer and arrives, if it arrives, as an attestation.
+   */
+  ;(ctx as unknown as { on(name: string, listener: (payload: unknown) => void): void })
+    .on('watch/execution-recorded', (payload) => {
+      const record = payload as {
+        idempotencyKey?: unknown
+        toolName?: unknown
+        sessionId?: unknown
+        startedAt?: unknown
+        inputSummary?: unknown
+        outputSummary?: unknown
+        sideEffect?: unknown
+        scope?: unknown
+        paths?: unknown
+        state?: unknown
+      }
+      const recordId = typeof record.idempotencyKey === 'string' ? record.idempotencyKey : null
+      if (recordId === null) return
+      const tool = typeof record.toolName === 'string' ? record.toolName : 'tool'
+      const paths = Array.isArray(record.paths) ? record.paths.filter(
+        (entry): entry is string => typeof entry === 'string') : []
+      generations.addLive({
+        recordId,
+        revisionId: recordId,
+        title: paths.length === 0 ? tool : `${tool} — ${paths.join(', ')}`,
+        kind: 'document',
+        // Searchable text, already redacted and bounded by the ledger that
+        // produced it. Nothing is re-derived here from anything unredacted.
+        text: [
+          tool,
+          typeof record.inputSummary === 'string' ? record.inputSummary : '',
+          typeof record.outputSummary === 'string' ? record.outputSummary : '',
+          ...paths,
+        ].join(' '),
+        source: null,
+        runId: typeof record.sessionId === 'string' ? record.sessionId : null,
+        observedAt: typeof record.startedAt === 'string' ? record.startedAt : null,
+        verdict: null,
+        tags: [
+          'execution-receipt',
+          `tool:${tool}`,
+          ...typeof record.sideEffect === 'string' ? [`effect:${record.sideEffect}`] : [],
+          ...typeof record.scope === 'string' ? [`scope:${record.scope}`] : [],
+          ...typeof record.state === 'string' ? [`state:${record.state}`] : [],
+        ],
+        evidenceIds: [],
+      })
+    })
+
   ctx.tools.register(defineTool({
     name: 'watch_verify',
     description:

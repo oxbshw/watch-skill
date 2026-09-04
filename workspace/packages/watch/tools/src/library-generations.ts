@@ -31,10 +31,11 @@
  * @module @deepwatch/dsh-tools/library-generations
  */
 
-import type { LibraryIndex } from '@deepwatch/dsh-library'
+import type { IndexableRecord, LibraryIndex } from '@deepwatch/dsh-library'
 import type { LibraryIndexState } from '@deepwatch/dsh-contracts/query/wire'
 
 import { buildIndex, buildIndexCancellable } from './library-search.js'
+import { wireIndexState } from './read-plane.js'
 
 /** One built index, and what is true about it. */
 export interface IndexGeneration {
@@ -93,6 +94,41 @@ export class LibraryGenerations {
     this.#config = config
   }
 
+  /**
+   * Records the Host produced while running, kept across rebuilds.
+   *
+   * An execution receipt is minted by this Host, in memory, seconds ago; a
+   * rebuild reads the evidence roots on disk. Without this, indexing a receipt
+   * and then pressing Refresh would lose it, and the Library would go from
+   * "searchable" to "empty" for no reason a person could see. Re-applied after
+   * every build, so Refresh converges on the same answer rather than racing
+   * whatever arrived while it ran.
+   */
+  #live = new Map<string, IndexableRecord>()
+
+  /**
+   * Index one record the Host made, now, without a rebuild.
+   *
+   * The failure this closes: the evaluation produced 76 tool actions and a
+   * Library with nothing in it, because nothing indexed a receipt until
+   * somebody pressed Refresh — and Refresh read roots that did not contain
+   * them yet.
+   */
+  addLive(record: IndexableRecord): void {
+    this.#live.set(record.recordId, record)
+    this.index().add(record)
+  }
+
+  /** How many live records are being carried across rebuilds. */
+  liveCount(): number {
+    return this.#live.size
+  }
+
+  /** Re-apply the live records to a freshly built index. */
+  #applyLive(index: LibraryIndex): void {
+    for (const record of this.#live.values()) index.add(record)
+  }
+
   /** The clock, injectable so a test can assert on a generation record. */
   #now(): string {
     return this.#config.now?.() ?? new Date().toISOString()
@@ -108,6 +144,7 @@ export class LibraryGenerations {
     if (this.#current === null) {
       const startedAt = this.#now()
       const built = buildIndex(this.#config.roots)
+      this.#applyLive(built.index)
       this.#current = {
         index: built.index,
         meta: this.#describe(this.#nextGeneration, startedAt, built.index, built.skipped),
@@ -142,7 +179,7 @@ export class LibraryGenerations {
       // The index's own word for its condition, mapped to the wire's. A
       // rebuild that read nothing is empty, not ready: an index nobody has
       // filled is not a complete answer to anything.
-      indexState: index.size === 0 ? 'empty' : (index.health === 'ready' ? 'ready' : 'stale'),
+      indexState: wireIndexState(index.health, index.size),
       skipped,
     }
   }
@@ -215,6 +252,12 @@ export class LibraryGenerations {
         const built = await build(this.#config.roots, controller.signal)
         if (built.index === null) return { kind: 'cancelled', index: previous }
 
+        // Before the generation is described, so its counts include them and a
+        // surface comparing generations is comparing the whole answer. A
+        // rebuild reads the roots; the receipts this Host minted while running
+        // are not there yet, and dropping them would take a searchable Library
+        // back to empty for no reason a person could see.
+        this.#applyLive(built.index)
         const meta = this.#describe(this.#nextGeneration, startedAt, built.index, built.skipped)
         this.#nextGeneration += 1
         // The swap. One assignment, after the new index is complete, so no
