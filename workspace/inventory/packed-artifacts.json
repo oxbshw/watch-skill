@@ -3,7 +3,7 @@
   "note": "Source-derived expectations for a release pack. Per-run facts -- the digest, the size, the commit, the directory -- belong to the inventory written beside the tarballs, never here.",
   "counts": {
     "packages": 20,
-    "files": 402
+    "files": 410
   },
   "publishOrder": [
     "@deepwatch/dsh-client-brand",
@@ -32,7 +32,7 @@
       "name": "@deepwatch/cli",
       "version": "0.1.0-preview.0",
       "access": "public",
-      "fileCount": 33,
+      "fileCount": 35,
       "dependencies": {
         "@deepwatch/dsh-bundle": "^0.1.0-preview.0"
       },
@@ -75,6 +75,8 @@
         "lib/lib/paths.js",
         "lib/lib/provision.d.ts",
         "lib/lib/provision.js",
+        "lib/provenance.d.ts",
+        "lib/provenance.js",
         "lib/setup.d.ts",
         "lib/setup.js",
         "lib/version.d.ts",
@@ -192,7 +194,7 @@
       "name": "@deepwatch/dsh-client-evidence",
       "version": "0.1.0-preview.0",
       "access": "public",
-      "fileCount": 29,
+      "fileCount": 35,
       "dependencies": {
         "@deepwatch/dsh-client-brand": "^0.1.0-preview.0",
         "@deepwatch/dsh-contracts": "^0.1.0-preview.0",
@@ -232,12 +234,18 @@
         "lib/client/compare-mode.d.ts",
         "lib/client/compare-mode.js",
         "lib/client/compare-mode.js.map",
+        "lib/client/compare-registration.d.ts",
+        "lib/client/compare-registration.js",
+        "lib/client/compare-registration.js.map",
         "lib/client/index.d.ts",
         "lib/client/index.js",
         "lib/client/index.js.map",
         "lib/compare-engine.d.ts",
         "lib/compare-engine.js",
         "lib/compare-engine.js.map",
+        "lib/compare-source.d.ts",
+        "lib/compare-source.js",
+        "lib/compare-source.js.map",
         "lib/index.d.ts",
         "lib/index.js",
         "lib/index.js.map",
