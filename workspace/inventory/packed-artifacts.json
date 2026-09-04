@@ -3,7 +3,7 @@
   "note": "Source-derived expectations for a release pack. Per-run facts -- the digest, the size, the commit, the directory -- belong to the inventory written beside the tarballs, never here.",
   "counts": {
     "packages": 20,
-    "files": 392
+    "files": 402
   },
   "publishOrder": [
     "@deepwatch/dsh-client-brand",
@@ -384,7 +384,7 @@
       "name": "@deepwatch/dsh-contracts",
       "version": "0.1.0-preview.0",
       "access": "public",
-      "fileCount": 29,
+      "fileCount": 31,
       "dependencies": {},
       "peerDependencies": {},
       "exports": [
@@ -405,6 +405,8 @@
         "lib/bindings.js",
         "lib/digests.d.ts",
         "lib/digests.js",
+        "lib/execution.d.ts",
+        "lib/execution.js",
         "lib/failures.d.ts",
         "lib/failures.js",
         "lib/identity.d.ts",
@@ -639,7 +641,7 @@
       "name": "@deepwatch/dsh-technology",
       "version": "0.1.0-preview.0",
       "access": "public",
-      "fileCount": 19,
+      "fileCount": 27,
       "dependencies": {
         "@deepwatch/dsh-contracts": "^0.1.0-preview.0"
       },
@@ -651,7 +653,11 @@
       },
       "exports": [
         ".",
+        "./attestation",
+        "./budget",
+        "./delegation",
         "./descriptors",
+        "./observation",
         "./package.json",
         "./provenance",
         "./routing"
@@ -660,12 +666,20 @@
       "files": [
         "LICENSE",
         "README.md",
+        "lib/attestation.d.ts",
+        "lib/attestation.js",
+        "lib/budget.d.ts",
+        "lib/budget.js",
+        "lib/delegation.d.ts",
+        "lib/delegation.js",
         "lib/descriptor.d.ts",
         "lib/descriptor.js",
         "lib/descriptors.d.ts",
         "lib/descriptors.js",
         "lib/index.d.ts",
         "lib/index.js",
+        "lib/observation.d.ts",
+        "lib/observation.js",
         "lib/ocr-qualification.d.ts",
         "lib/ocr-qualification.js",
         "lib/ocr-worker.d.ts",
