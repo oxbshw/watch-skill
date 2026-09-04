@@ -3,7 +3,7 @@
   "note": "Source-derived expectations for a release pack. Per-run facts -- the digest, the size, the commit, the directory -- belong to the inventory written beside the tarballs, never here.",
   "counts": {
     "packages": 20,
-    "files": 390
+    "files": 392
   },
   "publishOrder": [
     "@deepwatch/dsh-client-brand",
@@ -639,7 +639,7 @@
       "name": "@deepwatch/dsh-technology",
       "version": "0.1.0-preview.0",
       "access": "public",
-      "fileCount": 17,
+      "fileCount": 19,
       "dependencies": {
         "@deepwatch/dsh-contracts": "^0.1.0-preview.0"
       },
@@ -653,6 +653,7 @@
         ".",
         "./descriptors",
         "./package.json",
+        "./provenance",
         "./routing"
       ],
       "bin": [],
@@ -671,6 +672,8 @@
         "lib/ocr-worker.js",
         "lib/ocr.d.ts",
         "lib/ocr.js",
+        "lib/provenance.d.ts",
+        "lib/provenance.js",
         "lib/routing.d.ts",
         "lib/routing.js",
         "package.json"
