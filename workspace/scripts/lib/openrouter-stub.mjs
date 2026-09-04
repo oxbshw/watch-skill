@@ -314,8 +314,15 @@ export async function startOpenRouterStub({
           return
         }
         const model = typeof entry.body?.model === 'string' ? entry.body.model : 'stub/echo-small'
-        completions += 1
-        const scripted = scriptedCall(script, completions)
+        // Only a completion that carries tools is an agent turn able to act on
+        // a scripted call. A provider test ignores tool calls, and a
+        // session-title request is sent without tools at all — the first
+        // attempt at this spent the script's only step on one of those and
+        // looked exactly like an agent declining to do the work.
+        const advertisesTools = Array.isArray(entry.body?.tools)
+          && entry.body.tools.length > 0
+        if (advertisesTools) completions += 1
+        const scripted = advertisesTools ? scriptedCall(script, completions) : null
         if (entry.body?.stream === true) {
           response.writeHead(200, {
             'content-type': 'text/event-stream',

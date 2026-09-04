@@ -144,7 +144,11 @@ const SIDE_EFFECTS: Readonly<Record<string, SideEffectClass>> = {
   terminal_signal: 'execute',
   terminal_close: 'execute',
   spawn_teammate: 'execute',
+  subagent: 'execute',
+  subagent_fork: 'execute',
   skill: 'execute',
+  workflow: 'execute',
+  ralph: 'execute',
 
   web_fetch: 'network',
   web_search: 'network',
@@ -160,6 +164,7 @@ const SIDE_EFFECTS: Readonly<Record<string, SideEffectClass>> = {
   report: 'none',
   interrupt_agent: 'none',
   wait_agent: 'none',
+  exit_plan_mode: 'none',
 }
 
 /** The argument keys that carry a path, by the tools that take them. */
