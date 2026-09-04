@@ -116,6 +116,19 @@
     - id: watch-observation
       name: '@deepwatch/dsh-technology/observation'
 
+    # What one turn may spend, measured against the run that made this
+    # necessary: 47 model rounds, 76 tool calls, three subagents, nine minutes
+    # and 2.97M tokens of processed context at a 97% cache hit rate. The cache
+    # is why nobody stopped it -- the price signal that normally ends a runaway
+    # had been optimised away.
+    #
+    # Every hard limit sits well clear of that run. A budget that fires during
+    # ordinary work teaches people to raise it, and then it is not a budget.
+    - id: watch-budget
+      name: '@deepwatch/dsh-technology/budget'
+      config:
+        enforce: true
+
     # The route a delegated child inherits, and the preflight that stops a
     # child being created when there is not one.
     #

@@ -32,6 +32,10 @@
       "types": "./lib/attestation.d.ts",
       "default": "./lib/attestation.js"
     },
+    "./budget": {
+      "types": "./lib/budget.d.ts",
+      "default": "./lib/budget.js"
+    },
     "./delegation": {
       "types": "./lib/delegation.d.ts",
       "default": "./lib/delegation.js"
