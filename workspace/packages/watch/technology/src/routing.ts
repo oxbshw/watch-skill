@@ -87,6 +87,10 @@ const RECORD_SCHEMA = s.object({
   model: s.string().required(),
   credentialRef: s.string(),
   boundAt: s.string(),
+  // Optional, and absent means unattributed. A document written before this
+  // field existed is still a valid binding; what it is not is a binding
+  // anybody can say a person made.
+  boundBy: s.string(),
 })
 
 /**

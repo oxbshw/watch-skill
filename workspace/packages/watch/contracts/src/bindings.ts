@@ -145,6 +145,38 @@ export interface RoleBindingRecord {
   readonly credentialRef: string | null
   /** ISO-8601 instant the person made this choice. */
   readonly boundAt: string
+  /**
+   * What kind of actor wrote this binding.
+   *
+   * A binding decides where a person's credential gets sent, and a record that
+   * cannot say who decided cannot be audited. A document written by somebody
+   * clicking Save in Role Bindings and one written by a script are the same
+   * bytes, and only one of them is a decision the person made.
+   *
+   * A *kind*, never an identity. No user name, no account, no machine: those
+   * are personal identifiers, this document is exported, rides the settings
+   * RPC and appears in Diagnostics, and the question worth answering is "did a
+   * person choose this" rather than "which person".
+   */
+  readonly boundBy: BindingActor
+}
+
+/**
+ * Who wrote a binding.
+ *
+ * `unknown` is the honest reading of a document written before this field
+ * existed, or by a hand edit, or by any writer that did not say. It is not a
+ * defect and it is not `person`: presenting an unattributed binding as a
+ * deliberate choice is exactly the substitution this field exists to prevent.
+ */
+export type BindingActor = 'person' | 'setup' | 'unknown'
+
+/** The actors a stored document may name. */
+export const BINDING_ACTORS: readonly BindingActor[] = ['person', 'setup', 'unknown']
+
+/** Whether a stored value is an actor this build understands. */
+export function isBindingActor(value: unknown): value is BindingActor {
+  return typeof value === 'string' && (BINDING_ACTORS as readonly string[]).includes(value)
 }
 
 /** The whole document, as stored. */
@@ -216,7 +248,14 @@ function readBindingRecord(value: unknown): RoleBindingRecord | null {
   // reports an unresolvable credential as a blocker they can act on.
   const credentialRef = typeof ref === 'string' && ref !== '' ? ref : null
   const boundAt = typeof entry['boundAt'] === 'string' ? entry['boundAt'] : ''
-  return { provider: entry['provider'], model: entry['model'], credentialRef, boundAt }
+  // Anything this build does not recognise reads as `unknown`, including the
+  // absence of the field. A document from an earlier version is unattributed,
+  // which is true, rather than attributed to a person who may not have written
+  // it.
+  const boundBy = isBindingActor(entry['boundBy']) ? entry['boundBy'] : 'unknown'
+  return {
+    provider: entry['provider'], model: entry['model'], credentialRef, boundAt, boundBy,
+  }
 }
 
 /**

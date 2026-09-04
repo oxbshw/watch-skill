@@ -563,6 +563,11 @@ export class BindingStore {
       model,
       credentialRef: row?.credentialRef ?? null,
       boundAt: new Date().toISOString(),
+      // This path is reached only from Role Bindings, where somebody chose a
+      // provider and a model and pressed Save. Nothing else in the product
+      // calls it, and a writer that cannot say this truthfully must leave the
+      // field alone rather than claim it.
+      boundBy: 'person',
     }))
   }
 

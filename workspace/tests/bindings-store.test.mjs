@@ -253,3 +253,39 @@ describe('a binding is a reference, never a credential', () => {
     }
   })
 })
+
+describe('a binding says what kind of actor wrote it', () => {
+  const bound = (record) => readBindings({
+    version: 1, roles: { agent_model: { provider: 'p', model: 'm', ...record } },
+  }).roles.agent_model
+
+  test('a document written before this field existed is unattributed', () => {
+    // Honest, and deliberately not `person`: presenting an unattributed
+    // binding as a deliberate choice is the substitution the field exists to
+    // prevent, and every binding stored by an earlier build is in this state.
+    assert.equal(bound({ boundAt: '2026-01-01T00:00:00.000Z' }).boundBy, 'unknown')
+  })
+
+  test('an actor this build understands is kept', () => {
+    for (const actor of ['person', 'setup', 'unknown']) {
+      assert.equal(bound({ boundBy: actor }).boundBy, actor)
+    }
+  })
+
+  test('anything else reads as unattributed rather than being believed', () => {
+    for (const value of ['administrator', '', 42, null, {}, ['person']]) {
+      assert.equal(bound({ boundBy: value }).boundBy, 'unknown',
+        `${JSON.stringify(value)} was accepted as an actor`)
+    }
+  })
+
+  test('a name is never stored as an actor', () => {
+    // The field answers "did a person choose this", never "which person". This
+    // document is exported, rides the settings RPC and appears in Diagnostics.
+    assert.equal(bound({ boundBy: 'sayed' }).boundBy, 'unknown')
+  })
+
+  test('the actor is not a place a credential could hide', () => {
+    assert.equal(bound({ boundBy: 'sk-not-a-real-key-0000' }).boundBy, 'unknown')
+  })
+})

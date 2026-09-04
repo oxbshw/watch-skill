@@ -323,8 +323,23 @@ describe('the decision is persisted, and persisted as a reference', () => {
     const record = stub.calls.replace
       .find(call => call.ns === 'watch-bindings').section.roles.agent_model
     assert.equal(record.credentialRef, 'OPENROUTER_API_KEY')
-    assert.deepEqual(
-      Object.keys(record).sort(), ['boundAt', 'credentialRef', 'model', 'provider'])
+    assert.deepEqual(Object.keys(record).sort(),
+      ['boundAt', 'boundBy', 'credentialRef', 'model', 'provider'])
+  })
+
+  test('the record says what kind of actor wrote it, and never which one', async () => {
+    // A binding decides where a person's credential is sent, so a record that
+    // cannot say whether a person decided cannot be audited. What it must not
+    // become is a personal identifier: this document is exported, rides the
+    // settings RPC and appears in Diagnostics.
+    const { store, stub } = await loaded({ credentialConfigured: true })
+    await store.bind('agent_model', 'openrouter', 'openai/gpt-4o-mini')
+    const record = stub.calls.replace
+      .find(call => call.ns === 'watch-bindings').section.roles.agent_model
+    assert.equal(record.boundBy, 'person',
+      'a binding made in Role Bindings was not attributed to a person')
+    assert.ok(['person', 'setup', 'unknown'].includes(record.boundBy),
+      'the actor is an identity rather than a kind')
   })
 
   test('the write carries the revision it was read at', async () => {

@@ -391,11 +391,12 @@ export function MemorySection(): ReactNode {
           </Row>
         </div>
         <p style={T.note}>
-          The ledger is a plain file with this profile&apos;s permissions. On
-          Desktop it is intended to move behind the OS keychain; until that is
-          implemented and tested, this page will keep saying it is not
-          encrypted. Claiming otherwise would be the one thing a privacy setting
-          must never do.
+          The ledger is a plain file. It is created owner-only — no group, no
+          others — on systems that enforce file permissions; Windows has no
+          equivalent and the file inherits the folder it sits in. On Desktop it
+          is intended to move behind the OS keychain; until that is implemented
+          and tested, this page will keep saying it is not encrypted. Claiming
+          otherwise would be the one thing a privacy setting must never do.
         </p>
       </div>
     </div>

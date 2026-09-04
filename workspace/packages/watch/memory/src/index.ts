@@ -21,7 +21,30 @@
  */
 
 import { randomUUID } from 'node:crypto'
-import { mkdirSync, writeFileSync } from 'node:fs'
+import { chmodSync, mkdirSync, writeFileSync } from 'node:fs'
+
+/** Owner read, write and traverse. Nothing for the group, nothing for others. */
+const OWNER_ONLY_DIRECTORY = 0o700
+/** Owner read and write. Nothing for anyone else. */
+const OWNER_ONLY_FILE = 0o600
+
+/**
+ * Apply a mode, and carry on if the platform will not.
+ *
+ * Windows has no POSIX modes and `chmod` there is close to a no-op; a
+ * filesystem may refuse outright. Neither is a reason to fail to start, and
+ * neither is a reason to skip the call on the platforms where it does work.
+ * The product never claims the file is protected -- only that it is created as
+ * restricted as this machine allows.
+ */
+function restrict(path: string, mode: number): void {
+  try {
+    chmodSync(path, mode)
+  } catch {
+    // A platform that does not enforce modes is the documented case, not a
+    // failure: the Memory page says the ledger is a plain file.
+  }
+}
 import { dirname, join } from 'node:path'
 import { type Context, Service } from '@deepseek-ai/cordis'
 import s from '@deepseek-ai/schemastery'
@@ -136,8 +159,19 @@ export class WatchMemoryService extends Service {
     // about reading it. Making the mode a property of the storage means there
     // is no code path that could accidentally recall across sessions.
     if (policy.persists && policy.recallsAcrossSessions) {
-      mkdirSync(config.directory, { recursive: true })
+      // Owner-only, where the operating system enforces file modes. The store
+      // is plaintext -- the product says so on the Memory page and will keep
+      // saying so until an at-rest design exists that has been reviewed -- so
+      // the permissions are the only protection it actually has, and leaving
+      // them to the umask means a group-readable home makes them nothing.
+      //
+      // Windows ignores the mode and inherits the parent ACL, which is why the
+      // disclosure is worded as it is rather than promising a guarantee this
+      // cannot make everywhere.
+      mkdirSync(config.directory, { recursive: true, mode: OWNER_ONLY_DIRECTORY })
+      restrict(config.directory, OWNER_ONLY_DIRECTORY)
       this.ledger = new MemoryLedger(join(config.directory, 'memory-events.db'))
+      restrict(join(config.directory, 'memory-events.db'), OWNER_ONLY_FILE)
     } else {
       this.ledger = new MemoryLedger(':memory:')
     }
@@ -535,8 +569,12 @@ export class WatchMemoryService extends Service {
     }
     for (const [name, content] of Object.entries(files)) {
       const path = join(this.config.directory, name)
-      mkdirSync(dirname(path), { recursive: true })
-      writeFileSync(path, content, 'utf8')
+      mkdirSync(dirname(path), { recursive: true, mode: OWNER_ONLY_DIRECTORY })
+      writeFileSync(path, content, { encoding: 'utf8', mode: OWNER_ONLY_FILE })
+      // `mode` on `writeFileSync` applies at creation only, so a projection
+      // rewritten over a file that already exists would keep whatever
+      // permissions it was first given.
+      restrict(path, OWNER_ONLY_FILE)
     }
     this.ledger.append({
       kind: 'projection.rebuilt',

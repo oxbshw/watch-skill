@@ -71,12 +71,96 @@ def record(
     return Segment(artifact_id, kind, path, media_ts, end_media_ts, size, pinned)
 
 
+#: How much of one session's buffer may be held against eviction at once.
+#:
+#: A pin is permanent and eviction only removes unpinned segments, so without a
+#: ceiling a session that detects something every few seconds pins its whole
+#: buffer and the retention window quietly stops applying. The failure is
+#: invisible in the ordinary case and unbounded in the interesting one: the
+#: busier a session is, the more it keeps, and the reason to keep it is exactly
+#: the reason there is a lot of it.
+#:
+#: 512 MiB is roughly an hour of the frame rate this buffer records at, which is
+#: far more evidence than any single window needs and small enough that a laptop
+#: running a long session does not fill its disk.
+PIN_BUDGET_BYTES = 512 * 1024 * 1024
+
+
+def pinned_bytes(session_id: str) -> int:
+    """How much of this session's buffer is currently held against eviction."""
+    conn = connect()
+    try:
+        row = conn.execute(
+            "SELECT COALESCE(SUM(bytes), 0) AS total FROM live_segments "
+            "WHERE session_id = ? AND pinned = 1 AND expired = 0",
+            (session_id,),
+        ).fetchone()
+        return int(row["total"])
+    finally:
+        conn.close()
+
+
+def release_oldest_pins(session_id: str, budget: int = PIN_BUDGET_BYTES,
+                        protect_from: float | None = None) -> int:
+    """Unpin the oldest held segments until the session is inside its budget.
+
+    Returns how many segments were released. Oldest first, because a pin is a
+    promise to keep the evidence around a moment and the oldest moments have
+    had the longest chance to be looked at.
+
+    ``protect_from`` holds everything at or after a media timestamp, which is
+    how :func:`pin_window` keeps the promise it just made. Without it the pass
+    is free to release the very window that caused it to run -- under a budget
+    smaller than one window, every pin would immediately undo itself, and a
+    caller asking to keep the moment that just happened would be told yes and
+    given nothing.
+
+    Releasing is not deleting: a released segment becomes ordinary buffer again
+    and ages out through the same retention window as everything else. What
+    this prevents is a session holding evidence forever because it was busy.
+    """
+    conn = connect()
+    try:
+        rows = conn.execute(
+            "SELECT artifact_id, bytes, media_ts FROM live_segments "
+            "WHERE session_id = ? AND pinned = 1 AND expired = 0 ORDER BY media_ts",
+            (session_id,),
+        ).fetchall()
+        total = sum(int(row["bytes"]) for row in rows)
+        released = 0
+        for row in rows:
+            if total <= budget:
+                break
+            if protect_from is not None and row["media_ts"] >= protect_from:
+                # The window just pinned, and everything after it. Reaching this
+                # means the budget cannot hold even one window; the honest
+                # outcome is to keep the newest and stop, not to keep nothing.
+                break
+            with conn:
+                conn.execute(
+                    "UPDATE live_segments SET pinned = 0 WHERE session_id = ? "
+                    "AND artifact_id = ?",
+                    (session_id, row["artifact_id"]),
+                )
+            total -= int(row["bytes"])
+            released += 1
+        return released
+    finally:
+        conn.close()
+
+
 def pin_window(session_id: str, media_ts: float, before: float = 5.0,
-               after: float = 5.0) -> int:
+               after: float = 5.0, budget: int = PIN_BUDGET_BYTES) -> int:
     """Protect everything around a moment from eviction.
 
     Called when something interesting is detected, with a window on both
     sides: the cause of an event is usually visible before the event itself.
+
+    Bounded. The newest window is always pinned in full -- refusing to pin the
+    thing that just happened would be the wrong way round -- and then the
+    session is brought back inside :data:`PIN_BUDGET_BYTES` by releasing its
+    oldest pins. So the promise this makes is honest and finite: recent
+    evidence is held, and holding it cannot grow without limit.
     """
     conn = connect()
     try:
@@ -86,9 +170,11 @@ def pin_window(session_id: str, media_ts: float, before: float = 5.0,
                 "AND expired = 0 AND media_ts BETWEEN ? AND ?",
                 (session_id, media_ts - before, media_ts + after),
             )
-            return cursor.rowcount
+            pinned = cursor.rowcount
     finally:
         conn.close()
+    release_oldest_pins(session_id, budget, protect_from=media_ts - before)
+    return pinned
 
 
 def resolve(session_id: str, artifact_id: str) -> Segment | None:
