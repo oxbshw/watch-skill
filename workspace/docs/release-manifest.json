@@ -126,7 +126,7 @@
       {
         "name": "@deepwatch/dsh-memory",
         "version": "0.1.0-preview.0",
-        "integrity": "sha256:b4417d65bf4a5430b162e059225ba70d2c8b85245965475f4d2301eedfc8fe24",
+        "integrity": "sha256:7a0ee687cf41497d31673130464fc12ac9db502070b25ae462f52c2f44481da3",
         "sourceFiles": 11
       },
       {
@@ -189,7 +189,7 @@
       "creators": [
         "Tool: watch-gen-release-manifest"
       ],
-      "created": "2026-09-04T21:11:56Z"
+      "created": "2026-09-04T22:28:41Z"
     },
     "packages": [
       {
@@ -396,7 +396,7 @@
         "checksums": [
           {
             "algorithm": "SHA256",
-            "checksumValue": "b4417d65bf4a5430b162e059225ba70d2c8b85245965475f4d2301eedfc8fe24"
+            "checksumValue": "7a0ee687cf41497d31673130464fc12ac9db502070b25ae462f52c2f44481da3"
           }
         ]
       },

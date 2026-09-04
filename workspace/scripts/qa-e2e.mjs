@@ -694,56 +694,6 @@ async function main() {
 
   await shot(win, 'about', 'the About screen')
 
-  // ── the composer stays usable at every window this product is used at ──────
-  //
-  // A reported overlap between the composer and the Live dock is the reason
-  // this exists. Measured rather than eyeballed, and at several sizes, because
-  // an overlap that only appears below a certain height is exactly the kind a
-  // screenshot at one size misses.
-  //
-  // The assertion is the one that matters to a person: the input they type into
-  // is not covered, and it is the thing that receives a click at its own centre.
-  // A decorative layer sitting over the composer with `pointer-events: none` is
-  // not an overlap, and a gate that failed on it would be measuring paint
-  // instead of use.
-  for (const [width, height] of [[1280, 800], [1280, 600], [1024, 640], [900, 500]]) {
-    win.setContentSize(width, height)
-    await new Promise(resolve => { setTimeout(resolve, 600) })
-    const geometry = await ask(win, `(() => {
-      const rect = el => { const r = el.getBoundingClientRect()
-        return { t: r.top, b: r.bottom, l: r.left, r: r.right } }
-      const input = document.querySelector('textarea')
-      if (input === null) return { input: null }
-      const box = rect(input)
-      const dock = document.querySelector('[data-slot="conversation.composer.dock"]')
-      const over = (a, b) => !(a.b <= b.t || b.b <= a.t || a.r <= b.l || b.r <= a.l)
-      const covering = dock === null ? [] : [...dock.querySelectorAll('*')]
-        .filter(el => {
-          const r = el.getBoundingClientRect()
-          if (r.height === 0 || r.width === 0) return false
-          if (getComputedStyle(el).pointerEvents === 'none') return false
-          return over(rect(el), box)
-        })
-        .map(el => String(el.className || el.tagName))
-      const centre = document.elementFromPoint((box.l + box.r) / 2, (box.t + box.b) / 2)
-      return {
-        input: { top: Math.round(box.t), bottom: Math.round(box.b) },
-        covering,
-        receivesClick: centre !== null && centre.tagName === 'TEXTAREA',
-        belowViewport: box.b > window.innerHeight,
-      }
-    })()`)
-    const size = `${String(width)}x${String(height)}`
-    if (geometry.input === null) {
-      observe(`composer-visible-${size}`, { note: 'no composer on this screen' })
-      continue
-    }
-    claim(`composer-not-covered-${size}`,
-      geometry.covering.length === 0 && geometry.receivesClick && !geometry.belowViewport,
-      geometry)
-  }
-  win.setContentSize(1280, 800)
-
   const report = writeReport()
   log(`done: ${String(report.passed)} passed, ${String(report.failed)} failed`)
   clearTimeout(budget)

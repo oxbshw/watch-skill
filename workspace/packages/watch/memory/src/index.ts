@@ -21,7 +21,7 @@
  */
 
 import { randomUUID } from 'node:crypto'
-import { chmodSync, mkdirSync, writeFileSync } from 'node:fs'
+import { chmodSync, mkdirSync, readdirSync, writeFileSync } from 'node:fs'
 
 /** Owner read, write and traverse. Nothing for the group, nothing for others. */
 const OWNER_ONLY_DIRECTORY = 0o700
@@ -43,6 +43,24 @@ function restrict(path: string, mode: number): void {
   } catch {
     // A platform that does not enforce modes is the documented case, not a
     // failure: the Memory page says the ledger is a plain file.
+  }
+}
+
+/**
+ * Restrict every file already in the store, and the store itself.
+ *
+ * Called after anything that may have created a file this module did not name.
+ * SQLite's `-wal` and `-shm` are the reason: they hold the same memories the
+ * ledger does and appear without being asked for.
+ */
+function restrictAll(directory: string): void {
+  restrict(directory, OWNER_ONLY_DIRECTORY)
+  try {
+    for (const entry of readdirSync(directory, { withFileTypes: true })) {
+      if (entry.isFile()) restrict(join(directory, entry.name), OWNER_ONLY_FILE)
+    }
+  } catch {
+    // Nothing to tighten yet.
   }
 }
 import { dirname, join } from 'node:path'
@@ -171,7 +189,11 @@ export class WatchMemoryService extends Service {
       mkdirSync(config.directory, { recursive: true, mode: OWNER_ONLY_DIRECTORY })
       restrict(config.directory, OWNER_ONLY_DIRECTORY)
       this.ledger = new MemoryLedger(join(config.directory, 'memory-events.db'))
-      restrict(join(config.directory, 'memory-events.db'), OWNER_ONLY_FILE)
+      // Every file, not just the database. SQLite writes `-wal` and `-shm`
+      // beside it, and the write-ahead log holds the same memories the ledger
+      // does -- naming one file and forgetting the two it brings with it is how
+      // a store ends up half protected.
+      restrictAll(config.directory)
     } else {
       this.ledger = new MemoryLedger(':memory:')
     }
@@ -558,9 +580,22 @@ export class WatchMemoryService extends Service {
 
   /** Regenerate every Markdown projection from the ledger. */
   private rebuildProjections(): void {
-    if (!this.config.writeProjections) return
     if (!modePolicy(this.config.mode).recallsAcrossSessions) return
+    // Whatever else happens below, the store is left as tightly as this
+    // platform allows. SQLite's write-ahead log appears on the first *write*,
+    // not when the database is opened, so tightening only at construction
+    // leaves a file holding the same memories the ledger does at whatever the
+    // umask happened to be.
+    try {
+      if (!this.config.writeProjections) return
+      this.writeProjections()
+    } finally {
+      restrictAll(this.config.directory)
+    }
+  }
 
+  /** Regenerate the Markdown projections themselves. */
+  private writeProjections(): void {
     const records = this.ledger.records()
     const files: Record<string, string> = {
       'taste.md': renderTaste(records),
