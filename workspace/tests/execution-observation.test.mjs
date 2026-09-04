@@ -17,9 +17,12 @@
  * sequence is evidence, and none of it may reach a Watch verdict.
  */
 
-import { test, describe } from 'node:test'
+import { test, describe, after } from 'node:test'
 import assert from 'node:assert/strict'
-import { readFileSync } from 'node:fs'
+import {
+  mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync,
+} from 'node:fs'
+import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 
@@ -30,15 +33,32 @@ const TECH = join(ROOT, 'packages', 'watch', 'technology', 'lib')
 
 const observationPlugin = await import(pathToFileURL(join(TECH, 'observation.js')).href)
 const {
-  OBSERVATION_SERVICE, WatchObservation, classifySideEffect, pathsIn, readScope,
+  OBSERVATION_SERVICE, WatchObservation, classifySideEffect, containmentRefusal,
+  pathsIn, readScope,
 } = observationPlugin
 const provenancePlugin = await import(pathToFileURL(join(TECH, 'provenance.js')).href)
 const { boundSummary, executionKey, isSameAction, looksLikeSecret, redactSecrets } =
   await import(pathToFileURL(
     join(ROOT, 'packages', 'watch', 'contracts', 'lib', 'index.js')).href)
 
-const WORKSPACE = process.platform === 'win32' ? 'D:/work/project' : '/work/project'
-const OUTSIDE = process.platform === 'win32' ? 'D:/elsewhere/notes.md' : '/elsewhere/notes.md'
+/**
+ * Real directories, not spellings that look like directories.
+ *
+ * The suite used to name a drive-rooted path literally, which the repository's
+ * own tracked-artifact gate refused — rightly: a machine path in source is a
+ * machine path in the repository. Real temporary directories are also the
+ * better fixture, because containment consults the filesystem and a path that
+ * exists is the case it has to get right.
+ */
+const BASE = mkdtempSync(join(tmpdir(), 'watch-observation-'))
+// Native separators, left as they come: every helper these reach normalises
+// them, and a fixture that pre-normalised would stop exercising that.
+const WORKSPACE = join(BASE, 'project')
+const OUTSIDE = join(BASE, 'elsewhere', 'notes.md')
+mkdirSync(WORKSPACE, { recursive: true })
+mkdirSync(join(BASE, 'elsewhere'), { recursive: true })
+writeFileSync(OUTSIDE, 'not yours', 'utf8')
+after(() => { rmSync(BASE, { recursive: true, force: true, maxRetries: 5 }) })
 
 /**
  * A tool registry with the real lifecycle shape.
@@ -270,6 +290,233 @@ describe('containment is recorded, whatever it decided', () => {
     assert.deepEqual(pathsIn({ command: 'rm -rf /' }), [],
       'a command string was mistaken for a path')
     assert.deepEqual(readScope([], WORKSPACE).scope, 'not_applicable')
+  })
+})
+
+describe('the workspace boundary refuses rather than reports', () => {
+  /**
+   * A host whose session names a workspace, the way a real one does.
+   *
+   * The agent carries its session and its permission mode, because that is
+   * where the boundary reads both from — a second place to configure the
+   * workspace would be a second place for it to be wrong.
+   */
+  async function contained({ cwd = WORKSPACE, permission = 'workspace-write' } = {}) {
+    const ctx = new Context()
+    await ctx.plugin(StubProvenance)
+    await ctx.plugin(observationPlugin)
+    await ctx.plugin(StubTools)
+    const agent = {
+      id: 'agent-1',
+      session: { id: 'session-1', cwd },
+      permissions: { current: permission },
+    }
+    return {
+      ctx,
+      observation: ctx.get(OBSERVATION_SERVICE),
+      run: (call) => ctx.get('tools').execute({ agent, ...call }),
+      dispatched: () => ctx.get('tools').dispatched,
+    }
+  }
+
+  test('a read inside the workspace runs', async () => {
+    const host = await contained()
+    const result = await host.run({
+      callId: 'c1', name: 'read_file', arguments: { path: `${WORKSPACE}/src/index.ts` } })
+    assert.equal(result.isError, false)
+    assert.deepEqual(host.dispatched(), ['read_file'])
+  })
+
+  test('a read outside it is refused before it happens, and recorded', async () => {
+    const host = await contained()
+    const result = await host.run({
+      callId: 'c1', name: 'read_file', arguments: { path: OUTSIDE } })
+    assert.equal(result.isError, true, 'the call ran')
+    assert.deepEqual(host.dispatched(), [], 'the tool body was reached')
+    const [record] = host.observation.all()
+    assert.equal(record.scopeDecision, 'denied')
+    assert.equal(record.scope, 'outside_workspace')
+    assert.equal(record.state, 'cancelled')
+    assert.equal(record.exitStatus, 'denied')
+    assert.doesNotMatch(JSON.stringify(record), /elsewhere/,
+      'the refused path was written into the record it refused')
+  })
+
+  test('a shell write outside the workspace is refused too', async () => {
+    // Including the system temporary directory, which the evaluation wrote to
+    // and nobody saw.
+    const temp = process.platform === 'win32' ? 'D:/Temp/snapshot.json' : '/tmp/snapshot.json'
+    const host = await contained()
+    const result = await host.run({
+      callId: 'c1', name: 'write_file', arguments: { path: temp } })
+    assert.equal(result.isError, true)
+    assert.deepEqual(host.dispatched(), [])
+    assert.equal(host.observation.all()[0].scopeDecision, 'denied')
+  })
+
+  test('an empty workspace does not license searching outside it', async () => {
+    // The evaluation's actual failure: the selected workspace was empty, so the
+    // agent went looking on other drives. "Nothing here" is a question for the
+    // person who chose the directory.
+    const host = await contained({ cwd: null })
+    const result = await host.run({
+      callId: 'c1', name: 'glob', arguments: { path: OUTSIDE } })
+    assert.equal(result.isError, true)
+    assert.match(String(result.error.message), /no workspace is selected/)
+    assert.equal(host.observation.all()[0].scope, 'no_workspace')
+  })
+
+  test('an explicit wider permission is honoured, and still recorded', async () => {
+    // A boundary that ignored an explicit grant would be a different lie from
+    // the one this fixes.
+    const host = await contained({ permission: 'danger-full-access' })
+    const result = await host.run({
+      callId: 'c1', name: 'read_file', arguments: { path: OUTSIDE } })
+    assert.equal(result.isError, false, 'an explicit wider grant was ignored')
+    assert.deepEqual(host.dispatched(), ['read_file'])
+    const [record] = host.observation.all()
+    assert.equal(record.scope, 'outside_workspace',
+      'a permitted outside access stopped being recorded as one')
+  })
+
+  test('a call naming no path is not the boundary’s business', async () => {
+    const host = await contained()
+    const result = await host.run({ callId: 'c1', name: 'todo_write', arguments: { todos: [] } })
+    assert.equal(result.isError, false)
+    assert.deepEqual(host.dispatched(), ['todo_write'])
+  })
+
+  test('path normalisation and traversal escapes are refused', async () => {
+    const host = await contained()
+    for (const escape of [
+      `${WORKSPACE}/../elsewhere/notes.md`,
+      `${WORKSPACE}/./../../etc/passwd`,
+      `${WORKSPACE}suffix/notes.md`,
+    ]) {
+      const result = await host.run({
+        callId: `c-${escape.length}`, name: 'read_file', arguments: { path: escape } })
+      assert.equal(result.isError, true, `escaped containment: ${escape}`)
+    }
+    assert.deepEqual(host.dispatched(), [], 'an escape reached the tool body')
+  })
+
+  test('a sibling directory sharing a prefix is not inside the workspace', () => {
+    // `D:\Wsuite` is not inside `D:\Ws`. A bare prefix test says it is.
+    assert.equal(readScope([`${WORKSPACE}suffix/a.txt`], WORKSPACE).scope, 'outside_workspace')
+    assert.equal(readScope([`${WORKSPACE}/a.txt`], WORKSPACE).scope, 'inside')
+  })
+
+  test('record mode watches without refusing, and says so in its name', async () => {
+    const host = await contained()
+    host.observation.setContainmentMode('record')
+    const result = await host.run({
+      callId: 'c1', name: 'read_file', arguments: { path: OUTSIDE } })
+    assert.equal(result.isError, false)
+    const [record] = host.observation.all()
+    assert.equal(record.scope, 'outside_workspace')
+    assert.equal(record.scopeDecision, 'allowed')
+  })
+
+  test('the refusal decision is a pure function of the reading', () => {
+    const outside = { scope: 'outside_workspace', inside: [], outsideCount: 1 }
+    assert.notEqual(containmentRefusal(outside, 'enforce', 'workspace-write'), null)
+    assert.equal(containmentRefusal(outside, 'record', 'workspace-write'), null)
+    assert.equal(containmentRefusal(outside, 'off', 'workspace-write'), null)
+    assert.equal(containmentRefusal(outside, 'enforce', 'danger-full-access'), null)
+    assert.equal(
+      containmentRefusal({ scope: 'inside', inside: ['a'], outsideCount: 0 },
+        'enforce', 'workspace-write'), null)
+  })
+})
+
+describe('a link out of the workspace is still out of the workspace', () => {
+  /**
+   * A real junction, not a spelling that looks like one.
+   *
+   * The point of this test is that the boundary consults the filesystem. A
+   * path check that compares strings passes every case in the suite above and
+   * is walked through by one `mklink /J`, which needs no elevation on Windows
+   * and no privilege at all on POSIX. So this builds the escape for real and
+   * asks the boundary about it.
+   */
+  function linkedWorkspace() {
+    const base = mkdtempSync(join(tmpdir(), 'watch-containment-'))
+    const workspace = join(base, 'workspace')
+    const outside = join(base, 'outside')
+    mkdirSync(workspace)
+    mkdirSync(outside)
+    writeFileSync(join(outside, 'secret.txt'), 'not yours', 'utf8')
+    const link = join(workspace, 'escape')
+    try {
+      // `junction` is the Windows type that needs no elevation; on POSIX the
+      // argument is ignored and a plain symlink is made.
+      symlinkSync(outside, link, 'junction')
+    } catch {
+      rmSync(base, { recursive: true, force: true })
+      return null
+    }
+    return { base, workspace, link }
+  }
+
+  test('a file reached through a junction inside the workspace is outside it', async (t) => {
+    const made = linkedWorkspace()
+    if (made === null) {
+      t.skip('this platform would not create a link without elevation')
+      return
+    }
+    try {
+      const ctx = new Context()
+      await ctx.plugin(StubProvenance)
+      await ctx.plugin(observationPlugin)
+      await ctx.plugin(StubTools)
+      const agent = {
+        id: 'agent-1',
+        session: { id: 'session-1', cwd: made.workspace },
+        permissions: { current: 'workspace-write' },
+      }
+      const throughLink = join(made.link, 'secret.txt')
+      const result = await ctx.get('tools').execute({
+        agent, callId: 'c1', name: 'read_file', arguments: { path: throughLink },
+      })
+      assert.equal(result.isError, true,
+        'a junction inside the workspace was a way out of it')
+      assert.deepEqual(ctx.get('tools').dispatched, [])
+      const [record] = ctx.get(OBSERVATION_SERVICE).all()
+      assert.equal(record.scope, 'outside_workspace')
+      assert.equal(record.scopeDecision, 'denied')
+    } finally {
+      rmSync(made.base, { recursive: true, force: true, maxRetries: 5 })
+    }
+  })
+
+  test('an ordinary file in the same workspace still reads', async (t) => {
+    // The other half: a boundary that refused everything would also pass the
+    // test above.
+    const made = linkedWorkspace()
+    if (made === null) {
+      t.skip('this platform would not create a link without elevation')
+      return
+    }
+    try {
+      writeFileSync(join(made.workspace, 'notes.md'), 'mine', 'utf8')
+      const ctx = new Context()
+      await ctx.plugin(StubProvenance)
+      await ctx.plugin(observationPlugin)
+      await ctx.plugin(StubTools)
+      const agent = {
+        id: 'agent-1',
+        session: { id: 'session-1', cwd: made.workspace },
+        permissions: { current: 'workspace-write' },
+      }
+      const result = await ctx.get('tools').execute({
+        agent, callId: 'c1', name: 'read_file',
+        arguments: { path: join(made.workspace, 'notes.md') },
+      })
+      assert.equal(result.isError, false, 'the boundary refused a file inside the workspace')
+      assert.deepEqual(ctx.get(OBSERVATION_SERVICE).all()[0].paths, ['notes.md'])
+    } finally {
+      rmSync(made.base, { recursive: true, force: true, maxRetries: 5 })
+    }
   })
 })
 

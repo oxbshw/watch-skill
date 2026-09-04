@@ -48,6 +48,8 @@
  */
 
 import { createHash } from 'node:crypto'
+import { realpathSync } from 'node:fs'
+import { dirname, join, resolve } from 'node:path'
 import { Service } from '@deepseek-ai/cordis'
 import type { Context } from '@deepseek-ai/cordis'
 import {
@@ -56,7 +58,9 @@ import {
 import type {
   ScopeDecision, SideEffectClass, ToolExecutionRecord, WorkspaceScope,
 } from '@deepwatch/dsh-contracts'
-import { findAbsolutePaths, isInsideRoot, relativeToRoot } from '@deepwatch/dsh-contracts'
+import {
+  containsPath, findAbsolutePaths, relativeToRoot, resolveTraversal,
+} from '@deepwatch/dsh-contracts'
 import { PROVENANCE_SERVICE } from './provenance.js'
 import type { WatchProvenance } from './provenance.js'
 
@@ -131,6 +135,43 @@ export function pathsIn(argumentValue: unknown): readonly string[] {
   return found
 }
 
+/**
+ * The path a call would actually reach, with links followed.
+ *
+ * Traversal is resolved in the shared helper, which is pure and can run in a
+ * browser. A symlink or a junction cannot be: only the filesystem knows where
+ * one points, and a boundary that compares spellings is a boundary a link walks
+ * through. So the Host resolves what exists.
+ *
+ * A path that does not exist yet — a file about to be written — has its nearest
+ * existing ancestor resolved instead, which is the case that matters: writing
+ * into a symlinked directory is how a write escapes, and the directory exists
+ * even when the file does not.
+ *
+ * Unresolvable, the traversal-resolved spelling is returned. That fails towards
+ * refusal rather than towards permission: an unreadable path is not shown to be
+ * inside the workspace, so containment treats it as outside.
+ */
+export function realise(candidate: string): string {
+  let probe = resolve(resolveTraversal(candidate))
+  const climbed: string[] = []
+  for (let depth = 0; depth < 64; depth += 1) {
+    try {
+      const real = realpathSync.native(probe)
+      return resolveTraversal(climbed.length === 0 ? real : join(real, ...climbed.reverse()))
+    } catch {
+      const parent = dirname(probe)
+      if (parent === probe) return resolveTraversal(candidate)
+      // Both separators. The slice keeps whichever one this platform used, and
+      // stripping only the forward one leaves a leading backslash that `join`
+      // would then treat as the start of a path of its own.
+      climbed.push(probe.slice(parent.length).replace(/^[\\/]+/u, ''))
+      probe = parent
+    }
+  }
+  return resolveTraversal(candidate)
+}
+
 /** Where a call's paths land relative to the chosen workspace. */
 export interface ScopeReading {
   readonly scope: WorkspaceScope
@@ -154,11 +195,15 @@ export function readScope(
   if (workspace === null || workspace === '') {
     return { scope: 'no_workspace', inside: [], outsideCount: 0 }
   }
+  // Both sides realised, so a workspace that is itself reached through a link
+  // still contains the files inside it.
+  const root = realise(workspace)
   const inside: string[] = []
   let outsideCount = 0
   for (const path of paths) {
-    if (isInsideRoot(workspace, path)) {
-      const relative = relativeToRoot(path, workspace)
+    const landing = realise(path)
+    if (containsPath(root, landing)) {
+      const relative = relativeToRoot(landing, root)
       if (relative !== null) inside.push(relative)
     } else outsideCount += 1
   }
@@ -166,6 +211,69 @@ export function readScope(
     scope: outsideCount > 0 ? 'outside_workspace' : 'inside',
     inside,
     outsideCount,
+  }
+}
+
+/**
+ * How strictly the Host holds a call to the workspace somebody selected.
+ *
+ * `enforce` is the default and the only setting under which `Workspace Write`
+ * is a true statement. `record` exists for a deployment mid-migration that
+ * wants the ledger before the refusals, and says so in its own name rather
+ * than pretending to contain anything. `off` is for a deployment that has its
+ * own boundary and does not want a second one.
+ */
+export type ContainmentMode = 'enforce' | 'record' | 'off'
+
+/** Why a call was refused, in words a person can act on. */
+export interface Refusal {
+  readonly reason: string
+  readonly reading: ScopeReading
+}
+
+/**
+ * The permission modes upstream offers, and what each means for containment.
+ *
+ * `danger-full-access` is the one that opts out. It is named that way upstream
+ * for the same reason it is honoured here: somebody chose it explicitly, and a
+ * boundary that ignored an explicit wider grant would be a different lie from
+ * the one this fixes.
+ */
+export type PermissionMode = 'read-only' | 'workspace-write' | 'danger-full-access'
+
+/**
+ * Whether one call may proceed, given where its paths resolve.
+ *
+ * Returns null to allow. Everything about this is deliberately boring: it
+ * asks the same question of every tool and answers it the same way, because
+ * the failure it replaces was a boundary that existed only as a label.
+ *
+ * The empty-workspace case is the one worth reading twice. The evaluation that
+ * prompted this selected an empty workspace, found nothing in it, and — instead
+ * of stopping — searched other drives and read unrelated locations. "Nothing
+ * here" is a question for the person who chose the directory, not licence to go
+ * looking. So a path-bearing call with no workspace is refused, and the refusal
+ * says what to do about it.
+ */
+export function containmentRefusal(
+  reading: ScopeReading, mode: ContainmentMode, permission: PermissionMode,
+): Refusal | null {
+  if (mode !== 'enforce') return null
+  if (permission === 'danger-full-access') return null
+  if (reading.scope === 'inside' || reading.scope === 'not_applicable') return null
+  if (reading.scope === 'no_workspace') {
+    return {
+      reason: 'no workspace is selected, so this path cannot be checked against one. '
+        + 'Choose the directory to work in and try again; searching outside it is not '
+        + 'the same as working in it.',
+      reading,
+    }
+  }
+  return {
+    reason: `${String(reading.outsideCount)} path(s) in this call resolve outside the `
+      + 'selected workspace. Work inside it, or ask for a wider permission mode '
+      + 'explicitly — "workspace write" means the workspace.',
+    reading,
   }
 }
 
@@ -179,8 +287,8 @@ export const OUTSIDE_PLACEHOLDER = '<outside-workspace>'
  * the `paths` array and then walked straight back in through the serialised
  * arguments, because a summary is text and nobody had asked the text the
  * containment question. A record that says `outside_workspace` while printing
- * `D:/Users/<name>/…` beside it has disclosed exactly what the classification
- * was there to avoid.
+ * the path beside it has disclosed exactly what the classification was there
+ * to avoid — the operating system user's name included.
  *
  * Inside the workspace, a path becomes workspace-relative — the useful half.
  * Outside it, the path becomes {@link OUTSIDE_PLACEHOLDER} — the fact without
@@ -242,21 +350,67 @@ export class WatchObservation extends Service {
   private readonly open = new Map<string, OpenCall>()
   /** Attempts already seen per action, so a retry is numbered rather than duplicated. */
   private readonly attempts = new Map<string, number>()
-  /** The workspace containment is measured against. Null until one is chosen. */
-  private workspace: string | null = null
+  /**
+   * The workspace each session was opened in, by session id.
+   *
+   * Per session rather than one global, because two sessions can be open on two
+   * directories and a single root would quietly measure one against the other.
+   */
+  private readonly workspaces = new Map<string, string>()
+  /** The session whose workspace an unattributed call is measured against. */
+  private fallbackWorkspace: string | null = null
+  /** How strictly this Host holds calls to it. */
+  private mode: ContainmentMode = 'enforce'
 
   constructor(ctx: Context) {
     super(ctx, OBSERVATION_SERVICE)
   }
 
-  /** Point containment at the workspace a person selected. */
-  setWorkspace(root: string | null): void {
-    this.workspace = root === null || root === '' ? null : root
+  /** Point containment at the workspace a person selected for one session. */
+  setWorkspace(root: string | null, sessionId?: string): void {
+    const value = root === null || root === '' ? null : root
+    if (sessionId === undefined) {
+      this.fallbackWorkspace = value
+      return
+    }
+    if (value === null) this.workspaces.delete(sessionId)
+    else this.workspaces.set(sessionId, value)
   }
 
-  /** The workspace containment is currently measured against. */
-  workspaceRoot(): string | null {
-    return this.workspace
+  /** The workspace one session is held to, or the fallback when it named none. */
+  workspaceRoot(sessionId?: string): string | null {
+    if (sessionId !== undefined) {
+      const known = this.workspaces.get(sessionId)
+      if (known !== undefined) return known
+    }
+    return this.fallbackWorkspace
+  }
+
+  /** How strictly calls are held to the workspace. */
+  containmentMode(): ContainmentMode {
+    return this.mode
+  }
+
+  /** Set it. A composition decides this; nothing in a conversation can. */
+  setContainmentMode(mode: ContainmentMode): void {
+    this.mode = mode
+  }
+
+  /**
+   * Decide one call, and record the decision whichever way it goes.
+   *
+   * Called from `tools/pre-execute`. A refusal is a record too: an attempt to
+   * reach outside the workspace is something the owner is entitled to see, and
+   * the evaluation that prompted this made several that nobody could.
+   */
+  screen(
+    exec: ExecutionLike, sessionId: string, permission: PermissionMode,
+  ): Refusal | null {
+    const workspace = this.workspaceRoot(sessionId)
+    const reading = readScope(pathsIn(exec.arguments), workspace)
+    const refusal = containmentRefusal(reading, this.mode, permission)
+    if (refusal !== null) this.refuse(exec, sessionId, reading, 'denied')
+    return refusal
   }
 
   /**
@@ -315,7 +469,7 @@ export class WatchObservation extends Service {
     const endedAt = Date.now()
     const failed = result.isError === true
     const paths = pathsIn(exec.arguments)
-    const reading = readScope(paths, this.workspace)
+    const reading = readScope(paths, this.workspaceRoot(sessionId))
     const output = renderContent(result)
 
     const record: ToolExecutionRecord = {
@@ -336,8 +490,8 @@ export class WatchObservation extends Service {
       scopeDecision: 'allowed',
       paths: reading.inside,
       outsidePathCount: reading.outsideCount,
-      inputSummary: this.summarise(renderArguments(exec.arguments)),
-      outputSummary: this.summarise(output),
+      inputSummary: this.summarise(renderArguments(exec.arguments), sessionId),
+      outputSummary: this.summarise(output, sessionId),
       // Over the real output, not the redacted summary: the digest is what
       // makes the summary checkable against what actually came back.
       outputDigest: digestOf(output),
@@ -381,7 +535,7 @@ export class WatchObservation extends Service {
       scopeDecision: decision,
       paths: reading.inside,
       outsidePathCount: reading.outsideCount,
-      inputSummary: this.summarise(renderArguments(exec.arguments)),
+      inputSummary: this.summarise(renderArguments(exec.arguments), sessionId),
       outputSummary: 'refused before dispatch',
       outputDigest: digestOf(''),
       authorisedBy,
@@ -399,8 +553,8 @@ export class WatchObservation extends Service {
    * survives; then the length bound, so the cut happens after both and cannot
    * split a replacement in half.
    */
-  private summarise(text: string): string {
-    return boundSummary(redactPathsIn(redactSecrets(text), this.workspace))
+  private summarise(text: string, sessionId: string): string {
+    return boundSummary(redactPathsIn(redactSecrets(text), this.workspaceRoot(sessionId)))
   }
 
   private push(record: ToolExecutionRecord): void {
@@ -508,6 +662,60 @@ export function apply(ctx: Context): void {
     const id = agent?.session?.id
     return typeof id === 'string' ? id : 'unknown-session'
   }
+
+  /**
+   * The directory the session was opened in.
+   *
+   * Read structurally, and from two places, because a live session and a stored
+   * header spell it differently and neither is this package's to define. Absent,
+   * the answer is null and containment treats the call as having no workspace —
+   * which refuses rather than allows.
+   */
+  const workspaceOf = (exec: ExecutionLike): string | null => {
+    const session = (exec.agent as {
+      session?: { cwd?: unknown, header?: { cwd?: unknown } }
+    } | undefined)?.session
+    const direct = session?.cwd
+    if (typeof direct === 'string' && direct !== '') return direct
+    const stored = session?.header?.cwd
+    return typeof stored === 'string' && stored !== '' ? stored : null
+  }
+
+  /**
+   * The permission mode this call runs under.
+   *
+   * Upstream owns this value and a person sets it; read structurally and
+   * defaulted to the narrow one, so a Host that stops reporting it becomes
+   * stricter rather than more permissive.
+   */
+  const permissionOf = (exec: ExecutionLike): PermissionMode => {
+    const value = (exec.agent as { permissions?: { current?: unknown } } | undefined)
+      ?.permissions?.current
+    return value === 'danger-full-access' || value === 'read-only'
+      ? value
+      : 'workspace-write'
+  }
+
+  // `tools/pre-execute` is a waterfall returning allow/deny/ask, and it is the
+  // only point at which a call can be stopped before it happens. Containment
+  // lives here for that reason: a boundary that reports afterwards is a log,
+  // not a boundary.
+  ;(link as unknown as {
+    on(
+      name: 'tools/pre-execute',
+      listener: (
+        exec: ExecutionLike, next: () => Promise<{ kind: string }>,
+      ) => Promise<{ kind: string, reason?: string }>,
+    ): void
+  }).on('tools/pre-execute', async (exec, next) => {
+    const sessionId = sessionOf(exec)
+    // Learned here rather than configured: the session already knows where it
+    // was opened, and a second place to say so is a second place to be wrong.
+    observation.setWorkspace(workspaceOf(exec), sessionId)
+    const refusal = observation.screen(exec, sessionId, permissionOf(exec))
+    if (refusal === null) return next()
+    return { kind: 'deny', reason: refusal.reason }
+  })
 
   // `tools/execute` is a waterfall around the dispatch: it must return what
   // `next()` gives it, or the call it was watching never returns a result.

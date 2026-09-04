@@ -116,6 +116,50 @@ export function isInsideRoot(root: string, candidate: string): boolean {
   return target.startsWith(base.endsWith('/') ? base : `${base}/`)
 }
 
+/**
+ * One comparable spelling with `.` and `..` resolved away.
+ *
+ * Separate from {@link normalisePath} because the two answer different
+ * questions. Redaction asks "does this path start with a root I know", and a
+ * literal spelling is the right input for that. Containment asks "where does
+ * this path actually land", and there the literal spelling is the attack:
+ * `<workspace>/../elsewhere/notes.md` starts with the workspace and is not
+ * inside it. A containment check that skips this step reports the boundary
+ * holding while a call walks straight out of it.
+ *
+ * A `..` that would climb above the root is dropped rather than escaping into
+ * a relative prefix, so the result is always anchored where it started.
+ */
+export function resolveTraversal(value: string): string {
+  const normalised = normalisePath(value)
+  const prefix = /^(?:[A-Z]:\/|\/\/[^/]+\/[^/]+\/|\/)/.exec(normalised)?.[0] ?? ''
+  const rest = normalised.slice(prefix.length)
+  const out: string[] = []
+  for (const segment of rest.split('/')) {
+    if (segment === '' || segment === '.') continue
+    if (segment === '..') { out.pop(); continue }
+    out.push(segment)
+  }
+  const joined = `${prefix}${out.join('/')}`
+  return joined.length > 1 && joined.endsWith('/') ? joined.slice(0, -1) : joined
+}
+
+/**
+ * Whether a path lands inside a root once traversal is resolved.
+ *
+ * The containment question, and the one a boundary must ask.
+ * {@link isInsideRoot} is the redaction question and stays literal; this one
+ * resolves first, so `<root>/../elsewhere` is outside and `<root>/./a/../b` is
+ * inside.
+ *
+ * It cannot see a symlink or a junction — that needs the filesystem, and this
+ * package is shared with the browser. The Host resolves those before calling
+ * this; the two together are the boundary.
+ */
+export function containsPath(root: string, candidate: string): boolean {
+  return isInsideRoot(resolveTraversal(root), resolveTraversal(candidate))
+}
+
 /** The label a root renders as, in angle brackets. */
 function labelOf(root: PathRoot): string {
   return `<${root.label ?? root.kind}>`
