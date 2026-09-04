@@ -54,7 +54,7 @@ const recordOf = (over = {}) => ({
   rootCallId: null,
   subagentId: null,
   parentTurnId: null,
-  toolName: 'write_file',
+  toolName: 'write',
   state: 'completed',
   startedAt: '2026-09-04T00:00:00.000Z',
   endedAt: '2026-09-04T00:00:01.000Z',
@@ -149,7 +149,7 @@ describe('the Host asks; Core answers', () => {
   test('a write is asked about, and the verdict is the one Core returned', async () => {
     const host = await mount()
     await host.tools.execute({
-      callId: 'c1', name: 'write_file',
+      callId: 'c1', name: 'write',
       arguments: { path: join(host.workspace, 'out.json'), content: '{"ok":true}' },
     })
     await settle()
@@ -170,7 +170,7 @@ describe('the Host asks; Core answers', () => {
     // operation-level claim does not retroactively make the *action* verified.
     const host = await mount()
     await host.tools.execute({
-      callId: 'c1', name: 'write_file',
+      callId: 'c1', name: 'write',
       arguments: { path: join(host.workspace, 'out.json'), content: 'x' },
     })
     await settle()
@@ -183,7 +183,7 @@ describe('the Host asks; Core answers', () => {
     const host = await mount()
     const content = '{"record_count":4}'
     await host.tools.execute({
-      callId: 'c1', name: 'write_file',
+      callId: 'c1', name: 'write',
       arguments: { path: join(host.workspace, 'result.json'), content },
     })
     await settle()
@@ -226,7 +226,7 @@ describe('the Host asks; Core answers', () => {
   test('a read earns a receipt and no contract', async () => {
     const host = await mount()
     await host.tools.execute({
-      callId: 'c1', name: 'read_file', arguments: { path: join(host.workspace, 'a.txt') } })
+      callId: 'c1', name: 'read', arguments: { path: join(host.workspace, 'a.txt') } })
     await settle()
     assert.equal(host.core.asked.length, 0)
     const made = host.observation.allAttestations()[0]
@@ -239,7 +239,7 @@ describe('the Host asks; Core answers', () => {
   test('a write the Host never saw the content of gets existence only', async () => {
     const host = await mount()
     await host.tools.execute({
-      callId: 'c1', name: 'apply_patch', arguments: { path: join(host.workspace, 'a.txt') } })
+      callId: 'c1', name: 'edit', arguments: { path: join(host.workspace, 'a.txt') } })
     await settle()
     const { checks } = host.core.asked[0].params
     assert.deepEqual(checks.map(check => check.type), ['file_exists'],
@@ -249,7 +249,7 @@ describe('the Host asks; Core answers', () => {
   test('a failed action is not something to verify', async () => {
     const host = await mount()
     await host.tools.execute({
-      callId: 'c1', name: 'write_file',
+      callId: 'c1', name: 'write',
       arguments: { path: join(host.workspace, 'a.txt'), content: 'x' },
       result: { isError: true, error: { code: 'EACCES' }, content: [] },
     })
@@ -263,7 +263,7 @@ describe('no verdict is better than a borrowed one', () => {
   test('with no Bridge, an asked-for verification is requested_but_not_run', async () => {
     const host = await mount({ withCore: false })
     await host.tools.execute({
-      callId: 'c1', name: 'write_file',
+      callId: 'c1', name: 'write',
       arguments: { path: join(host.workspace, 'a.txt'), content: 'x' },
     })
     await settle()
@@ -276,7 +276,7 @@ describe('no verdict is better than a borrowed one', () => {
   test('a Bridge that throws leaves no verdict and does not break the turn', async () => {
     const host = await mount({ core: { fail: true } })
     const result = await host.tools.execute({
-      callId: 'c1', name: 'write_file',
+      callId: 'c1', name: 'write',
       arguments: { path: join(host.workspace, 'a.txt'), content: 'x' },
     })
     await settle()
@@ -289,7 +289,7 @@ describe('no verdict is better than a borrowed one', () => {
   test('a reply carrying no verdict is not treated as one', async () => {
     const host = await mount({ core: { reply: { reason: 'core was busy' } } })
     await host.tools.execute({
-      callId: 'c1', name: 'write_file',
+      callId: 'c1', name: 'write',
       arguments: { path: join(host.workspace, 'a.txt'), content: 'x' },
     })
     await settle()
@@ -299,7 +299,7 @@ describe('no verdict is better than a borrowed one', () => {
   test('a FAILED verdict is recorded as faithfully as a passing one', async () => {
     const host = await mount({ core: { reply: { verdict: 'FAILED', reason: 'digest differs' } } })
     await host.tools.execute({
-      callId: 'c1', name: 'write_file',
+      callId: 'c1', name: 'write',
       arguments: { path: join(host.workspace, 'a.txt'), content: 'x' },
     })
     await settle()
@@ -313,7 +313,7 @@ describe('no verdict is better than a borrowed one', () => {
     const seen = []
     host.ctx.on('watch/attestation-recorded', (made) => { seen.push(made.state) })
     await host.tools.execute({
-      callId: 'c1', name: 'write_file',
+      callId: 'c1', name: 'write',
       arguments: { path: join(host.workspace, 'a.txt'), content: 'x' },
     })
     await settle()

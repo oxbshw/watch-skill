@@ -97,27 +97,69 @@ export const ATTESTATION_DEADLINE_MS = 15_000
  * and `unknown` never counts as harmless.
  */
 const SIDE_EFFECTS: Readonly<Record<string, SideEffectClass>> = {
-  read_file: 'read',
-  read_files: 'read',
-  list_dir: 'read',
+  // Read, taken from the pinned Harness's own registrations rather than from
+  // what a filesystem tool is usually called. The first draft of this table
+  // guessed `read_file` and `write_file`; upstream registers `read` and
+  // `write`, so every filesystem action in the real product classified as
+  // `unknown`. The unit tests agreed with the guess because they were written
+  // from it, and the packed journey is what found it.
+  read: 'read',
+  read_image: 'read',
   glob: 'read',
   grep: 'read',
-  search: 'read',
-  write_file: 'write',
-  edit_file: 'write',
-  create_file: 'write',
-  delete_file: 'write',
-  move_file: 'write',
-  apply_patch: 'write',
+  workspace: 'read',
+  session_search: 'read',
+  session_event_read: 'read',
+  session_event_search: 'read',
+  session_event_trace: 'read',
+  session_trace: 'read',
+  job_list: 'read',
+  job_output: 'read',
+  list_agents: 'read',
+  terminal_list: 'read',
+  terminal_read: 'read',
+  get_goal: 'read',
+  team_task_get: 'read',
+  team_task_list: 'read',
+  schedule_list: 'read',
+  lsp: 'read',
+
+  write: 'write',
+  edit: 'write',
+  str_replace_editor: 'write',
+  export: 'write',
+  create_goal: 'write',
+  update_goal: 'write',
+  team_task_create: 'write',
+  team_task_update: 'write',
+  schedule_create: 'write',
+  schedule_delete: 'write',
+
   bash: 'execute',
-  shell: 'execute',
-  powershell: 'execute',
-  run_code: 'execute',
-  run_command: 'execute',
-  fetch: 'network',
+  pwsh: 'execute',
+  cordis_run: 'execute',
+  job_kill: 'execute',
+  terminal_open: 'execute',
+  terminal_send: 'execute',
+  terminal_signal: 'execute',
+  terminal_close: 'execute',
+  spawn_teammate: 'execute',
+  skill: 'execute',
+
+  web_fetch: 'network',
   web_search: 'network',
+  send_message: 'network',
+
+  // Changes nothing outside the conversation.
   todo_write: 'none',
-  update_plan: 'none',
+  plan: 'none',
+  compact: 'none',
+  ask_user_question: 'none',
+  feedback: 'none',
+  message_feedback: 'none',
+  report: 'none',
+  interrupt_agent: 'none',
+  wait_agent: 'none',
 }
 
 /** The argument keys that carry a path, by the tools that take them. */

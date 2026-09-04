@@ -46,12 +46,12 @@ const receipt = (over = {}) => ({
   revisionId: 'session-1/agent-1#1/c1#1',
   title: 'write_file — result.json',
   kind: 'document',
-  text: 'write_file {"path":"result.json"} ok result.json',
+  text: 'write {"path":"result.json"} ok result.json',
   source: null,
   runId: 'session-1',
   observedAt: '2026-09-04T00:00:00.000Z',
   verdict: null,
-  tags: ['execution-receipt', 'tool:write_file', 'effect:write', 'state:completed'],
+  tags: ['execution-receipt', 'tool:write', 'effect:write', 'state:completed'],
   evidenceIds: [],
   ...over,
 })
@@ -99,7 +99,7 @@ describe('a receipt is searchable without pressing Refresh', () => {
     assert.equal(generations.index().size, 0)
     generations.addLive(receipt())
     assert.equal(generations.index().size, 1, 'a receipt was not indexed when it was recorded')
-    const found = generations.index().search({ text: 'write_file', limit: 10, offset: 0 })
+    const found = generations.index().search({ text: 'write', limit: 10, offset: 0 })
     assert.equal(found.total, 1)
   })
 
@@ -155,7 +155,7 @@ describe('a receipt is searchable without pressing Refresh', () => {
     const generations = new LibraryGenerations({ roots: [emptyRoot()] })
     generations.addLive(receipt())
     const [stored] = generations.index().search(
-      { text: 'write_file', limit: 10, offset: 0 }).results
+      { text: 'write', limit: 10, offset: 0 }).results
     assert.equal(stored.kind, 'document')
     // A search hit names the source; the stored record is where the filing is.
     const full = generations.index().record(stored.sourceId)

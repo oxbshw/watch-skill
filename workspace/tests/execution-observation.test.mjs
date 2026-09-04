@@ -132,13 +132,13 @@ describe('a task that never mentions Watch still leaves Watch evidence', () => {
     // Deliberately the shape of the evaluation that failed: generic tools, no
     // Watch tool anywhere, nothing in the arguments naming Watch.
     const host = await mount()
-    await host.tools.execute({ callId: 'c1', name: 'read_file', arguments: { path: `${WORKSPACE}/src/index.ts` } })
-    await host.tools.execute({ callId: 'c2', name: 'write_file', arguments: { path: `${WORKSPACE}/out.json` } })
+    await host.tools.execute({ callId: 'c1', name: 'read', arguments: { path: `${WORKSPACE}/src/index.ts` } })
+    await host.tools.execute({ callId: 'c2', name: 'write', arguments: { path: `${WORKSPACE}/out.json` } })
     await host.tools.execute({ callId: 'c3', name: 'bash', arguments: { command: 'npm test' } })
 
     const records = host.observation.all()
     assert.equal(records.length, 3, 'a generic task left no Watch record')
-    assert.deepEqual(records.map(r => r.toolName), ['read_file', 'write_file', 'bash'])
+    assert.deepEqual(records.map(r => r.toolName), ['read', 'write', 'bash'])
     assert.deepEqual(records.map(r => r.sideEffect), ['read', 'write', 'execute'])
     for (const record of records) {
       assert.equal(record.sessionId, 'session-1')
@@ -150,7 +150,7 @@ describe('a task that never mentions Watch still leaves Watch evidence', () => {
   test('every call has exactly one correlated record', async () => {
     const host = await mount()
     for (let n = 0; n < 12; n += 1) {
-      await host.tools.execute({ callId: `c${String(n)}`, name: 'read_file', arguments: { path: `${WORKSPACE}/a${String(n)}.txt` } })
+      await host.tools.execute({ callId: `c${String(n)}`, name: 'read', arguments: { path: `${WORKSPACE}/a${String(n)}.txt` } })
     }
     const records = host.observation.all()
     assert.equal(records.length, 12)
@@ -161,8 +161,8 @@ describe('a task that never mentions Watch still leaves Watch evidence', () => {
 
   test('a retry is a second attempt at one action, not a second action', async () => {
     const host = await mount()
-    await host.tools.execute({ callId: 'c1', name: 'write_file', arguments: { path: `${WORKSPACE}/out.json` } })
-    await host.tools.execute({ callId: 'c1', name: 'write_file', arguments: { path: `${WORKSPACE}/out.json` } })
+    await host.tools.execute({ callId: 'c1', name: 'write', arguments: { path: `${WORKSPACE}/out.json` } })
+    await host.tools.execute({ callId: 'c1', name: 'write', arguments: { path: `${WORKSPACE}/out.json` } })
     const [first, second] = host.observation.all()
     assert.equal(first.attempt, 1)
     assert.equal(second.attempt, 2)
@@ -185,8 +185,8 @@ describe('a task that never mentions Watch still leaves Watch evidence', () => {
     const host = await mount()
     const announced = []
     host.ctx.on('watch/execution-recorded', (record) => { announced.push(record.toolName) })
-    await host.tools.execute({ callId: 'c1', name: 'read_file', arguments: { path: `${WORKSPACE}/a.txt` } })
-    assert.deepEqual(announced, ['read_file'],
+    await host.tools.execute({ callId: 'c1', name: 'read', arguments: { path: `${WORKSPACE}/a.txt` } })
+    assert.deepEqual(announced, ['read'],
       'nothing announced the record, so the Library can only learn of it by polling')
   })
 })
@@ -194,7 +194,7 @@ describe('a task that never mentions Watch still leaves Watch evidence', () => {
 describe('completed is not verified', () => {
   test('a successful call is recorded UNVERIFIED', async () => {
     const host = await mount()
-    await host.tools.execute({ callId: 'c1', name: 'write_file', arguments: { path: `${WORKSPACE}/out.json` } })
+    await host.tools.execute({ callId: 'c1', name: 'write', arguments: { path: `${WORKSPACE}/out.json` } })
     const [record] = host.observation.all()
     assert.equal(record.state, 'completed')
     assert.equal(record.verification, 'UNVERIFIED',
@@ -207,7 +207,7 @@ describe('completed is not verified', () => {
     // reports PASS. Watch sees two ordinary tool calls and nothing else.
     const host = await mount()
     await host.tools.execute({
-      callId: 'c1', name: 'write_file',
+      callId: 'c1', name: 'write',
       arguments: { path: `${WORKSPACE}/verification.json` },
       result: {
         isError: false, value: 'written',
@@ -215,7 +215,7 @@ describe('completed is not verified', () => {
       },
     })
     await host.tools.execute({
-      callId: 'c2', name: 'read_file',
+      callId: 'c2', name: 'read',
       arguments: { path: `${WORKSPACE}/verification.json` },
       result: {
         isError: false, value: 'read',
@@ -245,7 +245,7 @@ describe('completed is not verified', () => {
 describe('containment is recorded, whatever it decided', () => {
   test('a path inside the workspace is recorded workspace-relative', async () => {
     const host = await mount()
-    await host.tools.execute({ callId: 'c1', name: 'read_file', arguments: { path: `${WORKSPACE}/src/index.ts` } })
+    await host.tools.execute({ callId: 'c1', name: 'read', arguments: { path: `${WORKSPACE}/src/index.ts` } })
     const [record] = host.observation.all()
     assert.equal(record.scope, 'inside')
     assert.deepEqual(record.paths, ['src/index.ts'])
@@ -254,7 +254,7 @@ describe('containment is recorded, whatever it decided', () => {
 
   test('a path outside it is counted and never written down', async () => {
     const host = await mount()
-    await host.tools.execute({ callId: 'c1', name: 'read_file', arguments: { path: OUTSIDE } })
+    await host.tools.execute({ callId: 'c1', name: 'read', arguments: { path: OUTSIDE } })
     const [record] = host.observation.all()
     assert.equal(record.scope, 'outside_workspace')
     assert.equal(record.outsidePathCount, 1)
@@ -265,7 +265,7 @@ describe('containment is recorded, whatever it decided', () => {
 
   test('no selected workspace is its own answer, not "inside"', async () => {
     const host = await mount({ workspace: null })
-    await host.tools.execute({ callId: 'c1', name: 'read_file', arguments: { path: OUTSIDE } })
+    await host.tools.execute({ callId: 'c1', name: 'read', arguments: { path: OUTSIDE } })
     const [record] = host.observation.all()
     assert.equal(record.scope, 'no_workspace')
   })
@@ -280,7 +280,7 @@ describe('containment is recorded, whatever it decided', () => {
 
   test('a tool this distribution has never seen is unknown, not harmless', () => {
     assert.equal(classifySideEffect('something_new'), 'unknown')
-    assert.equal(classifySideEffect('read_file'), 'read')
+    assert.equal(classifySideEffect('read'), 'read')
   })
 
   test('scope reading finds paths in the argument shapes tools actually use', () => {
@@ -322,15 +322,15 @@ describe('the workspace boundary refuses rather than reports', () => {
   test('a read inside the workspace runs', async () => {
     const host = await contained()
     const result = await host.run({
-      callId: 'c1', name: 'read_file', arguments: { path: `${WORKSPACE}/src/index.ts` } })
+      callId: 'c1', name: 'read', arguments: { path: `${WORKSPACE}/src/index.ts` } })
     assert.equal(result.isError, false)
-    assert.deepEqual(host.dispatched(), ['read_file'])
+    assert.deepEqual(host.dispatched(), ['read'])
   })
 
   test('a read outside it is refused before it happens, and recorded', async () => {
     const host = await contained()
     const result = await host.run({
-      callId: 'c1', name: 'read_file', arguments: { path: OUTSIDE } })
+      callId: 'c1', name: 'read', arguments: { path: OUTSIDE } })
     assert.equal(result.isError, true, 'the call ran')
     assert.deepEqual(host.dispatched(), [], 'the tool body was reached')
     const [record] = host.observation.all()
@@ -348,7 +348,7 @@ describe('the workspace boundary refuses rather than reports', () => {
     const temp = process.platform === 'win32' ? 'D:/Temp/snapshot.json' : '/tmp/snapshot.json'
     const host = await contained()
     const result = await host.run({
-      callId: 'c1', name: 'write_file', arguments: { path: temp } })
+      callId: 'c1', name: 'write', arguments: { path: temp } })
     assert.equal(result.isError, true)
     assert.deepEqual(host.dispatched(), [])
     assert.equal(host.observation.all()[0].scopeDecision, 'denied')
@@ -371,9 +371,9 @@ describe('the workspace boundary refuses rather than reports', () => {
     // the one this fixes.
     const host = await contained({ permission: 'danger-full-access' })
     const result = await host.run({
-      callId: 'c1', name: 'read_file', arguments: { path: OUTSIDE } })
+      callId: 'c1', name: 'read', arguments: { path: OUTSIDE } })
     assert.equal(result.isError, false, 'an explicit wider grant was ignored')
-    assert.deepEqual(host.dispatched(), ['read_file'])
+    assert.deepEqual(host.dispatched(), ['read'])
     const [record] = host.observation.all()
     assert.equal(record.scope, 'outside_workspace',
       'a permitted outside access stopped being recorded as one')
@@ -394,7 +394,7 @@ describe('the workspace boundary refuses rather than reports', () => {
       `${WORKSPACE}suffix/notes.md`,
     ]) {
       const result = await host.run({
-        callId: `c-${escape.length}`, name: 'read_file', arguments: { path: escape } })
+        callId: `c-${escape.length}`, name: 'read', arguments: { path: escape } })
       assert.equal(result.isError, true, `escaped containment: ${escape}`)
     }
     assert.deepEqual(host.dispatched(), [], 'an escape reached the tool body')
@@ -410,7 +410,7 @@ describe('the workspace boundary refuses rather than reports', () => {
     const host = await contained()
     host.observation.setContainmentMode('record')
     const result = await host.run({
-      callId: 'c1', name: 'read_file', arguments: { path: OUTSIDE } })
+      callId: 'c1', name: 'read', arguments: { path: OUTSIDE } })
     assert.equal(result.isError, false)
     const [record] = host.observation.all()
     assert.equal(record.scope, 'outside_workspace')
@@ -476,7 +476,7 @@ describe('a link out of the workspace is still out of the workspace', () => {
       }
       const throughLink = join(made.link, 'secret.txt')
       const result = await ctx.get('tools').execute({
-        agent, callId: 'c1', name: 'read_file', arguments: { path: throughLink },
+        agent, callId: 'c1', name: 'read', arguments: { path: throughLink },
       })
       assert.equal(result.isError, true,
         'a junction inside the workspace was a way out of it')
@@ -509,7 +509,7 @@ describe('a link out of the workspace is still out of the workspace', () => {
         permissions: { current: 'workspace-write' },
       }
       const result = await ctx.get('tools').execute({
-        agent, callId: 'c1', name: 'read_file',
+        agent, callId: 'c1', name: 'read',
         arguments: { path: join(made.workspace, 'notes.md') },
       })
       assert.equal(result.isError, false, 'the boundary refused a file inside the workspace')

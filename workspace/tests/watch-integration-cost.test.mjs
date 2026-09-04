@@ -158,11 +158,11 @@ describe('observing costs no provider requests', () => {
     const host = await mount()
     for (let n = 0; n < 10; n += 1) {
       await host.tools.execute({
-        callId: `r${String(n)}`, name: 'read_file',
+        callId: `r${String(n)}`, name: 'read',
         arguments: { path: join(host.workspace, `a${String(n)}.txt`) },
       })
       await host.tools.execute({
-        callId: `w${String(n)}`, name: 'write_file',
+        callId: `w${String(n)}`, name: 'write',
         arguments: { path: join(host.workspace, `b${String(n)}.json`), content: '{}' },
       })
       await host.tools.execute({
@@ -179,7 +179,7 @@ describe('observing costs no provider requests', () => {
   test('an attestation is a Bridge request, not a model call', async () => {
     const host = await mount()
     await host.tools.execute({
-      callId: 'c1', name: 'write_file',
+      callId: 'c1', name: 'write',
       arguments: { path: join(host.workspace, 'out.json'), content: '{}' },
     })
     await settle()
@@ -191,7 +191,7 @@ describe('observing costs no provider requests', () => {
     // The ledger holds records; holding them is not an activity.
     const host = await mount()
     await host.tools.execute({
-      callId: 'c1', name: 'write_file',
+      callId: 'c1', name: 'write',
       arguments: { path: join(host.workspace, 'out.json'), content: '{}' },
     })
     await settle()
@@ -205,7 +205,7 @@ describe('observing costs no provider requests', () => {
   test('a refused call costs nothing either', async () => {
     const host = await mount()
     await host.tools.execute({
-      callId: 'c1', name: 'read_file', arguments: { path: join(BASE, 'outside.txt') },
+      callId: 'c1', name: 'read', arguments: { path: join(BASE, 'outside.txt') },
     })
     await settle()
     assert.equal(host.llm.dispatched, 0)
@@ -218,11 +218,11 @@ describe('a tool call is evidence, not a memory about a person', () => {
     const host = await mount()
     for (let n = 0; n < 10; n += 1) {
       await host.tools.execute({
-        callId: `w${String(n)}`, name: 'write_file',
+        callId: `w${String(n)}`, name: 'write',
         arguments: { path: join(host.workspace, `b${String(n)}.json`), content: '{}' },
       })
       await host.tools.execute({
-        callId: `r${String(n)}`, name: 'read_file',
+        callId: `r${String(n)}`, name: 'read',
         arguments: { path: join(host.workspace, `a${String(n)}.txt`) },
       })
       await host.tools.execute({
@@ -238,7 +238,7 @@ describe('a tool call is evidence, not a memory about a person', () => {
   test('the ledger and memory are different stores, and only one is automatic', async () => {
     const host = await mount()
     await host.tools.execute({
-      callId: 'c1', name: 'write_file',
+      callId: 'c1', name: 'write',
       arguments: { path: join(host.workspace, 'out.json'), content: '{}' },
     })
     await settle()
@@ -255,11 +255,11 @@ describe('the record carries no machine identity', () => {
   test('no record mentions the operating system user or an absolute path', async () => {
     const host = await mount()
     await host.tools.execute({
-      callId: 'c1', name: 'write_file',
+      callId: 'c1', name: 'write',
       arguments: { path: join(host.workspace, 'deep', 'out.json'), content: 'x' },
     })
     await host.tools.execute({
-      callId: 'c2', name: 'read_file', arguments: { path: join(BASE, 'outside.txt') },
+      callId: 'c2', name: 'read', arguments: { path: join(BASE, 'outside.txt') },
     })
     await settle()
 
@@ -275,7 +275,7 @@ describe('the record carries no machine identity', () => {
   test('paths inside the workspace survive as workspace-relative', async () => {
     const host = await mount()
     await host.tools.execute({
-      callId: 'c1', name: 'write_file',
+      callId: 'c1', name: 'write',
       arguments: { path: join(host.workspace, 'src', 'index.ts'), content: 'x' },
     })
     await settle()

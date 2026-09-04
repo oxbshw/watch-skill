@@ -100,7 +100,21 @@ function record(method, url, headers, body) {
  * Deterministic to the byte. A stub that varied its answer would make every
  * assertion about rendering a flaky one.
  */
-function completion(model) {
+function completion(model, scripted) {
+  if (scripted !== null) {
+    return {
+      id: 'chatcmpl-stub-1',
+      object: 'chat.completion',
+      created: 0,
+      model,
+      choices: [{
+        index: 0,
+        message: { role: 'assistant', content: null, tool_calls: [scripted] },
+        finish_reason: 'tool_calls',
+      }],
+      usage: { prompt_tokens: 11, completion_tokens: 7, total_tokens: 18 },
+    }
+  }
   return {
     id: 'chatcmpl-stub-1',
     object: 'chat.completion',
@@ -115,10 +129,49 @@ function completion(model) {
   }
 }
 
+/**
+ * A tool call the stub is told to make, once, on its first completion.
+ *
+ * The owner journey needs a model that *acts*, because the property under test
+ * is that acting leaves Watch evidence without the model knowing Watch exists.
+ * A stub that only ever answers in prose can prove the routing and the
+ * accounting and nothing about the observation.
+ *
+ * Scripted rather than clever: the caller says which tool and which arguments,
+ * the stub asks for it on the first completion of a turn and answers in prose
+ * on the next. Nothing here inspects the conversation to decide what to do,
+ * because a stub that made decisions would be a second agent in the test.
+ */
+function scriptedCall(script, seen) {
+  if (script === null || seen > script.length) return null
+  const step = script[seen - 1]
+  if (step === undefined) return null
+  return {
+    id: `call_stub_${String(seen)}`,
+    type: 'function',
+    function: { name: step.name, arguments: JSON.stringify(step.arguments ?? {}) },
+  }
+}
+
 /** The same answer as server-sent events, for a client that asked to stream. */
-function streamChunks(model) {
+function streamChunks(model, scripted) {
   const frame = data => `data: ${JSON.stringify(data)}\n\n`
   const base = { id: 'chatcmpl-stub-1', object: 'chat.completion.chunk', created: 0, model }
+  if (scripted !== null) {
+    return [
+      frame({ ...base, choices: [{ index: 0, delta: { role: 'assistant' }, finish_reason: null }] }),
+      frame({
+        ...base,
+        choices: [{
+          index: 0,
+          delta: { tool_calls: [{ index: 0, ...scripted }] },
+          finish_reason: null,
+        }],
+      }),
+      frame({ ...base, choices: [{ index: 0, delta: {}, finish_reason: 'tool_calls' }] }),
+      'data: [DONE]\n\n',
+    ].join('')
+  }
   return [
     frame({ ...base, choices: [{ index: 0, delta: { role: 'assistant' }, finish_reason: null }] }),
     frame({ ...base, choices: [{ index: 0, delta: { content: STUB_REPLY }, finish_reason: null }] }),
@@ -206,8 +259,13 @@ export function classifyCompletion(entry, promptText, credential) {
  *   chose is gone" is reachable without editing this file.
  * @returns the base URL, the recorded requests, and a way to stop it.
  */
-export async function startOpenRouterStub({ failWith = null, models = STUB_MODELS } = {}) {
+export async function startOpenRouterStub({
+  failWith = null, models = STUB_MODELS, script = null,
+} = {}) {
   const requests = []
+  // How many completions this stub has answered, so a script advances one step
+  // per model round rather than repeating its first answer forever.
+  let completions = 0
 
   const server = createServer((request, response) => {
     void (async () => {
@@ -256,16 +314,18 @@ export async function startOpenRouterStub({ failWith = null, models = STUB_MODEL
           return
         }
         const model = typeof entry.body?.model === 'string' ? entry.body.model : 'stub/echo-small'
+        completions += 1
+        const scripted = scriptedCall(script, completions)
         if (entry.body?.stream === true) {
           response.writeHead(200, {
             'content-type': 'text/event-stream',
             'cache-control': 'no-cache',
             connection: 'keep-alive',
           })
-          response.end(streamChunks(model))
+          response.end(streamChunks(model, scripted))
           return
         }
-        json(response, 200, completion(model))
+        json(response, 200, completion(model, scripted))
         return
       }
 
