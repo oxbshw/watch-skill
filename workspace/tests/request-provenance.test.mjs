@@ -36,7 +36,7 @@ const TECH = join(ROOT, 'packages', 'watch', 'technology', 'lib')
 const routing = (await import(pathToFileURL(join(TECH, 'routing.js')).href)).default
 const provenancePlugin = (await import(pathToFileURL(join(TECH, 'provenance.js')).href))
 const { receiptAuthorises, routeKey } = provenancePlugin
-const { testProvider } = await import(pathToFileURL(
+const { testProvider, readRouteReadiness } = await import(pathToFileURL(
   join(ROOT, 'packages', 'watch', 'tools', 'lib', 'read-plane.js')).href)
 
 const PROVIDER = 'openrouter'
@@ -479,6 +479,81 @@ describe('a capability is one use, one route, and it expires', () => {
     const second = await host.background()
     assert.equal(second.ok, false)
     assert.equal(host.calls() - before, 0)
+    await host.dispose()
+  })
+})
+
+describe('the screen reads readiness from the Host, not from its own memory', () => {
+  test('the Host answers proved only while the proof still holds', async () => {
+    const host = await mount()
+    assert.deepEqual(
+      await readRouteReadiness(
+        { protocol: 1, requestId: 'r1', deadlineMs: 5_000, provider: PROVIDER, model: MODEL },
+        host.ctx),
+      {
+        outcome: 'route_readiness', protocol: 1, requestId: 'r1',
+        provider: PROVIDER, model: MODEL, proved: false, reason: 'never_tested',
+      })
+
+    await host.providerTest()
+    const proved = await readRouteReadiness(
+      { protocol: 1, requestId: 'r2', deadlineMs: 5_000, provider: PROVIDER, model: MODEL },
+      host.ctx)
+    assert.equal(proved.proved, true)
+    assert.equal(proved.reason, 'proved')
+
+    host.settings.edit('llm-pi-ai', (document) => {
+      document.providers[PROVIDER].baseURL = 'http://127.0.0.1:2/api/v1'
+    })
+    const stale = await readRouteReadiness(
+      { protocol: 1, requestId: 'r3', deadlineMs: 5_000, provider: PROVIDER, model: MODEL },
+      host.ctx)
+    assert.equal(stale.proved, false)
+    assert.equal(stale.reason, 'configuration_changed',
+      'a moved configuration reads as untested rather than as changed')
+    await host.dispose()
+  })
+
+  test('the answer agrees with what the guard would actually do', async () => {
+    // Two questions with one answer. A screen that says ready over a route the
+    // guard refuses is the failure this read exists to remove, so the two are
+    // compared rather than assumed to match.
+    const host = await mount()
+    for (const step of ['before', 'after', 'moved']) {
+      if (step === 'after') await host.providerTest()
+      if (step === 'moved') {
+        host.settings.edit('llm-pi-ai', (document) => {
+          document.providers[PROVIDER].apiKeyEnv = 'SOMETHING_ELSE'
+        })
+      }
+      const shown = await readRouteReadiness(
+        { protocol: 1, requestId: `r-${step}`, deadlineMs: 5_000, provider: PROVIDER, model: MODEL },
+        host.ctx)
+      assert.equal(shown.proved, host.provenance.isReady(PROVIDER, MODEL),
+        `the screen and the guard disagreed ${step} the test`)
+    }
+    await host.dispose()
+  })
+
+  test('a Host with no provenance row reads as unproved, not as ready', async () => {
+    // Fails closed in the direction that matters: the screen may under-promise
+    // and never over-promise.
+    const bare = { get: () => undefined }
+    const answer = await readRouteReadiness(
+      { protocol: 1, requestId: 'r4', deadlineMs: 5_000, provider: PROVIDER, model: MODEL }, bare)
+    assert.equal(answer.proved, false)
+    assert.equal(answer.reason, 'unreadable')
+  })
+
+  test('the verdict carries no credential, no reference and no path', async () => {
+    const host = await mount()
+    await host.providerTest()
+    const answer = await readRouteReadiness(
+      { protocol: 1, requestId: 'r5', deadlineMs: 5_000, provider: PROVIDER, model: MODEL },
+      host.ctx)
+    const serialised = JSON.stringify(answer)
+    assert.doesNotMatch(serialised, /sk-|Bearer|OPENROUTER_API_KEY|apiKey/)
+    assert.doesNotMatch(serialised, /[A-Za-z]:[\\/]/)
     await host.dispose()
   })
 })

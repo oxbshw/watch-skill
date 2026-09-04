@@ -159,6 +159,24 @@ export type ProviderTester = (
   provider: string, model: string, signal: AbortSignal,
 ) => Promise<ProviderTestFacts>
 
+/** The Host's own verdict on one route, and why, when it is not ready. */
+export interface RouteReadinessFacts {
+  readonly proved: boolean
+  readonly reason: 'proved' | 'never_tested' | 'configuration_changed' | 'unreadable'
+}
+
+/**
+ * Ask the Host whether it would serve a route, without spending anything.
+ *
+ * Optional, because a deployment may mount this panel against a Host without
+ * the read plane. Absent, the tab falls back to its own memory of the tests it
+ * ran — which is what this exists to stop being the only answer, and is still
+ * better than refusing to draw the screen.
+ */
+export type RouteReadinessReader = (
+  provider: string, model: string, signal: AbortSignal,
+) => Promise<RouteReadinessFacts>
+
 /* ── what a surface renders from ────────────────────────────────────────── */
 
 /** One provider, with everything a setup screen needs to talk about it. */
@@ -334,7 +352,58 @@ export class BindingStore {
   constructor(
     private readonly api: HostApi,
     private readonly providerTester?: ProviderTester,
+    private readonly readinessReader?: RouteReadinessReader,
   ) {}
+
+  /**
+   * Replace what this tab believes about tested routes with what the Host says.
+   *
+   * The browser used to be the only place a provider-test verdict lived, and a
+   * tab cannot see a Host restart, an edit made in another tab, or a key
+   * rotated behind a reference that did not change. It drew a tested badge over
+   * routes the Host had already stopped being willing to serve, and the
+   * composer that badge unlocks opened onto a refusal.
+   *
+   * So the Host is asked, per bound route, and its answer wins in both
+   * directions: a route it still proves is tested even in a tab that has just
+   * been reloaded and ran no test, and a route it no longer proves stops being
+   * tested here the moment this is read.
+   */
+  private async reconcileReadiness(
+    bindings: WatchBindings, providers: readonly ProviderRow[], signal: AbortSignal,
+  ): Promise<void> {
+    if (this.readinessReader === undefined) return
+    for (const role of BINDABLE_ROLES) {
+      const binding = bindingFor(bindings, role)
+      if (binding === null) continue
+      const credentialRef = providers
+        .find(entry => entry.provider === binding.provider)?.credentialRef ?? null
+      const key = providerTestKey(binding.provider, binding.model, credentialRef)
+      let verdict: RouteReadinessFacts
+      try {
+        verdict = await this.readinessReader(binding.provider, binding.model, signal)
+      } catch {
+        // A read that failed says nothing about the route, and inventing
+        // either answer would be the defect. The tab keeps what it has.
+        continue
+      }
+      if (signal.aborted) return
+      if (verdict.proved) {
+        this.providerTests.set(key, {
+          provider: binding.provider,
+          model: binding.model,
+          ok: true,
+          credential: 'verified',
+          reachability: 'reachable',
+          // Deliberately not "the provider test succeeded": this tab did not
+          // run one. What is true is that the Host still holds the proof.
+          message: 'The Host still holds a proof for this route.',
+        })
+      } else {
+        this.providerTests.delete(key)
+      }
+    }
+  }
 
   /** @returns the current snapshot; stable between changes. */
   getSnapshot = (): BindingSnapshot => this.snapshot
@@ -432,6 +501,12 @@ export class BindingStore {
         catalogError: failureByProvider.get(entry.provider) ?? null,
       }
     })
+
+    // Before the first publish, so no frame is ever drawn from this tab's own
+    // memory when the Host has a different answer.
+    const readiness = new AbortController()
+    await this.reconcileReadiness(bindings, rows, readiness.signal)
+    if (generation !== this.generation) return
 
     this.publish({
       status: 'ready',

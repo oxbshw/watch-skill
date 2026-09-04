@@ -56,6 +56,7 @@ import type {
   LibraryRecord, LibraryRefreshRequest, LibraryRefreshResponse,
   LibrarySearchRequest, LibrarySearchResponse,
   ProviderTestRequest, ProviderTestResponse,
+  RouteReadinessRequest, RouteReadinessResponse,
 } from '@deepwatch/dsh-contracts/query/wire'
 import {
   parseCoreHealthRequest, parseLibraryGetRequest, parseLibraryRefreshRequest,
@@ -240,6 +241,52 @@ export class WatchQueryService extends TypertRemoteService {
   ): Promise<ProviderTestResponse> {
     return testProvider(request, this.ctx, signal)
   }
+
+  /**
+   * Whether the Host would serve this route right now, asked without spending
+   * anything.
+   *
+   * The browser half used to answer this from its own memory of a provider
+   * test it had run, which is a claim about a Host it cannot see. A tab that
+   * stayed open across a Host restart, or across an edit made in another tab,
+   * kept drawing a tested badge over a route the Host had already stopped
+   * being willing to serve — and the composer it gates opened onto a refusal.
+   * There is one answer, and this is where it is read from.
+   */
+  @Remote('routeReadiness')
+  routeReadiness(
+    request: RouteReadinessRequest, signal: AbortSignal,
+  ): Promise<RouteReadinessResponse> {
+    // Read straight out of Host memory: there is nothing to wait for, so the
+    // only thing a cancellation can do is refuse an answer already in hand.
+    // Taken so the signature is the one Typert generates a codec from, and so
+    // an aborted caller is not handed a verdict it stopped asking for.
+    if (signal.aborted) return Promise.reject(signal.reason as Error)
+    return Promise.resolve(readRouteReadiness(request, this.ctx))
+  }
+}
+
+/**
+ * Read the Host's verdict for one route.
+ *
+ * No network, no provider, no credential. When the provenance row is not
+ * composed the honest answer is that nothing here can say, which reads as
+ * unproved — the same direction the guard fails in.
+ */
+export function readRouteReadiness(
+  request: RouteReadinessRequest, ctx: Context,
+): RouteReadinessResponse {
+  const provenance = ctx.get?.(PROVENANCE_SERVICE) as unknown as ProvenanceLike | undefined
+  const reason = provenance?.readiness(request.provider, request.model) ?? 'unreadable'
+  return {
+    outcome: 'route_readiness',
+    protocol: WATCH_QUERY_PROTOCOL_VERSION,
+    requestId: request.requestId,
+    provider: request.provider,
+    model: request.model,
+    proved: reason === 'proved',
+    reason,
+  }
 }
 
 function providerFailure(
@@ -294,6 +341,8 @@ interface ProvenanceLike {
     providerRevision: string
     credentialRevision: string
   }): void
+  readiness(provider: string, model: string):
+    'proved' | 'never_tested' | 'configuration_changed' | 'unreadable'
 }
 
 /** The service key, spelled once. */

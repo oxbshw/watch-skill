@@ -608,3 +608,67 @@ describe('every surface that reports readiness reports the same readiness', () =
     assert.ok(diagnostics.includes('Not configured'))
   })
 })
+
+describe('the Host is what the screen believes about a tested route', () => {
+  /** A store loaded with a readiness reader, which is what a real one has. */
+  async function loadedWithHost(options, verdict, providerTester) {
+    const stub = host(options)
+    const asked = []
+    const store = new BindingStore(stub.api, providerTester, async (provider, model) => {
+      asked.push(`${provider} ${model}`)
+      return verdict
+    })
+    await store.load()
+    return { store, stub, asked }
+  }
+
+  const PROVED = { proved: true, reason: 'proved' }
+  const MOVED = { proved: false, reason: 'configuration_changed' }
+
+  test('a reloaded tab that ran no test shows the proof the Host still holds', async () => {
+    // The tab has no memory of a provider test — a reload, or a second window.
+    // The Host does, and it is the one that would serve the request.
+    const { store, asked } = await loadedWithHost(
+      { credentialConfigured: true, bindings: BOUND }, PROVED)
+    assert.deepEqual(asked, ['openrouter openai/gpt-4o-mini'])
+    assert.equal(isExecutable(chatReadiness(store.getSnapshot())), true,
+      `the screen ignored a proof the Host was still holding: ${
+        JSON.stringify(chatReadiness(store.getSnapshot()))}`)
+  })
+
+  test('a route the Host no longer proves stops reading as tested', async () => {
+    // The dangerous direction: this tab ran the test itself, and the Host has
+    // since stopped being willing to serve the route.
+    const tester = async (provider, model) => ({
+      provider, model, ok: true, credential: 'verified', reachability: 'reachable',
+      message: 'Provider request succeeded. This exact binding is ready.',
+    })
+    const stub = host({ credentialConfigured: true, bindings: BOUND })
+    let verdict = PROVED
+    const store = new BindingStore(stub.api, tester, async () => verdict)
+    await store.load()
+    await store.testRole('agent_model')
+    assert.equal(isExecutable(chatReadiness(store.getSnapshot())), true)
+
+    verdict = MOVED
+    await store.load()
+    assert.equal(chatReadiness(store.getSnapshot()).status, 'bound_unverified',
+      'the screen kept a tested badge over a route the Host would refuse')
+  })
+
+  test('a Host that cannot answer leaves the screen as it was', async () => {
+    // A read that failed says nothing about the route. Inventing either answer
+    // is the defect; the tab keeps what it has and the badge stays honest.
+    const stub = host({ credentialConfigured: true, bindings: BOUND })
+    const store = new BindingStore(stub.api, undefined, async () => {
+      throw new Error('remote unavailable')
+    })
+    await store.load()
+    assert.equal(chatReadiness(store.getSnapshot()).status, 'bound_unverified')
+  })
+
+  test('nothing is asked about a role nobody bound', async () => {
+    const { asked } = await loadedWithHost({ credentialConfigured: true }, PROVED)
+    assert.deepEqual(asked, [])
+  })
+})

@@ -92,13 +92,13 @@
       {
         "name": "@deepwatch/dsh-client-settings",
         "version": "0.1.0-preview.0",
-        "integrity": "sha256:8518960c5e7127254b4e83f9fc20b9abbd513b79e6d02c40638365b00f05e48f",
+        "integrity": "sha256:5b054dc77f1466521c0268294915c1dcbb5e45e6b466b9c3c971e6828cdfbf23",
         "sourceFiles": 16
       },
       {
         "name": "@deepwatch/dsh-contracts",
         "version": "0.1.0-preview.0",
-        "integrity": "sha256:a52e5396fe9524922a720362bcd742dce7159cd770a5b25a746c63753ffbd53c",
+        "integrity": "sha256:89a32b3b878b72a4fae3ab4ae15e50cbebc13afbc64536341d9864dfb85c040a",
         "sourceFiles": 16
       },
       {
@@ -110,7 +110,7 @@
       {
         "name": "@deepwatch/dsh-library",
         "version": "0.1.0-preview.0",
-        "integrity": "sha256:9dffa66add6e50fe2dbd9d6730ca3ed3e11d2748103db483396ba89d5bf77fd5",
+        "integrity": "sha256:0566a078c80253b4a91ea168cafbf51684ab37b5b630786d859dbd290a5f0ef2",
         "sourceFiles": 15
       },
       {
@@ -134,7 +134,7 @@
       {
         "name": "@deepwatch/dsh-technology",
         "version": "0.1.0-preview.0",
-        "integrity": "sha256:c996db2c9c79b794e4df63c614d104ccffcbd54f9acd797c44754a31a665a0dd",
+        "integrity": "sha256:e7cb7c751d554fb3e75e883362a8d1670221bfe4628a95e4a8182b3292ba5e11",
         "sourceFiles": 11
       },
       {
@@ -146,7 +146,7 @@
       {
         "name": "@deepwatch/dsh-tools",
         "version": "0.1.0-preview.0",
-        "integrity": "sha256:f7e9cc0beabb9febec6bfcb7ce043d327e41ccaab60191a8fea15376e4e6af92",
+        "integrity": "sha256:8c94767930068b827ef322bb0f1afd63b8173c2acae1ba2d0426afa373c58f71",
         "sourceFiles": 10
       },
       {
@@ -185,7 +185,7 @@
       "creators": [
         "Tool: watch-gen-release-manifest"
       ],
-      "created": "2026-09-04T02:14:23Z"
+      "created": "2026-09-04T02:53:30Z"
     },
     "packages": [
       {
@@ -312,7 +312,7 @@
         "checksums": [
           {
             "algorithm": "SHA256",
-            "checksumValue": "8518960c5e7127254b4e83f9fc20b9abbd513b79e6d02c40638365b00f05e48f"
+            "checksumValue": "5b054dc77f1466521c0268294915c1dcbb5e45e6b466b9c3c971e6828cdfbf23"
           }
         ]
       },
@@ -328,7 +328,7 @@
         "checksums": [
           {
             "algorithm": "SHA256",
-            "checksumValue": "a52e5396fe9524922a720362bcd742dce7159cd770a5b25a746c63753ffbd53c"
+            "checksumValue": "89a32b3b878b72a4fae3ab4ae15e50cbebc13afbc64536341d9864dfb85c040a"
           }
         ]
       },
@@ -360,7 +360,7 @@
         "checksums": [
           {
             "algorithm": "SHA256",
-            "checksumValue": "9dffa66add6e50fe2dbd9d6730ca3ed3e11d2748103db483396ba89d5bf77fd5"
+            "checksumValue": "0566a078c80253b4a91ea168cafbf51684ab37b5b630786d859dbd290a5f0ef2"
           }
         ]
       },
@@ -424,7 +424,7 @@
         "checksums": [
           {
             "algorithm": "SHA256",
-            "checksumValue": "c996db2c9c79b794e4df63c614d104ccffcbd54f9acd797c44754a31a665a0dd"
+            "checksumValue": "e7cb7c751d554fb3e75e883362a8d1670221bfe4628a95e4a8182b3292ba5e11"
           }
         ]
       },
@@ -456,7 +456,7 @@
         "checksums": [
           {
             "algorithm": "SHA256",
-            "checksumValue": "f7e9cc0beabb9febec6bfcb7ce043d327e41ccaab60191a8fea15376e4e6af92"
+            "checksumValue": "8c94767930068b827ef322bb0f1afd63b8173c2acae1ba2d0426afa373c58f71"
           }
         ]
       },

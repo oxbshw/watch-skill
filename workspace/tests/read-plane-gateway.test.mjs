@@ -95,7 +95,8 @@ test('every namespace method is a strict descriptor, not an SRC claim', async ()
   // Diagnostics needs one — a second namespace for a single method would be a
   // second generated protocol to keep in step for no reader.
   assert.deepEqual(invocations.map(entry => entry.method).sort(),
-    ['coreHealth', 'libraryGet', 'libraryRefresh', 'librarySearch', 'providerTest'],
+    ['coreHealth', 'libraryGet', 'libraryRefresh', 'librarySearch', 'providerTest',
+      'routeReadiness'],
     'the generated Host protocol carries exactly the read plane methods')
 
   for (const invocation of invocations) {

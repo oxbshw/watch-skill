@@ -33,7 +33,7 @@ import { RoleBindings } from './role-bindings.js'
 import { ChatGate } from './chat-gate.js'
 import type { ComposerBlocks } from './chat-gate.js'
 import type { HostApi } from './binding-state.js'
-import type { ProviderTestFacts } from './binding-state.js'
+import type { ProviderTestFacts, RouteReadinessFacts } from './binding-state.js'
 
 export * from './components.js'
 export * from './onboarding.js'
@@ -90,6 +90,18 @@ type CoreHealthReader = (
 ) => Promise<{ ok: true, value: unknown } | { ok: false }>
 
 type ProviderTestReader = (
+  request: {
+    protocol: number
+    requestId: string
+    deadlineMs: number
+    provider: string
+    model: string
+  },
+  signal?: AbortSignal,
+) => Promise<{ ok: true, value: unknown } | { ok: false }>
+
+/** The same envelope, for the read that spends nothing. */
+type RouteReadinessReader = (
   request: {
     protocol: number
     requestId: string
@@ -218,8 +230,37 @@ export function apply(ctx: Context): void {
     }
     return value
   }
+  /**
+   * The Host's verdict on a route, read rather than remembered.
+   *
+   * Shaped like `runProviderTest` and deliberately not like it: this spends
+   * nothing, reaches no provider, and is asked on every load. It is what stops
+   * a tab that has been open across a Host restart, or across an edit made
+   * somewhere else, from drawing a tested badge over a route the Host would
+   * refuse.
+   */
+  const readRouteReadiness = async (
+    provider: string, model: string, signal: AbortSignal,
+  ): Promise<RouteReadinessFacts> => {
+    const method = (ctx as unknown as {
+      remote?: { watchQuery?: { routeReadiness?: RouteReadinessReader } }
+    }).remote?.watchQuery?.routeReadiness
+    if (method === undefined) throw new Error('route readiness remote unavailable')
+    const result = await method({
+      protocol: 1, requestId: `req_readiness_${Date.now().toString(36)}`,
+      deadlineMs: 5_000, provider, model,
+    }, signal)
+    if (!result.ok) throw new Error('route readiness remote refused the request')
+    const value = result.value as RouteReadinessFacts & {
+      outcome?: string, provider?: string, model?: string
+    }
+    if (value.outcome !== 'route_readiness' || value.provider !== provider || value.model !== model) {
+      throw new Error('route readiness returned a mismatched response')
+    }
+    return { proved: value.proved, reason: value.reason }
+  }
   const store = new BindingStore(
-    (ctx.get('connection') as { api: HostApi }).api, runProviderTest,
+    (ctx.get('connection') as { api: HostApi }).api, runProviderTest, readRouteReadiness,
   )
   const RoleBindingsSection = (): ReactNode => RoleBindings({ store })
   const healthStore = new CoreHealthStore(readHealth)

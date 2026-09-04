@@ -132,6 +132,16 @@ export interface RequestCapability {
   readonly causeId: string
 }
 
+/**
+ * What a screen may say about one route, and it is the Host that says it.
+ *
+ * A browser tab holding its own memory of a provider test is a claim about a
+ * Host it cannot see: the Host may have restarted, or the base URL may have
+ * been edited in another tab, and the tab would still be drawing a tested
+ * badge over a route the Host would refuse. So the verdict is read from here.
+ */
+export type RouteReadiness = 'proved' | 'never_tested' | 'configuration_changed' | 'unreadable'
+
 /** Why a capability was refused, for a message somebody has to act on. */
 export type CapabilityVerdict =
   | 'ok' | 'unknown' | 'replayed' | 'route_mismatch' | 'expired'
@@ -345,6 +355,23 @@ export class WatchProvenance extends Service {
   isReady(provider: string, model: string): boolean {
     return receiptAuthorises(
       this.receiptFor(provider, model), provider, model, this.factsFor(provider, model))
+  }
+
+  /**
+   * The same answer, in the words a screen has to use.
+   *
+   * `isReady` is the guard's question and a boolean is all it needs. A person
+   * looking at a binding needs to know *which* thing to do, and "never tested"
+   * and "tested, then something moved" have different next steps — run the
+   * test, or look at what changed first. Nothing here is derived from a
+   * credential and nothing names one.
+   */
+  readiness(provider: string, model: string): RouteReadiness {
+    const facts = this.factsFor(provider, model)
+    if (facts === null) return 'unreadable'
+    const receipt = this.receiptFor(provider, model)
+    if (receipt === undefined) return 'never_tested'
+    return receiptAuthorises(receipt, provider, model, facts) ? 'proved' : 'configuration_changed'
   }
 
   /**

@@ -39,6 +39,8 @@ import type {
   LibrarySearchResponse,
   ProviderTestRequest,
   ProviderTestResponse,
+  RouteReadinessRequest,
+  RouteReadinessResponse,
 } from '@deepwatch/dsh-contracts/query/wire'
 import { WATCH_QUERY_WIRE_VERSION } from '@deepwatch/dsh-contracts/query/wire'
 import type { IndexHealth, IndexQueryResult } from '../index-store.js'
@@ -81,6 +83,16 @@ export interface WatchQueryRemote {
   readonly providerTest: (
     request: ProviderTestRequest, signal?: AbortSignal,
   ) => Promise<RemoteResult<ProviderTestResponse>>
+  /**
+   * The Host's own verdict on a route, asked without spending anything.
+   *
+   * Here because this is the browser's only channel to the Host, and because
+   * the alternative — a tab remembering a provider test it ran — is a claim
+   * about a Host it cannot see.
+   */
+  readonly routeReadiness: (
+    request: RouteReadinessRequest, signal?: AbortSignal,
+  ) => Promise<RemoteResult<RouteReadinessResponse>>
 }
 
 /** One row of results, however the surface obtained it. */

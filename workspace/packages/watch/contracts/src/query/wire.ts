@@ -428,6 +428,48 @@ export interface ProviderTestRequest {
   readonly model: string
 }
 
+/**
+ * What a screen asks the Host about a route it has already been told about.
+ *
+ * A read, not a test: it spends no provider request and reaches no network. It
+ * exists because the browser half used to hold its own memory of a provider
+ * test, which is a claim about a Host it cannot see — the Host may have
+ * restarted, or the route's configuration may have been edited in another tab,
+ * and the badge would still say tested over a route the Host would refuse.
+ */
+export interface RouteReadinessRequest {
+  readonly protocol: number
+  readonly requestId: string
+  readonly deadlineMs: number
+  readonly provider: string
+  readonly model: string
+}
+
+/**
+ * The Host's own verdict, and nothing that could identify a credential.
+ *
+ * `reason` is separate from `proved` because the two states that are not
+ * proved need opposite actions: a route nobody has tested needs the test, and
+ * a route whose configuration moved since the test needs somebody to look at
+ * what moved before spending another request on it.
+ */
+export interface RouteReadinessReport {
+  readonly outcome: 'route_readiness'
+  readonly protocol: number
+  readonly requestId: string
+  readonly provider: string
+  readonly model: string
+  /** Whether the Host would serve this route to a turn right now. */
+  readonly proved: boolean
+  readonly reason: 'proved' | 'never_tested' | 'configuration_changed' | 'unreadable'
+}
+
+/** What `routeReadiness` answers. */
+export type RouteReadinessResponse =
+  | RouteReadinessReport
+  | LibraryRequestRejected
+  | LibraryDeadlineExceeded
+
 /** Only provider-neutral facts cross back; provider output and credentials never do. */
 export interface ProviderTestResponse {
   readonly outcome: 'provider_test'
