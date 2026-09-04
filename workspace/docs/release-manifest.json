@@ -46,6 +46,10 @@
   "integrity": {
     "algorithm": "sha256",
     "scope": "first-party package source, excluding node_modules and build output",
+    "composition": {
+      "all": "sha256:ee81e094fb573fa7756a042ba9684c7f671149463e6a778604bab5432df0aef6",
+      "runtime": "sha256:d4ba416a2f0e64756628df06cdba212fc5e8c7f35f44f90d84abcc797c92644f"
+    },
     "packages": [
       {
         "name": "@deepwatch/dsh-adapters",
@@ -68,8 +72,8 @@
       {
         "name": "@deepwatch/cli",
         "version": "0.1.0-preview.0",
-        "integrity": "sha256:b9de9a298ca715b3cce699971e76374f31d4ce565abc060aada875eedcee65cd",
-        "sourceFiles": 11
+        "integrity": "sha256:631d211483c134a53aba13e705c5707f210d8ed678cd4e711ebb3f5c8434cf52",
+        "sourceFiles": 12
       },
       {
         "name": "@deepwatch/dsh-client-evidence",
@@ -185,7 +189,7 @@
       "creators": [
         "Tool: watch-gen-release-manifest"
       ],
-      "created": "2026-09-04T20:23:22Z"
+      "created": "2026-09-04T20:54:00Z"
     },
     "packages": [
       {
@@ -248,7 +252,7 @@
         "checksums": [
           {
             "algorithm": "SHA256",
-            "checksumValue": "b9de9a298ca715b3cce699971e76374f31d4ce565abc060aada875eedcee65cd"
+            "checksumValue": "631d211483c134a53aba13e705c5707f210d8ed678cd4e711ebb3f5c8434cf52"
           }
         ]
       },

@@ -25,7 +25,9 @@ import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 
 import { probe, run } from './lib/exec.js'
-import { harness, harnessVersion } from './lib/harness.js'
+import { harness, harnessDir, harnessVersion } from './lib/harness.js'
+import { describeProvenance, renderProvenance } from './provenance.js'
+import type { Provenance } from './provenance.js'
 import { HARNESS_PACKAGE, HARNESS_VERSION } from './version.js'
 import { deepwatchHome, dshHome, profileName, watchCoreBin } from './lib/paths.js'
 
@@ -48,6 +50,13 @@ export interface Finding {
 export interface DoctorReport {
   readonly ok: boolean
   readonly findings: readonly Finding[]
+  /**
+   * What is installed, in terms comparable with what was released.
+   *
+   * Present whether or not the doctor is otherwise happy: "which build is
+   * this?" is exactly the question a broken install raises.
+   */
+  readonly provenance: Provenance
 }
 
 const NODE_FLOOR = 22
@@ -185,6 +194,7 @@ export async function doctor(env: NodeJS.ProcessEnv = process.env): Promise<Doct
     ok: findings.every(finding =>
       !finding.required || (finding.state !== 'missing' && finding.fix === '')),
     findings,
+    provenance: describeProvenance(join(harnessDir(env), 'node_modules')),
   }
 }
 
@@ -206,6 +216,8 @@ export function renderDoctor(report: DoctorReport, home: string): string {
     lines.push('What to do:', '')
     for (const finding of fixes) lines.push(`  ${finding.name}: ${finding.fix}`, '')
   }
+  lines.push('Provenance:', '',
+    ...renderProvenance(report.provenance).map(line => `  ${line}`), '')
   lines.push(report.ok
     ? 'DeepWatch can start. Run `deepwatch web`.'
     : 'DeepWatch cannot start yet. See above.')

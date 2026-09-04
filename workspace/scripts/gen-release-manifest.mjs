@@ -36,6 +36,8 @@ import { join, dirname, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { createHash } from 'node:crypto'
 
+import { byCodeUnit } from './lib/order.mjs'
+
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const OUTPUT = join(ROOT, 'docs', 'release-manifest.json')
 
@@ -98,6 +100,25 @@ function packageDigest(dir) {
     files += 1
   }
   return { digest: `sha256:${hash.digest('hex')}`, files }
+}
+
+/**
+ * The digest of a composition: sorted `name@version`, newline-joined.
+ *
+ * The same spelling as `@deepwatch/cli`'s `compositionDigest`, and it has to
+ * stay that way -- two spellings of one digest are two digests, and the whole
+ * point is that a machine can recompute what the release recorded.
+ * `tests/provenance.test.mjs` holds the two against each other.
+ */
+function compositionDigest(packages) {
+  const lines = packages
+    .map(pkg => `${pkg.name}@${pkg.version}`)
+    // Code-point order, from the shared comparator: a digest ordered by the
+    // host's collation is not an identity -- it varies with ICU data -- and
+    // this value is committed.
+    .sort(byCodeUnit)
+    .join(String.fromCharCode(10))
+  return `sha256:${createHash('sha256').update(lines, 'utf8').digest('hex')}`
 }
 
 /** Every first-party package, with its integrity digest. */
@@ -263,6 +284,35 @@ function main() {
     integrity: {
       algorithm: 'sha256',
       scope: 'first-party package source, excluding node_modules and build output',
+      /**
+       * The identity of the composition itself, in one value.
+       *
+       * A digest over the sorted `name@version` list, which `deepwatch doctor`
+       * recomputes from what is actually installed on a machine. That is the
+       * chain the release needs and did not have: an installed runtime could
+       * not say which release it came from, because nothing carried this
+       * identity to the machine the product runs on.
+       *
+       * Derived from the source and nothing else -- no clock, no CI run id, no
+       * path, no user, no repository state -- so two machines that installed
+       * the same release compute the same value, and a `.git` directory is
+       * needed at neither end.
+       */
+      composition: {
+        /** Every first-party package this repository releases. */
+        all: compositionDigest(packages),
+        /**
+         * Only the packages that compose a runtime profile.
+         *
+         * The scope that can actually be compared with an installation: the
+         * CLI and the desktop shell are released but never installed into a
+         * profile, so a digest over all of them could never equal what a
+         * machine computes for itself, and a comparison that can never hold is
+         * worse than none.
+         */
+        runtime: compositionDigest(
+          packages.filter(pkg => pkg.name.startsWith('@deepwatch/dsh-'))),
+      },
       packages: packages.map(pkg => ({
         name: pkg.name,
         version: pkg.version,

@@ -26,6 +26,21 @@ export const HARNESS_PACKAGE = '@deepseek-ai/dsh'
  */
 export const HARNESS_VERSION = '0.1.1-rc.2'
 
+/**
+ * The composition this release recorded, as a digest over its runtime packages.
+ *
+ * `deepwatch doctor` computes the same value from what is actually installed
+ * and says whether the two agree, which is the whole provenance chain: an
+ * installation that cannot name its own release is one nobody can audit.
+ *
+ * A constant rather than a runtime read, for the same reason as the versions
+ * above -- a published package has no release manifest beside it. The manifest
+ * is the source of truth and `tests/provenance-identity.test.mjs` holds this
+ * against it, so a release that bumps a package version without regenerating
+ * both fails a gate instead of shipping a CLI that vouches for the wrong build.
+ */
+export const RELEASE_RUNTIME_DIGEST = 'sha256:d4ba416a2f0e64756628df06cdba212fc5e8c7f35f44f90d84abcc797c92644f'
+
 /** Where it is fetched from, named in the plan before anything is fetched. */
 export const HARNESS_REGISTRY = 'https://registry.npmjs.org'
 
