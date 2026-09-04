@@ -57,6 +57,9 @@
       "@deepwatch/dsh-technology": [
         "./packages/watch/technology/src/index.ts"
       ],
+      "@deepwatch/dsh-technology/attestation": [
+        "./packages/watch/technology/src/attestation.ts"
+      ],
       "@deepwatch/dsh-technology/descriptors": [
         "./packages/watch/technology/src/descriptors.ts"
       ],

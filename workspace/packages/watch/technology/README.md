@@ -10,6 +10,7 @@ memory and independent verification.
 ## Exports
 
 - `@deepwatch/dsh-technology`
+- `@deepwatch/dsh-technology/attestation`
 - `@deepwatch/dsh-technology/descriptors`
 - `@deepwatch/dsh-technology/observation`
 - `@deepwatch/dsh-technology/provenance`

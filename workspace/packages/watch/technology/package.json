@@ -28,6 +28,10 @@
       "types": "./lib/index.d.ts",
       "default": "./lib/index.js"
     },
+    "./attestation": {
+      "types": "./lib/attestation.d.ts",
+      "default": "./lib/attestation.js"
+    },
     "./descriptors": {
       "types": "./lib/descriptors.d.ts",
       "default": "./lib/descriptors.js"

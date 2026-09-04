@@ -61,6 +61,8 @@ import type {
 import {
   containsPath, findAbsolutePaths, relativeToRoot, resolveTraversal,
 } from '@deepwatch/dsh-contracts'
+import { freezeChecks, operationContract, verificationRequest } from './attestation.js'
+import type { Attestation, AttestationState } from './attestation.js'
 import { PROVENANCE_SERVICE } from './provenance.js'
 import type { WatchProvenance } from './provenance.js'
 
@@ -76,6 +78,15 @@ export const OBSERVATION_SERVICE = 'watchObservation'
  * session is still inspectable.
  */
 export const LEDGER_LIMIT = 2_000
+
+/**
+ * How long the Host waits for Core to answer one automatic attestation.
+ *
+ * Short, because this runs after every write and a person is waiting on the
+ * turn behind it. A deadline that passes leaves no verdict, which is the
+ * honest outcome and not a failure of the action.
+ */
+export const ATTESTATION_DEADLINE_MS = 15_000
 
 /**
  * Which tools touch what, by their declared upstream names.
@@ -330,6 +341,27 @@ interface ResultLike {
   readonly value?: unknown
 }
 
+/**
+ * The one thing this module asks of Watch Core.
+ *
+ * Described structurally rather than imported, so the ledger does not take a
+ * dependency on the Bridge package to ask one question. `request` is the
+ * Bridge's own method; nothing here can reach past it.
+ */
+export interface CoreRequester {
+  request<T>(
+    method: string, params: Record<string, unknown>, options?: { deadlineMs?: number },
+  ): Promise<T>
+}
+
+/** What Core replies to `watch.verification.run`. Read, never constructed. */
+interface CoreVerificationReply {
+  readonly verdict?: unknown
+  readonly reason?: unknown
+  readonly verificationId?: unknown
+  readonly verification_id?: unknown
+}
+
 /** A record still being built, between `tools/execute` and `tools/result`. */
 interface OpenCall {
   readonly identity: { sessionId: string, turnId: string, callId: string, attempt: number }
@@ -567,6 +599,93 @@ export class WatchObservation extends Service {
     events.emit('watch/execution-recorded', record)
   }
 
+  /**
+   * Attestations by the record they belong to.
+   *
+   * Kept beside the ledger rather than inside a record, because a record is
+   * what the Host observed and an attestation is what Core was asked and
+   * answered. Folding them together would make it possible to read a verdict
+   * as a property of the action, which is the confusion this whole subsystem
+   * is built to prevent.
+   */
+  private readonly attestations = new Map<string, Attestation>()
+
+  /**
+   * Ask Core whether the narrow claim about one action holds.
+   *
+   * The Host's part is: work out what would make the act true, freeze it, send
+   * it, and record what came back. Every branch that does not reach Core
+   * records a state that is not a verdict, because the absence of a verdict is
+   * a thing a surface must be able to show.
+   */
+  async attest(
+    record: ToolExecutionRecord, argumentsValue: unknown, core: CoreRequester | undefined,
+  ): Promise<Attestation> {
+    const contract = operationContract(record, argumentsValue)
+    const contractDigest = freezeChecks(contract.checks)
+    const base = {
+      idempotencyKey: record.idempotencyKey,
+      contractId: contract.contractId,
+      basis: contract.basis,
+      expectation: contract.expectation,
+      contractDigest,
+      coreVerdict: null,
+      coreReason: null,
+      verificationId: null,
+      at: new Date().toISOString(),
+    }
+
+    const settle = (attestation: Attestation): Attestation => {
+      this.attestations.set(record.idempotencyKey, attestation)
+      const events = this.ctx as unknown as { emit(name: string, ...args: unknown[]): void }
+      events.emit('watch/attestation-recorded', attestation)
+      return attestation
+    }
+
+    // Nothing truthful to ask. Not a failure, and emphatically not a pass.
+    if (contract.checks.length === 0) {
+      return settle({ ...base, state: 'no_contract' satisfies AttestationState })
+    }
+    // Asked for, and unable to reach the only thing allowed to answer.
+    if (core === undefined) {
+      return settle({ ...base, state: 'requested_but_not_run' satisfies AttestationState })
+    }
+
+    const verificationId = `ver_${contract.contractId}_${String(Date.now())}`
+    try {
+      const reply = await core.request<CoreVerificationReply>(
+        'watch.verification.run',
+        verificationRequest(contract, verificationId, this.workspaceRoot(record.sessionId)),
+        { deadlineMs: ATTESTATION_DEADLINE_MS },
+      )
+      // Read out of Core's reply. Nothing here decides what it should have been.
+      const verdict = typeof reply.verdict === 'string' ? reply.verdict : null
+      return settle({
+        ...base,
+        state: verdict === null
+          ? ('requested_but_not_run' satisfies AttestationState)
+          : ('answered' satisfies AttestationState),
+        coreVerdict: verdict,
+        coreReason: typeof reply.reason === 'string' ? reply.reason : null,
+        verificationId,
+      })
+    } catch {
+      // A Bridge that did not answer leaves no verdict, and the record says
+      // that rather than inventing one in either direction.
+      return settle({ ...base, state: 'unavailable' satisfies AttestationState })
+    }
+  }
+
+  /** The attestation for one record, if it has one. */
+  attestationFor(idempotencyKey: string): Attestation | undefined {
+    return this.attestations.get(idempotencyKey)
+  }
+
+  /** Every attestation, for the surfaces and for Compare. */
+  allAttestations(): readonly Attestation[] {
+    return [...this.attestations.values()]
+  }
+
   /** Every settled record, oldest first. */
   all(): readonly ToolExecutionRecord[] {
     return this.records
@@ -587,6 +706,7 @@ export class WatchObservation extends Service {
     this.records.length = 0
     this.open.clear()
     this.attempts.clear()
+    this.attestations.clear()
   }
 }
 
@@ -655,6 +775,17 @@ export function apply(ctx: Context): void {
   const observe = ctx as unknown as {
     on(name: string, listener: (...args: never[]) => void): void
   }
+
+  /**
+   * The Bridge, when this deployment composed one.
+   *
+   * Looked up per call rather than captured once: the Bridge reconnects, and a
+   * reference taken at mount would outlive the connection it was taken from.
+   * Absent, an attestation records `requested_but_not_run`, which is the
+   * truthful thing to show and is not a verdict.
+   */
+  const coreOf = (): CoreRequester | undefined =>
+    ctx.get?.('watchCore') as CoreRequester | undefined
 
   /** The session a call belongs to, as far as the boundary can tell. */
   const sessionOf = (exec: ExecutionLike): string => {
@@ -735,7 +866,12 @@ export function apply(ctx: Context): void {
   ;(observe as unknown as {
     on(name: 'tools/result', listener: (exec: ExecutionLike, result: ResultLike) => void): void
   }).on('tools/result', (exec, result) => {
-    observation.settle(exec, result, sessionOf(exec))
+    const record = observation.settle(exec, result, sessionOf(exec))
+    // Asked immediately after the act, and not awaited: the turn does not wait
+    // on a verdict, and a verdict that arrives late is still a verdict about
+    // the same frozen question. A rejection cannot escape here — `attest`
+    // settles every path into a state — and the `void` says so out loud.
+    void observation.attest(record, exec.arguments, coreOf())
   })
 
   // A profile that is torn down should not leave a ledger behind it.
