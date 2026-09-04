@@ -14,6 +14,58 @@ language across Watch, Live, Memory, Library, Compare, settings and evidence.
 “Into the Know” appears only on DeepWatch-owned surfaces until the pinned
 Harness exposes a supported headline extension.
 
+### Release closure — what an owner evaluation found, and what it changed
+
+An owner evaluation of this candidate produced findings that split into two
+kinds, and telling them apart mattered more than fixing them.
+
+Two were errors in the evaluation itself, and are retracted here. The default
+`deepwatch` profile was reported as advertising no agent tools; it advertises
+47, and the measurement had read a preparation completion rather than the one
+carrying tools. A workspace write was reported as refused by filesystem policy;
+the harness had passed `path` to a tool whose advertised argument is
+`file_path`, so a caller's typo was read as a policy decision. Both now have
+gates that would have caught them.
+
+The rest were real.
+
+**One execution, one receipt.** A call the containment screen refused produced
+two records: the truthful one, and then a second when the denial travelled back
+through the dispatch layer as an ordinary error and settled as
+`scopeDecision: 'allowed'`. Both carried the same idempotency key, and the
+Library keeps receipts in a map keyed by exactly that — so the record an owner
+read said the boundary let through a call the boundary had stopped. The ledger
+is now keyed by execution identity and every producer writes through one
+reconciliation: a denial is permanent, a terminal state is final, progress only
+moves forward.
+
+**Compare had no records.** The engine was correct and unreachable; the mode
+was registered with no source of records at all. It now reads verifications
+from the Library, copying Core's verdict verbatim — `null` included, so an
+unruled record stays unruled rather than reading as agreement.
+
+**An installation can now say which release it is.** `deepwatch doctor` reports
+the composed packages, the Harness alongside the version this build was
+measured against, and a digest the release manifest records from the same
+inputs. Derived from the source and nothing else: no clock, no CI run id, no
+path, no user, and no `.git` needed at either end.
+
+**Shell containment is established rather than assumed.** Watch does not parse
+command strings — a boundary built on guessing can be written around — so the
+pinned Harness sandbox is the authority, and a gate now proves it across
+absolute paths, traversal, redirection, a working directory argument, a
+directory changed mid-command, a second interpreter and a junction resolving
+outside the workspace. The assertion is no side effect, with a control case
+proving the boundary still permits ordinary work.
+
+**Three smaller things.** Pinning live evidence was a promise with no end: a
+busy session pinned its whole buffer and retention quietly stopped applying, so
+pins now yield to a byte budget, oldest first, while the newest window is
+always kept. A binding records the kind of actor that wrote it — never an
+identity — because a document written by a person pressing Save and one written
+by a script were the same bytes. And the memory store, which is plaintext and
+still says so, is created owner-only where the operating system enforces modes.
+
 ### `watch-skill notes` — a write-up whose every line is checkable
 
 A readable document for an indexed video: chapters, what was said, what was on
