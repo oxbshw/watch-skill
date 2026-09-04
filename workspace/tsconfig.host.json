@@ -60,6 +60,9 @@
       "@deepwatch/dsh-technology/descriptors": [
         "./packages/watch/technology/src/descriptors.ts"
       ],
+      "@deepwatch/dsh-technology/observation": [
+        "./packages/watch/technology/src/observation.ts"
+      ],
       "@deepwatch/dsh-technology/provenance": [
         "./packages/watch/technology/src/provenance.ts"
       ],

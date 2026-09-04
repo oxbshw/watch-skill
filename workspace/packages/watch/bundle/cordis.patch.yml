@@ -101,6 +101,21 @@
     - id: watch-provenance
       name: '@deepwatch/dsh-technology/provenance'
 
+    # Watch, listening at the boundary every tool call already goes through.
+    #
+    # An owner evaluation ran 76 tool calls through this Host and Watch recorded
+    # none of them -- not a write that failed, but nothing listening: every
+    # Watch capability was a tool the model could choose to call, and the model
+    # never chose to. A product whose subject is evidence produced none, and the
+    # only thing resembling a verdict was a file the model wrote and then reread.
+    #
+    # `@deepseek-ai/dsh-tools` publishes the dispatch lifecycle, so this needs no
+    # fork and no per-tool patch. A row of its own, ahead of what injects it,
+    # because a Cordis service is reflected per scope and a ledger two halves
+    # disagree about is worse than no ledger.
+    - id: watch-observation
+      name: '@deepwatch/dsh-technology/observation'
+
     - id: watch-routing
       name: '@deepwatch/dsh-technology/routing'
       config:

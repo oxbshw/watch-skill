@@ -32,6 +32,10 @@
       "types": "./lib/descriptors.d.ts",
       "default": "./lib/descriptors.js"
     },
+    "./observation": {
+      "types": "./lib/observation.d.ts",
+      "default": "./lib/observation.js"
+    },
     "./package.json": "./package.json",
     "./provenance": {
       "types": "./lib/provenance.d.ts",
