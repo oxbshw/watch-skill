@@ -10,6 +10,7 @@
  */
 
 export * from './compare-engine.js'
+export * from './compare-source.js'
 
 /** No host-side behavior: the views are pure presentation over the turn. */
 export function apply(): void {}

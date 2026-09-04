@@ -15,15 +15,38 @@
  */
 
 import type { ReactNode } from 'react'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { EmptyState, Facts, ModeSurface, Note, Panel } from '@deepwatch/dsh-workspace/surface'
 import type { ModeViewProps } from '@deepwatch/dsh-workspace/surface'
 import { compareRecords, describeIncompatibility } from '../compare-engine.js'
 import type { ClaimDifference, ComparableRecord } from '../compare-engine.js'
+import { comparableRecords } from '../compare-source.js'
+import type { SourceRecord } from '../compare-source.js'
+
+/**
+ * The one read this mode makes.
+ *
+ * Narrower than the Library's whole namespace on purpose: Compare needs a list
+ * of records Core has ruled on, and nothing else. A wider dependency here would
+ * be a second surface able to refresh or mutate the corpus while somebody is
+ * reading a diff of it.
+ */
+export interface CompareReads {
+  readonly librarySearch: (
+    request: {
+      protocol: number, requestId: string, query: string,
+      modalities: readonly string[], limit: number,
+      cursor: string | null, deadlineMs: number,
+    },
+    signal?: AbortSignal,
+  ) => Promise<{ readonly value?: { readonly records?: readonly SourceRecord[] } | null } | null>
+}
 
 export interface CompareModeProps extends ModeViewProps {
-  /** Records the person can choose between. */
+  /** Records the person can choose between, when a caller already has them. */
   readonly records?: readonly ComparableRecord[]
+  /** Where to read records from, when it does not. */
+  readonly reads?: CompareReads | undefined
 }
 
 /** A word and a tone for each disposition. Never colour alone. */
@@ -61,9 +84,31 @@ const S = {
 }
 
 /** The Compare mode: two records, and every way they differ. */
-export function CompareModeView({ records = [] }: CompareModeProps = {}): ReactNode {
+export function CompareModeView(
+  { records: given, reads }: CompareModeProps = {},
+): ReactNode {
   const [leftId, setLeftId] = useState('')
   const [rightId, setRightId] = useState('')
+  const [fetched, setFetched] = useState<readonly ComparableRecord[]>([])
+
+  // Read once when the mode opens, and never on a timer. A comparison somebody
+  // is reading must not rearrange itself underneath them: the two sides they
+  // picked would keep their ids and change their meaning.
+  useEffect(() => {
+    if (reads === undefined) return undefined
+    const abort = new AbortController()
+    void (async () => {
+      const answer = await reads.librarySearch({
+        protocol: 1, requestId: `compare-${String(Date.now())}`, query: 'verification',
+        modalities: [], limit: 100, cursor: null, deadlineMs: 30_000,
+      }, abort.signal)
+      if (abort.signal.aborted) return
+      setFetched(comparableRecords(answer?.value?.records ?? []))
+    })()
+    return () => { abort.abort() }
+  }, [reads])
+
+  const records = given ?? fetched
 
   const left = useMemo(() => records.find(r => r.recordId === leftId) ?? null, [records, leftId])
   const right = useMemo(() => records.find(r => r.recordId === rightId) ?? null, [records, rightId])

@@ -243,14 +243,14 @@ test('the modes are registered as the bodies DSH renders', async t => {
     watch: read('packages/watch/workspace/src/client/index.tsx'),
     live: read('packages/watch/live/src/client/index.tsx'),
     library: read('packages/watch/library/src/client/index.tsx'),
-    compare: read('packages/watch/client-evidence/src/client/index.tsx'),
+    compare: read('packages/watch/client-evidence/src/client/compare-registration.tsx'),
   }
 
   await t.test('each view registration points at a mode body', () => {
     assert.match(REG.watch, /mode\('watch', 'Watch', WatchModeView/)
     assert.match(REG.live, /id: 'live'[\s\S]{0,90}LiveModeView/)
     assert.match(REG.library, /id: 'library'[\s\S]{0,90}LibraryModeView/)
-    assert.match(REG.compare, /id: 'compare'[\s\S]{0,90}CompareModeView/)
+    assert.match(REG.compare, /id: 'compare'[\s\S]{0,120}CompareModeView/)
   })
 
   await t.test('cross-package imports use the plain ESM subpath', () => {

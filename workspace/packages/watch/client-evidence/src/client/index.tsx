@@ -19,7 +19,7 @@ import type { ReactNode } from 'react'
 import { parseVerdict, parseAnswer } from '@deepwatch/dsh-contracts'
 import { VerdictRow } from './VerdictRow.js'
 import { SourceAnswerRow } from './SourceAnswerRow.js'
-import { CompareModeView } from './compare-mode.js'
+import { registerCompare } from './compare-registration.js'
 
 export { VerdictRow } from './VerdictRow.js'
 export { SourceAnswerRow } from './SourceAnswerRow.js'
@@ -118,10 +118,5 @@ export function apply(ctx: Context): void {
   // workspace shell because the thing it compares is evidence, and the rules
   // about what a difference may and may not assert are already here: a
   // comparison describes a divergence, it never mints a verdict of its own.
-  slots.inject('conversation.view', () => {
-    slots.register(
-      { name: 'conversation.view', id: 'compare', label: 'Compare', order: 60 },
-      CompareModeView,
-    )
-  })
+  registerCompare(ctx)
 }

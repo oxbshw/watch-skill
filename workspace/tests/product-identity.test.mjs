@@ -190,7 +190,10 @@ test('the bundle composes the whole product', async t => {
 
 test('the product modes are DSH views', async t => {
   const WORKSPACE = read('packages/watch/workspace/src/client/index.tsx')
-  const EVIDENCE = read('packages/watch/client-evidence/src/client/index.tsx')
+  // Compare's registration lives in its own module: it is the one mode that
+  // needs a Host round-trip, so it is mounted in a nested scope that declares
+  // that dependency without parking the tool views alongside it.
+  const EVIDENCE = read('packages/watch/client-evidence/src/client/compare-registration.tsx')
   const LIVE = read('packages/watch/live/src/client/index.tsx')
   const LIBRARY = read('packages/watch/library/src/client/index.tsx')
   const MEMORY = read('packages/watch/client-memory/src/client/index.tsx')
