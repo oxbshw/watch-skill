@@ -38,9 +38,11 @@
  * a timer, a retry — none of them authorise anything on their own.
  *
  * **What is never here.** No credential value and nothing derived from one: no
- * hash, no prefix, no length. A receipt binds to the credential *reference* and
- * to the provider's routable configuration, both of which the Host already
- * holds in plain settings.
+ * hash, no prefix, no length. A receipt binds to the credential *reference*, to
+ * a count of how many times the Host has been told that reference was
+ * rewritten, and to the provider's stored profile — all of which the Host
+ * already holds in the clear. That is also how a rotated key stops authorising
+ * anything: the count moved, without this module having been near the secret.
  *
  * @module @deepwatch/dsh-technology/provenance
  */
@@ -53,9 +55,6 @@ export const PROVENANCE_SERVICE = 'watchProvenance'
 
 /** The settings namespace the Harness keeps provider routes in. */
 const PROVIDER_NAMESPACE = 'llm-pi-ai'
-
-/** The settings namespace DeepWatch keeps role bindings in. */
-const BINDINGS_NAMESPACE_ID = 'watch-bindings'
 
 /**
  * How long a provider-test capability stays usable.
@@ -81,14 +80,30 @@ export type RequestInitiator = 'provider_test' | 'user_turn'
 /** Everything about a route that must not have changed since it was proved. */
 export interface RouteFacts {
   /**
-   * A digest of the provider's routable configuration: base URL, API flavour
-   * and the credential *reference*. Never a credential value.
+   * A digest of the provider's whole stored profile — base URL, API flavour,
+   * headers, timeouts, model overrides, and the credential *reference*.
+   *
+   * The whole entry rather than a chosen few fields, because a hand-picked
+   * list is a list of the ways a configuration change was allowed to go
+   * unnoticed. Upstream's schema is what makes that safe: exactly one field,
+   * `apiKeyEnv`, is declared `role('credential-ref')`, and a reference is not
+   * a value. Nothing else in a provider profile is a secret by that schema's
+   * own account, so digesting all of it stores no credential and leaves no
+   * configuration gap.
    */
   readonly providerRevision: string
-  /** The credential reference the route resolves through. Never a value. */
+  /**
+   * Which credential the route resolves through, and how many times this Host
+   * has seen that credential rewritten.
+   *
+   * A reference and a counter. Never a value, and nothing measured from one —
+   * so a rotated key invalidates the proof taken under the old one without
+   * this module ever having touched either. The counter comes from the
+   * credentials service's own `credentials/reference-updated` and
+   * `credentials/record-updated` notifications, which upstream fans out only
+   * after a write has committed.
+   */
   readonly credentialRevision: string
-  /** A digest of the binding document the proof was taken under. */
-  readonly bindingRevision: string
 }
 
 /** Proof that one exact route answered one real request. */
@@ -130,9 +145,19 @@ export function routeKey(provider: string, model: string): string {
  * Whether a receipt still proves anything about this route.
  *
  * Every field has to match, and each is a way a proof could go stale unnoticed:
- * a different model, a base URL edited after the test, a credential pointed
- * somewhere else, a rebinding. Any of them and the answer is no — not
- * "probably still fine".
+ * a different model, a base URL or header edited after the test, a credential
+ * pointed somewhere else, a key rotated at the same reference. Any of them and
+ * the answer is no — not "probably still fine".
+ *
+ * *Which role is bound to this route is deliberately not here.* A proof is
+ * about whether this provider and model answer, which is what the provider
+ * test established; who may use them is a separate question, and the guard
+ * asks it of the live binding document on every request rather than of a
+ * digest taken minutes earlier. Pinning it here would have been weaker in one
+ * direction — a snapshot cannot notice an edit that arrives without an event —
+ * and wrong in the other: the product's own order is configure, test, bind,
+ * prompt, so a proof that died when a role was bound was a proof that never
+ * survived to be used.
  */
 export function receiptAuthorises(
   receipt: RouteReceipt | undefined, provider: string, model: string,
@@ -143,7 +168,6 @@ export function receiptAuthorises(
     && receipt.model === model
     && receipt.providerRevision === facts.providerRevision
     && receipt.credentialRevision === facts.credentialRevision
-    && receipt.bindingRevision === facts.bindingRevision
 }
 
 /**
@@ -304,7 +328,15 @@ export class WatchProvenance extends Service {
     return this.receipts.get(routeKey(provider, model))
   }
 
-  /** Forget everything proved. Any settings change calls this. */
+  /**
+   * Forget everything proved.
+   *
+   * Nothing in normal operation calls this: a receipt lapses by no longer
+   * matching the route's live facts, which is precise where forgetting
+   * everything was merely loud. It stays because a Host that is tearing a
+   * profile down should not leave proofs behind it, and because a test that
+   * wants an unproved route should be able to say so directly.
+   */
   clearReceipts(): void {
     this.receipts.clear()
   }
@@ -329,28 +361,50 @@ export class WatchProvenance extends Service {
     const settings = this.ctx.get('settings') as unknown as SettingsLike | undefined
     if (settings === undefined) return null
     let providers: Record<string, unknown> | undefined
-    let bindings: Record<string, unknown> | undefined
     try {
       providers = settings.section(PROVIDER_NAMESPACE)?.['providers'] as
         Record<string, unknown> | undefined
-      bindings = settings.section(BINDINGS_NAMESPACE_ID)
     } catch {
       // A malformed section is not a licence to proceed.
       return null
     }
     const entry = (providers?.[provider] ?? {}) as Record<string, unknown>
+    // The reference the profile names, and the record the adapter would look
+    // for under its own scope. Either can be the one that answers, so a write
+    // to either has to count.
+    const reference = typeof entry['apiKeyEnv'] === 'string' ? entry['apiKeyEnv'] : null
+    const record = `${PROVIDER_NAMESPACE}/${provider}`
     return {
-      // Everything that decides *where* the request goes, and the reference it
-      // resolves a credential through. No value, and nothing measured from one.
-      providerRevision: digestOf({
-        provider,
-        model,
-        baseURL: entry['baseURL'] ?? null,
-        api: entry['api'] ?? null,
+      // The profile entire, plus the route it is being asked about. Digested
+      // over settings this Host already holds in the clear; upstream marks the
+      // one credential-bearing field as a reference, and a reference is what
+      // this is allowed to bind to.
+      providerRevision: digestOf({ provider, model, entry }),
+      credentialRevision: digestOf({
+        reference,
+        referenceWrites: reference === null ? 0 : (this.credentialWrites.get(reference) ?? 0),
+        record,
+        recordWrites: this.credentialWrites.get(record) ?? 0,
       }),
-      credentialRevision: digestOf(entry['apiKeyEnv'] ?? null),
-      bindingRevision: digestOf(bindings ?? null),
     }
+  }
+
+  /* ── credentials ──────────────────────────────────────────────────────── */
+
+  /**
+   * How many times each credential reference or record has been rewritten.
+   *
+   * A counter per name, and nothing else: this module is told *that* a stored
+   * value changed and never what it was or is. Wired to the credentials
+   * service's own notifications in {@link apply}, which upstream fans out
+   * after the write commits — so a receipt taken before a key rotation stops
+   * authorising at the next request rather than at the next restart.
+   */
+  private readonly credentialWrites = new Map<string, number>()
+
+  /** A stored credential changed. Everything proved under the old one lapses. */
+  noteCredentialWrite(name: string): void {
+    this.credentialWrites.set(name, (this.credentialWrites.get(name) ?? 0) + 1)
   }
 }
 
@@ -367,16 +421,27 @@ export const name = 'watch-provenance'
 export function apply(ctx: Context): void {
   const provenance = new WatchProvenance(ctx)
 
-  // Any settings change at all invalidates every proof. A receipt is taken
-  // against a base URL, a credential reference and a binding document; working
-  // out which edit touched which route would be cleverness in the one place
-  // where being wrong means a request nobody authorised. Forgetting costs one
-  // provider test.
   const events = ctx as unknown as {
     on(name: string, listener: (...args: unknown[]) => void): void
   }
-  events.on('settings/document-updated', () => { provenance.clearReceipts() })
-  events.on('settings/updated', () => { provenance.clearReceipts() })
+
+  // A rewritten credential is the one change to a route that leaves no trace
+  // in settings: the reference stays the same word while the thing behind it
+  // becomes something else. Upstream announces it, so this counts the
+  // announcements — a name and a number, never a value.
+  //
+  // Every *other* way a route can change is caught by comparison instead of by
+  // event, because `factsFor` reads the live settings document on each request.
+  // An earlier version cleared every receipt on any settings write, which
+  // sounded conservative and was not: it also cleared them on the write that
+  // binds a role, so the product's own configure–test–bind–prompt order ended
+  // at a refusal, and the browser pass caught it.
+  events.on('credentials/reference-updated', (ref) => {
+    if (typeof ref === 'string') provenance.noteCredentialWrite(ref)
+  })
+  events.on('credentials/record-updated', (key) => {
+    if (typeof key === 'string') provenance.noteCredentialWrite(key)
+  })
 
   // A turn is open only while the agent loop says so. An event that never
   // fires leaves no turn open, and no turn open refuses — so a rename upstream

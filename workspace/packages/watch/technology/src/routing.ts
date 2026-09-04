@@ -248,21 +248,27 @@ export function apply(ctx: Context, config: Config): void {
   /**
    * Why this request may not go out, or null when it may.
    *
-   * Two questions, in this order, because they fail for different reasons and a
-   * caller deserves the one actually blocking it.
+   * Three questions, in this order, because they fail for different reasons and
+   * a caller deserves the one actually blocking it.
    *
    *   1. *Who asked?* Either a capability issued for this exact route by a
    *      provider test somebody requested, or a turn this Host has open.
    *      Nothing else has authority to spend a request however good the route
    *      is — which is what stops a timer, a restored session or a deferred
    *      title task from reaching a provider on the strength of a binding.
-   *   2. *Has this route been proved?* A receipt minted when a provider test
-   *      actually came back, still matching the base URL, credential reference
-   *      and binding document it was taken under.
+   *   2. *Did somebody choose this route?* The original question, asked of the
+   *      binding document as it stands right now. It is asked live rather than
+   *      pinned into the proof, because the document can be edited between one
+   *      request and the next and a digest taken at proof time would not know.
+   *   3. *Has this route been proved?* A receipt minted when a provider test
+   *      actually came back, still matching the provider profile and credential
+   *      reference it was taken under.
    *
-   * A provider test answers the first question and is exempt from the second,
-   * because it is the request that establishes the answer. It is exempt from
-   * nothing else: one use, one route, and it expires.
+   * A provider test answers the first question and is exempt from the other
+   * two, because it is the request that establishes them — a route cannot be
+   * proved before the request that proves it, and this is the screen where
+   * somebody is deciding whether to bind it at all. It is exempt from nothing
+   * else: one use, one route, and it expires.
    */
   const refuse = (options: {
     provider: string, model: string, watchAuthorization?: unknown,
@@ -285,10 +291,11 @@ export function apply(ctx: Context, config: Config): void {
     if (provenance.activeTurn() === null) {
       return new UnattributedRequestError(options.provider, options.model, 'no_open_turn')
     }
+    if (!isRoutePermitted(current, options.provider, options.model)) {
+      return new UnboundRouteError(options.provider, options.model, permittedRoutes(current))
+    }
     if (provenance.isReady(options.provider, options.model)) return null
-    return new UnboundRouteError(
-      options.provider, options.model, permittedRoutes(current),
-      isRoutePermitted(current, options.provider, options.model))
+    return new UnboundRouteError(options.provider, options.model, permittedRoutes(current), true)
   }
 
   // `prepend`, so this runs ahead of the retry and replay listeners. A

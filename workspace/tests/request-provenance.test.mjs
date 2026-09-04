@@ -45,8 +45,10 @@ const ROUTE = routeKey(PROVIDER, MODEL)
 
 /** The settings document a profile actually holds, served synchronously. */
 class StubSettings extends Service {
-  constructor(ctx) {
+  constructor(ctx, config = {}) {
     super(ctx, 'settings')
+    this.watchers = new Map()
+    const bound = config.bound !== false
     this.document = {
       'llm-pi-ai': {
         providers: {
@@ -59,22 +61,55 @@ class StubSettings extends Service {
       },
       'watch-bindings': {
         version: 1,
-        roles: {
-          agent_model: {
-            provider: PROVIDER, model: MODEL,
-            credentialRef: 'OPENROUTER_API_KEY',
-            boundAt: '2026-08-31T05:03:08.000Z',
-          },
-        },
+        roles: bound
+          ? {
+              agent_model: {
+                provider: PROVIDER, model: MODEL,
+                credentialRef: 'OPENROUTER_API_KEY',
+                boundAt: '2026-08-31T05:03:08.000Z',
+              },
+            }
+          : {},
       },
     }
   }
 
+  /** Bind the chat role to the observed route, the way the screen would. */
+  bind() {
+    this.edit('watch-bindings', (document) => {
+      document.roles.agent_model = {
+        provider: PROVIDER, model: MODEL,
+        credentialRef: 'OPENROUTER_API_KEY',
+        boundAt: new Date().toISOString(),
+      }
+    })
+  }
+
   section(ns) { return this.document[ns] }
+
+  /**
+   * The half `installSettingsSection` uses.
+   *
+   * Present because the routing guard reads its bindings through a registered
+   * section rather than through `section()`, and a stub that answered only the
+   * latter left the guard looking at the empty composition base — which made
+   * every bound route read as unbound and every refusal look correct for the
+   * wrong reason.
+   */
+  register(ns, _schema, options = {}) {
+    this.document[ns] ??= options.base
+    const watchers = this.watchers.get(ns) ?? []
+    this.watchers.set(ns, watchers)
+    return {
+      get: () => this.document[ns],
+      watch: (listener) => { watchers.push(listener) },
+    }
+  }
 
   /** Edit one namespace the way a settings write would, and announce it. */
   edit(ns, mutate) {
     mutate(this.document[ns])
+    for (const listener of this.watchers.get(ns) ?? []) listener()
     this.ctx.emit('settings/document-updated', ns, 2)
   }
 }
@@ -104,9 +139,9 @@ class LazyLlm extends Service {
 }
 
 /** The composed shape: one provenance row, injected by the guard. */
-async function mount() {
+async function mount(config = {}) {
   const ctx = new Context()
-  await ctx.plugin(StubSettings)
+  await ctx.plugin(StubSettings, config)
   await ctx.plugin(LazyLlm)
   await ctx.plugin(provenancePlugin)
   const fiber = await ctx.plugin(routing, { enforce: true })
@@ -225,6 +260,35 @@ describe('only a completed provider test may prove a route', () => {
     await host.dispose()
   })
 
+  test('testing before binding is the product order, and it works', async () => {
+    // The regression the browser pass caught. DeepWatch's own sequence is
+    // configure, test, bind, prompt: a person proves the route on the Models
+    // screen and only then gives it a role. An earlier version cleared every
+    // receipt on any settings write, so the bind step destroyed the proof it
+    // depended on and the first message was refused.
+    const host = await mount({ bound: false })
+    const test1 = await host.providerTest()
+    assert.equal(test1.ok, true, String(test1.error))
+    host.settings.bind()
+    const before = host.calls()
+    const result = await host.userTurn()
+    assert.equal(result.ok, true, String(result.error))
+    assert.equal(host.calls() - before, 1)
+    await host.dispose()
+  })
+
+  test('a proved route nobody bound still serves no turn', async () => {
+    // Proving a route is not choosing it. The original question survives.
+    const host = await mount({ bound: false })
+    await host.providerTest()
+    const before = host.calls()
+    const result = await host.userTurn()
+    assert.equal(result.ok, false, 'an unbound route served a turn once tested')
+    assert.equal(result.error.name, 'UnboundRouteError')
+    assert.equal(host.calls() - before, 0)
+    await host.dispose()
+  })
+
   test('a forged attestation beside the binding sends nothing', async () => {
     const host = await mount()
     host.settings.edit('watch-bindings', (document) => {
@@ -258,7 +322,38 @@ describe('a proof does not outlive what it was taken under', () => {
     })
   }
 
-  test('a changed binding invalidates readiness', async () => {
+  test('an edited header invalidates readiness', async () => {
+    // Not one of the four fields an earlier version pinned, which is exactly
+    // why it is here: the digest is over the whole profile, so a field nobody
+    // thought to list still moves it.
+    const host = await mount()
+    await host.providerTest()
+    const before = host.calls()
+    host.settings.edit('llm-pi-ai', (document) => {
+      document.providers[PROVIDER].headers = { 'HTTP-Referer': 'https://elsewhere.example' }
+    })
+    const result = await host.userTurn()
+    assert.equal(result.ok, false, 'a header changed and the old proof still served')
+    assert.equal(host.calls() - before, 0)
+    await host.dispose()
+  })
+
+  test('a rotated credential invalidates readiness', async () => {
+    // The one change that leaves settings byte-identical: the reference still
+    // reads `OPENROUTER_API_KEY` and the value behind it is somebody else's.
+    // Caught by counting the store's own announcements, never by reading either
+    // value.
+    const host = await mount()
+    await host.providerTest()
+    const before = host.calls()
+    host.ctx.emit('credentials/reference-updated', 'OPENROUTER_API_KEY')
+    const result = await host.userTurn()
+    assert.equal(result.ok, false, 'a proof survived the key it was taken under')
+    assert.equal(host.calls() - before, 0)
+    await host.dispose()
+  })
+
+  test('a rebinding to another model unbinds this route', async () => {
     const host = await mount()
     await host.providerTest()
     const before = host.calls()
@@ -267,14 +362,15 @@ describe('a proof does not outlive what it was taken under', () => {
     })
     const result = await host.userTurn()
     assert.equal(result.ok, false)
+    assert.equal(result.error.name, 'UnboundRouteError')
+    assert.equal(result.error.boundButUnproved, false,
+      'the refusal blamed the proof when nothing was bound to this route')
     assert.equal(host.calls() - before, 0)
     await host.dispose()
   })
 
   test('a receipt for another model proves nothing about this one', () => {
-    const facts = {
-      providerRevision: 'a', credentialRevision: 'b', bindingRevision: 'c',
-    }
+    const facts = { providerRevision: 'a', credentialRevision: 'b' }
     const receipt = { provider: PROVIDER, model: 'other', requestId: 'r', at: 'now', ...facts }
     assert.equal(receiptAuthorises(receipt, PROVIDER, MODEL, facts), false)
     assert.equal(receiptAuthorises(undefined, PROVIDER, MODEL, facts), false)
@@ -374,9 +470,12 @@ describe('nothing secret is anywhere near this', () => {
     await host.providerTest()
     const receipt = host.provenance.receiptFor(PROVIDER, MODEL)
     assert.deepEqual(Object.keys(receipt).sort(), [
-      'at', 'bindingRevision', 'credentialRevision', 'model', 'provider',
-      'providerRevision', 'requestId',
+      'at', 'credentialRevision', 'model', 'provider', 'providerRevision', 'requestId',
     ])
+    // The reference is a permitted thing to bind to; the value is not, and
+    // neither is anything measured from it. The revisions are digests of
+    // settings and a write count, so the reference name itself does not survive
+    // into the receipt either.
     const serialised = JSON.stringify(receipt)
     assert.doesNotMatch(serialised, /sk-|Bearer |OPENROUTER_API_KEY/)
     await host.dispose()
@@ -413,7 +512,22 @@ describe('the upstream events this relies on still exist', () => {
       return
     }
     assert.ok(source.includes('settings/document-updated'),
-      'settings changes would stop invalidating proofs')
+      'settings changes would stop reaching the binding source')
+  })
+
+  test('the credentials service still announces a committed write', (t) => {
+    const source = credentialsSource()
+    if (source === null) {
+      t.skip('the pinned Harness baseline is not checked out; run scripts/upstream-sync.mjs')
+      return
+    }
+    // The one route change that leaves settings byte-identical. Without these
+    // two notifications a rotated key would keep a stale proof alive, and the
+    // only alternative signal is the value itself, which this subsystem is not
+    // allowed to read.
+    for (const name of ['credentials/reference-updated', 'credentials/record-updated']) {
+      assert.ok(source.includes(name), `the pinned credentials service no longer emits ${name}`)
+    }
   })
 })
 
@@ -439,3 +553,4 @@ const agentLoopSource = () => {
 ${agent}`
 }
 const settingsSource = () => pinned('settings', 'settings', 'src', 'index.ts')
+const credentialsSource = () => pinned('credentials', 'credentials', 'src', 'types.ts')

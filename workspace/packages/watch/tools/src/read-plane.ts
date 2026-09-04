@@ -285,7 +285,6 @@ interface ProvenanceLike {
   factsFor(provider: string, model: string): {
     providerRevision: string
     credentialRevision: string
-    bindingRevision: string
   } | null
   mint(receipt: {
     provider: string
@@ -294,7 +293,6 @@ interface ProvenanceLike {
     at: string
     providerRevision: string
     credentialRevision: string
-    bindingRevision: string
   }): void
 }
 
@@ -333,9 +331,11 @@ export async function testProvider(
         return providerFailure(request, chunk.reason.failure)
       }
       // Minted here and nowhere else: after a real request to this exact route
-      // came back. Pinned to the base URL, credential reference and binding
-      // document as they are now, so any of those changing leaves the proof
-      // behind rather than carrying it forward.
+      // came back. Pinned to the provider profile and credential reference as
+      // they are now, so either of those changing leaves the proof behind
+      // rather than carrying it forward. Not to the binding document — the
+      // guard reads that live, and this is the screen a person tests *before*
+      // they bind.
       const facts = provenance?.factsFor(request.provider, request.model) ?? null
       if (provenance !== undefined && facts !== null) {
         provenance.mint({
