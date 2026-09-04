@@ -33,6 +33,8 @@ const { startOpenRouterStub, STUB_API_KEY, STUB_REPLY } = await import(
   pathToFileURL(join(ROOT, 'scripts', 'lib', 'openrouter-stub.mjs')).href)
 const routing = await import(
   pathToFileURL(join(ROOT, 'packages', 'watch', 'technology', 'lib', 'routing.js')).href)
+const provenancePlugin = await import(
+  pathToFileURL(join(ROOT, 'packages', 'watch', 'technology', 'lib', 'provenance.js')).href)
 const { relativeToRoot, findAbsolutePaths } = await import(
   pathToFileURL(join(ROOT, 'packages', 'watch', 'contracts', 'lib', 'paths.js')).href)
 
@@ -41,6 +43,16 @@ class StubLlm extends Service {
   constructor(ctx) {
     super(ctx, 'llm')
   }
+}
+
+/** The settings the guard reads a route's authoritative facts out of. */
+class StubSettings extends Service {
+  constructor(ctx, document) {
+    super(ctx, 'settings')
+    this.document = document
+  }
+
+  section(ns) { return this.document[ns] }
 }
 
 const running = []
@@ -74,15 +86,42 @@ function bound(model = 'stub/echo-small') {
  * That is what makes "zero requests reached the provider" a claim about the
  * network rather than about a mock nobody wired up.
  */
-async function host(stub, { bindings, enforce = true } = {}) {
+async function host(stub, { bindings, enforce = true, prove = true } = {}) {
   const ctx = new Context()
   await ctx.plugin(StubLlm)
+  await ctx.plugin(StubSettings, {
+    'llm-pi-ai': {
+      providers: {
+        'openrouter-stub': {
+          baseURL: stub.baseURL, api: 'openai-completions',
+          apiKeyEnv: 'OPENROUTER_STUB_KEY',
+        },
+      },
+    },
+    'watch-bindings': bindings ?? { version: 1, roles: {} },
+  })
+  await ctx.plugin(provenancePlugin)
   const fiber = await ctx.plugin(routing, {
     enforce,
     ...bindings === undefined ? {} : { bindings },
   })
 
+  // A route the fixture bound counts as proved unless the case is about an
+  // unproved one, and a send happens inside an open turn — which is what a
+  // person pressing enter causes.
+  const provenance = ctx.get('watchProvenance')
+  if (prove) {
+    for (const record of Object.values(bindings?.roles ?? {})) {
+      const facts = provenance.factsFor(record.provider, record.model)
+      provenance.mint({
+        provider: record.provider, model: record.model,
+        requestId: 'stub-test', at: '2026-08-31T05:04:00.000Z', ...facts,
+      })
+    }
+  }
+
   const send = async (provider, model, messages, { apiKey = STUB_API_KEY } = {}) => {
+    provenance.openTurn('agent#1')
     try {
       const stream = await ctx.waterfall(
         'llm/stream',
@@ -105,10 +144,12 @@ async function host(stub, { bindings, enforce = true } = {}) {
       return { ok: true, chunks }
     } catch (error) {
       return { ok: false, error }
+    } finally {
+      provenance.closeTurn('agent#1')
     }
   }
 
-  return { ctx, send, dispose: () => fiber.dispose() }
+  return { ctx, provenance, send, dispose: () => fiber.dispose() }
 }
 
 describe('the bound route is the route that is called', () => {
@@ -142,6 +183,41 @@ describe('the bound route is the route that is called', () => {
     assert.equal(result.ok, false)
     assert.equal(result.error.name, 'UnboundRouteError')
     assert.equal(stub.completions().length, 0, 'a refused route still spent a request')
+    await deployment.dispose()
+  })
+
+  test('a bound route nobody proved reaches the provider zero times', async () => {
+    // The regression that escaped, on the wire: a binding naming a route
+    // appeared in a profile nobody had pointed at it, and the Host attempted a
+    // completion because the document said it was bound. Being in the document
+    // is not evidence — only a completed provider test is.
+    const stub = await stubProvider()
+    const deployment = await host(stub, { bindings: bound(), prove: false })
+
+    const result = await deployment.send('openrouter-stub', 'stub/echo-small', [
+      { role: 'user', content: 'ready?' },
+    ])
+
+    assert.equal(result.ok, false)
+    assert.equal(result.error.name, 'UnboundRouteError')
+    assert.match(String(result.error.message), /no provider test has proved it/)
+    assert.equal(stub.completions().length, 0, 'an unproved binding spent a request')
+    await deployment.dispose()
+  })
+
+  test('an idle background call reaches the provider zero times', async () => {
+    // Proved route, no turn. The wire-level form of "nobody asked".
+    const stub = await stubProvider()
+    const deployment = await host(stub, { bindings: bound() })
+    let threw = null
+    try {
+      const stream = await deployment.ctx.waterfall('llm/stream', {
+        provider: 'openrouter-stub', model: 'stub/echo-small', messages: [],
+      }, () => (async function* served() { yield { type: 'text', text: 'x' } })())
+      for await (const chunk of stream) void chunk
+    } catch (error) { threw = error }
+    assert.equal(threw?.name, 'UnattributedRequestError')
+    assert.equal(stub.completions().length, 0, 'an idle call spent a request')
     await deployment.dispose()
   })
 

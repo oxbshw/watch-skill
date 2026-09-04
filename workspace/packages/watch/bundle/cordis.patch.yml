@@ -89,6 +89,18 @@
     # with it. `scripts/verify-bundle.mjs` now imports every row's module and
     # checks for `apply`, because that failure looks exactly like a composition
     # problem and is three minutes of provisioning away from being seen.
+    # The one place that knows who asked for a provider request, and which
+    # routes have actually been proved.
+    #
+    # A row of its own, ahead of everything that injects it, because there has
+    # to be exactly one. The routing guard used to construct it, and a Cordis
+    # service is reflected per scope — so the guard and the read plane read two
+    # different objects, and the single request allowed to prove a route was
+    # refused while the guard insisted nothing had asked for it. One owner,
+    # injected by both halves, is the fix.
+    - id: watch-provenance
+      name: '@deepwatch/dsh-technology/provenance'
+
     - id: watch-routing
       name: '@deepwatch/dsh-technology/routing'
       config:

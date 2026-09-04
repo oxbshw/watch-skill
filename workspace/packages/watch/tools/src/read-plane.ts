@@ -270,11 +270,54 @@ function providerFailure(
   }
 }
 
+/**
+ * The one Host service that says who asked and what has been proved.
+ *
+ * Described structurally and reached by name. A value import would put
+ * `@deepwatch/dsh-technology` into this package's dependency graph so that one
+ * function could obtain a capability; the bundle mounts the service as its own
+ * row and both halves inject it, which is what guarantees there is one.
+ */
+interface ProvenanceLike {
+  authorizeProviderTest(provider: string, model: string, causeId: string): {
+    readonly token: string
+  }
+  factsFor(provider: string, model: string): {
+    providerRevision: string
+    credentialRevision: string
+    bindingRevision: string
+  } | null
+  mint(receipt: {
+    provider: string
+    model: string
+    requestId: string
+    at: string
+    providerRevision: string
+    credentialRevision: string
+    bindingRevision: string
+  }): void
+}
+
+/** The service key, spelled once. */
+const PROVENANCE_SERVICE = 'watchProvenance'
+
 /** Execute a provider request without returning or logging model output. */
 export async function testProvider(
   request: ProviderTestRequest, ctx: Context, signal: AbortSignal,
 ): Promise<ProviderTestResponse> {
   const bounded = AbortSignal.any([signal, AbortSignal.timeout(request.deadlineMs)])
+  // `get?.` because a caller may hand this a minimal context — a unit test
+  // driving the provider test against a stub runtime does. No registry means no
+  // capability, and the guard refuses an unattributed request, which is the
+  // correct outcome for a Host that has not composed the row.
+  const provenance = ctx.get?.(PROVENANCE_SERVICE) as unknown as ProvenanceLike | undefined
+  // A capability rather than a scope, carried on the request itself. `stream`
+  // is lazy — nothing reaches the guard until the first pull — so anything
+  // ambient established around this call has already ended by the time the
+  // request happens. A value travelling with the request cannot be stale when
+  // the request arrives.
+  const authorization = provenance?.authorizeProviderTest(
+    request.provider, request.model, request.requestId).token
   try {
     const messages = [createUserMessage({
       content: [{ type: 'text', text: 'Reply with OK.' }],
@@ -283,10 +326,22 @@ export async function testProvider(
     for await (const chunk of ctx.llm.stream({
       provider: request.provider, model: request.model, messages,
       maxTokens: 1, temperature: 0, signal: bounded,
+      ...authorization === undefined ? {} : { watchAuthorization: authorization },
     })) {
       if (chunk.type !== 'finish') continue
       if (chunk.reason.kind === 'error' || chunk.reason.kind === 'aborted') {
         return providerFailure(request, chunk.reason.failure)
+      }
+      // Minted here and nowhere else: after a real request to this exact route
+      // came back. Pinned to the base URL, credential reference and binding
+      // document as they are now, so any of those changing leaves the proof
+      // behind rather than carrying it forward.
+      const facts = provenance?.factsFor(request.provider, request.model) ?? null
+      if (provenance !== undefined && facts !== null) {
+        provenance.mint({
+          provider: request.provider, model: request.model,
+          requestId: request.requestId, at: new Date().toISOString(), ...facts,
+        })
       }
       return {
         outcome: 'provider_test', protocol: WATCH_QUERY_PROTOCOL_VERSION,

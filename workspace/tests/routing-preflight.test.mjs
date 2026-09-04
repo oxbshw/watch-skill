@@ -33,6 +33,7 @@ const ROOT = join(HERE, '..')
 const TECHNOLOGY = join(ROOT, 'packages', 'watch', 'technology')
 
 const routing = await import(pathToFileURL(join(TECHNOLOGY, 'lib', 'routing.js')).href)
+const provenancePlugin = await import(pathToFileURL(join(TECHNOLOGY, 'lib', 'provenance.js')).href)
 
 /**
  * The one service the plugin injects.
@@ -45,6 +46,36 @@ class StubLlm extends Service {
   constructor(ctx) {
     super(ctx, 'llm')
   }
+}
+
+/**
+ * The settings the guard reads a route's authoritative facts out of.
+ *
+ * A receipt is pinned to the base URL, the credential reference and the binding
+ * document, so the guard has to be able to read them. Without a settings
+ * service it cannot, and refuses — which is the safe direction and is asserted
+ * separately.
+ */
+class StubSettings extends Service {
+  constructor(ctx, document) {
+    super(ctx, 'settings')
+    this.document = document
+  }
+
+  section(ns) { return this.document[ns] }
+}
+
+/** The provider entries a bindings fixture implies, so facts can be read. */
+function providersFor(bindings) {
+  const providers = {}
+  for (const record of Object.values(bindings?.roles ?? {})) {
+    providers[record.provider] = {
+      baseURL: `http://127.0.0.1:1/${record.provider}`,
+      api: 'openai-completions',
+      apiKeyEnv: record.credentialRef ?? null,
+    }
+  }
+  return providers
 }
 
 /** A document with one role bound, in the shape the settings section holds. */
@@ -62,30 +93,52 @@ function bound(provider, model, role = 'agent_model') {
  * entered, because "refused" and "refused after asking the provider" are
  * different outcomes and only one of them is the fix.
  */
-async function mount(config = {}) {
+async function mount(config = {}, { prove = true } = {}) {
   const ctx = new Context()
   await ctx.plugin(StubLlm)
+  await ctx.plugin(StubSettings, {
+    'llm-pi-ai': { providers: providersFor(config.bindings) },
+    'watch-bindings': config.bindings ?? { version: 1, roles: {} },
+  })
+  await ctx.plugin(provenancePlugin)
   const fiber = await ctx.plugin(routing, { enforce: true, ...config })
+  const provenance = ctx.get('watchProvenance')
 
-  const attempt = async (provider, model) => {
-    let reached = 0
-    const stream = await ctx.waterfall(
-      'llm/stream',
-      { provider, model, messages: [] },
-      () => {
-        reached += 1
-        return (async function* served() { yield { type: 'text', text: 'ok' } })()
+  // Every route the fixture bound counts as one somebody proved, unless a case
+  // is about an unproved one. Minting is the only way a receipt exists.
+  if (prove) {
+    for (const record of Object.values(config.bindings?.roles ?? {})) {
+      const facts = provenance.factsFor(record.provider, record.model)
+      provenance.mint({
+        provider: record.provider, model: record.model,
+        requestId: 'test-request', at: '2026-08-31T05:04:00.000Z', ...facts,
       })
+    }
+  }
+
+  /** Attempt one request inside an open turn, which is what a person causes. */
+  const attempt = async (provider, model, { inTurn = true } = {}) => {
+    let reached = 0
+    if (inTurn) provenance.openTurn('agent#1')
     try {
+      const stream = await ctx.waterfall(
+        'llm/stream',
+        { provider, model, messages: [] },
+        () => {
+          reached += 1
+          return (async function* served() { yield { type: 'text', text: 'ok' } })()
+        })
       const chunks = []
       for await (const chunk of stream) chunks.push(chunk)
       return { ok: true, reached, chunks }
     } catch (error) {
       return { ok: false, reached, error }
+    } finally {
+      if (inTurn) provenance.closeTurn('agent#1')
     }
   }
 
-  return { ctx, attempt, dispose: () => fiber.dispose() }
+  return { ctx, provenance, attempt, dispose: () => fiber.dispose() }
 }
 
 describe('a route nobody bound does not reach a provider', () => {
@@ -202,10 +255,15 @@ describe('the check cannot be quietly turned off', () => {
     await host.dispose()
   })
 
-  test('the plugin injects only the runtime, so no missing service parks it', async () => {
-    // `settings` is deliberately not injected. Injecting it would park this
+  test('it injects the runtime and the provenance service, and nothing else', async () => {
+    // `settings` is still deliberately absent: injecting it would park this
     // plugin on a deployment that composes no settings file, and a routing
     // check that silently stops running is worse than one that is absent.
-    assert.deepEqual(routing.inject, ['llm'])
+    //
+    // `watchProvenance` is the one addition, and parking on it is the safe
+    // direction. The service is what knows who asked and what has been proved;
+    // a guard mounted without it could only fail open. Parked, nothing answers
+    // `llm/stream` at all, so no request is authorised either.
+    assert.deepEqual(routing.inject, ['llm', 'watchProvenance'])
   })
 })

@@ -42,7 +42,7 @@ export type { BrowserConfig } from './browser.js'
 export type { SensoryConfig } from './sensory.js'
 
 export const name = 'watch-tools'
-export const inject = ['tools', 'watchCore', 'systemPrompt', 'llm']
+export const inject = ['tools', 'watchCore', 'systemPrompt', 'llm', 'watchProvenance']
 
 /** Deployment policy for the Watch tool surface. */
 export interface Config {

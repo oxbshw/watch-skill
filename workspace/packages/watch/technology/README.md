@@ -11,6 +11,7 @@ memory and independent verification.
 
 - `@deepwatch/dsh-technology`
 - `@deepwatch/dsh-technology/descriptors`
+- `@deepwatch/dsh-technology/provenance`
 - `@deepwatch/dsh-technology/routing`
 
 ## Peers

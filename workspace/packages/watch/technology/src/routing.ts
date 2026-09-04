@@ -61,6 +61,8 @@ import {
   readBindings,
 } from '@deepwatch/dsh-contracts'
 import type { WatchBindings } from '@deepwatch/dsh-contracts'
+import { PROVENANCE_SERVICE, routeKey } from './provenance.js'
+import type { CapabilityVerdict, WatchProvenance } from './provenance.js'
 
 /** The settings section the binding screens write and this module reads. */
 export const BINDINGS_SETTINGS_NAMESPACE = settingsNamespace(BINDINGS_NAMESPACE)
@@ -145,26 +147,70 @@ export const name = 'watch-routing'
  * refusal — on any deployment that composes no settings file, which is the
  * exact shape where a fail-open would go unnoticed.
  */
-export const inject = ['llm']
+export const inject = ['llm', PROVENANCE_SERVICE]
 
-/** A request refused because no role in this profile is bound to its route. */
+/**
+ * A request refused because nothing asked for it.
+ *
+ * Separate from {@link UnboundRouteError} because it is a different fault with
+ * a different fix. That one is about a route; this one is about a caller. A
+ * timer, a recovery task, a restored session or a title job that resolves a
+ * perfectly good selection arrives here — the route may be proved, and nobody
+ * asked.
+ */
+export class UnattributedRequestError extends Error {
+  readonly provider: string
+  readonly model: string
+  /** Which way the attribution failed, for a log somebody has to read. */
+  readonly verdict: CapabilityVerdict | 'no_open_turn'
+
+  constructor(
+    provider: string, model: string, verdict: CapabilityVerdict | 'no_open_turn',
+  ) {
+    super(
+      `nothing initiated the request to ${provider}/${model} (${verdict}): a provider `
+      + 'request must carry a capability from an explicit provider test, or belong '
+      + 'to an open user turn')
+    this.name = 'UnattributedRequestError'
+    this.provider = provider
+    this.model = model
+    this.verdict = verdict
+  }
+}
+
+/**
+ * A request refused because its route is not one this profile is ready to use.
+ *
+ * Two refusals kept apart, because they need opposite actions: a route nobody
+ * bound is fixed by choosing one, and a route bound but never proved is fixed
+ * by running the provider test. Reporting both as "not bound" sent somebody to
+ * a screen where the binding they were told was missing sat in front of them.
+ */
 export class UnboundRouteError extends Error {
   /** The route the request named. Not a credential and not a path. */
   readonly provider: string
   readonly model: string
+  /** Whether the refusal was about proof rather than about choice. */
+  readonly boundButUnproved: boolean
 
-  constructor(provider: string, model: string, permitted: readonly string[]) {
+  constructor(
+    provider: string, model: string, permitted: readonly string[], boundButUnproved = false,
+  ) {
     // Written for a Host log and for Diagnostics. It never reaches a
     // conversation as-is: the browser half maps this onto a typed card, which
     // is what stops a route id being shown to somebody who did not choose it.
     super(
-      `no capability in this profile is bound to ${provider}/${model}`
-      + (permitted.length === 0
-        ? '; nothing is bound yet'
-        : `; bound routes are ${permitted.join(', ')}`))
+      boundButUnproved
+        ? `${provider}/${model} is bound but no provider test has proved it, so `
+          + 'nothing may be sent to it yet'
+        : `no capability in this profile is bound to ${provider}/${model}`
+          + (permitted.length === 0
+            ? '; nothing is bound yet'
+            : `; bound routes are ${permitted.join(', ')}`))
     this.name = 'UnboundRouteError'
     this.provider = provider
     this.model = model
+    this.boundButUnproved = boundButUnproved
   }
 }
 
@@ -199,14 +245,61 @@ export function apply(ctx: Context, config: Config): void {
 
   if (!config.enforce) return
 
+  /**
+   * Why this request may not go out, or null when it may.
+   *
+   * Two questions, in this order, because they fail for different reasons and a
+   * caller deserves the one actually blocking it.
+   *
+   *   1. *Who asked?* Either a capability issued for this exact route by a
+   *      provider test somebody requested, or a turn this Host has open.
+   *      Nothing else has authority to spend a request however good the route
+   *      is — which is what stops a timer, a restored session or a deferred
+   *      title task from reaching a provider on the strength of a binding.
+   *   2. *Has this route been proved?* A receipt minted when a provider test
+   *      actually came back, still matching the base URL, credential reference
+   *      and binding document it was taken under.
+   *
+   * A provider test answers the first question and is exempt from the second,
+   * because it is the request that establishes the answer. It is exempt from
+   * nothing else: one use, one route, and it expires.
+   */
+  const refuse = (options: {
+    provider: string, model: string, watchAuthorization?: unknown,
+  }): Error | null => {
+    const provenance = ctx.get(PROVENANCE_SERVICE) as unknown as WatchProvenance | undefined
+    if (provenance === undefined) {
+      // Injected, so unreachable in a composed profile — and if the wiring ever
+      // changes, the safe reading of "I have no way to check" is a refusal.
+      return new UnattributedRequestError(options.provider, options.model, 'unknown')
+    }
+    const route = routeKey(options.provider, options.model)
+
+    if (options.watchAuthorization !== undefined) {
+      const verdict = provenance.consume(options.watchAuthorization, route)
+      return verdict === 'ok'
+        ? null
+        : new UnattributedRequestError(options.provider, options.model, verdict)
+    }
+
+    if (provenance.activeTurn() === null) {
+      return new UnattributedRequestError(options.provider, options.model, 'no_open_turn')
+    }
+    if (provenance.isReady(options.provider, options.model)) return null
+    return new UnboundRouteError(
+      options.provider, options.model, permittedRoutes(current),
+      isRoutePermitted(current, options.provider, options.model))
+  }
+
   // `prepend`, so this runs ahead of the retry and replay listeners. A
   // refusal that a retry listener could reach first would be retried, and a
   // request nobody authorised would be attempted several times rather than
   // none.
-  ctx.on('llm/stream', (options: { provider: string, model: string }, next) => {
-    if (isRoutePermitted(current, options.provider, options.model)) return next()
-    const refusal = new UnboundRouteError(
-      options.provider, options.model, permittedRoutes(current))
+  ctx.on('llm/stream', (options: {
+    provider: string, model: string, watchAuthorization?: unknown,
+  }, next) => {
+    const refusal = refuse(options)
+    if (refusal === null) return next()
     // Returned as an iterable that rejects on the first pull, rather than
     // thrown from the listener body. The waterfall's contract is that a
     // listener hands back an async iterable, and a synchronous throw here

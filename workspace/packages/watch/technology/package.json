@@ -33,6 +33,10 @@
       "default": "./lib/descriptors.js"
     },
     "./package.json": "./package.json",
+    "./provenance": {
+      "types": "./lib/provenance.d.ts",
+      "default": "./lib/provenance.js"
+    },
     "./routing": {
       "types": "./lib/routing.d.ts",
       "default": "./lib/routing.js"
