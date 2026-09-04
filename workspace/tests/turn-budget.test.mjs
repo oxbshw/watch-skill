@@ -228,6 +228,40 @@ describe('a hard limit stops the next request, not the current action', () => {
   })
 })
 
+describe('a partially configured row still boots', () => {
+  test('the composed shape — enforce only, no limits — mounts and enforces', async () => {
+    // The regression this exists for took down the whole plugin tree on a
+    // profile's first boot. The bundle row supplies `{ enforce: true }` and
+    // nothing else; the loader hands that object through as it stands, and a
+    // plugin that assumed a schema default had been applied threw reading
+    // `limits.modelRounds` of undefined. Every unit test passed, because every
+    // unit test supplied both fields.
+    const ctx = new Context()
+    await ctx.plugin(StubLlm, {})
+    await ctx.plugin(budgetPlugin, { enforce: true })
+    await ctx.plugin(StubLoop)
+    const budget = ctx.get(BUDGET_SERVICE)
+    assert.deepEqual(budget.limitTable().modelRounds, DEFAULT_LIMITS.modelRounds)
+    await ctx.get('stubLoop').step(1)
+    assert.equal(budget.spendFor('agent-1#1').modelRounds, 1)
+  })
+
+  test('no config at all mounts, and enforces by default', async () => {
+    // An absent flag is not a request to stop enforcing.
+    const ctx = new Context()
+    await ctx.plugin(StubLlm, {})
+    await ctx.plugin(budgetPlugin)
+    await ctx.plugin(StubLoop)
+    assert.deepEqual(
+      ctx.get(BUDGET_SERVICE).limitTable().toolCalls, DEFAULT_LIMITS.toolCalls)
+  })
+
+  test('an empty limits object is the same as none', () => {
+    assert.deepEqual(resolveLimits({}), resolveLimits(undefined))
+    assert.deepEqual(resolveLimits(undefined).modelRounds, DEFAULT_LIMITS.modelRounds)
+  })
+})
+
 describe('the defaults are above the run they were measured against', () => {
   test('every observed figure is under its hard limit', () => {
     for (const [dimension, spent] of Object.entries(OBSERVED)) {

@@ -163,11 +163,18 @@ function emptySpend(): Spend {
 
 /** The whole limit table, with a profile's overrides folded in. */
 export function resolveLimits(
-  overrides: Config['limits'],
+  overrides: Config['limits'] | undefined,
 ): Readonly<Record<BudgetDimension, Limit>> {
+  // Defaulted here rather than trusted from the schema. A composed row supplies
+  // the keys it cares about — `{ enforce: true }` and nothing else — and the
+  // loader hands that object through as it stands, so a plugin that assumed a
+  // schema default had been applied threw on the profile's first boot and took
+  // the whole tree down with it. A plugin reads its own config defensively or
+  // it does not survive being configured partially.
+  const supplied = overrides ?? {}
   const out: Record<string, Limit> = {}
   for (const [dimension, fallback] of Object.entries(DEFAULT_LIMITS)) {
-    const over = overrides[dimension as BudgetDimension]
+    const over = supplied[dimension as BudgetDimension]
     out[dimension] = {
       warn: over?.warn ?? fallback.warn,
       hard: over?.hard ?? fallback.hard,
@@ -206,10 +213,12 @@ export class WatchBudget extends Service {
   private readonly warned = new Map<string, Set<BudgetDimension>>()
   private stopped = new Map<string, BudgetBreach>()
 
-  constructor(ctx: Context, config: Config) {
+  constructor(ctx: Context, config: Partial<Config> | undefined) {
     super(ctx, BUDGET_SERVICE)
-    this.limits = resolveLimits(config.limits)
-    this.enforce = config.enforce
+    this.limits = resolveLimits(config?.limits)
+    // Enforcing unless a composition says otherwise: an absent flag is not a
+    // request to stop enforcing.
+    this.enforce = config?.enforce !== false
   }
 
   /** Begin counting for one turn, if it is not already counted. */
@@ -340,7 +349,7 @@ export const inject = ['llm']
 /**
  * Mount the accounting and hang it off the events that already happen.
  */
-export function apply(ctx: Context, config: Config): void {
+export function apply(ctx: Context, config?: Partial<Config>): void {
   const budget = new WatchBudget(ctx, config)
 
   const link = ctx as unknown as {
@@ -382,7 +391,7 @@ export function apply(ctx: Context, config: Config): void {
   })
   observe.on('agent/disposed', () => { budget.clear() })
 
-  if (!config.enforce) return
+  if (config?.enforce === false) return
 
   // The refusal, and the counting, at the one boundary every model request
   // passes through. `prepend` so a spent budget is not retried by a retry
