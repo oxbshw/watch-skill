@@ -435,6 +435,24 @@ export function apply(ctx: Context, config: Config): void {
         items: { type: 'string' },
         description: 'Optional prior evidence to check the expectation against.',
       },
+      checks: {
+        type: 'array',
+        // A lossless JSON node per item rather than a spelled-out object: the
+        // `params` of a check vary by its type, Core owns those shapes and
+        // validates them, and a second schema here would be a second place for
+        // the two sides to disagree about what a check is.
+        items: { type: 'json' },
+        description:
+          'The executable checks that decide the verdict. An expectation without checks is a '
+          + 'sentence, and a sentence returns UNVERIFIED — which is the honest answer and not a '
+          + 'pass. Each check is `{ id, type, params }`. Types: file_exists `{path}`, '
+          + 'file_digest `{path, sha256}`, json_value `{path, pointer, equals}` with an RFC 6901 '
+          + 'pointer, command_exit `{command: [argv], cwd?, exit_code?}`, numeric_invariant, '
+          + 'directory_manifest, json_schema, sqlite_query, http_request. Paths are relative to '
+          + 'the workspace. Watch Core runs these itself, in its own isolated verifier — you are '
+          + 'naming the question, not answering it, and a check you write cannot see anything you '
+          + 'tell it.',
+      },
     },
     output: {
       ...JSON_OUTPUT,
@@ -457,6 +475,11 @@ export function apply(ctx: Context, config: Config): void {
           expectation: args.expectation,
           sourceId: args.source_id ?? null,
           evidenceIds: args.evidence_ids ?? [],
+          // Forwarded verbatim. Core validates the shapes, freezes the
+          // contract and refuses anything it cannot evaluate; a second
+          // validation here would be a second place for the two sides to
+          // disagree about what was asked.
+          checks: args.checks ?? [],
           // Minted here so the verdict, the receipt and the Trajectory record
           // all hang off one id the user can follow.
           verificationId: `ver_${randomUUID()}`,

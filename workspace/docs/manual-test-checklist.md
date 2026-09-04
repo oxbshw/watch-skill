@@ -76,6 +76,23 @@ provider credential and must produce zero provider egress until you act.
     Diagnostics, and Chat all return to unconfigured/not-tested without a real
     provider request.
 
-External sign-off also records OpenRouter balance/request count, npm first
-publication plus 2FA, per-package Trusted Publisher configuration, restricted
-npm teams, Desktop signing/notarization, and any GPU-specific validation.
+External sign-off records what this pass cannot observe, and it is worth
+keeping the two trains apart because they are not in the same position.
+
+*DeepWatch (`@deepwatch/*`, npm).* A genuine first publication: nothing exists
+under the scope yet. Record the one-time publisher credential and 2FA, the
+per-package Trusted Publisher configuration that replaces it afterwards, and
+the restricted npm teams.
+
+*Watch Skill (`watch-skill`, PyPI).* An update to a package that already
+exists — 1.0.0, 1.1.0, 1.2.0 and 1.3.0rc2 precede this candidate. Record the
+provider balance and request count for whatever real-provider testing was done.
+There is no first-publication step here, and looking for one wastes a release
+owner's time.
+
+*Desktop.* Signing and notarization belong to a Desktop release. They are not a
+condition of a Web or npm release candidate and must not be reported as
+blocking one; record them when Desktop is in the train being shipped.
+
+Any GPU-specific validation is recorded alongside whichever train it applies
+to.

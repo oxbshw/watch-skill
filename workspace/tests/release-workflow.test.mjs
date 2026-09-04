@@ -153,8 +153,15 @@ describe('what reaches the registry, and in what order', () => {
     assert.match(doc, /npm deprecate/)
     assert.match(doc, /core-v<version>/)
     assert.match(doc, /deepwatch-v<version>/)
-    // And it must not claim the thing nobody has done.
-    assert.match(doc, /Neither train has ever run/)
+    // And it must keep the two trains apart. This used to pin "Neither train
+    // has ever run", which was wrong in the half that mattered: `watch-skill`
+    // is already on PyPI, and calling its next tag a first publication sent a
+    // release owner looking for a one-time credential step that does not apply.
+    assert.match(doc, /DeepWatch has never published/)
+    assert.match(doc, /Watch Skill has published before/)
+    assert.match(doc, /update to an existing package/)
+    assert.doesNotMatch(doc, /Neither train has ever run/,
+      'the corrected claim was reverted to the one that misled')
   })
 })
 

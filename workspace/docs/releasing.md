@@ -11,12 +11,24 @@ There is no `v*` trigger any more. There used to be, and it meant a tag
 intended for one product built and published the other from whatever the tree
 happened to contain at that moment.
 
-**Neither train has ever run.** Nothing is published under the `@deepwatch`
-scope, so `npx @deepwatch/cli` does not work and no document in this repository
-may say it does. What has been exercised is the packed artifact a publish would
-upload: `npm run release:artifacts` packs all twenty, installs them into a
-clean project, and runs the CLI through `npm exec`, `npx`, `pnpm` and a global
-install.
+**The two trains are not in the same position, and saying they were was
+wrong.**
+
+*DeepWatch has never published.* Nothing exists under the `@deepwatch` scope,
+so `npx @deepwatch/cli` does not work and no document in this repository may
+say it does. That train's first run really is a first publication. What has
+been exercised is the packed artifact a publish would upload: `npm run
+release:artifacts` packs all twenty, installs them into a clean project, and
+runs the CLI through `npm exec`, `npx`, `pnpm` and a global install.
+
+*Watch Skill has published before.* `watch-skill` is on PyPI and this
+repository's own changelog records 1.0.0, 1.1.0, 1.2.0 and 1.3.0rc2 before the
+current candidate. A `core-v*` tag is an **update to an existing package**, not
+a first publication: the Trusted Publisher is already configured, the project
+page already exists, and the failure modes are a version clash or a rejected
+upload rather than a package that has to be created by hand. Describing it as a
+first publication sent a release owner looking for a one-time credential step
+that does not apply to it.
 
 ## Before a DeepWatch release
 
@@ -66,8 +78,11 @@ rewrites it to the same bytes.
 That separation is load-bearing rather than tidy. The tracked file used to
 carry digests and a date, so `npm run release:artifacts` left the worktree
 dirty -- and the very next command this guide gives, `first-publish`, refuses
-a dirty tree. The documented path to a first publication could not be walked,
-and `npm run verify:release-sequence` is the gate that walks it.
+a dirty tree. The documented path to a first publication could not be walked
+*then*; `npm run verify:release-sequence` is the gate that walks it, and it has
+since been walked end to end at more than one release candidate. Rerun it at
+the exact commit being released — the point is that this commit's path is
+clean, not that the path is untried.
 
 ### The bytes are reproducible
 
