@@ -26,6 +26,15 @@ export interface StdioTransportOptions {
   readonly args: readonly string[]
   readonly cwd: string | undefined
   readonly env: Readonly<Record<string, string>> | undefined
+  /**
+   * Values applied *underneath* the ambient environment.
+   *
+   * The difference from `env` is the whole point: `env` overrides what the Host
+   * was started with, and these only fill in what it never carried. A composed
+   * profile uses this to give its engine its own data directory without taking
+   * away a directory somebody chose for themselves.
+   */
+  readonly envDefaults?: Readonly<Record<string, string>> | undefined
   /** How long the child has to become writable before the connect fails. */
   readonly startupTimeoutMs: number
 }
@@ -162,7 +171,14 @@ export class StdioTransport implements Transport {
     try {
       child = spawn(this.options.command, [...this.options.args], {
         cwd: this.options.cwd,
-        env: this.options.env === undefined ? process.env : { ...process.env, ...this.options.env },
+        // Defaults first, the ambient environment over them, then any explicit
+        // override last. The order is the policy: a profile may supply what
+        // nobody set, and may not take away what somebody did.
+        env: {
+          ...this.options.envDefaults,
+          ...process.env,
+          ...this.options.env,
+        },
         stdio: ['pipe', 'pipe', 'pipe'],
         windowsHide: true,
       })

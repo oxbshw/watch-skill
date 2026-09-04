@@ -224,6 +224,9 @@ export function writeCoreBinOverride(profileDir: string, coreBin: string): strin
   // Forward slashes: a YAML scalar keeps its backslashes, and a Windows path
   // that survives quoting still has to survive being read back as a command.
   const command = coreBin.replace(/\\/g, '/')
+  // Beside the profile it belongs to, so removing the profile removes its
+  // evidence with it and two profiles cannot read each other's.
+  const dataDir = join(profileDir, 'watch-core-data').replace(/\\/g, '/')
 
   writeFileSync(path, [
     body.trimEnd(),
@@ -245,12 +248,23 @@ export function writeCoreBinOverride(profileDir: string, coreBin: string): strin
     '#',
     '# Omitted, the service schema governs, and its defaults are the same',
     '# values the bundle declares. One place to change, one value to read.',
+    '#',
+    "# `dataDir` is this profile's own, and it is the one value here about",
+    '# isolation rather than about reaching the binary. Without it the engine',
+    '# falls back to its own `~/.watch-skill`, which is right for one install',
+    '# and wrong for two: a second profile composed by `setup` shared the first',
+    "# one's Library, Memory, receipts and indexes, and a clean room built to",
+    '# prove something about a fresh install was reading a directory an earlier',
+    '# one had filled. It is a default rather than an override — an exported',
+    '# `WATCHSKILL_DATA_DIR` still wins — and nothing is migrated into it,',
+    "# because a new profile has no claim on an older one's evidence.",
     '- id: watch-core-bridge',
     '  config:',
     '    transport: auto',
     `    command: '${command}'`,
     '    args: [bridge]',
     "    cwd: ''",
+    `    dataDir: '${dataDir}'`,
     '    autoConnect: true',
     CORE_BIN_END,
     '',

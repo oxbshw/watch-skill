@@ -72,6 +72,11 @@ export interface Config {
   readonly startupTimeoutMs: number
   /** Deadline applied to a request that does not carry its own. */
   readonly requestTimeoutMs: number
+  /**
+   * Profile-scoped data directory for the engine. Empty leaves the engine's
+   * own default, and an ambient `WATCHSKILL_DATA_DIR` always wins over this.
+   */
+  readonly dataDir: string
   /** Connect during plugin activation rather than on first use. */
   readonly autoConnect: boolean
   /**
@@ -165,6 +170,25 @@ export class WatchCoreService extends Service {
     // start as a dead engine; the default is the one a bare config inherits.
     startupTimeoutMs: s.number().step(1).min(100).default(45_000),
     requestTimeoutMs: s.number().step(1).min(100).default(30_000),
+    /**
+     * Where this profile's engine keeps its data, when nobody has said
+     * otherwise.
+     *
+     * Empty by default, meaning "wherever Watch Core would put it" — the
+     * engine's own `~/.watch-skill`. That is right for somebody with one
+     * install and wrong the moment there are two: a second profile composed by
+     * `deepwatch setup` silently shared the first one's Library, Memory,
+     * receipts and indexes, and a clean room built to prove something about a
+     * fresh install was reading a directory an earlier one had filled.
+     *
+     * Set, it reaches the engine as `WATCHSKILL_DATA_DIR` — but only when the
+     * environment does not already carry one. Somebody who exported that
+     * variable has chosen a directory, and a profile is not entitled to
+     * overrule them. Nothing is migrated and nothing is copied: a new
+     * directory starts empty, which is the only honest thing a new profile can
+     * say about its own contents.
+     */
+    dataDir: s.string().default(''),
     autoConnect: s.boolean().default(true),
     failuresBeforeOpen: s.number().step(1).min(1).default(3),
     initialCooldownMs: s.number().step(1).min(1).default(1_000),
@@ -653,6 +677,13 @@ export class WatchCoreService extends Service {
       args: this.config.args,
       cwd: this.config.cwd === '' ? undefined : this.config.cwd,
       env: undefined,
+      // A default, never an override. `envDefaults` is applied underneath the
+      // ambient environment, so a person who exported `WATCHSKILL_DATA_DIR`
+      // keeps the directory they chose and a profile that composed one only
+      // fills the gap where nobody has.
+      envDefaults: this.config.dataDir === ''
+        ? undefined
+        : { WATCHSKILL_DATA_DIR: this.config.dataDir },
       startupTimeoutMs: this.config.startupTimeoutMs,
     })
   }

@@ -61,6 +61,7 @@ ask will ever be answered.
 | `args` | `[bridge]` | its arguments |
 | `startupTimeoutMs` | `45000` | how long the engine has to start. Generous on purpose: a first spawn against a freshly created virtualenv pays for a cold import that a 10s backstop reported as a dead engine. |
 | `requestTimeoutMs` | `30000` | deadline for a request that carries none |
+| `dataDir` | *(empty)* | where this profile's engine keeps its Library, Memory, receipts and indexes. Empty leaves the engine its own `~/.watch-skill`, which two profiles on one machine would then share. `deepwatch setup` composes a directory inside the profile instead. It is a *default*: an exported `WATCHSKILL_DATA_DIR` still wins, and nothing is migrated into it. |
 | `autoConnect` | `true` | connect during activation rather than on first use |
 
 A deployment that requires the engine should pin `transport: stdio`, which

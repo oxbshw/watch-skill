@@ -373,12 +373,19 @@ function writeOverlay(corePath, memoryDir, evidenceRoot) {
 # exceeded: the manual acceptance profile was the last place still able to
 # report a healthy engine as a dead one. Omitted, the service schema governs,
 # and its defaults are the values the bundle ships.
+#
+# \`dataDir\` for the same reason \`deepwatch setup\` composes one: without it the
+# engine uses its own machine-wide \`~/.watch-skill\`, so this fixture profile
+# would read and write whatever a real install had already put there — and the
+# seeded demo records would land in it. It is a default rather than an override,
+# so an exported \`WATCHSKILL_DATA_DIR\` still wins.
 - id: watch-core-bridge
   config:
     transport: auto
     command: ${JSON.stringify(corePath)}
     args: [bridge]
     cwd: ''
+    dataDir: ${JSON.stringify(posixPath(join(HOME, 'watch-core-data')))}
     autoConnect: true
 
 - id: watch-memory
