@@ -60,6 +60,9 @@
       "@deepwatch/dsh-technology/attestation": [
         "./packages/watch/technology/src/attestation.ts"
       ],
+      "@deepwatch/dsh-technology/delegation": [
+        "./packages/watch/technology/src/delegation.ts"
+      ],
       "@deepwatch/dsh-technology/descriptors": [
         "./packages/watch/technology/src/descriptors.ts"
       ],

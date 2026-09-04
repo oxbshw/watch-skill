@@ -116,6 +116,19 @@
     - id: watch-observation
       name: '@deepwatch/dsh-technology/observation'
 
+    # The route a delegated child inherits, and the preflight that stops a
+    # child being created when there is not one.
+    #
+    # Upstream inherits `parent.options.provider`, which is right for a
+    # deployment that puts its route there. This one resolves a route per
+    # request from the binding a person made, so the parent has nothing in
+    # `options` to pass down and three subagents died on their first step with
+    # "has no provider/model". `agent/request` is the waterfall upstream's own
+    # error names for exactly this, and filling it there fixes parent and child
+    # with one rule.
+    - id: watch-delegation
+      name: '@deepwatch/dsh-technology/delegation'
+
     - id: watch-routing
       name: '@deepwatch/dsh-technology/routing'
       config:
