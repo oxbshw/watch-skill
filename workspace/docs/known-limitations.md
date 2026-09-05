@@ -46,6 +46,37 @@ Compare shows two records **from the conversation you are in**, brought in by
 selecting Watch tool rows. A fresh session has nothing to compare and says so
 rather than reaching across sessions for a pair that was never asked for.
 
+## A receipt does not carry the verdict Core returned for it
+
+**This is a defect, found by running the release against a real provider, and it
+is not fixed in 0.1.0.** It is written here rather than left to be discovered,
+because the gap is between two things the product otherwise keeps carefully
+apart, and a reader could reasonably assume the join works.
+
+What is true: Watch Core runs the contract and returns a real verdict, and the
+record it writes is complete. A clean room built from this release's sealed
+artifacts produced three verification records — two `pass` and one `fail` — each
+with its checks and their statuses, each independently re-readable with
+`watch-skill verify show`.
+
+What is not: **no execution receipt in the Library carries that verdict.** Every
+row reads `verdict: null`, including the successful write whose own attestation
+Core answered `pass`. The consequence is visible in Compare: two verification
+records selected side by side are reported as *"only on one side"* and each row
+reads `unchecked`, because neither carries a verdict to compare. The comparison
+itself is computed correctly — it is comparing records that have no verdict on
+them.
+
+The verdict is not lost. It is on disk in the verification record, it is in
+`watch-skill verify show`, and the tool result the agent received carried it.
+What is missing is the join that puts it back onto the receipt, so the
+Library's VERIFIED/FAILED filter matches nothing and Compare has no verdict to
+rank or diff.
+
+Until it is fixed: read a verdict from the verification record or from
+`watch-skill verify list`, not from a Library row's verdict column, and do not
+read Compare's verification table as a statement about Core's outcomes.
+
 ## Perception is optional, and unconfigured by default
 
 Visual perception, speech to text, audio understanding, diarization and

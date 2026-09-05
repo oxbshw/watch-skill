@@ -13,6 +13,11 @@ anywhere. A provider-backed journey then created a file, read it back, verified
 it, and was refused a write outside the workspace. These are photographs of that
 run.
 
+**One of these shows a defect, on purpose.** `09-compare-two-records.png` is a
+photograph of a real failure to attach Core's verdict to a receipt. Replacing it
+with a shot from a build where that worked would be the one dishonest thing this
+page could do, so it stays and the caption says what it is.
+
 **What is deliberately absent.** No API key, token or credential appears on any
 screen — the Models page masks the field and the Role Bindings page shows only
 that a credential is *referenced*. No absolute host path appears either: the
@@ -32,7 +37,7 @@ The files are in [`docs/screenshots/release/`](screenshots/release/), captured a
 | `06-independent-verification.png` | Verification through the product's own tool: a contract Core ran, with each check's status and the contract digest. | A DeepWatch session showing a VERIFIED result card from watch_verify: two of two checks passed, one confirming owner-test/totals.json exists and one confirming /total equals 60, with the contract's sha256 digest. |
 | `07-containment-refusal.png` | A request aimed outside the workspace, refused before it touched anything. | A DeepWatch session where the agent was asked to modify a file outside the workspace; the attempt is recorded as refused and the file was never changed. |
 | `08-library-receipts.png` | The Library: every receipt this workspace recorded, searchable on the local host with no service and no model. | The DeepWatch Evidence Library, showing that search runs on the workspace's own host and offering filters by media type and verification state. |
-| `09-compare-two-records.png` | Compare, reading two real Core verification records — one that passed and one that failed — rather than fixtures. | The DeepWatch Compare surface with two verification records selected side by side, one VERIFIED and one FAILED, showing where they differ. |
+| `09-compare-two-records.png` | Compare, with the two records this run's agent produced by calling `watch_verify` twice, selected side by side. **It also shows a defect:** both rows read `unchecked` and the table counts them as *only on one side*, because no receipt carries the verdict Core returned for it — see [known limitations](known-limitations.md). The comparison itself is computed correctly; it is comparing records that have no verdict on them. | The DeepWatch Compare surface with two watch_verify records selected, each labelled unchecked, and a verification table reading: matching 0, claim changed 0, verdict changed 0, only on one side 2. |
 | `10-perception-sources.png` | Perception sources: all local, none requested, each with the permission it would ask for at first use. | DeepWatch perception sources listing files, video, browser, screen, window, camera and microphone, each marked Local and Not requested, with the permission each would ask for. |
 | `11-memory-off-by-default.png` | Memory, off until somebody turns it on. | The DeepWatch memory settings page showing memory is not enabled by default. |
 
