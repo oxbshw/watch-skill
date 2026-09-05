@@ -30,7 +30,9 @@ import { tmpdir } from 'node:os'
 import { basename, dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import { launchWindowsShim, resolveNodeCli, resolveNpm, resolvePnpm } from './lib/process.mjs'
+import {
+  describeCommand, launchWindowsShim, resolveNodeCli, resolveNpm, resolvePnpm,
+} from './lib/process.mjs'
 import { installInvocation } from './lib/install.mjs'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
@@ -100,6 +102,50 @@ function room(prefix) {
   return dir
 }
 
+/**
+ * What a failed launch actually was, in enough detail to act on.
+ *
+ * The three previous call sites reported `stderr.split('\n').slice(-3)`, which
+ * is the wrong three lines of a Node stack: the tail of a `MODULE_NOT_FOUND`
+ * is `requireStack: []`, `}` and the Node version, and the line that names the
+ * missing module is above it. A CI failure that took three runs to characterise
+ * and still had to be guessed at is a reporting defect, not a flake.
+ *
+ * So this reports the launcher it resolved, how (a Node entry point, a
+ * `PATH` executable, a shim), the working directory, the exit code, and the
+ * whole of both streams up to a bound -- through `describeCommand`, which
+ * redacts a secret-shaped argument, and never the environment's values.
+ *
+ * @param launcher - `{ command, prefix, kind }` from `resolvePnpm`/`resolveNpm`, or null.
+ * @param args - the arguments after the launcher's own prefix.
+ * @param result - `{ code, stdout, stderr }` from `run`.
+ * @param cwd - where it ran.
+ * @returns a multi-line description.
+ */
+function describeLaunchFailure(launcher, args, result, cwd) {
+  const bound = text => {
+    const trimmed = String(text ?? '').trim()
+    return trimmed.length > 4000 ? `…${trimmed.slice(-4000)}` : trimmed
+  }
+  const described = launcher === null
+    ? { executable: '(unresolved)', arguments: [] }
+    : describeCommand(launcher.command, [...launcher.prefix, ...args])
+  const lines = [
+    '',
+    `    launcher   ${described.executable}`,
+    `    kind       ${launcher?.kind ?? 'none — nothing resolved'}`,
+    `    arguments  ${JSON.stringify(described.arguments)}`,
+    `    cwd        ${cwd}`,
+    `    exit       ${String(result.code)}`,
+  ]
+  const out = bound(result.stdout)
+  const err = bound(result.stderr)
+  if (out !== '') lines.push('    stdout', ...out.split('\n').map(line => `      ${line}`))
+  if (err !== '') lines.push('    stderr', ...err.split('\n').map(line => `      ${line}`))
+  if (out === '' && err === '') lines.push('    (both streams were empty)')
+  return lines.join('\n')
+}
+
 async function main() {
   const problems = []
   const say = (where, detail) => problems.push(`${where}: ${detail}`)
@@ -125,7 +171,9 @@ async function main() {
   const installed = run(project_npm.command,
     [...project_npm.prefix, ...installInvocation(tarballs)], { cwd: project })
   if (installed.code !== 0) {
-    say('install', installed.stderr.split('\n').filter(Boolean).slice(-3).join(' / '))
+    say('install', describeLaunchFailure(
+      { command: project_npm.command, prefix: project_npm.prefix, kind: project_npm.kind },
+      installInvocation(tarballs), installed, project))
     return { problems, ran }
   }
 
@@ -203,7 +251,8 @@ ERR<${result.stderr.slice(0, 300)}>
     ? { code: 1, stdout: '', stderr: 'no pnpm this tooling can run was found' }
     : run(pnpm.command, [...pnpm.prefix, 'install'], { cwd: pnpmRoom })
   if (pnpmInstalled.code !== 0) {
-    say('pnpm install', pnpmInstalled.stderr.split('\n').filter(Boolean).slice(-3).join(' / '))
+    say('pnpm install',
+      describeLaunchFailure(pnpm, ['install'], pnpmInstalled, pnpmRoom))
   } else {
     expect('pnpm exec (workspace of unpacked tarballs)',
       run(pnpm.command, [...pnpm.prefix, 'exec', 'deepwatch', '--version'],
@@ -217,7 +266,9 @@ ERR<${result.stderr.slice(0, 300)}>
     [...runner.prefix, 'install', '--global', '--legacy-peer-deps', '--no-audit', '--no-fund',
       `--prefix=${prefix}`, ...tarballs])
   if (global_.code !== 0) {
-    say('global install', global_.stderr.split('\n').filter(Boolean).slice(-3).join(' / '))
+    say('global install', describeLaunchFailure(
+      { command: runner.command, prefix: runner.prefix, kind: runner.kind },
+      ['install', '--global'], global_, prefix))
   } else {
     const shim = process.platform === 'win32'
       ? join(prefix, 'deepwatch.cmd')
