@@ -309,6 +309,20 @@ describe('containment is recorded, whatever it decided', () => {
       'inside')
   })
 
+  test('a relative path that climbs out is outside, not inside', () => {
+    // A real session asked to write `../outside-canary/canary.txt`. The Harness
+    // sandbox stopped it, and Watch recorded the attempt as `scope: inside` --
+    // because `resolveTraversal` drops a `..` it cannot honour, which is right
+    // for an absolute path (nothing climbs above a root) and wrong for a
+    // relative one: the path became `outside-canary/canary.txt`, resolved
+    // against the process cwd, and landed back in the workspace it was leaving.
+    assert.equal(readScope(['../escape.txt'], WORKSPACE).scope, 'outside_workspace')
+    assert.equal(
+      readScope(['../outside-canary/canary.txt'], WORKSPACE).scope, 'outside_workspace')
+    assert.equal(readScope(['owner-test/totals.json'], WORKSPACE).scope, 'inside')
+    assert.equal(readScope(['./owner-test/../totals.json'], WORKSPACE).scope, 'inside')
+  })
+
   test('a match expression is not a location', () => {
     // `glob` and `grep` take a pattern. Resolving a wildcard as a literal path
     // would be a confident wrong answer, so they stay unscanned on purpose.

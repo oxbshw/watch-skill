@@ -60,7 +60,7 @@ import type {
   ScopeDecision, SideEffectClass, ToolExecutionRecord, WorkspaceScope,
 } from '@deepwatch/dsh-contracts'
 import {
-  containsPath, findAbsolutePaths, relativeToRoot, resolveTraversal,
+  containsPath, findAbsolutePaths, isAbsoluteLocalPath, relativeToRoot, resolveTraversal,
 } from '@deepwatch/dsh-contracts'
 import { freezeChecks, operationContract, verificationRequest } from './attestation.js'
 import type { Attestation, AttestationState } from './attestation.js'
@@ -291,7 +291,16 @@ export function readScope(
   const inside: string[] = []
   let outsideCount = 0
   for (const path of paths) {
-    const landing = realise(path)
+    // Anchored to the workspace *before* traversal is resolved, and that order
+    // is the whole point. `resolveTraversal` drops a `..` it cannot honour,
+    // which is right for an absolute path — nothing climbs above a root — and
+    // wrong for a relative one: `../outside/canary.txt` became
+    // `outside/canary.txt`, resolved against the process cwd, and landed back
+    // inside the workspace. A real session asked for exactly that path, was
+    // stopped by the Harness sandbox, and Watch recorded the attempt as
+    // `scope: inside`. Joining first means the `..` is honoured against a real
+    // root, so a relative escape reads as the escape it is.
+    const landing = realise(isAbsoluteLocalPath(path) ? path : join(root, path))
     if (containsPath(root, landing)) {
       const relative = relativeToRoot(landing, root)
       if (relative !== null) inside.push(relative)

@@ -60,6 +60,41 @@ fallback, a missing package, or an order that differs from the manifest graph.
 The state report is `.release-artifacts/first-publish-state.json` and always
 lists `created`, `skipped`, `failed`, and `remaining` packages.
 
+### The sealed manifest, because a version is not a fingerprint
+
+`release:artifacts` ends with `release:seal` and `release:provenance`. Together
+they answer a question the two inventories below cannot: *did these bytes come
+from this source?*
+
+A candidate once shipped artifacts packed three commits behind the accepted
+head, from a dirty tree, and every gate passed — because every gate compared
+`name@version`, and both byte sets wore the same version. Exactly one package
+differed in content. So `gen-provenance-manifest.mjs` writes
+`.release-artifacts-provenance.json`, binding the exact commit **and tree** to a
+SHA-256 over every tarball, the wheel and the sdist, plus the pinned upstream
+Harness, the build toolchain and the SBOM identity. It refuses to seal a dirty
+tree at all, and it writes outside the directory it describes so sealing cannot
+change what is being sealed. The recorded build timestamp is never compared — a
+reproducible build must not depend on the clock.
+
+`verify-provenance.mjs` then rejects a set on any of: a dirty worktree, a commit
+or tree that is not the checkout's, an artifact older than the accepted source,
+one `name@version` whose bytes differ from the sealed ones, installed content
+that is not what was sealed, a missing artifact or digest, and a `SHA256SUMS`
+that disagrees with the inventory. Every finding names a fix, because
+"provenance failed" sends somebody to re-run the build and "these bytes are from
+an older commit" sends them to repack.
+
+```bash
+node scripts/verify-provenance.mjs \
+  --artifacts .release-artifacts \
+  --manifest .release-artifacts-provenance.json \
+  --expect-commit "$(git rev-parse HEAD)"
+```
+
+`--expect-commit` is the accepted head. Pass it at the release gate: a set
+sealed anywhere else is stale by definition, however well-formed it is.
+
 ### Two inventories, because there are two questions
 
 `.release-artifacts/packed-artifacts.json` describes **these** archives: the
