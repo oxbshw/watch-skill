@@ -31,3 +31,11 @@ qa/
 # record is the release manifest, not the repository.
 *.tgz
 dist-artifacts/
+
+# The sealed provenance manifest for a local pack. Written beside the artifact
+# directory rather than inside it, so sealing a set cannot change the set being
+# sealed -- and ignored here for the same reason `.release-artifacts/` is: it
+# is a per-run fact about bytes on this machine, not a source. Leaving it
+# tracked also made the tree dirty the moment a set was sealed, which the
+# provenance gate then correctly refused to seal a second time.
+.release-artifacts-provenance.json

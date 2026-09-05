@@ -139,7 +139,12 @@ function packedIdentity(path) {
   // directory: passing a path relative to the directory it already names sent
   // tar looking for `.release-artifacts/.release-artifacts/…`, and every
   // lookup failed quietly enough to leave the names simply absent.
-  const out = capture('tar', ['-xzOf', resolve(path), 'package/package.json'], process.cwd())
+  //
+  // `--force-local` because an absolute Windows path is `D:\…`, and GNU tar
+  // reads `host:path` as a remote archive — so it tried to open a network
+  // connection to a host called `D` and failed with a name-resolution error.
+  const out = capture(
+    'tar', ['--force-local', '-xzOf', resolve(path), 'package/package.json'], process.cwd())
   if (out === null) return null
   try {
     const manifest = JSON.parse(out)
