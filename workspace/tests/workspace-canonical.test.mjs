@@ -27,7 +27,9 @@
 import { test, describe } from 'node:test'
 import assert from 'node:assert/strict'
 import { execFileSync, spawnSync } from 'node:child_process'
-import { mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
+import {
+  existsSync, mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync, writeFileSync,
+} from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -298,11 +300,13 @@ describe('platform path behaviour', () => {
 })
 
 describe('Core agrees with the launcher', () => {
-  /** Run a snippet against the Python contract, or skip when Core is absent. */
-  function core(snippet, env = {}) {
-    const python = process.platform === 'win32'
-      ? join(ROOT, '..', '.venv', 'Scripts', 'python.exe')
-      : join(ROOT, '..', '.venv', 'bin', 'python')
+  /** The interpreter that would run Core, whether or not it is there. */
+  const python = process.platform === 'win32'
+    ? join(ROOT, '..', '.venv', 'Scripts', 'python.exe')
+    : join(ROOT, '..', '.venv', 'bin', 'python')
+
+  /** Run a snippet against the Python contract. Never interprets the result. */
+  function run(snippet, env = {}) {
     return spawnSync(python, ['-c', snippet], {
       encoding: 'utf8',
       env: { ...process.env, ...env },
@@ -310,33 +314,105 @@ describe('Core agrees with the launcher', () => {
     })
   }
 
-  test('Core spells the variable the way the launcher writes it', () => {
-    const run = core('from watch_skill.workspace_root import WORKSPACE_ENV; print(WORKSPACE_ENV)')
-    if (run.status !== 0) return // no Core checkout beside the workspace
-    assert.equal(run.stdout.trim(), WORKSPACE_ENV)
+  /**
+   * Is Core importable here, and if not, exactly why?
+   *
+   * Asked once, before any test runs, and separately from the checks
+   * themselves. That separation is the whole point of this rewrite: these
+   * three tests used to end with `if (run.status !== 0) return`, which is
+   * green for a missing virtualenv, an `ImportError`, a crash, a timeout —
+   * and for Core answering the wrong thing. A check that cannot fail is worse
+   * than no check, because the row is there and it is reassuring.
+   *
+   * Now a missing prerequisite is a *skip*, named, and anything else is a
+   * failure carrying the interpreter's own stderr.
+   */
+  const availability = (() => {
+    if (!existsSync(python)) {
+      return { skip: `no interpreter at ${python} — run \`uv sync --all-extras\`` }
+    }
+    const probe = run('import watch_skill.workspace_root as m; print(m.__file__)')
+    if (probe.error !== undefined && probe.error.code === 'ETIMEDOUT') {
+      return { fail: `importing watch_skill timed out after 120s` }
+    }
+    if (probe.status !== 0) {
+      const why = `${probe.stderr ?? ''}`.trim().split('\n').slice(-1)[0] ?? ''
+      // An ImportError for the package itself is "Core is not installed here",
+      // which is a legitimate skip. An ImportError for something Core depends
+      // on is Core being broken, and that is a failure.
+      return /No module named ['"]?watch_skill/.test(why)
+        ? { skip: `watch_skill is not importable by ${python}: ${why}` }
+        : { fail: `watch_skill failed to import: ${why}` }
+    }
+    return {}
+  })()
+
+  const options = availability.skip === undefined ? {} : { skip: availability.skip }
+
+  /** Assert the interpreter ran and answered, with its own words on failure. */
+  function answered(result, what) {
+    if (result.error !== undefined) {
+      assert.fail(`${what}: the interpreter did not run — ${result.error.code ?? result.error.message}`)
+    }
+    assert.equal(result.status, 0,
+      `${what}: python exited ${String(result.status)}\n`
+      + `stdout: ${(result.stdout ?? '').trim()}\n`
+      + `stderr: ${(result.stderr ?? '').trim()}`)
+    return result.stdout.trim()
+  }
+
+  test('the Python contract is importable, or says why it is not', () => {
+    // The prerequisite probe is itself a result worth asserting: a `fail`
+    // verdict from it must not be reported as a skip further down.
+    assert.equal(availability.fail, undefined, availability.fail)
   })
 
-  test('Core resolves the launcher\'s root to the same absolute file', () => {
+  test('Core spells the variable the way the launcher writes it', options, () => {
+    const out = answered(
+      run('from watch_skill.workspace_root import WORKSPACE_ENV; print(WORKSPACE_ENV)'),
+      'reading WORKSPACE_ENV')
+    assert.equal(out, WORKSPACE_ENV)
+  })
+
+  test('Core resolves the launcher\'s root to the same absolute file', options, () => {
     const root = scratch()
-    const run = core(
+    const out = answered(run(
       'from watch_skill.workspace_root import require_workspace, resolve_in_workspace\n'
       + 'print(resolve_in_workspace(require_workspace("test"), "owner-test/totals.json"))',
-      { [WORKSPACE_ENV]: root })
-    if (run.status !== 0) return
+      { [WORKSPACE_ENV]: root }), 'resolving inside the workspace')
     const context = establishWorkspace(root, 'flag')
-    assert.ok(sameWorkspace(run.stdout.trim(), resolveInWorkspace(context, 'owner-test/totals.json')))
+    assert.ok(sameWorkspace(out, resolveInWorkspace(context, 'owner-test/totals.json')),
+      `Core resolved ${out}, the launcher resolves `
+      + `${resolveInWorkspace(context, 'owner-test/totals.json')}`)
   })
 
-  test('Core fails closed when the launcher established nothing', () => {
-    const run = core(
+  test('Core fails closed when the launcher established nothing', options, () => {
+    const out = answered(run(
       'from watch_skill.workspace_root import require_workspace, WorkspaceNotEstablished\n'
       + 'try:\n'
       + '    require_workspace("watch.verification.run")\n'
       + '    print("GUESSED")\n'
       + 'except WorkspaceNotEstablished:\n'
       + '    print("REFUSED")',
-      { [WORKSPACE_ENV]: '' })
-    if (run.status !== 0) return
-    assert.equal(run.stdout.trim(), 'REFUSED')
+      { [WORKSPACE_ENV]: '' }), 'asking with no workspace established')
+    assert.equal(out, 'REFUSED')
+  })
+
+  test('a broken contract turns these red rather than green', options, () => {
+    // The counterfactual. Each check above compares Core's answer to the
+    // launcher's; this proves the comparison is load-bearing by running a
+    // snippet that answers wrongly, and by running one that fails outright.
+    //
+    // Before this rewrite both of these produced a passing test.
+    const wrong = run('print("WATCHSKILL_WORKSPACE_BUT_NOT_REALLY")')
+    assert.equal(wrong.status, 0, 'the control snippet should itself run')
+    assert.notEqual(wrong.stdout.trim(), WORKSPACE_ENV,
+      'the control did not actually differ, so it proves nothing')
+
+    const broken = run('from watch_skill.workspace_root import no_such_symbol')
+    assert.notEqual(broken.status, 0, 'a broken import should exit nonzero')
+    assert.throws(() => answered(broken, 'a deliberately broken import'),
+      /python exited/,
+      'a nonzero exit must fail the check instead of returning quietly')
   })
 })

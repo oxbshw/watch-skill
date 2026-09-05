@@ -154,6 +154,25 @@ jobs:
       - name: Install
         run: pnpm install --frozen-lockfile
 
+      # Core, importable, so the cross-language contract is actually checked.
+      #
+      # `workspace-canonical.test.mjs` compares the launcher's idea of the
+      # workspace root with Core's, in Python, through a subprocess. Without an
+      # interpreter that can import `watch_skill` those three checks skip —
+      # honestly, and uselessly, because that contract is the one most likely
+      # to drift: its two halves are written in different languages and
+      # reviewed separately. They used to *pass* in that situation, which was
+      # worse.
+      #
+      # Default dependencies only. The contract needs `watch_skill` to import,
+      # not whisper or a browser.
+      - uses: astral-sh/setup-uv@v7
+        with:
+          python-version: "3.11"
+      - name: Core importable
+        working-directory: .
+        run: uv sync
+
       # Required before the gates, and easy to forget: inventory generation
       # and parity diffing read the pinned DSH source rather than a
       # description of it, and a fresh clone has no checkout. Proven by a
