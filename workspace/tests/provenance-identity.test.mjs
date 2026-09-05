@@ -215,8 +215,13 @@ describe('the released manifest and an installation speak the same language', ()
     const provenance = describeProvenance(runtime(packages))
     assert.equal(provenance.compositionDigest, MANIFEST.integrity.composition.runtime)
     assert.equal(provenance.matchesRelease, true)
-    assert.match(renderProvenance(provenance).join(String.fromCharCode(10)),
-      /matches the published composition/)
+    // "Recorded", not "published". Nothing has been published, so no
+    // installation can match a published composition — and a report claiming
+    // otherwise tells a person a registry could confirm their build.
+    const rendered = renderProvenance(provenance).join(String.fromCharCode(10))
+    assert.match(rendered, /versions\s+match the composition this release recorded/)
+    assert.doesNotMatch(rendered, /published composition/)
+    assert.match(rendered, /registry\s+not published/)
   })
 
   test('an installation that is not the release says so, loudly', () => {
@@ -226,8 +231,11 @@ describe('the released manifest and an installation speak the same language', ()
     packages[`${SCOPE}/dsh-tools`] = '0.0.0-tampered'
     const provenance = describeProvenance(runtime(packages))
     assert.equal(provenance.matchesRelease, false)
-    assert.match(renderProvenance(provenance).join(String.fromCharCode(10)),
-      /DOES NOT match the published composition/)
+    const rendered = renderProvenance(provenance).join(String.fromCharCode(10))
+    assert.match(rendered, /versions\s+DO NOT match the composition this release recorded/)
+    // Still says what a version digest cannot answer, so a reader does not
+    // take a passing version check for a content check.
+    assert.match(rendered, /content\s+not checked here/)
   })
 
   test('an installation missing one package does not match', () => {

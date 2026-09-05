@@ -41,6 +41,22 @@ export const HARNESS_VERSION = '0.1.1-rc.2'
  */
 export const RELEASE_RUNTIME_DIGEST = 'sha256:d4ba416a2f0e64756628df06cdba212fc5e8c7f35f44f90d84abcc797c92644f'
 
+/**
+ * Whether the `@deepwatch` scope exists on a public registry yet.
+ *
+ * `false`, and it must stay false until the publish step actually runs. The
+ * distinction is not pedantry: `doctor` used to report that an installation
+ * "matches the published composition", which was untrue of every installation
+ * that has ever existed — nothing has been published, so nothing can match it.
+ * A person reading that line would reasonably conclude they were running a
+ * released build and that a registry could confirm it.
+ *
+ * What `doctor` can honestly say is narrower and more useful: these are the
+ * packages this CLI was built to compose, and the digest agrees with the
+ * release manifest. That is a *recorded* composition, not a published one.
+ */
+export const SCOPE_PUBLISHED = false
+
 /** Where it is fetched from, named in the plan before anything is fetched. */
 export const HARNESS_REGISTRY = 'https://registry.npmjs.org'
 

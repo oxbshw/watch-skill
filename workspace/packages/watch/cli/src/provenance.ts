@@ -30,7 +30,7 @@ import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 
 import {
-  HARNESS_PACKAGE, HARNESS_VERSION, RELEASE_RUNTIME_DIGEST, VERSION,
+  HARNESS_PACKAGE, HARNESS_VERSION, RELEASE_RUNTIME_DIGEST, SCOPE_PUBLISHED, VERSION,
 } from './version.js'
 
 /** The npm scope every first-party runtime package sits under. */
@@ -182,10 +182,32 @@ export function renderProvenance(provenance: Provenance): readonly string[] {
   }
   lines.push(`composition    ${String(provenance.packages.length)} package(s)`)
   lines.push(`digest         ${provenance.compositionDigest}`)
+
+  // Four different questions, and conflating them is what let a stale artifact
+  // set be accepted. This digest answers only the first.
+  //
+  //   version composition   — the sorted name@version list agrees. What this is.
+  //   content composition   — the installed bytes match a sealed manifest.
+  //                           `scripts/verify-provenance.mjs` answers it; a
+  //                           version digest cannot, which is exactly how a
+  //                           tarball missing `restrictAll` passed every gate.
+  //   published composition — a registry serves these bytes. Nothing yet does.
+  //   local artifacts       — what is actually installed here, from a directory.
   lines.push(provenance.matchesRelease
-    ? 'release        matches the published composition'
-    : `release        DOES NOT match the published composition (${
+    ? 'versions       match the composition this release recorded'
+    : `versions       DO NOT match the composition this release recorded (${
       provenance.releaseDigest})`)
+  lines.push(
+    'content        not checked here — a version digest cannot see changed bytes.',
+    '               `node scripts/verify-provenance.mjs` compares the sealed',
+    '               SHA-256 of every artifact against the source it came from.')
+  lines.push(SCOPE_PUBLISHED
+    ? 'registry       published'
+    : 'registry       not published — these packages are installed from local',
+  )
+  if (!SCOPE_PUBLISHED) {
+    lines.push('               release artifacts, so no registry can confirm them.')
+  }
   for (const entry of provenance.packages) {
     lines.push(`               ${entry.name}@${entry.version}`)
   }
