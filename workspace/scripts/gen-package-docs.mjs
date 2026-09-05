@@ -31,6 +31,28 @@ const REPO = 'https://github.com/oxbshw/watch-skill'
 const LICENSE = readFileSync(join(ROOT, '..', 'LICENSE'), 'utf8')
 
 /**
+ * Whether anything under the `@deepwatch` scope is on the registry.
+ *
+ * Declared once, in the workspace manifest, and read from there by everything
+ * that shows an install command. Three pages used to state it in prose and the
+ * README disagreed with the other two — which is how the front page ended up
+ * telling a visitor to run `npm install -g @deepwatch/cli` against a scope
+ * that holds nothing.
+ *
+ * @returns `'unpublished'` or `'published'`.
+ */
+function registryStatus() {
+  return WORKSPACE_MANIFEST.deepwatch?.registryStatus ?? 'published'
+}
+
+/** The tag that publishes the scope for the first time. */
+function firstPublicationTag() {
+  return WORKSPACE_MANIFEST.deepwatch?.firstPublicationTag ?? 'deepwatch-v0.1.0'
+}
+
+const WORKSPACE_MANIFEST = JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8'))
+
+/**
  * The pnpm catalog, so a peer range reads as a version rather than a protocol.
  *
  * `catalog:` is how this workspace states the Harness version once; it is
@@ -119,7 +141,20 @@ function page(manifest) {
   // Everything below is composed from what the manifest already declares,
   // restated where somebody arriving from a dependency tree will read it. A
   // page that asserts more than its manifest is a page that will drift.
-  lines.push('## Install', '', '```sh', `npm install ${manifest.name}`, '```', '')
+  lines.push('## Install', '')
+  if (registryStatus() === 'unpublished') {
+    // A page that shows an install command for a package nobody can install
+    // wastes the first thing a reader does. The note goes above the block
+    // rather than below it, because below it is after they have run it.
+    lines.push(
+      '> **Not on npm yet.** Nothing exists under the `@deepwatch` scope. This',
+      `> package is published for the first time by the \`${firstPublicationTag()}\``,
+      '> release; until then the command below resolves nothing, and',
+      `> [the workspace README](${REPO}/tree/main/workspace#readme) has the path`,
+      '> that works from a checkout.',
+      '')
+  }
+  lines.push('```sh', `npm install ${manifest.name}`, '```', '')
   if (manifest.name !== BUNDLE) {
     lines.push(
       `Rarely on its own. [\`${BUNDLE}\`](${REPO}/tree/main/workspace/packages/watch/bundle#readme)`,
@@ -148,6 +183,21 @@ function page(manifest) {
       ? 'a pre-release. The surface is close to settled but not yet guaranteed.'
       : 'a stable release.'
   lines.push('## Stability', '', `\`${version}\` — ${stability}`, '')
+
+  // "Stable" and "1.0" are different claims, and a `0.x` version makes only
+  // the first one. Said here rather than left to convention: a dependent
+  // reading "a stable release" beside `^0.1.0` would reasonably expect the
+  // guarantee a 1.x line gives, and this line does not give it.
+  if (/^0\./.test(version) && !version.includes('-')) {
+    lines.push(
+      'Stable means tested, documented and supported — not 1.0. This is a',
+      'pre-1.0 line, and semantic versioning gives `0.x` no compatibility',
+      'guarantee across minor versions: **a `0.MINOR` bump may change or remove',
+      'surface, and a patch will not.** Depend on it with a tilde range',
+      `(\`~${version}\`) if you want that difference enforced by your lockfile`,
+      'rather than by a changelog. The usual major-version promise starts at 1.0.',
+      '')
+  }
 
   // `sideEffects: false` is a bundler fact about module evaluation, not a claim
   // about what the package does once a host mounts it. Naming which one is

@@ -388,6 +388,7 @@ signed distribution.
 | --- | --- |
 | [docs/setup.md](docs/setup.md) | a new machine, in three commands |
 | [docs/getting-started.md](docs/getting-started.md) | the full walkthrough |
+| [docs/install-and-upgrade.md](docs/install-and-upgrade.md) | installing both products, upgrading, and the compatibility policy |
 | [docs/architecture.md](docs/architecture.md) | the design and the reasoning |
 | [docs/running-the-apps.md](docs/running-the-apps.md) | Web and Desktop, day to day |
 | [docs/releasing.md](docs/releasing.md) | the two trains, dist-tags and recovery |

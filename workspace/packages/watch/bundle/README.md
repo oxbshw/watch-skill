@@ -9,6 +9,12 @@ this package is the part of it that composes into somebody else's Harness.
 
 ## Install
 
+> **Not on npm yet.** Nothing exists under the `@deepwatch` scope. This package
+> and its thirteen siblings are published for the first time by the
+> `deepwatch-v0.1.0` release; until then the command below resolves nothing.
+> To try it from a checkout, build the candidate tarballs and compose a profile
+> against them — [getting started](../../../docs/getting-started.md).
+
 ```bash
 dsh plugin --profile web add @deepwatch/dsh-bundle
 ```
@@ -23,7 +29,19 @@ For the full experience, install the engine too:
 pip install watch-skill
 ```
 
-The Bridge finds it on `PATH` and connects on its own.
+`watch-skill` is on PyPI and installs today; the newest published version is
+1.2.0, and the 1.4.0 this bundle is built against is published by the
+`core-v1.4.0` release. The Bridge finds the executable on `PATH` and connects
+on its own.
+
+## Stability
+
+`0.1.0` — a stable release. Stable means tested, documented and supported —
+not 1.0. This is a pre-1.0 line, and semantic versioning gives `0.x` no
+compatibility guarantee across minor versions: **a `0.MINOR` bump may change or
+remove surface, and a patch will not.** Depend on it with a tilde range
+(`~0.1.0`) if you want that difference enforced by your lockfile rather than by
+a changelog. The usual major-version promise starts at 1.0.
 
 ## What you get
 

@@ -3,6 +3,44 @@
 Watch Skill exposes one engine through four connection methods. Choose the method your
 agent supports; the underlying index, tools, and privacy settings are identical.
 
+## The agents
+
+<div align="center">
+
+<a href="agent-zero.md" title="Agent Zero"><img src="../assets/agents/agent-zero.webp" alt="Agent Zero" width="56" height="56"></a>
+<a href="aider.md" title="Aider"><img src="../assets/agents/aider.webp" alt="Aider" width="56" height="56"></a>
+<a href="amp.md" title="Amp"><img src="../assets/agents/amp.webp" alt="Amp" width="56" height="56"></a>
+<a href="claude-code.md" title="Claude Code"><img src="../assets/agents/claude-code.webp" alt="Claude Code" width="56" height="56"></a>
+<a href="claude-desktop.md" title="Claude Desktop"><img src="../assets/agents/claude-desktop.webp" alt="Claude Desktop" width="56" height="56"></a>
+<a href="cline.md" title="Cline (VS Code extension)"><img src="../assets/agents/cline.webp" alt="Cline (VS Code extension)" width="56" height="56"></a>
+<a href="codex-cli.md" title="Codex CLI (OpenAI)"><img src="../assets/agents/codex-cli.webp" alt="Codex CLI (OpenAI)" width="56" height="56"></a>
+<a href="continue.md" title="Continue"><img src="../assets/agents/continue.webp" alt="Continue" width="56" height="56"></a>
+<a href="cursor.md" title="Cursor"><img src="../assets/agents/cursor.webp" alt="Cursor" width="56" height="56"></a>
+<a href="gemini-cli.md" title="Gemini CLI"><img src="../assets/agents/gemini-cli.webp" alt="Gemini CLI" width="56" height="56"></a>
+<a href="github-copilot-cli.md" title="GitHub Copilot CLI"><img src="../assets/agents/github-copilot-cli.webp" alt="GitHub Copilot CLI" width="56" height="56"></a>
+<a href="goose.md" title="Goose"><img src="../assets/agents/goose.webp" alt="Goose" width="56" height="56"></a>
+<a href="hermes.md" title="Hermes Agent (and Hermes-style harnesses)"><img src="../assets/agents/hermes.webp" alt="Hermes Agent (and Hermes-style harnesses)" width="56" height="56"></a>
+<a href="jetbrains.md" title="JetBrains IDEs"><img src="../assets/agents/jetbrains.webp" alt="JetBrains IDEs" width="56" height="56"></a>
+<a href="kilocode.md" title="Kilo Code"><img src="../assets/agents/kilocode.webp" alt="Kilo Code" width="56" height="56"></a>
+<a href="kimi-code.md" title="Kimi Code CLI"><img src="../assets/agents/kimi-code.webp" alt="Kimi Code CLI" width="56" height="56"></a>
+<a href="openclaw.md" title="OpenClaw"><img src="../assets/agents/openclaw.webp" alt="OpenClaw" width="56" height="56"></a>
+<a href="opencode.md" title="OpenCode"><img src="../assets/agents/opencode.webp" alt="OpenCode" width="56" height="56"></a>
+<a href="openhands.md" title="OpenHands"><img src="../assets/agents/openhands.webp" alt="OpenHands" width="56" height="56"></a>
+<a href="pi.md" title="Pi"><img src="../assets/agents/pi.webp" alt="Pi" width="56" height="56"></a>
+<a href="qodo.md" title="Qodo Command"><img src="../assets/agents/qodo.webp" alt="Qodo Command" width="56" height="56"></a>
+<a href="qwen-code.md" title="Qwen Code"><img src="../assets/agents/qwen-code.webp" alt="Qwen Code" width="56" height="56"></a>
+<a href="roo-code.md" title="Roo Code"><img src="../assets/agents/roo-code.webp" alt="Roo Code" width="56" height="56"></a>
+<a href="vscode.md" title="VS Code (native MCP / Copilot agent mode)"><img src="../assets/agents/vscode.webp" alt="VS Code (native MCP / Copilot agent mode)" width="56" height="56"></a>
+<a href="windsurf.md" title="Windsurf"><img src="../assets/agents/windsurf.webp" alt="Windsurf" width="56" height="56"></a>
+<a href="zed.md" title="Zed"><img src="../assets/agents/zed.webp" alt="Zed" width="56" height="56"></a>
+
+</div>
+
+Twenty-six agents with a page of their own, plus frameworks and HTTP clients
+below. Each avatar links to that agent's setup and its verification status;
+the tables after this say which method it uses and how far the status has been
+proven.
+
 ## What the status labels mean
 
 | Status | Evidence required |

@@ -11,6 +11,159 @@ entry below still describes what the software does; this entry describes
 finishing the path that puts it in front of somebody, which turned out to
 contain three defects that only a stable release could expose.
 
+### A visible GPU is not a working one, and a transcript was lost to it
+
+`has_cuda_gpu()` asks `nvidia-smi` whether an NVIDIA card with enough memory is
+present. That is a real question and not the one that decides anything:
+CTranslate2 also needs a matching CUDA and cuDNN, and this repository's own
+development machine has the card without them. Loading the model raised
+`Library cublas64_12.dll is not found or cannot be loaded`, and local
+transcription ended there — "no whisper rung succeeded", about a clip the same
+machine's processor transcribes in 4.4 seconds. The advice to set
+`WATCHSKILL_WHISPER_DEVICE=cpu` was already correct and was buried in an error
+nobody reads, on a path that had already given up.
+
+A **guessed** CUDA is now retried once on the processor, and says so. A device
+somebody **chose** is not retried anywhere: honouring an explicit choice
+matters more than succeeding, because a benchmark that quietly ran somewhere
+else measured nothing. The retry cannot rescue the other CUDA failure this
+module documents — a mismatched runtime whose first kernel launch never returns
+— because that one hangs rather than raising; the environment variable remains
+the way out of it.
+
+### Two of the fourteen check types could not be reached from the command line
+
+`http_request` and `browser_dom` both go through the origin guard, which
+refuses an origin the run was not allowlisted for. Its failure text says *add
+the host to the contract's allowed_origins*. There was no such field: the
+contract model forbids extra keys, and `verify run` never passed an allowlist
+to `verify_run`, so from the CLI the list was always empty and both check types
+raised `PermissionError` every time. The guard's own docstring calls a loopback
+dev server "a legitimate and common case"; it was the case that could not be
+expressed.
+
+`allowed_origins` is now a field of the contract — not a flag — because the
+digest has to cover it. A contract cannot be widened after it was agreed to,
+a revision carries the reach its predecessor was granted, and the evidence
+bundle records what the run was permitted to reach. An unlisted origin is
+`inconclusive` and named in `limitations`, never `fail`: nothing was learned
+about the target, and "could not check" is not "checked and false".
+
+`docs/verification.md` also listed nine check types and called DOM-locator and
+browser-console assertions "not implemented", which had stopped being true. All
+fourteen are now in the table.
+
+### ffmpeg 9 removed `-vsync`, and the fixtures stopped regenerating
+
+The benchmark frame extractor passed `-vsync 0`. ffmpeg deprecated it in 5.1 in
+favour of the per-stream `-fps_mode` — *"vsync is deprecated and will be removed
+in the future"* — and removed it in 9, where it now fails as
+`Unrecognized option 'vsync'` before decoding starts. Both call sites pass
+`-fps_mode:v passthrough`, verified against ffmpeg 9.0.1: both fixtures
+regenerate, and every ground-truth field in the regenerated manifest is
+identical to the committed one (only the md5 and byte size move, because x264
+output is not byte-reproducible).
+
+That option implies a floor, so `watch-skill doctor` now names it: below
+ffmpeg 5.1 it **warns**, and says the video and audio pipelines are unaffected
+and only fixture regeneration needs the newer build. A warning that read as
+"your ffmpeg is broken" would cost somebody an afternoon replacing a working
+dependency.
+
+### A merge could have published a Docker image
+
+`docker.yml` pushed `ghcr.io/oxbshw/watch-skill` on every push to `main` that
+touched `src/**`, `pyproject.toml`, `uv.lock` or the Dockerfile — tagged `main`
+**and** `latest`, because the condition was `is_default_branch`. That is a
+reasonable rule for a project with no releases and the wrong one for a project
+with two release trains: merging anything would move the tag a person gets from
+`docker pull` to whatever had just landed, ahead of the release meant to set it.
+
+A branch push now builds the image and runs it, and publishes nothing.
+Publication happens on a release or a deliberate dispatch, and `latest` comes
+from a non-prerelease release. `tests/workflow-policy.test.mjs` holds the rule
+for every workflow, not just this one: no step that logs in to a registry,
+pushes an image, publishes a package or writes an attestation may be reachable
+from a branch push.
+
+### The release order put the announcement before the fact
+
+`release.yml` created the GitHub Release in the build job and published to PyPI
+from the next one, so a release existed — announced, linked, carrying assets —
+while the upload it announced had not happened and might still fail. That is
+also why the post-publish smoke had to poll: `release: published` was a claim
+about this workflow's progress rather than a fact about the registry.
+
+The order is now build → seal → PyPI → MCP registry → GitHub Release, each step
+a `needs:`. The build job writes `SHA256SUMS` and a `release-manifest.json`
+binding the commit and tag to a digest of every artifact; **every job after it
+verifies that seal before using a file, and nothing is rebuilt** — the wheel
+PyPI receives and the wheel attached to the Release are the same bytes. A final
+`report` job states which registries were reached whatever the outcome, and
+fails the run rather than showing green over a half-finished release.
+
+### A half-finished npm release is now resumable, on one condition
+
+`release-deepwatch.yml` refused outright if any version was already on the
+registry, so a release that died at the fourteenth of twenty packages could not
+be finished at that version by anyone. The obvious fix — skip what exists — is
+the dangerous one: "already published" and "already published *from this build*"
+are different questions, and only the second makes a resume safe.
+
+`scripts/publish-plan.mjs` asks the registry for the integrity of what it holds
+and compares it with the tarball this run would upload. `publish` when nothing
+is there, `skip` when the bytes are identical, and `refuse` when the version
+exists with different bytes — one refusal stops the release, because no amount
+of retrying makes that scope consistent again. The plan is taken again in the
+publish job, after the environment approval, since that is the only moment
+whose answer is current. The publish job also verifies the sealed provenance
+manifest before its first upload and packs nothing itself.
+
+A version-pinned `npx @deepwatch/cli@<version> --version` smoke now runs on
+Linux, macOS and Windows after the publish job succeeds.
+
+### QA could write into a real credential store, and did
+
+A test room can reach an existing credential without copying it:
+`dsh-credentials-local` takes the document's location as configuration. The
+reference worked. What nobody had thought about is that `qa-e2e-run.mjs`
+*resets* the credential store before configuring a provider, and then configures
+one — so a synthetic pass deleted and rewrote a document that belonged to a
+person, adding an `OPENROUTER_E2E_API_KEY` entry beside the key in use.
+
+`scripts/lib/qa-credential-store.mjs` now resolves which document a room is
+wired to *before* anything starts — a structured read of each profile's
+credential config, plus a blunt textual sweep for any credential-document-shaped
+location the scanner might have missed — and refuses to run against any store
+outside the room. The refusal names the document and the profile line that
+aimed it there. `tests/qa-credential-containment.test.mjs` builds a synthetic
+owner store, points a throwaway room at it, runs the real script, and asserts
+the file is byte-identical afterwards: same digest, same size, same modification
+time.
+
+### The front page told visitors to install a package that does not exist
+
+`npm install -g @deepwatch/cli` was the README's first instruction, with an npm
+version badge above it, for a scope that holds nothing. The repository already
+knew — `workspace/docs/getting-started.md` says so and `docs/releasing.md`
+states it as a rule — and nothing checked that the README agreed.
+
+Every registry install command naming `@deepwatch` now sits under a note saying
+which release publishes it, in the README and in all twenty package pages, with
+the path that works from a checkout named beside it. The note is generated from
+one declaration, `deepwatch.registryStatus` in the workspace manifest, so the
+first publication turns it off in one edit.
+`tests/pending-release-claims.test.mjs` holds the rule and is what will fail
+when that edit is due.
+
+The package pages also state the compatibility policy their version actually
+offers: **stable means tested, documented and supported — not 1.0.** `0.x` has
+no compatibility guarantee across minor versions, so a `0.MINOR` bump may
+change or remove surface and a patch will not.
+[`workspace/docs/install-and-upgrade.md`](workspace/docs/install-and-upgrade.md)
+is the new page for both products, including why `deepwatch setup` after an
+upgrade is not optional and why a downgrade is not supported.
+
 ### The first npm publication cannot use trusted publishing
 
 `release-deepwatch.yml` publishes over OIDC with no token path at all. It cannot

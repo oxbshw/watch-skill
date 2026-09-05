@@ -28,9 +28,41 @@ ways:
 
 Ahead/behind is measured against `main` as it stood before consolidation,
 `994ee7514c64a9ec4980eeabef789b5e10ea28be`. The recovery SHA is the branch's
-last commit: `git checkout -b <name> <sha>` brings it back exactly, and it stays
-reachable as long as the objects do, so nothing here is a one-way door for the
-lifetime of a clone that has fetched it.
+last commit: `git checkout -b <name> <sha>` brings it back exactly — **but only
+while the object is still reachable**, and a deleted branch's tip is exactly the
+kind of object that stops being reachable. A SHA written in a document is a
+label for something that may no longer exist; garbage collection does not read
+documentation.
+
+So a git bundle of every tip was taken before any branch was deleted, and kept
+outside this repository (a bundle stored inside the repository shares the
+repository's fate). It is a single file that is itself a repository:
+
+```bash
+# before deleting anything
+git bundle create <backup-dir>/watch-skill-branch-tips.bundle \
+  refs/heads/main refs/heads/release/final-closure \
+  $(git for-each-ref --format='%(refname)' refs/remotes/origin | grep -v HEAD)
+```
+
+Verified two ways, because "the file exists" is not the claim:
+
+```bash
+git bundle verify <backup-dir>/watch-skill-branch-tips.bundle   # complete history
+git clone --mirror <backup-dir>/watch-skill-branch-tips.bundle /tmp/check
+git -C /tmp/check cat-file -t <sha>                             # every tip, by SHA
+```
+
+Restoring one branch from it needs no network:
+
+```bash
+git fetch <backup-dir>/watch-skill-branch-tips.bundle \
+  'refs/remotes/origin/workspace-rc:refs/heads/workspace-rc'
+```
+
+The bundle is not pushed anywhere. A backup branch or tag on the remote would
+put the count back above one and would be a second thing to keep true; a file is
+a file.
 
 | Branch | Last SHA | Behind / ahead of `main` | PR | Disposition |
 | --- | --- | --- | --- | --- |

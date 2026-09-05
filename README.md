@@ -43,8 +43,15 @@ whole product is built around it.
 DeepWatch composes the official [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)
 through plugins and overlays. It is not a fork, and it does not pick your model.
 
+> **Not on npm yet.** Nothing exists under the `@deepwatch` scope. The twenty
+> packages are published for the first time by the `deepwatch-v0.1.0` release,
+> and until that tag runs, `npm install -g @deepwatch/cli` and
+> `npx @deepwatch/cli` resolve nothing. The block below is the command you will
+> run; [build it from this repository](workspace/docs/getting-started.md) to run
+> it today.
+
 ```bash
-npm install -g @deepwatch/cli
+npm install -g @deepwatch/cli         # pending the deepwatch-v0.1.0 release
 deepwatch setup                       # builds the runtime and composes the profile
 deepwatch web --workspace ./my-project
 ```
@@ -63,9 +70,14 @@ what turns a binding Ready; saving a key never does.
 deepwatch doctor        # what is installed, what is missing, and how to fix each
 ```
 
-Requires Node ≥ 22.19 and Python ≥ 3.11. Windows, macOS and Linux.
+Requires Node ≥ 22.19 and Python 3.11, 3.12 or 3.13 — the versions CI runs and the classifiers declare. Windows, macOS and Linux.
 
 ## Add Watch Skill to an agent you already use
+
+> **On PyPI, one version behind.** `watch-skill` is published and installs
+> today; the newest release on PyPI is 1.2.0. The 1.4.0 described on this page
+> is published by the `core-v1.4.0` release, so until that tag runs, pin
+> nothing and expect 1.2.0 — or install from a checkout.
 
 ```bash
 pip install watch-skill            # or: uv tool install watch-skill
@@ -317,6 +329,7 @@ Method, fixtures and the full seven axes:
 | [Troubleshooting](docs/troubleshooting.md) | Dependency repair and common runtime errors |
 | [Comparison](docs/comparison.md) | Honest trade-offs against the alternatives |
 | [Ecosystem](docs/ecosystem.md) | Where this project appears, and which of it is coverage |
+| [Install and upgrade](workspace/docs/install-and-upgrade.md) | Both products, the optional extras, and the compatibility policy |
 | **DeepWatch** | [workspace README](workspace/README.md) · [setup](workspace/docs/setup.md) · [releasing](workspace/docs/releasing.md) · [known limitations](workspace/docs/known-limitations.md) |
 
 ### Twenty runnable examples
