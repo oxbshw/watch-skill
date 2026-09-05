@@ -46,6 +46,36 @@ Compare shows two records **from the conversation you are in**, brought in by
 selecting Watch tool rows. A fresh session has nothing to compare and says so
 rather than reaching across sessions for a pair that was never asked for.
 
+## Execution receipts live as long as the Host does
+
+The Library holds two kinds of thing and they have different lifetimes, which
+is worth knowing before you rely on either.
+
+**Indexed sources persist.** A video, its frames, its transcript and its
+evidence are Watch Core's, they are on disk in the data directory, and a
+`Refresh` re-reads them. Stopping and restarting DeepWatch does not lose them.
+
+**Execution receipts do not.** The receipt for each tool call — what ran, what
+it touched, whether it was allowed and how it ended — is indexed live by the
+Host as the call settles. It is not written to the data directory, so when the
+Host process stops, those rows are gone. Measured rather than inferred: a room
+holding thirteen receipts was restarted, and afterwards the Library returned
+one, the receipt created after the restart. `Refresh` does not bring them back;
+it reports `sourceCount: 0` and re-indexes only what is on disk.
+
+What this means in practice:
+
+- receipts are for looking at the work as it happens and just after, not for
+  an audit trail across restarts;
+- the durable record of a *verification* is the verification record itself, in
+  `verifications/` under the data directory, readable with
+  `watch-skill verify show` and `watch-skill verify list`, and that does
+  survive a restart;
+- if you need a receipt kept, export the session log before stopping the Host.
+
+`Refresh` itself works and reports what it did: it advances the index
+generation, counts the sources and records it found, and ends in `ready`.
+
 ## A receipt does not carry the verdict Core returned for it
 
 **This is a defect, found by running the release against a real provider, and it
