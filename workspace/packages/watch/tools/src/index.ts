@@ -42,6 +42,18 @@ export type { BrowserConfig } from './browser.js'
 export type { SensoryConfig } from './sensory.js'
 
 export const name = 'watch-tools'
+/**
+ * How many receipts stay joinable to a late verdict.
+ *
+ * Matched to the ledger's own limit in `@deepwatch/dsh-technology`: an
+ * attestation is about a call from seconds ago, so an entry the ledger has
+ * already evicted has nothing left to join to. Three maps are bounded by it —
+ * what was indexed, what verdict was applied, and what verdict is waiting for
+ * a receipt — because each is keyed by something a session can produce without
+ * limit.
+ */
+const RECEIPT_LIMIT = 500
+
 export const inject = ['tools', 'watchCore', 'systemPrompt', 'llm', 'watchProvenance']
 
 /** Deployment policy for the Watch tool surface. */
@@ -378,6 +390,73 @@ export function apply(ctx: Context, config: Config): void {
     tags: readonly string[]
   }>()
 
+  /** The verdict already applied to a record, so a repeat is not a rewrite. */
+  const applied = new Map<string, string>()
+
+  /**
+   * Verdicts that arrived before the receipt they belong to.
+   *
+   * `settle()` announces a receipt before `attest()` is started, so in the
+   * ordinary case the receipt is here first. That is not a guarantee: the two
+   * listeners are on a fork that receives events on its own schedule, a
+   * reconciled record can be re-announced, and an attestation for a call this
+   * instance never saw is a real possibility after a reload. Dropping Core's
+   * answer in any of those cases is the wrong trade -- it is the one piece of
+   * information in the exchange that nothing else can reproduce, and losing it
+   * is what left every row in a real room reading `verdict: null`.
+   *
+   * So an early verdict waits. Bounded by the same reasoning as the ledger it
+   * mirrors: an attestation belongs to a call from seconds ago, and an entry
+   * older than the ledger's own limit has nothing left to join to.
+   */
+  const pending = new Map<string, { verdict: string, verificationId: string | null }>()
+
+  /** Keep the newest `limit` entries of an insertion-ordered map. */
+  const bound = (map: Map<string, unknown>, limit: number): void => {
+    while (map.size > limit) {
+      const oldest = map.keys().next()
+      if (oldest.done === true) return
+      map.delete(oldest.value)
+    }
+  }
+
+  /**
+   * Put Core's verdict on the record it names, once.
+   *
+   * Re-indexing under the same `recordId` replaces the row and moves the
+   * `revisionId`, so a reader can tell the answered record from the one filed
+   * before Core replied. Doing it twice with the same verdict would file the
+   * same revision again, so it is done once: repeat delivery of an attestation
+   * is normal and must not look like a second answer.
+   *
+   * @returns true when a revision was filed.
+   */
+  const joinVerdict = (
+    recordId: string, verdict: string, verificationId: string | null,
+  ): boolean => {
+    const base = indexed.get(recordId)
+    if (base === undefined) return false
+    if (applied.get(recordId) === verdict) return false
+    applied.set(recordId, verdict)
+    bound(applied, RECEIPT_LIMIT)
+    generations.addLive({
+      recordId,
+      revisionId: `${recordId}#verdict`,
+      title: base.title,
+      // The verdict joins the searchable text so the Library's own filter and
+      // a person typing "VERIFIED" find the same rows.
+      text: `${base.text} ${verdict}`,
+      kind: 'document',
+      source: null,
+      runId: base.runId,
+      observedAt: base.observedAt,
+      verdict,
+      tags: [...base.tags, `verdict:${verdict}`],
+      evidenceIds: verificationId === null ? [] : [verificationId],
+    })
+    return true
+  }
+
   ;(ctx as unknown as { on(name: string, listener: (payload: unknown) => void): void })
     .on('watch/execution-recorded', (payload) => {
       const record = payload as {
@@ -441,6 +520,13 @@ export function apply(ctx: Context, config: Config): void {
           ...typeof record.state === 'string' ? [`state:${record.state}`] : [],
         ],
       })
+      bound(indexed, RECEIPT_LIMIT)
+
+      // A verdict that got here first has been waiting for this receipt.
+      const early = pending.get(recordId)
+      if (early !== undefined && joinVerdict(recordId, early.verdict, early.verificationId)) {
+        pending.delete(recordId)
+      }
     })
 
   /**
@@ -471,26 +557,20 @@ export function apply(ctx: Context, config: Config): void {
         ? attestation.idempotencyKey
         : null
       const verdict = typeof attestation.coreVerdict === 'string' ? attestation.coreVerdict : null
+      // No verdict is not a verdict. `requested_but_not_run` and `unavailable`
+      // are real states, and writing one of them as a pass would be the Host
+      // deciding an answer only Core may give (ADR-002).
       if (recordId === null || verdict === null) return
-      const base = indexed.get(recordId)
-      if (base === undefined) return
-      generations.addLive({
-        recordId,
-        revisionId: `${recordId}#verdict`,
-        title: base.title,
-        kind: 'document',
-        // The verdict joins the searchable text so the Library's own filter and
-        // a person typing "VERIFIED" find the same rows.
-        text: `${base.text} ${verdict}`,
-        source: null,
-        runId: base.runId,
-        observedAt: base.observedAt,
-        verdict,
-        tags: [...base.tags, `verdict:${verdict}`],
-        evidenceIds: typeof attestation.verificationId === 'string'
-          ? [attestation.verificationId]
-          : [],
-      })
+      const verificationId = typeof attestation.verificationId === 'string'
+        ? attestation.verificationId
+        : null
+      if (joinVerdict(recordId, verdict, verificationId)) return
+      // The receipt is not here yet, or this exact verdict is already on it.
+      // Only the first of those is worth holding.
+      if (!indexed.has(recordId)) {
+        pending.set(recordId, { verdict, verificationId })
+        bound(pending, RECEIPT_LIMIT)
+      }
     })
 
   ctx.tools.register(defineTool({
