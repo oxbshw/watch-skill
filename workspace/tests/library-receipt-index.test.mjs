@@ -190,3 +190,68 @@ describe('refresh converges rather than racing', () => {
     assert.equal(outcome.index.recordCount, 0)
   })
 })
+
+
+
+describe('a verdict reaches the receipt it belongs to', () => {
+  /**
+   * The receipt listener says a verdict "arrives, if it arrives, as an
+   * attestation". It did arrive — `watch/attestation-recorded` carries Core's
+   * verdict under the same idempotency key — and nothing was listening, so
+   * every row in the Library read `verdict: null`. The Library's own
+   * VERIFIED/FAILED filter could match nothing, and Compare, which ranks
+   * verdict-bearing records first, had none to rank.
+   */
+  const receipt = (over = {}) => ({
+    recordId: 'call-1', revisionId: 'call-1', title: 'watch_verify', kind: 'document',
+    text: 'watch_verify', source: null, runId: 'session-1',
+    observedAt: '2026-09-05T00:00:00Z', verdict: null,
+    tags: ['execution-receipt', 'tool:watch_verify'], evidenceIds: [], ...over,
+  })
+
+  test('a receipt filed before Core answers matches no verification filter', () => {
+    const generations = new LibraryGenerations({
+      roots: [emptyRoot()], index: () => new LibraryIndex() })
+    generations.addLive(receipt())
+    assert.equal(generations.index().search({ text: '', verdicts: ['VERIFIED'] }).total, 0)
+    assert.equal(generations.index().search({ text: 'watch_verify' }).total, 1)
+  })
+
+  test('the verdict revision makes the same receipt findable as VERIFIED', () => {
+    const generations = new LibraryGenerations({
+      roots: [emptyRoot()], index: () => new LibraryIndex() })
+    generations.addLive(receipt())
+    generations.addLive(receipt({
+      revisionId: 'call-1#verdict',
+      text: 'watch_verify VERIFIED',
+      verdict: 'VERIFIED',
+      tags: ['execution-receipt', 'tool:watch_verify', 'verdict:VERIFIED'],
+    }))
+    // One record, not two: a verdict is a revision of the receipt, never a
+    // second receipt beside it.
+    assert.equal(generations.liveCount(), 1)
+    assert.equal(generations.index().search({ text: '', verdicts: ['VERIFIED'] }).total, 1)
+    assert.equal(generations.index().search({ text: '', verdicts: ['FAILED'] }).total, 0)
+  })
+
+  test('two receipts with different verdicts are both findable', () => {
+    // What Compare needs: two comparable records that actually differ.
+    const generations = new LibraryGenerations({
+      roots: [emptyRoot()], index: () => new LibraryIndex() })
+    generations.addLive(receipt({
+      recordId: 'call-1', revisionId: 'call-1#verdict',
+      text: 'watch_verify VERIFIED', verdict: 'VERIFIED',
+      tags: ['execution-receipt', 'verdict:VERIFIED'],
+    }))
+    generations.addLive(receipt({
+      recordId: 'call-2', revisionId: 'call-2#verdict',
+      text: 'watch_verify FAILED', verdict: 'FAILED',
+      tags: ['execution-receipt', 'verdict:FAILED'],
+    }))
+    assert.equal(generations.liveCount(), 2)
+    assert.equal(generations.index().search({ text: '', verdicts: ['VERIFIED'] }).total, 1)
+    assert.equal(generations.index().search({ text: '', verdicts: ['FAILED'] }).total, 1)
+    // And an empty query — the one Compare asks — returns both.
+    assert.equal(generations.index().search({ text: '' }).total, 2)
+  })
+})

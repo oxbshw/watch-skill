@@ -392,6 +392,8 @@ signed distribution.
 | [docs/running-the-apps.md](docs/running-the-apps.md) | Web and Desktop, day to day |
 | [docs/releasing.md](docs/releasing.md) | the two trains, dist-tags and recovery |
 | [docs/provider-handoff.md](docs/provider-handoff.md) | where the provider boundary sits |
+| [docs/known-limitations.md](docs/known-limitations.md) | what this release does not do, and why |
+| [docs/screenshots-release.md](docs/screenshots-release.md) | the release screenshots, what each shows, and what none of them show |
 | [docs/platform-support.md](docs/platform-support.md) | what was run where |
 | [docs/upstream-hero-extension-request.md](docs/upstream-hero-extension-request.md) | the one remaining upstream visual seam |
 | [docs/signing.md](docs/signing.md) | what a signed release still needs |

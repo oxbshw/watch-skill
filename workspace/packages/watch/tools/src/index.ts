@@ -363,6 +363,21 @@ export function apply(ctx: Context, config: Config): void {
    * `verdict` is deliberately null. A receipt is what happened; whether it was
    * right is Core's answer and arrives, if it arrives, as an attestation.
    */
+  /**
+   * What each receipt was indexed as, so a later verdict can be joined to it.
+   *
+   * Bounded by the same reasoning as the ledger it mirrors: an attestation
+   * arrives seconds after its receipt or not at all, so an entry older than the
+   * ledger's own limit has nothing left to join to.
+   */
+  const indexed = new Map<string, {
+    title: string
+    text: string
+    runId: string | null
+    observedAt: string | null
+    tags: readonly string[]
+  }>()
+
   ;(ctx as unknown as { on(name: string, listener: (payload: unknown) => void): void })
     .on('watch/execution-recorded', (payload) => {
       const record = payload as {
@@ -407,6 +422,74 @@ export function apply(ctx: Context, config: Config): void {
           ...typeof record.state === 'string' ? [`state:${record.state}`] : [],
         ],
         evidenceIds: [],
+      })
+      indexed.set(recordId, {
+        title: paths.length === 0 ? tool : `${tool} — ${paths.join(', ')}`,
+        text: [
+          tool,
+          typeof record.inputSummary === 'string' ? record.inputSummary : '',
+          typeof record.outputSummary === 'string' ? record.outputSummary : '',
+          ...paths,
+        ].join(' '),
+        runId: typeof record.sessionId === 'string' ? record.sessionId : null,
+        observedAt: typeof record.startedAt === 'string' ? record.startedAt : null,
+        tags: [
+          'execution-receipt',
+          `tool:${tool}`,
+          ...typeof record.sideEffect === 'string' ? [`effect:${record.sideEffect}`] : [],
+          ...typeof record.scope === 'string' ? [`scope:${record.scope}`] : [],
+          ...typeof record.state === 'string' ? [`state:${record.state}`] : [],
+        ],
+      })
+    })
+
+  /**
+   * Put Core's verdict on the receipt it belongs to.
+   *
+   * The comment above says a receipt's verdict "arrives, if it arrives, as an
+   * attestation". It did arrive — `watch/attestation-recorded` carries Core's
+   * verdict, keyed by the same idempotency key the receipt was indexed under —
+   * and nothing was listening, so every record in the Library carried
+   * `verdict: null` for the whole life of the feature. The Library's own
+   * VERIFIED/FAILED filter could match nothing, and Compare, which ranks
+   * verdict-bearing records first, had none to rank.
+   *
+   * Re-indexing under the same `recordId` replaces the row; the `revisionId`
+   * moves so a reader can tell the answered record from the one that was filed
+   * before Core replied. A verdict is only ever written when Core returned one:
+   * a null stays null, because the absence of a verdict is the thing the
+   * product exists to keep distinguishable from a pass.
+   */
+  ;(ctx as unknown as { on(name: string, listener: (payload: unknown) => void): void })
+    .on('watch/attestation-recorded', (payload) => {
+      const attestation = payload as {
+        idempotencyKey?: unknown
+        coreVerdict?: unknown
+        verificationId?: unknown
+      }
+      const recordId = typeof attestation.idempotencyKey === 'string'
+        ? attestation.idempotencyKey
+        : null
+      const verdict = typeof attestation.coreVerdict === 'string' ? attestation.coreVerdict : null
+      if (recordId === null || verdict === null) return
+      const base = indexed.get(recordId)
+      if (base === undefined) return
+      generations.addLive({
+        recordId,
+        revisionId: `${recordId}#verdict`,
+        title: base.title,
+        kind: 'document',
+        // The verdict joins the searchable text so the Library's own filter and
+        // a person typing "VERIFIED" find the same rows.
+        text: `${base.text} ${verdict}`,
+        source: null,
+        runId: base.runId,
+        observedAt: base.observedAt,
+        verdict,
+        tags: [...base.tags, `verdict:${verdict}`],
+        evidenceIds: typeof attestation.verificationId === 'string'
+          ? [attestation.verificationId]
+          : [],
       })
     })
 

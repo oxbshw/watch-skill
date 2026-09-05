@@ -98,8 +98,20 @@ export function CompareModeView(
     if (reads === undefined) return undefined
     const abort = new AbortController()
     void (async () => {
+      // An empty query, which the read plane answers with everything it holds.
+      // This asked for `'verification'` and got nothing back for the whole life
+      // of the feature: the Library indexes a receipt under its tool name and
+      // its paths, so `watch_verify` and `write — owner-test/totals.json` are
+      // what is searchable, and the one word this looked for appears in
+      // neither. Compare drew its empty state after a real verification had
+      // just run — the exact failure its registration comment warns about,
+      // arriving through the query instead of through the mounting.
+      //
+      // `comparableRecords` is the filter that matters, and it already ranks
+      // verdict-bearing records first; narrowing here only ever hid rows from
+      // it.
       const answer = await reads.librarySearch({
-        protocol: 1, requestId: `compare-${String(Date.now())}`, query: 'verification',
+        protocol: 1, requestId: `compare-${String(Date.now())}`, query: '',
         modalities: [], limit: 100, cursor: null, deadlineMs: 30_000,
       }, abort.signal)
       if (abort.signal.aborted) return
