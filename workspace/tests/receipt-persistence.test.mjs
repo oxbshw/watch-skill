@@ -28,8 +28,8 @@
 import { test, describe, after } from 'node:test'
 import assert from 'node:assert/strict'
 import {
-  appendFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync,
-  writeFileSync,
+  appendFileSync, chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync,
+  statSync, writeFileSync,
 } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
@@ -425,7 +425,49 @@ describe('a store that is not working says so', () => {
         'the journal was not created under the profile directory')
     } else {
       assert.equal(mode, 0o600, `expected owner-only, got ${mode.toString(8)}`)
-      assert.equal(statSync(receipts).mode & 0o777, 0o700)
+      assert.equal(statSync(receipts).mode & 0o777, 0o700,
+        'the directory holding the receipts is listable by other accounts')
     }
+  })
+
+  test('a directory that was already there is narrowed too', async (t) => {
+    // The case that got through: the store only narrowed a directory it had
+    // created itself, and the ordinary case is the other one -- `.watch`
+    // already exists, the profile was copied, an unpack made the parent. On a
+    // POSIX box the receipts then sat at whatever the umask allowed, and the
+    // file's own 0o600 does not close a directory anybody can list. Invisible
+    // on Windows, where the mode decides nothing; a hosted runner is what
+    // reported it.
+    if (process.platform === 'win32') {
+      t.skip('POSIX modes do not decide access on Windows')
+      return
+    }
+    const receipts = room()
+    chmodSync(receipts, 0o777)
+
+    const ctx = await boot(receipts)
+    ctx.emit('watch/execution-recorded', receiptEvent())
+    await settle()
+
+    assert.equal(statSync(receipts).mode & 0o777, 0o700,
+      'a pre-existing receipts directory kept its wide permissions')
+  })
+
+  test('a journal left wide by an earlier build is narrowed at open', async () => {
+    if (process.platform === 'win32') return
+    const { ReceiptJournal } = await import(
+      pathToFileURL(join(ROOT, 'packages', 'watch', 'tools', 'lib', 'receipt-journal.js')).href)
+    const receipts = room()
+    const journal = new ReceiptJournal(receipts)
+    journal.append({
+      recordId: 'r1', revisionId: 'r1', title: 't', text: 't',
+      kind: 'document', source: null, runId: null, observedAt: null,
+      verdict: null, tags: [], evidenceIds: [],
+    })
+    chmodSync(journal.path, 0o644)
+
+    new ReceiptJournal(receipts).load()
+    assert.equal(statSync(journal.path).mode & 0o777, 0o600,
+      'an existing journal kept the permissions it was found with')
   })
 })

@@ -130,11 +130,16 @@ export class ReceiptJournal {
    */
   append(record: IndexableRecord): boolean {
     try {
+      // Unconditionally, the way the memory store beside it does. Guarding
+      // this on `existsSync` narrowed only a directory this class created,
+      // and the ordinary case is the other one: `.watch` already exists, or
+      // the profile was copied, or a `mkdir -p` made the parent first. A
+      // POSIX box then kept the receipts at whatever the umask allowed --
+      // 0o755 on the hosted runner that caught this -- and the file's own
+      // 0o600 does not close a directory anybody can list.
       const directory = dirname(this.#path)
-      if (!existsSync(directory)) {
-        mkdirSync(directory, { recursive: true, mode: OWNER_ONLY_DIRECTORY })
-        restrict(directory, OWNER_ONLY_DIRECTORY)
-      }
+      mkdirSync(directory, { recursive: true, mode: OWNER_ONLY_DIRECTORY })
+      restrict(directory, OWNER_ONLY_DIRECTORY)
       const fresh = !existsSync(this.#path)
       // One write of one complete line. The failure this survives is the
       // process dying mid-append, which leaves a partial last line — repaired
@@ -216,6 +221,10 @@ export class ReceiptJournal {
     if (!existsSync(this.#path)) {
       return { records: [], damaged: 0, lines: 0, status: 'absent', repairedBytes: 0, reason: null }
     }
+    // An existing journal is narrowed at open for the same reason: this may
+    // be the first time this build has seen a store an earlier one, a backup
+    // or an unpack left behind.
+    restrict(this.#path, OWNER_ONLY_FILE)
     // Before anything is read back, make the file safe to append to again.
     const repairedBytes = this.#repairTail()
     let text: string
