@@ -159,6 +159,15 @@
       config:
         queryTimeoutMs: 120000
         verifyTimeoutMs: 60000
+        # Where execution receipts are journalled, beside the memory store and
+        # for the same reason: a record the Host makes about your workspace
+        # belongs in your profile, not in a process that is about to exit.
+        #
+        # Without it receipts are live-only. A room holding thirteen of them
+        # was restarted and the Library afterwards returned one — the receipt
+        # made after the restart — and Refresh could not bring the rest back,
+        # because Refresh re-reads what is on disk and they never were.
+        receiptsDirectory: .watch/receipts
 
     # The browser half. These are `dsh.client` rows, so the modules package
     # scans them into the boot graph and serves their bundles under /plugins.

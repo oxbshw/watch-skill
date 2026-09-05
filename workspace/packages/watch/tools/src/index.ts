@@ -25,6 +25,7 @@ import { defineTool } from '@deepseek-ai/dsh-tools'
 import { applyLibrarySearch } from './library-search.js'
 import { applyReadPlane } from './read-plane.js'
 import { LibraryGenerations } from './library-generations.js'
+import { ReceiptJournal } from './receipt-journal.js'
 import type { GenericCallView, JsonValue } from '@deepseek-ai/dsh-tools'
 import type {} from '@deepseek-ai/dsh-system-prompt'
 import type {} from '@deepwatch/dsh-core-bridge'
@@ -36,6 +37,8 @@ import { BROWSER_GUIDANCE, applyBrowserTools } from './browser.js'
 export { SENSORY_GUIDANCE, applySensoryTools } from './sensory.js'
 export { applyMemory } from './memory.js'
 export { LibraryGenerations } from './library-generations.js'
+export { ReceiptJournal } from './receipt-journal.js'
+export type { JournalLoad } from './receipt-journal.js'
 export type { IndexGeneration, RefreshOutcome } from './library-generations.js'
 export { BROWSER_GUIDANCE, applyBrowserTools } from './browser.js'
 export type { BrowserConfig } from './browser.js'
@@ -85,6 +88,16 @@ export interface Config {
    * replayed against another workspace's snapshot.
    */
   readonly workspaceScope?: string
+  /**
+   * Where execution receipts are journalled, so they survive a restart.
+   *
+   * Relative paths resolve against the profile's working directory, as the
+   * memory store's `directory` does. Unset means no journal: receipts are
+   * still indexed live, and are still lost when the Host stops — which is what
+   * every deployment did before this existed, and is the honest behaviour for
+   * one that has not asked for a durable record.
+   */
+  readonly receiptsDirectory?: string
 }
 
 /** Schemastery validation for the tool-surface policy. */
@@ -348,6 +361,45 @@ export function apply(ctx: Context, config: Config): void {
   const generations = new LibraryGenerations({ roots })
   const library = applyLibrarySearch(ctx, { roots, generations })
 
+  /**
+   * The durable half of the Library.
+   *
+   * Indexed sources are Core's and are on disk already. Receipts were not, so
+   * a restart lost them and `Refresh` could not bring them back. The journal
+   * is this plugin's own: a receipt is the Host's observation of its own tool
+   * calls, and sending it across the Bridge to be stored would put Core's name
+   * on a record it did not make.
+   */
+  const journal = config.receiptsDirectory === undefined
+    ? null
+    : new ReceiptJournal(config.receiptsDirectory)
+
+  /** File a record in the Library and, if there is one, in the journal. */
+  const file = (record: Parameters<typeof generations.addLive>[0]): void => {
+    generations.addLive(record)
+    journal?.append(record)
+  }
+
+  // Restore what a previous run recorded, before anything new is filed.
+  //
+  // Through the same `addLive` the live path uses, so a restored receipt is
+  // indistinguishable from one minted a moment ago -- which is the property
+  // that makes a restart invisible to a reader. Not re-journalled: it is
+  // already in the file it came from, and appending it again would grow the
+  // journal by its own contents on every boot.
+  if (journal !== null) {
+    const restored = journal.load()
+    for (const record of restored.records) generations.addLive(record)
+    if (restored.damaged > 0) {
+      // Said out loud rather than swallowed. A torn last line is the ordinary
+      // consequence of a process dying mid-append and costs one record; a
+      // larger count is a corrupted file and somebody should know.
+      process.stderr.write(
+        `watch-tools: ${String(restored.damaged)} of ${String(restored.lines)} `
+        + `journal line(s) could not be read and were skipped (${journal.path})\n`)
+    }
+  }
+
   // The same index, reachable by the surfaces as well as by the agent. A
   // `conversation.view` entry is handed `{ inspect, onInspectDone }` and
   // nothing else, so without this the Library mode has no way to obtain the
@@ -439,7 +491,7 @@ export function apply(ctx: Context, config: Config): void {
     if (applied.get(recordId) === verdict) return false
     applied.set(recordId, verdict)
     bound(applied, RECEIPT_LIMIT)
-    generations.addLive({
+    file({
       recordId,
       revisionId: `${recordId}#verdict`,
       title: base.title,
@@ -476,7 +528,7 @@ export function apply(ctx: Context, config: Config): void {
       const tool = typeof record.toolName === 'string' ? record.toolName : 'tool'
       const paths = Array.isArray(record.paths) ? record.paths.filter(
         (entry): entry is string => typeof entry === 'string') : []
-      generations.addLive({
+      file({
         recordId,
         revisionId: recordId,
         title: paths.length === 0 ? tool : `${tool} — ${paths.join(', ')}`,
