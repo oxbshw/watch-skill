@@ -32,6 +32,7 @@
 import { createHash } from 'node:crypto'
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs'
 import { join } from 'node:path'
+import { pathToFileURL } from 'node:url'
 
 import { artifactDigests, sourceIdentity } from './gen-provenance-manifest.mjs'
 
@@ -248,6 +249,10 @@ function main(argv) {
   return 1
 }
 
-if (process.argv[1] !== undefined && import.meta.url === `file://${process.argv[1].replace(/\\/g, '/')}`) {
+// `pathToFileURL` rather than a hand-built `file://` string: on Windows the
+// real URL is `file:///D:/…` and a two-slash spelling never matches, so the
+// hand-built comparison silently declined to run and the command exited 0
+// having done nothing. A gate that quietly does nothing is worse than no gate.
+if (process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href) {
   process.exitCode = main(process.argv.slice(2))
 }

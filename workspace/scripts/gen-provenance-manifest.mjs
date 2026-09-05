@@ -43,8 +43,8 @@
 import { createHash } from 'node:crypto'
 import { execFileSync } from 'node:child_process'
 import { existsSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs'
-import { dirname, join, basename } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { dirname, join, basename, resolve } from 'node:path'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const REPO = join(ROOT, '..')
@@ -135,7 +135,11 @@ export function artifactDigests(dir) {
  * that had been renamed.
  */
 function packedIdentity(path) {
-  const out = capture('tar', ['-xzOf', path, 'package/package.json'], dirname(path))
+  // Resolved, and read from the process cwd rather than the tarball's own
+  // directory: passing a path relative to the directory it already names sent
+  // tar looking for `.release-artifacts/.release-artifacts/…`, and every
+  // lookup failed quietly enough to leave the names simply absent.
+  const out = capture('tar', ['-xzOf', resolve(path), 'package/package.json'], process.cwd())
   if (out === null) return null
   try {
     const manifest = JSON.parse(out)
@@ -223,6 +227,10 @@ function main(argv) {
   return 0
 }
 
-if (process.argv[1] !== undefined && import.meta.url === `file://${process.argv[1].replace(/\\/g, '/')}`) {
+// `pathToFileURL` rather than a hand-built `file://` string: on Windows the
+// real URL is `file:///D:/…` and a two-slash spelling never matches, so the
+// hand-built comparison silently declined to run and the command exited 0
+// having done nothing. A gate that quietly does nothing is worse than no gate.
+if (process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href) {
   process.exitCode = main(process.argv.slice(2))
 }
