@@ -216,7 +216,7 @@ let schema = null
 {
   const probe = await startOpenRouterStub({})
   try {
-    const route = await proveLoopbackRoute({ rpc, stub: probe, apiKey: STUB_API_KEY })
+    const route = await proveLoopbackRoute({ rpc, stub: probe, apiKey: STUB_API_KEY, home: HOME })
     claim('SC-00 the loopback route proves', route.ok,
       { attempts: route.attempts.length, diagnosis: route.diagnosis })
     if (route.ok) {
@@ -281,7 +281,7 @@ for (const entry of plan) {
   let sessionId = null
   let receipts = []
   try {
-    const route = await proveLoopbackRoute({ rpc, stub, apiKey: STUB_API_KEY })
+    const route = await proveLoopbackRoute({ rpc, stub, apiKey: STUB_API_KEY, home: HOME })
     if (!route.ok) {
       claim(`${entry.id} — route`, false, { diagnosis: route.diagnosis })
       continue

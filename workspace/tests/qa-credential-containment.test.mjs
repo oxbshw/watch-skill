@@ -40,8 +40,11 @@ import { fileURLToPath } from 'node:url'
 const WORKSPACE = join(dirname(fileURLToPath(import.meta.url)), '..')
 const SCRIPT = join(WORKSPACE, 'scripts', 'qa-e2e-run.mjs')
 
-const { assertTaskOwnedStore, resolveCredentialStores, isInside } = await import(
+const { assertTaskOwnedStore, resolveCredentialStores, isInside, locate } = await import(
   new URL('../scripts/lib/qa-credential-store.mjs', import.meta.url).href)
+
+const { proveLoopbackRoute } = await import(
+  new URL('../scripts/lib/loopback-route.mjs', import.meta.url).href)
 
 /**
  * A credentials document in the shape the local provider writes.
@@ -215,6 +218,104 @@ describe('a QA run cannot touch a credential store it does not own', () => {
       const output = `${run.stdout ?? ''}${run.stderr ?? ''}`
       assert.doesNotMatch(output, /^stub: /m, `a provider stub was started:\n${output}`)
       assert.doesNotMatch(output, /^reset: /m, `the profile was reset:\n${output}`)
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+})
+describe('the other thing that writes a credential is guarded too', () => {
+  // `qa-e2e-run.mjs` was not the only writer. `proveLoopbackRoute` calls
+  // `credentials.set`, and every packed gate in this repository starts by
+  // calling it -- so a gate pointed at a room that references somebody's
+  // document would store `STUB_LOCAL_API_KEY` in it. A different name and the
+  // same mechanism as the entry that started all of this.
+
+  test('it refuses to run without being told which room it may write in', async () => {
+    let called = false
+    await assert.rejects(
+      () => proveLoopbackRoute({
+        rpc: () => { called = true; return { result: { ok: true } } },
+        stub: { baseURL: 'http://127.0.0.1:1', requests: [] },
+        apiKey: 'synthetic',
+      }),
+      /`home` is required/)
+    assert.equal(called, false, 'nothing may be sent before the room is known')
+  })
+
+  test('it refuses a room that references a store outside itself', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'route-foreign-'))
+    try {
+      const ownerHome = join(root, 'owner', 'dsh-home')
+      mkdirSync(ownerHome, { recursive: true })
+      const ownerStore = join(ownerHome, '.credentials.yaml')
+      writeFileSync(ownerStore, SYNTHETIC_OWNER_DOCUMENT, 'utf8')
+      const before = fingerprint(ownerStore)
+      const home = buildRoom(join(root, 'room'), { storePath: ownerStore })
+
+      let called = false
+      await assert.rejects(
+        () => proveLoopbackRoute({
+          rpc: () => { called = true; return { result: { ok: true } } },
+          stub: { baseURL: 'http://127.0.0.1:1', requests: [] },
+          apiKey: 'synthetic',
+          home,
+        }),
+        /credential document outside itself/)
+      assert.equal(called, false, 'the credential must not be sent')
+      assert.deepEqual(fingerprint(ownerStore), before)
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
+  test('a room that owns its store is allowed through to the RPC', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'route-own-'))
+    try {
+      const home = buildRoom(root)
+      const sent = []
+      const result = await proveLoopbackRoute({
+        rpc: (method) => {
+          sent.push(method)
+          // Fail the settings write so the function returns early rather than
+          // running its six-attempt probe against a stub that is not there.
+          return { result: { ok: false, error: 'stopped by the test' } }
+        },
+        stub: { baseURL: 'http://127.0.0.1:1', requests: [] },
+        apiKey: 'synthetic',
+        home,
+      })
+      assert.equal(result.ok, false)
+      assert.deepEqual(sent, ['credentials.set', 'settings.replace'])
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+})
+
+describe('`--home` means two things in this repository, and both resolve', () => {
+  test('a room directory that holds dsh-home', () => {
+    const root = mkdtempSync(join(tmpdir(), 'locate-room-'))
+    try {
+      const home = buildRoom(root)
+      const found = locate(home)
+      assert.equal(found.room, home)
+      assert.equal(found.dshHome, join(home, 'dsh-home'))
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
+  test('a harness home that holds profiles', () => {
+    const root = mkdtempSync(join(tmpdir(), 'locate-dsh-'))
+    try {
+      const home = buildRoom(root)
+      const dshHome = join(home, 'dsh-home')
+      const found = locate(dshHome)
+      assert.equal(found.dshHome, dshHome)
+      assert.equal(found.room, home, 'the room is the parent, not the harness home')
+      // And the store it protects is the same one either way.
+      assert.equal(assertTaskOwnedStore({ home: dshHome, env: {} }).store,
+        assertTaskOwnedStore({ home, env: {} }).store)
     } finally {
       rmSync(root, { recursive: true, force: true })
     }

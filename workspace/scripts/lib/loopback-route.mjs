@@ -17,7 +17,15 @@
  *   - **Applying settings is not instantaneous.** The proof is retried on a
  *     bounded schedule instead of raced once, and every attempt is recorded, so
  *     a flaky route is visible as a flaky route rather than as a pass.
+ *
+ * This function stores a credential, so it also takes the room it is allowed to
+ * store one in. That is not ceremony: the store a profile writes to is
+ * configurable, a room can be pointed at a document that already exists, and a
+ * synthetic gate that wrote into a person's real credential store is the reason
+ * `scripts/lib/qa-credential-store.mjs` exists.
  */
+
+import { assertTaskOwnedStore } from './qa-credential-store.mjs'
 
 const PROVIDER = 'stub-local'
 const MODEL = 'stub/echo-small'
@@ -36,8 +44,21 @@ export const ROUTE = { provider: PROVIDER, model: MODEL, credentialRef: CREDENTI
  * reading a failed CI job, and names the next thing to look at rather than
  * restating that something went wrong.
  */
-export async function proveLoopbackRoute({ rpc, stub, apiKey }) {
+export async function proveLoopbackRoute({ rpc, stub, apiKey, home }) {
   const attempts = []
+
+  // `credentials.set` writes. Which document it writes to is decided by the
+  // profile, and a profile can be pointed at one that already exists -- which
+  // is how a synthetic pass once added an entry to a person's real credential
+  // store. So the room is checked before the write, not after, and a gate that
+  // does not say which room it is running in does not get to write at all.
+  if (home === undefined || home === null || String(home).trim() === '') {
+    throw new Error(
+      'proveLoopbackRoute: `home` is required. This function stores a '
+      + 'credential, and the room it belongs to has to be named so the store '
+      + 'can be checked against it. See scripts/lib/qa-credential-store.mjs.')
+  }
+  assertTaskOwnedStore({ home })
 
   const stored = await rpc('credentials.set', { ref: CREDENTIAL_REF, value: apiKey })
   const routed = await rpc('settings.replace', {

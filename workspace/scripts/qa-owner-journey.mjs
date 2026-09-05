@@ -126,7 +126,7 @@ process.stdout.write(`stub: ${stub.baseURL}\n`)
 let report = null
 try {
   // ── 2. configure, prove and bind the loopback route ─────────────────
-  const route = await proveLoopbackRoute({ rpc, stub, apiKey: STUB_API_KEY })
+  const route = await proveLoopbackRoute({ rpc, stub, apiKey: STUB_API_KEY, home: HOME })
   claim('OJ-01 the loopback route proves', route.ok,
     { attempts: route.attempts, diagnosis: route.diagnosis })
   if (!route.ok) console.error('qa-owner-journey:', route.diagnosis)

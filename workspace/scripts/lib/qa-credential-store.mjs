@@ -37,7 +37,7 @@
  */
 
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs'
-import { join, relative, resolve, sep } from 'node:path'
+import { dirname, join, relative, resolve, sep } from 'node:path'
 
 /** The document name `dsh-credentials-local` uses under a harness home. */
 export const CREDENTIALS_FILENAME = '.credentials.yaml'
@@ -60,6 +60,29 @@ export function isInside(root, candidate) {
   const step = relative(resolve(root), resolve(candidate))
   if (step === '') return true
   return !step.startsWith('..') && !step.startsWith(`..${sep}`) && !/^[A-Za-z]:/.test(step)
+}
+
+/**
+ * The harness home and the room that contains it, from whichever one was given.
+ *
+ * `--home` means two different things across this repository's gates.
+ * `qa-e2e-run.mjs` takes the room directory that *holds* `dsh-home`;
+ * `verify-agent-profile.mjs` takes the harness home itself, and joins
+ * `profiles/` onto it. Both are reasonable and neither is going to be
+ * renamed for this, so the shape is detected rather than assumed — a guard
+ * that silently resolved the wrong directory would report containment it had
+ * not checked, which is worse than not having the guard.
+ *
+ * @param home - a room directory or a harness home.
+ * @returns `{ room, dshHome }`, both absolute.
+ */
+export function locate(home) {
+  const given = resolve(home)
+  const nested = join(given, 'dsh-home')
+  if (existsSync(nested)) return { room: given, dshHome: nested }
+  if (existsSync(join(given, 'profiles'))) return { room: dirname(given), dshHome: given }
+  // Neither exists yet — a room being built. The documented layout wins.
+  return { room: given, dshHome: nested }
 }
 
 /** Every profile directory under a room's harness home, in listing order. */
@@ -156,8 +179,7 @@ function sweepCredentialLocations(text) {
  * @returns the effective store, the room default, and every referenced location.
  */
 export function resolveCredentialStores({ home, env = process.env }) {
-  const room = resolve(home)
-  const dshHome = join(room, 'dsh-home')
+  const { room, dshHome } = locate(home)
   const roomStore = join(dshHome, CREDENTIALS_FILENAME)
 
   const references = []
