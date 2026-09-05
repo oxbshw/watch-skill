@@ -13,13 +13,23 @@
  * @module @deepwatch/cli/launch
  */
 
-import { existsSync } from 'node:fs'
-import { join } from 'node:path'
+import { existsSync, realpathSync, statSync } from 'node:fs'
+import { isAbsolute, join, resolve } from 'node:path'
 
 import type { Invocation } from './args.js'
 import { ensureHarness } from './lib/harness.js'
 import { supervise } from './lib/exec.js'
 import { dshHome, profileName } from './lib/paths.js'
+
+/**
+ * The environment variable every layer reads the canonical workspace from.
+ *
+ * Mirrors `WORKSPACE_ENV` in `@deepwatch/dsh-contracts/workspace`. Restated
+ * rather than imported because the CLI's dependency closure is part of what
+ * ships: this module needs one string, not a package edge, and a test holds
+ * the pair together.
+ */
+export const WORKSPACE_ENV = 'DEEPWATCH_WORKSPACE'
 
 /** Refuse to start something that was never composed, and say what to run. */
 function profileMissing(env: NodeJS.ProcessEnv): string | null {
@@ -28,10 +38,91 @@ function profileMissing(env: NodeJS.ProcessEnv): string | null {
   return existsSync(manifest) ? null : profile
 }
 
+/** A canonical workspace root, or the reason there isn't one. */
+export type WorkspaceChoice =
+  | {
+    readonly ok: true
+    readonly root: string
+    readonly origin: 'flag' | 'environment' | 'invocation'
+  }
+  | { readonly ok: false, readonly detail: string }
+
+/**
+ * Decide the one directory this run works in.
+ *
+ * The Harness derives its session workspace from the directory the host
+ * process is invoked in, Watch Core inherits the cwd it is spawned with, and
+ * the verifier falls back to its own. Left alone those are three answers, and
+ * a real owner session wrote `owner-test/totals.json` into one of them and
+ * verified against another. So the workspace is decided here, once, and every
+ * layer below is *told* rather than left to derive.
+ *
+ * `realpathSync.native` is what makes the answer canonical rather than merely
+ * absolute: a junction on Windows and a symlink elsewhere are two spellings of
+ * one directory, and a containment check comparing an unresolved spelling
+ * against a resolved one reports a file outside a workspace it is plainly
+ * inside. Resolving once here means every consumer compares the same string.
+ *
+ * A missing directory is refused rather than created. Starting a workspace by
+ * inventing the directory it names is how a typo becomes an empty workspace
+ * that looks like it worked.
+ */
+export function chooseWorkspace(
+  invocation: Pick<Invocation, 'workspace'>, env: NodeJS.ProcessEnv, cwd: string,
+): WorkspaceChoice {
+  const named = invocation.workspace
+  const inherited = env[WORKSPACE_ENV]
+  const [candidate, origin] = named !== null && named !== ''
+    ? [named, 'flag' as const]
+    : typeof inherited === 'string' && inherited !== ''
+      ? [inherited, 'environment' as const]
+      : [cwd, 'invocation' as const]
+
+  // An inherited value is the one place a relative path is a configuration
+  // error rather than a convenience: it was written by whoever composed the
+  // environment, and resolving it against this process's cwd would reintroduce
+  // the ambiguity this function exists to remove.
+  if (origin === 'environment' && !isAbsolute(candidate)) {
+    return {
+      ok: false,
+      detail: `${WORKSPACE_ENV} is set to "${candidate}", which is not an absolute path`,
+    }
+  }
+
+  const absolute = resolve(cwd, candidate)
+  if (!existsSync(absolute)) return { ok: false, detail: `there is no directory at ${absolute}` }
+  if (!statSync(absolute).isDirectory()) {
+    return { ok: false, detail: `${absolute} is not a directory` }
+  }
+  return { ok: true, root: realpathSync.native(absolute), origin }
+}
+
+/** `deepwatch: …` with the fix under it, the way the rest of this CLI reports. */
+export function workspaceRefusal(detail: string): string {
+  return `deepwatch: ${detail}.\n`
+    + '           --workspace names the one directory DeepWatch works in: the\n'
+    + "           agent's files, the shell, Watch containment and the verifier\n"
+    + '           all resolve relative paths there. Pass a directory that\n'
+    + '           exists, or omit the flag to use the current one.\n'
+}
+
 /** `deepwatch web`. */
 export async function runWeb(invocation: Invocation): Promise<number> {
   const env = { ...process.env }
   if (invocation.profile !== null) env['DEEPWATCH_PROFILE'] = invocation.profile
+
+  // The invocation is checked before the machine is. A person who mistyped
+  // `--workspace` and has no profile yet should be told about the typo they can
+  // fix now, rather than sent to run `setup` and told about it afterwards.
+  //
+  // Fail closed on purpose: a run whose workspace cannot be established is the
+  // run that wrote a file nobody could verify. Refusing here costs a restart;
+  // not refusing cost an owner evaluation.
+  const workspace = chooseWorkspace(invocation, env, process.cwd())
+  if (!workspace.ok) {
+    process.stderr.write(workspaceRefusal(workspace.detail))
+    return 2
+  }
 
   const missing = profileMissing(env)
   if (missing !== null) {
@@ -59,10 +150,18 @@ export async function runWeb(invocation: Invocation): Promise<number> {
   }
 
   process.stdout.write(`Starting DeepWatch on ${host}. Press Ctrl-C to stop.\n`)
+  // The Harness takes its session workspace from the directory it is invoked
+  // in, so `cwd` here is not a detail of process spawning — it *is* the
+  // workspace the agent's tools will resolve against. Passing the same value
+  // in the environment is what lets Watch Core, containment and the verifier
+  // agree with it instead of each deriving a root of their own.
   return supervise(
     dsh.command,
     [...dsh.prefix, '--profile', profileName(env), '--no-open', '--host', host, '--port', port],
-    { env: { ...env, DSH_HOME: dshHome(env) } },
+    {
+      cwd: workspace.root,
+      env: { ...env, DSH_HOME: dshHome(env), [WORKSPACE_ENV]: workspace.root },
+    },
   )
 }
 
@@ -76,7 +175,6 @@ export async function runWeb(invocation: Invocation): Promise<number> {
  * fabricate an application.
  */
 export function runDesktop(invocation: Invocation): Promise<number> {
-  void invocation
   const binary = process.env['DEEPWATCH_DESKTOP_BIN']
   if (typeof binary !== 'string' || binary === '') {
     process.stderr.write(
@@ -88,6 +186,18 @@ export function runDesktop(invocation: Invocation): Promise<number> {
       + '           `deepwatch web` runs the same workspace in your browser now.\n')
     return Promise.resolve(2)
   }
+  // The desktop shell hosts the same Harness, so it needs the same one root.
+  // A workspace established for `web` and not for `desktop` would be the same
+  // defect with a different entry point.
+  const workspace = chooseWorkspace(invocation, process.env, process.cwd())
+  if (!workspace.ok) {
+    process.stderr.write(workspaceRefusal(workspace.detail))
+    return Promise.resolve(2)
+  }
+
   process.stdout.write('Starting the DeepWatch desktop app. Press Ctrl-C to stop.\n')
-  return supervise(binary, [], { env: { ...process.env, DSH_HOME: dshHome() } })
+  return supervise(binary, [], {
+    cwd: workspace.root,
+    env: { ...process.env, DSH_HOME: dshHome(), [WORKSPACE_ENV]: workspace.root },
+  })
 }

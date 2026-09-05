@@ -112,7 +112,16 @@ machine it is on.
 
 `--json` where a command has machine-readable output, `--yes` to agree to the
 download `setup` describes, `--offline` to refuse the network outright, and
-`--profile` and `--port` for `web`.
+`--profile`, `--port` and `--workspace` for `web`.
+
+`--workspace <dir>` names the one directory DeepWatch works in, and it is one
+directory on purpose. The agent's filesystem tools, the shell, Watch
+containment, the verifier, receipts and the Library all resolve a relative path
+like `owner-test/totals.json` against the same root, so a file the agent writes
+is a file the verifier can find. It defaults to the directory you run the
+command from; a directory that does not exist is refused rather than created,
+and a run that cannot establish a workspace stops with a named fix instead of
+guessing one.
 
 Two rules govern what may appear there. **Every command is backed by something
 real** — a subcommand that printed a plan, or that would work once something
@@ -193,6 +202,7 @@ platform installer rather than from npm.
 | `DEEPWATCH_HOME` | everything DeepWatch writes, so an uninstall is one directory |
 | `DEEPWATCH_PROFILE` | which profile to compose into (default `deepwatch`) |
 | `DEEPWATCH_HOST`, `--port` | where `deepwatch web` binds (loopback by default) |
+| `DEEPWATCH_WORKSPACE`, `--workspace` | the one directory tools, containment and the verifier share |
 | `DEEPWATCH_DSH_BIN` | an explicit Harness, overriding detection |
 | `DEEPWATCH_DESKTOP_BIN` | an installed desktop application to launch |
 | `DSH_HOME` | the Harness's own variable, passed through unchanged |

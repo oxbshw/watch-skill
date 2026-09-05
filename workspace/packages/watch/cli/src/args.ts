@@ -28,6 +28,10 @@ Options
                             packed-artifacts.json inventory are. \`setup\` needs
                             this until the packages are published; they are
                             never fetched from a registry.
+  --workspace <dir>         the directory DeepWatch works in. One canonical
+                            root for the agent's files, the shell, Watch
+                            containment and the verifier. Defaults to the
+                            directory you run the command from.
   --port <n>                port for \`web\` (default: an OS-chosen one)
   --version, -v
   --help, -h
@@ -52,6 +56,16 @@ export interface Invocation {
    * for a 404 and calling it a network problem.
    */
   readonly artifacts: string | null
+  /**
+   * The directory DeepWatch treats as the workspace.
+   *
+   * Explicit because the alternative was three roots. The Harness derives its
+   * session workspace from the invoking directory, Watch Core inherited
+   * whatever cwd the Host was started from, and the verifier fell back to its
+   * own. Naming it once, here, is what lets every one of those be the same
+   * directory — and lets a person who cares say which one it is.
+   */
+  readonly workspace: string | null
   readonly port: string | null
   /** Consent for the one command that may touch the network. */
   readonly yes: boolean
@@ -79,6 +93,7 @@ export function parse(argv: readonly string[]): Invocation {
     version: argv.includes('--version') || argv.includes('-v'),
     profile: flag('--profile'),
     artifacts: flag('--artifacts'),
+    workspace: flag('--workspace'),
     port: flag('--port'),
     yes: argv.includes('--yes') || argv.includes('-y'),
     offline: argv.includes('--offline'),

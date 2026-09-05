@@ -27,6 +27,7 @@ from typing import Any
 from pydantic import ValidationError
 
 from watch_skill.surfaces.bridge.protocol import BridgeError
+from watch_skill.workspace_root import WorkspaceNotEstablished, require_workspace
 from watch_skill.surfaces.bridge.redact import safe_message, scrub
 from watch_skill.surfaces.bridge.wire import (
     AnswerCitation,
@@ -485,12 +486,23 @@ def verification_run(params: dict[str, Any]) -> Any:
         ) from None
 
     contract = contract.freeze(created_by="bridge")
+    # `Path(".")` used to stand here, and it is the whole of the workspace
+    # defect: given no `workingDir`, the verifier measured against whatever
+    # directory this process happened to be started in — neither the directory
+    # the agent wrote in nor the one the person chose. A file created correctly
+    # verified as INCONCLUSIVE: honest, and useless. There is no default for
+    # this. Either the request names a directory or the launcher established
+    # one, and otherwise this stops and says how to fix it.
     working_dir = params.get("workingDir")
-    bundle, _attestation = verify_run(
-        contract,
-        working_dir=Path(str(working_dir)) if working_dir else Path("."),
-        isolated=True,
-    )
+    try:
+        root = require_workspace("watch.verification.run", working_dir)
+    except WorkspaceNotEstablished as exc:
+        raise BridgeError(
+            error="verify.workspace_unresolved",
+            message=str(exc),
+            fix=WorkspaceNotEstablished.fix,
+        ) from None
+    bundle, _attestation = verify_run(contract, working_dir=root, isolated=True)
     return _outcome_from_bundle(verification_id, bundle)
 
 
