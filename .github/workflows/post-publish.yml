@@ -16,14 +16,23 @@ name: Post-publish
 #
 # This workflow publishes nothing. It reads what is already on PyPI.
 #
-# It also has to survive the fact that `published` fires *before* the upload it
-# is meant to check. In release.yml the GitHub Release is created by one job and
-# PyPI receives the distributions from the next, so at the instant this workflow
-# starts, the newest version on PyPI is still the previous release. Resolving
-# "whatever is newest" at that moment does not fail -- it succeeds against the
-# wrong version and reports green, which is the worst of the three outcomes.
-# So a release event pins the version from its own tag and waits for PyPI to
-# serve exactly that.
+# It pins the version it is verifying rather than resolving "whatever is
+# newest", and that is not belt and braces.
+#
+# `published` used to fire *before* the upload it is meant to check: in
+# release.yml the GitHub Release was created by one job and PyPI received the
+# distributions from the next, so at the instant this workflow started, the
+# newest version on PyPI was still the previous release. Resolving "whatever is
+# newest" at that moment did not fail -- it succeeded against the wrong version
+# and reported green, which is the worst of the three outcomes.
+#
+# release.yml no longer completes its GitHub Release until PyPI has accepted
+# the upload, so the ordering defect is fixed at its source. The pin stays,
+# because two things are still true: PyPI accepts an upload before its CDN
+# serves the file, and a `workflow_dispatch` with a version typed into it must
+# verify *that* version. Reading the version off the tag is also what lets the
+# failure be honest -- "1.4.0 never appeared on PyPI" instead of a green run
+# against 1.3.0.
 
 on:
   release:
@@ -60,8 +69,7 @@ jobs:
           requested="${{ inputs.version }}"
 
           # A release event knows exactly which version it is about, and the
-          # tag is the only trustworthy source for it: `newest on PyPI` is
-          # still the previous release while the publish job is running.
+          # tag is the only trustworthy source for it.
           if [ -z "$requested" ] && [ "${{ github.event_name }}" = "release" ]; then
             tag="${{ github.event.release.tag_name }}"
             requested="${tag#core-v}"
@@ -77,9 +85,9 @@ jobs:
             exit 0
           fi
 
-          # Up to ten minutes. PyPI accepts an upload before its CDN serves the
-          # file, and the publish job it is racing has its own environment
-          # approval in front of it.
+          # Up to ten minutes. PyPI accepts an upload before its CDN serves
+          # the file, so a release event can arrive ahead of the first
+          # successful resolve even now that the upload precedes it.
           url="https://pypi.org/pypi/watch-skill/${requested}/json"
           for attempt in $(seq 1 60); do
             code=$(curl -sS -o /dev/null -w '%{http_code}' "$url" || echo 000)

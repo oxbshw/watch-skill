@@ -40,9 +40,18 @@ import { fileURLToPath } from 'node:url'
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..')
 const JSON_OUT = process.argv.includes('--json')
 
-/** Conventional-commit subject: `type(scope)!: summary`. */
+/**
+ * Conventional-commit subject: `type(scope)!: summary`.
+ *
+ * `release` is in the set alongside the usual eleven, because this repository
+ * has two release trains and the commits that promote versions, seal artifacts
+ * and finish a release path are a distinct kind of change. They were being
+ * written as `release:` already and refused here, which left the branch red
+ * for a reason that had nothing to do with accountability -- the thing this
+ * gate is actually for. `chore:` would have passed and would have said less.
+ */
 export const CONVENTIONAL =
-  /^(build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test)(\([^)]+\))?!?: .+/
+  /^(build|chore|ci|docs|feat|fix|perf|refactor|release|revert|style|test)(\([^)]+\))?!?: .+/
 
 /** A `Co-Authored-By` trailer line, captured so its parts can be judged. */
 const COAUTHOR_LINE = /^co-authored-by:[ \t]*(.*)$/gim

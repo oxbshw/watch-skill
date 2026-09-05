@@ -90,7 +90,8 @@ together, and `tests/test_python_version_policy.py` fails until they agree.
 ## Commits
 
 Conventional commits (`feat:`, `fix:`, `docs:`, `test:`, `refactor:`,
-`chore:`). Commit at working increments. Never commit `bin/`, caches, `.env`,
+`chore:`, and `release:` for a version promotion or a release-path change).
+Commit at working increments. Never commit `bin/`, caches, `.env`,
 or index databases (`.gitignore` already covers these — keep it that way).
 
 A commit message describes the product change and the reason for it. Nothing

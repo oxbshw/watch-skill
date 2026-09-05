@@ -327,14 +327,24 @@ describe('one boundary, shared', () => {
     // `bootstrap.mjs` cannot: the shared boundary is the built CLI, and
     // bootstrap is what runs before anything is built. That is a real
     // exception with a real reason, and it has to stay the only one.
+    //
+    // Comments are stripped first. `publish-plan.mjs` explains *why* it does
+    // not pass `shell: true` -- a shell concatenates an argument array instead
+    // of escaping it, and one of its arguments is a package name read out of a
+    // manifest -- and quoting the thing you are refusing to do is not doing
+    // it. Reading prose as behaviour would make the rule punish the scripts
+    // that document their compliance with it.
     const scripts = join(ROOT, 'scripts')
     const asking = []
+    const executable = source => source
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .split('\n').filter(line => !/^\s*\/\//.test(line)).join('\n')
     const walk = at => {
       for (const name of readdirSync(at)) {
         const full = join(at, name)
         if (statSync(full).isDirectory()) { walk(full); continue }
         if (!name.endsWith('.mjs')) continue
-        const source = readFileSync(full, 'utf8')
+        const source = executable(readFileSync(full, 'utf8'))
         if (/shell:\s*true/.test(source)) asking.push(relative(ROOT, full).split(sep).join('/'))
       }
     }

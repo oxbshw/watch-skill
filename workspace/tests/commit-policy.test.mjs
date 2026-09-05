@@ -213,6 +213,9 @@ describe('what the gate is allowed to read', () => {
     for (const subject of [
       'feat: add a thing', 'fix(bridge): stop a thing', 'chore(release)!: drop a thing',
       'docs: explain a thing', 'test(live): prove a thing', 'refactor(index): move a thing',
+      // Two trains and a promotion step: a release commit is its own kind of
+      // change here, and writing it as `chore:` would say less about it.
+      'release: promote Watch Skill to 1.4.0', 'release(npm): seal the artifacts',
     ]) {
       assert.ok(CONVENTIONAL.test(subject), `rejected: ${subject}`)
     }

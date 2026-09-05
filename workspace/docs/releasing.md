@@ -251,31 +251,101 @@ list.
 
 1. **Read the summary.** `Published: …` is the authoritative list. Do not infer
    it from the log.
-2. **Do not re-run the job.** Every published version will fail its existence
-   check, and the ones that are not published will publish under a tag whose
-   other half is already public — which is the state you are trying to leave.
-3. **Fix the cause.** A trusted publisher that was never configured, a gate
+2. **Fix the cause.** A trusted publisher that was never configured, a gate
    that failed, a network error. The `verify` job runs everything before the
    first upload, so a failure inside `publish` is nearly always a permission or
    a registry problem rather than a code one.
-4. **Bump the version.** Every package moves to the next patch or prerelease
+3. **Re-run the workflow at the same tag**, once the cause is fixed and the
+   commit has not moved.
+
+### Why re-running is safe here, and what makes it safe
+
+Re-running used to be the thing you must not do, and the instruction was right
+for the workflow as it then was: the publish loop started at the first package
+and every already-published version failed its existence check.
+
+What changed is that the loop no longer asks *whether* a version exists. It
+asks whether the registry holds **the bytes this build would upload**, and it
+asks the registry directly, at the moment of publishing:
+
+```bash
+node scripts/publish-plan.mjs --artifacts .release-artifacts
+```
+
+Each package gets one of three decisions.
+
+| Decision | Meaning |
+| --- | --- |
+| `publish` | the registry holds nothing at this version |
+| `skip` | the registry holds this version with **identical** integrity — already done |
+| `refuse` | the registry holds this version with **different** bytes |
+
+A `skip` is what makes a resume possible: a release that died at the
+fourteenth package resumes at the fourteenth package, and the thirteen before
+it are left exactly as they are. Nothing is ever overwritten, because npm
+cannot overwrite and this never asks it to.
+
+A single `refuse` stops the release. That state means somebody published this
+version from a different build, and no amount of retrying makes the scope
+consistent again — skipping it would ship a release whose halves came from
+different commits, which no later gate would catch, because every gate compares
+`name@version` and both byte sets wear the same version.
+
+`refuse` is also what you get if the tarballs are not the ones the `verify`
+job sealed. The plan checks each file's SHA-256 against
+`packed-artifacts.json` before it asks the registry anything, and the publish
+job re-verifies the whole set against `.release-artifacts-provenance.json`
+before its first upload.
+
+### When the plan refuses
+
+Then, and only then, the recovery is a new version.
+
+1. **Bump the version.** Every package moves to the next patch or prerelease
    number together; the workspace publishes one version across the scope, and a
    split version is a support burden nobody needs.
-5. **Deprecate what is stranded**, so an installer is told rather than left
+2. **Deprecate what is stranded**, so an installer is told rather than left
    guessing:
 
    ```bash
    npm deprecate @deepwatch/dsh-library@0.1.0 "incomplete release; use 0.1.1"
    ```
 
-6. **Tag again**, with the new version, and approve the environment.
+3. **Tag again**, with the new version, and approve the environment.
 
 If the failure happened *before* any package published, none of this applies:
 fix the cause, delete the tag, and tag again at the same version.
+
+### Watch Core is not resumable in the same way
+
+`core-v*` publishes one distribution to PyPI, and PyPI refuses a re-upload of a
+version it already holds. **Do not re-run the job** to finish a Core release
+that got past its PyPI step: the build job would rebuild and the upload would
+be rejected. The `report` job says which stages succeeded and which did not,
+and the two stages after PyPI — the MCP registry entry and the GitHub Release
+— are each recoverable on their own from that run's sealed `release-build`
+artifact.
 
 ## Watch Core
 
 `core-v<version>` must name the version `pyproject.toml` declares; the workflow
 refuses otherwise. PyPI publishing is also OIDC, through a trusted publisher on
-`watch-skill`, and the MCP registry entry is published last so it never
-advertises an install that does not exist yet.
+`watch-skill`.
+
+The order is build → seal → PyPI → MCP registry → GitHub Release, and each
+arrow is a `needs:`. Two of them are worth stating plainly:
+
+- **The MCP registry entry is published after PyPI**, so it never advertises an
+  install that does not exist yet.
+- **The GitHub Release is completed last.** It used to be created first, which
+  meant a release existed — announced, linked, carrying assets — while the
+  upload it announced had not happened and might still fail. Anything watching
+  `release: published` was watching a claim: the post-publish smoke fired
+  against a PyPI that still served the previous version and reported green.
+  Now `release: published` fires after PyPI accepted the upload, so it is a
+  signal about the registry rather than about the workflow's progress.
+
+The build job seals the distributions into `SHA256SUMS` and
+`release-manifest.json`, and every job after it verifies that seal before using
+a file. Nothing is rebuilt after the build job: the wheel PyPI receives and the
+wheel attached to the Release are the same bytes.

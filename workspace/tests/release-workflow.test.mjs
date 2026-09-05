@@ -57,6 +57,50 @@ describe('the two products release on separate trains', () => {
     assert.match(DEEPWATCH, /does not name workspace version/)
   })
 
+  test('Core completes its GitHub Release only after PyPI accepted the upload', () => {
+    // The Release used to be created in the build job, before the upload it
+    // announced. Anything watching `release: published` was therefore watching
+    // a claim: the post-publish smoke fired against a PyPI that still served
+    // the previous version, and reported green.
+    const build = job(CORE, 'build')
+    assert.ok(!build.includes('action-gh-release'),
+      'the build job must not announce a release it has not published')
+
+    const release = job(CORE, 'github-release')
+    assert.match(release, /needs: \[build, pypi\]/)
+    assert.match(release, /action-gh-release/)
+    assert.match(release, /contents: write/)
+
+    // And the registry entry still comes after the package it advertises.
+    assert.match(job(CORE, 'mcp-registry'), /needs: pypi/)
+  })
+
+  test('Core publishes the bytes it sealed, and rebuilds nothing to do it', () => {
+    const build = job(CORE, 'build')
+    assert.match(build, /sha256sum/)
+    assert.match(build, /release-manifest\.json/)
+    assert.match(build, /name: release-build/)
+
+    const pypi = job(CORE, 'pypi')
+    assert.match(pypi, /sha256sum -c SHA256SUMS/)
+    assert.ok(!pypi.includes('uv build'), 'the publish job must not rebuild')
+    assert.ok(pypi.indexOf('sha256sum -c SHA256SUMS') < pypi.indexOf('pypa/gh-action-pypi-publish'),
+      'the seal must be verified before the upload')
+
+    // The skill bundle, the notes and the manifest are in the sealed set and
+    // must not be handed to twine.
+    assert.match(pypi, /cp sealed\/\*\.whl sealed\/\*\.tar\.gz dist\//)
+  })
+
+  test('a partial Core release is reported as the state it is', () => {
+    const report = job(CORE, 'report')
+    assert.match(report, /if: always\(\)/)
+    assert.match(report, /This release is incomplete/)
+    assert.match(report, /Nothing was published/)
+    // A green check on a half-done release is worse than a red one.
+    assert.match(report, /\[ "\$BUILD" = "success" \]/)
+  })
+
   test('Core classifies a prerelease from the version, not the tag', () => {
     // `core-v0.1.0` contains a hyphen, and the `*-*` arm of that case
     // statement would have made every stable release a prerelease.
@@ -120,10 +164,45 @@ describe('what reaches the registry, and in what order', () => {
 
   test('every version is checked against the registry before the first upload', () => {
     const verify = job(DEEPWATCH, 'verify')
-    assert.match(verify, /npm view/)
-    assert.match(verify, /is already published/)
-    assert.ok(verify.indexOf('npm view') < verify.indexOf('upload-artifact'),
-      'the existence check must run before anything is handed to the publish job')
+    assert.match(verify, /scripts\/publish-plan\.mjs/)
+    assert.ok(verify.indexOf('publish-plan.mjs') < verify.indexOf('upload-artifact'),
+      'the registry check must run before anything is handed to the publish job')
+  })
+
+  test('the publish job publishes what the verify job sealed', () => {
+    // Not "a tarball with the right name". A candidate once shipped artifacts
+    // packed three commits behind the accepted head and every gate passed,
+    // because every gate compared `name@version` and both byte sets wore the
+    // same version. The seal is content-bound and is checked before the first
+    // upload, in the job that does the uploading.
+    const verify = job(DEEPWATCH, 'verify')
+    assert.match(verify, /npm run release:seal/)
+    assert.ok(verify.indexOf('npm run pack') < verify.indexOf('npm run release:seal'),
+      'the seal must describe what was packed')
+
+    const publish = job(DEEPWATCH, 'publish')
+    assert.match(publish, /verify-provenance\.mjs/)
+    assert.match(publish, /--expect-commit/)
+    assert.ok(!publish.includes('npm run pack'),
+      'the publish job must not pack; it publishes the bytes it was given')
+    assert.ok(publish.indexOf('verify-provenance.mjs') < publish.indexOf('npm publish'),
+      'the manifest must be verified before the first upload')
+  })
+
+  test('a resume skips a version only when the registry holds identical bytes', () => {
+    // The distinction this rests on: "already published" and "already
+    // published from this build" are different questions, and only the second
+    // makes a resume safe. `publish-plan.mjs` answers the second one by
+    // comparing integrity, and the workflow acts on its verdict rather than
+    // on the existence of a version.
+    const publish = job(DEEPWATCH, 'publish')
+    assert.match(publish, /scripts\/publish-plan\.mjs/,
+      'the publish job must re-plan against the registry, not replay a stale plan')
+    assert.match(publish, /publish-plan\.json/)
+    assert.match(publish, /if \[ "\$action" = "skip" \]/)
+    assert.match(publish, /already holds these exact bytes/)
+    // And anything that is neither publish nor skip stops the loop.
+    assert.match(publish, /if \[ "\$action" != "publish" \]/)
   })
 
   test('packages publish in dependency order, derived from the manifests', () => {
@@ -149,7 +228,17 @@ describe('what reaches the registry, and in what order', () => {
   test('the recovery procedure is written down, and says a version is spent', () => {
     const doc = readFileSync(join(ROOT, 'docs', 'releasing.md'), 'utf8')
     assert.match(doc, /can never be replaced/)
+    // "Do not re-run the job" was once the whole advice, and it was right for
+    // a publish loop that started at the first package every time. It is now
+    // true of exactly one train: PyPI refuses a re-upload, so a Core release
+    // that got past its PyPI step cannot be finished by re-running. The npm
+    // train re-plans against the registry and resumes, so telling a release
+    // owner not to re-run it would send them to burn a version they still
+    // have.
     assert.match(doc, /Do not re-run the job/)
+    assert.match(doc, /Why re-running is safe here/)
+    assert.match(doc, /Watch Core is not resumable in the same way/)
+    assert.match(doc, /identical.{0,40}integrity|integrity.{0,40}identical/s)
     assert.match(doc, /npm deprecate/)
     assert.match(doc, /core-v<version>/)
     assert.match(doc, /deepwatch-v<version>/)

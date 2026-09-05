@@ -1,7 +1,21 @@
 name: Docker
 
-# Publishes ghcr.io/oxbshw/watch-skill. GitHub Container Registry needs no
-# account setup and no secret — GITHUB_TOKEN is enough.
+# Builds ghcr.io/oxbshw/watch-skill, and publishes it on a release. GitHub
+# Container Registry needs no account setup and no secret — GITHUB_TOKEN is
+# enough.
+#
+# **A push to main builds and smokes the image; it does not publish one.** It
+# used to, and the tags it pushed were `main` and `latest` — `latest` because
+# `is_default_branch` was the condition, which is a reasonable rule for a
+# project with no releases and the wrong one for a project with two release
+# trains. The effect was that merging anything touching `src/**` moved the tag
+# a person gets from `docker pull ghcr.io/oxbshw/watch-skill` to whatever had
+# just landed, ahead of — and sometimes instead of — the version that was
+# actually released. A merge is not a release, so a merge no longer publishes.
+#
+# The build still runs on every such push, because a Dockerfile that stops
+# working should fail on the commit that broke it rather than on the tag that
+# needed it.
 
 on:
   push:
@@ -36,10 +50,12 @@ jobs:
 
       - uses: docker/setup-buildx-action@v4
 
-      # Pull requests from forks cannot push; build them anyway so a broken
-      # Dockerfile is caught in review rather than on main.
+      # Everything below the smoke is publication, and publication happens on a
+      # release or on a deliberate dispatch. A pull request and a push to main
+      # both build the image and run it; neither logs in, and neither can
+      # therefore write to the registry even by mistake.
       - name: Log in to ghcr.io
-        if: github.event_name != 'pull_request'
+        if: ${{ github.event_name == 'release' || github.event_name == 'workflow_dispatch' }}
         uses: docker/login-action@v4
         with:
           registry: ghcr.io
@@ -55,7 +71,11 @@ jobs:
             type=ref,event=branch
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
-            type=raw,value=latest,enable={{is_default_branch}}
+            # `latest` is the released image, so it is set by a release and
+            # never by a branch. A prerelease tag is excluded by the metadata
+            # action's own semver handling, which is why this is expressed as
+            # a release event rather than as "the newest thing we built".
+            type=raw,value=latest,enable=${{ github.event_name == 'release' && github.event.release.prerelease == false }}
 
       - name: Build
         uses: docker/build-push-action@v7
@@ -77,11 +97,11 @@ jobs:
       # arm64 matters: Apple Silicon is most of the macOS install base, and
       # running an amd64 image under emulation makes ffmpeg work crawl.
       - name: Set up QEMU for the arm64 build
-        if: github.event_name != 'pull_request'
+        if: ${{ github.event_name == 'release' || github.event_name == 'workflow_dispatch' }}
         uses: docker/setup-qemu-action@v4
 
       - name: Push
-        if: github.event_name != 'pull_request'
+        if: ${{ github.event_name == 'release' || github.event_name == 'workflow_dispatch' }}
         id: push
         uses: docker/build-push-action@v7
         with:
@@ -98,7 +118,7 @@ jobs:
       # Signs the pushed digest with the workflow's own identity, so anyone
       # can verify the image came from this repository and no other.
       - name: Attest the build provenance
-        if: github.event_name != 'pull_request'
+        if: ${{ github.event_name == 'release' || github.event_name == 'workflow_dispatch' }}
         uses: actions/attest-build-provenance@v4
         with:
           subject-name: ${{ env.IMAGE }}

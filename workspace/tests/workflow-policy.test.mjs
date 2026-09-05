@@ -189,3 +189,98 @@ describe('the ordinary check list contains no permanently skipped job', () => {
     assert.match(install, /resolved from the source checkout/)
   })
 })
+/**
+ * Every step in a workflow, as a block of text including its own `if:`.
+ *
+ * Steps are found by their list marker at step indentation rather than by
+ * parsing YAML, for the reason the header gives: the interesting content of
+ * these files is inside `${{ }}` expressions, and a parser hands back a
+ * string where the question is what the string says.
+ */
+function steps(text) {
+  const lines = text.split('\n')
+  const found = []
+  let current = null
+  for (const line of lines) {
+    if (/^ {6}- /.test(line)) {
+      if (current !== null) found.push(current.join('\n'))
+      current = [line]
+    } else if (current !== null) {
+      if (/^ {0,5}\S/.test(line)) { found.push(current.join('\n')); current = null }
+      else current.push(line)
+    }
+  }
+  if (current !== null) found.push(current.join('\n'))
+  return found
+}
+
+describe('merging a branch cannot publish anything', () => {
+  // The list is of things that write to a registry, not of things that build.
+  // A build on every push is the point of CI; an upload on every push is a
+  // release nobody decided to make.
+  const REGISTRY_WRITES = [
+    { marker: 'docker/login-action', what: 'logs in to a container registry' },
+    { marker: 'push: true', what: 'pushes a container image' },
+    { marker: 'npm publish', what: 'publishes to npm' },
+    { marker: 'pypa/gh-action-pypi-publish', what: 'publishes to PyPI' },
+    { marker: 'mcp-publisher publish', what: 'publishes to the MCP registry' },
+    { marker: 'push-to-registry: true', what: 'writes an attestation to a registry' },
+  ]
+
+  /** Does this workflow run on a push to a branch? */
+  function runsOnBranchPush(text) {
+    const on = text.slice(text.indexOf('\non:'))
+    const head = on.slice(0, on.search(/\n(?:permissions|env|concurrency|defaults|jobs):/))
+    const push = head.indexOf('  push:')
+    if (push === -1) return false
+    const after = head.slice(push)
+    const nextTrigger = after.search(/\n {2}(?:release|pull_request|workflow_dispatch|schedule):/)
+    return /branches:/.test(nextTrigger === -1 ? after : after.slice(0, nextTrigger))
+  }
+
+  /** A guard that admits only a release or a deliberate dispatch. */
+  function gatedToARelease(step) {
+    const guard = /if:[^\n]*/.exec(step)?.[0] ?? ''
+    if (!guard.includes('github.event_name')) return false
+    const named = [...guard.matchAll(/github\.event_name\s*==\s*'([a-z_]+)'/g)].map(m => m[1])
+    return named.length > 0 && named.every(name => name === 'release' || name === 'workflow_dispatch')
+  }
+
+  test('no workflow that runs on a branch push writes to a registry unguarded', () => {
+    // This is the audit that has to hold before a release branch is merged.
+    // `docker.yml` failed it: a push to main matching `src/**` pushed
+    // `ghcr.io/oxbshw/watch-skill:main` *and* `:latest`, so merging anything
+    // would have moved the tag a person gets from `docker pull` to whatever
+    // had just landed — ahead of the release that was supposed to set it.
+    const offenders = []
+    for (const { name, text } of workflows()) {
+      if (!runsOnBranchPush(text)) continue
+      for (const step of steps(text)) {
+        for (const { marker, what } of REGISTRY_WRITES) {
+          if (!step.includes(marker)) continue
+          if (gatedToARelease(step)) continue
+          offenders.push(`${name}: a step that ${what} is reachable from a branch push`)
+        }
+      }
+    }
+    assert.deepEqual(offenders, [])
+  })
+
+  test('the image a person pulls is the released one', () => {
+    const docker = readFileSync(join(WORKFLOWS, 'docker.yml'), 'utf8')
+    // `is_default_branch` is a reasonable rule for a project with no releases
+    // and the wrong one for a project with two release trains.
+    assert.ok(!/value=latest,enable=\{\{is_default_branch\}\}/.test(docker),
+      'latest must not follow the default branch')
+    assert.match(docker, /value=latest,enable=\$\{\{ github\.event_name == 'release'/)
+    assert.match(docker, /github\.event\.release\.prerelease == false/,
+      'a prerelease must not take latest')
+  })
+
+  test('a branch push still builds the image, so a broken Dockerfile fails early', () => {
+    const docker = readFileSync(join(WORKFLOWS, 'docker.yml'), 'utf8')
+    const build = docker.slice(docker.indexOf('- name: Build'), docker.indexOf('- name: Set up QEMU'))
+    assert.ok(!build.includes('if:'), 'the build and its smoke run on every trigger')
+    assert.match(build, /docker run --rm/)
+  })
+})

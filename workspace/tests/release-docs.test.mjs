@@ -43,9 +43,17 @@ test('historical evidence and process state cannot masquerade as current', () =>
 })
 
 test('the first-publish guide fixes the repository, workflow and environment', () => {
+  // The three things `npm trust github` will not guess, spelled as the guide
+  // spells them to a person running it. This used to assert the literal prose
+  // "environment `npm`", which failed the moment the sentence was rewritten to
+  // "the GitHub `npm` environment" — same environment, same guidance, better
+  // English. An assertion that a document names a deployment environment
+  // should not also be an assertion about adjective order, so it now reads the
+  // trust parameter itself and the protection the guide asks for around it.
   const releasing = read('releasing.md')
   assert.match(releasing, /oxbshw\/watch-skill/)
   assert.match(releasing, /release-deepwatch\.yml/)
-  assert.match(releasing, /environment `npm`/)
+  assert.match(releasing, /--env npm/)
+  assert.match(releasing, /`npm` environment with required\n?\s*reviewers/)
   assert.match(releasing, /--publish --confirm-first-publish/)
 })
