@@ -23,6 +23,13 @@
  * Nothing here reaches the internet. The stub binds loopback on a port the
  * operating system picks, and no code path in this file reads a provider
  * credential from the environment.
+ *
+ * And nothing here touches a credential store outside the room it was given.
+ * The reset above is safe only while "the store" means the throwaway one; once
+ * rooms learned to reference an existing credentials document by path, a QA
+ * pass configured a provider through the UI and the save landed in the owner's
+ * document. `assertTaskOwnedStore` decides that question first and fails the
+ * run rather than the person's key ring. See `scripts/lib/qa-credential-store.mjs`.
  */
 
 import { spawn, spawnSync } from 'node:child_process'
@@ -36,6 +43,9 @@ const WORKSPACE = join(HERE, '..')
 
 const { startOpenRouterStub, STUB_API_KEY, classifyCompletion } = await import(
   pathToFileURL(join(WORKSPACE, 'scripts', 'lib', 'openrouter-stub.mjs')).href)
+
+const { assertTaskOwnedStore } = await import(
+  pathToFileURL(join(WORKSPACE, 'scripts', 'lib', 'qa-credential-store.mjs')).href)
 
 /** Read `--name value` pairs, because this has three and no more. */
 function option(name, fallback = null) {
@@ -73,10 +83,16 @@ if (HOME === null) {
  * settings. Removing the store and that block is the smallest reset that
  * restores the precondition — rebuilding the whole runtime takes four minutes
  * and proves nothing extra about the provider flow.
+ *
+ * `credentials` is passed in rather than derived here, and that is the whole
+ * point of the guard above: this function used to compute the store from
+ * `home` and delete it, which is correct only while the room's profile has not
+ * been pointed at somebody else's document. Taking the location as an argument
+ * means the only path that can reach `rmSync` is one `assertTaskOwnedStore`
+ * has already agreed is inside the room.
  */
-function resetProviders(home) {
+function resetProviders(home, credentials) {
   const dshHome = join(home, 'dsh-home')
-  const credentials = join(dshHome, '.credentials.yaml')
   if (existsSync(credentials)) {
     rmSync(credentials)
     process.stdout.write('reset: removed the credential store\n')
@@ -281,7 +297,16 @@ async function main() {
   // reads it back, and a run that never wrote one would otherwise be described
   // by its predecessor's claims.
   rmSync(join(OUT, 'e2e-report.json'), { force: true })
-  resetProviders(HOME)
+
+  // Before anything is reset, started or configured: which credential document
+  // is this room actually wired to? A synthetic pass gets a synthetic store,
+  // and it gets it by refusing to run against any other. The provider below is
+  // a loopback stub with a fake key, so a QA room has no business naming a real
+  // document — and a room that names one is an owner journey, run separately.
+  const { store } = assertTaskOwnedStore({ home: HOME })
+  process.stdout.write(`credential store: ${store}\n`)
+
+  resetProviders(HOME, store)
 
   const stub = await startOpenRouterStub()
   process.stdout.write(`stub: ${stub.baseURL}\n`)

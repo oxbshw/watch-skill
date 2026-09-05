@@ -168,6 +168,50 @@ The distinction that matters in a report: whether the agent said it worked, and
 whether verification agreed. Those are different observations and this product
 exists to keep them apart.
 
+## Reusing your credential for a test room
+
+A test room can reach an existing credential without a copy of it:
+`dsh-credentials-local` takes the credentials document's location as
+configuration, so a profile can name a document that already exists and let the
+provider resolve the value per request. Nothing is duplicated and no plaintext
+moves.
+
+**That reference is opt-in, and it must stay that way.** The room builders take
+it as an explicit flag and add nothing without one, because a profile pointed at
+your document makes every credential write in that room land in your document.
+
+**Synthetic QA never gets one.** `scripts/qa-e2e-run.mjs` resets the provider
+state it is about to configure — that is what makes it repeatable — so it now
+resolves which document it has been aimed at *before* it starts anything, and
+refuses to run against any store outside its own room
+(`scripts/lib/qa-credential-store.mjs`). The refusal names the document and the
+profile line that aimed it there.
+
+This is a regression, not a precaution. A QA pass was once pointed at a real
+credentials document so a journey could reuse the provider; it configured a
+provider through the UI, and the save added a second entry to that document
+beside the key in use. `tests/qa-credential-containment.test.mjs` builds a
+synthetic owner store, points a throwaway room at it, runs the real script, and
+asserts the file is byte-identical afterwards — same digest, same size, same
+modification time.
+
+A real provider belongs in an owner journey, which is a separate run against a
+room built with the reference on purpose.
+
+## Removing one entry by name
+
+If a store has picked up an entry you did not intend — a test key beside your
+real one — remove it from the product rather than by editing the file.
+
+**Settings, Models.** Each configured provider row names the credential
+reference it stores. Find the row for the unwanted reference by its name, choose
+**Edit**, and remove the key; if the reference is the only thing that row holds,
+**Remove provider** on that row deletes the entry outright.
+
+Do this by entry name. Do not open the document to decide which line to delete:
+the name is enough to identify the row, and a store with two entries is exactly
+the case where reading the file puts the key you meant to keep on screen.
+
 ## Removing the credential afterwards
 
 Settings, Models, **Edit** on the provider, and remove the key.
