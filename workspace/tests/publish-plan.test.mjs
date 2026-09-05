@@ -22,7 +22,7 @@
 import { test, describe } from 'node:test'
 import assert from 'node:assert/strict'
 import { createHash } from 'node:crypto'
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -31,7 +31,10 @@ import { buildPlan, registryDist, tarballIntegrity } from '../scripts/publish-pl
 import { publishOrder } from '../scripts/publish-order.mjs'
 
 const WORKSPACE = join(dirname(fileURLToPath(import.meta.url)), '..')
-const REAL_INVENTORY = join(WORKSPACE, '.release-artifacts', 'packed-artifacts.json')
+/** Tracked: what a pack of this source is expected to produce. */
+const TRACKED_INVENTORY = join(WORKSPACE, 'inventory', 'packed-artifacts.json')
+/** Untracked, beside the tarballs: what a pack actually produced, with digests. */
+const PACKED_INVENTORY = join(WORKSPACE, '.release-artifacts', 'packed-artifacts.json')
 
 /** A packed set: one tiny "tarball" per publishable package, plus its inventory. */
 function fakeArtifacts(root) {
@@ -176,15 +179,40 @@ describe('an unreachable registry is not an empty one', () => {
   })
 })
 
-test('the real packed inventory carries what the plan needs', () => {
-  // Not a registry call — just that the fields this reads are the fields the
-  // pack writes, so a change to `pack-release.mjs` cannot quietly strand it.
-  const inventory = JSON.parse(readFileSync(REAL_INVENTORY, 'utf8'))
+test('the packed inventory carries what the plan needs', () => {
+  // Read from the *tracked* inventory, not from `.release-artifacts/`.
+  //
+  // The first version of this read the untracked one beside the tarballs,
+  // which exists only after a local `npm run pack` — so it passed on the
+  // machine that wrote it and failed with ENOENT on every clean checkout,
+  // which is every CI job. A test that depends on a build artifact is a test
+  // about the machine.
+  //
+  // The tracked file is the better subject anyway: it is what a pack of this
+  // source is *expected* to produce, so it is what the plan's field
+  // expectations should be pinned against.
+  const inventory = JSON.parse(readFileSync(TRACKED_INVENTORY, 'utf8'))
   assert.equal(inventory.packages.length, 20)
+  // The tracked file describes identity, not bytes -- it has no `file` and no
+  // digest, deliberately, so that packing rewrites it to the same content and
+  // leaves the worktree clean for the first-publish bootstrap that follows.
   for (const entry of inventory.packages) {
-    assert.equal(typeof entry.file, 'string')
     assert.equal(typeof entry.name, 'string')
     assert.equal(typeof entry.version, 'string')
+    assert.equal(typeof entry.access, 'string')
+  }
+  assert.deepEqual(
+    inventory.packages.map(entry => entry.name).sort(),
+    publishOrder().map(entry => entry.name).sort(),
+    'the plan walks the publish order; the inventory must describe the same set')
+
+  // And when a local pack *has* run, its inventory carries the digest the plan
+  // compares against. Skipped rather than faked when it has not.
+  if (!existsSync(PACKED_INVENTORY)) return
+  const packed = JSON.parse(readFileSync(PACKED_INVENTORY, 'utf8'))
+  assert.equal(packed.packages.length, 20)
+  for (const entry of packed.packages) {
+    assert.equal(typeof entry.file, 'string')
     assert.match(entry.sha256, /^[0-9a-f]{64}$/)
   }
 })

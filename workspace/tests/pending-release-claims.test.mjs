@@ -45,8 +45,17 @@ const NEARBY_LINES = 12
 /** A command that asks a registry for a `@deepwatch` package. */
 const INSTALL = /(?:npm\s+(?:install|i|exec)|npx|pnpm\s+(?:add|dlx)|yarn\s+(?:add|dlx)|bun\s+(?:add|x)|dsh\s+plugin\b[^\n]*\badd)\b[^\n]*@deepwatch\//
 
-/** The claim that makes such a command honest today. */
-const PENDING = /not on npm yet|not published yet|are not published|pending the deepwatch-v|first publication|has never published|never published/i
+/**
+ * The claim that makes such a command honest today.
+ *
+ * Phrased loosely on purpose. The first version of this list enumerated the
+ * exact sentences the README used, and then failed on
+ * `npm install -g @deepwatch/cli@latest      # pending the first release` --
+ * a line that says the thing this rule exists to require, in words the rule
+ * had not been told about. A guard against dishonest documentation should not
+ * also be a style guide for how to be honest.
+ */
+const PENDING = /not on npm yet|not published yet|are not published|pending[^\n]{0,40}release|first publication|has never published|never published/i
 
 /** Documentation, as the release-surface gate defines it, minus its history. */
 function documents() {
