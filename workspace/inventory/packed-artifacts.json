@@ -3,7 +3,7 @@
   "note": "Source-derived expectations for a release pack. Per-run facts -- the digest, the size, the commit, the directory -- belong to the inventory written beside the tarballs, never here.",
   "counts": {
     "packages": 20,
-    "files": 412
+    "files": 414
   },
   "publishOrder": [
     "@deepwatch/dsh-client-brand",
@@ -739,7 +739,7 @@
       "name": "@deepwatch/dsh-tools",
       "version": "0.1.0",
       "access": "public",
-      "fileCount": 22,
+      "fileCount": 24,
       "dependencies": {
         "@deepwatch/dsh-contracts": "^0.1.0",
         "@deepwatch/dsh-core-bridge": "^0.1.0",
@@ -778,6 +778,8 @@
         "lib/memory.js",
         "lib/read-plane.d.ts",
         "lib/read-plane.js",
+        "lib/receipt-journal.d.ts",
+        "lib/receipt-journal.js",
         "lib/sensory.d.ts",
         "lib/sensory.js",
         "lib/typert.host.d.ts",
