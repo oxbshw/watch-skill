@@ -46,7 +46,7 @@ Edit `%APPDATA%\Claude\claude_desktop_config.json`
 }
 ```
 
-Tip: `watch-skill setup` (see [the 2-minute install](../../README.md#install))
+Tip: `watch-skill setup` (see [adding it to an agent](../../README.md#add-watch-skill-to-an-agent-you-already-use))
 detects Claude Desktop and writes this for you, backing up the existing file.
 
 ## Smoke test (3 steps)

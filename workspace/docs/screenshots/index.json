@@ -19,7 +19,7 @@
       "memoryLedgerVisible": false,
       "compareBoundaryVisible": false,
       "readiness": {
-        "summaryReady": 1,
+        "summaryReady": 2,
         "summaryTotal": 12,
         "ready": 0,
         "degraded": 0,
@@ -50,7 +50,7 @@
       "memoryLedgerVisible": false,
       "compareBoundaryVisible": false,
       "readiness": {
-        "summaryReady": 1,
+        "summaryReady": 2,
         "summaryTotal": 12,
         "ready": 0,
         "degraded": 0,
@@ -81,7 +81,7 @@
       "memoryLedgerVisible": false,
       "compareBoundaryVisible": false,
       "readiness": {
-        "summaryReady": 1,
+        "summaryReady": 2,
         "summaryTotal": 12,
         "ready": 0,
         "degraded": 0,
@@ -424,7 +424,7 @@
       "readiness": {
         "summaryReady": null,
         "summaryTotal": null,
-        "ready": 0,
+        "ready": 1,
         "degraded": 0,
         "unconfigured": 4,
         "unavailable": 0,
@@ -579,10 +579,10 @@
       "readiness": {
         "summaryReady": null,
         "summaryTotal": null,
-        "ready": 1,
-        "degraded": 2,
+        "ready": 2,
+        "degraded": 1,
         "unconfigured": 6,
-        "unavailable": 0,
+        "unavailable": 1,
         "notTested": 2,
         "error": 0
       }
@@ -982,7 +982,7 @@
       "readiness": {
         "summaryReady": null,
         "summaryTotal": null,
-        "ready": 0,
+        "ready": 1,
         "degraded": 0,
         "unconfigured": 4,
         "unavailable": 0,
@@ -1137,10 +1137,10 @@
       "readiness": {
         "summaryReady": null,
         "summaryTotal": null,
-        "ready": 1,
-        "degraded": 2,
+        "ready": 2,
+        "degraded": 1,
         "unconfigured": 6,
-        "unavailable": 0,
+        "unavailable": 1,
         "notTested": 2,
         "error": 0
       }
@@ -1540,7 +1540,7 @@
       "readiness": {
         "summaryReady": null,
         "summaryTotal": null,
-        "ready": 0,
+        "ready": 1,
         "degraded": 0,
         "unconfigured": 4,
         "unavailable": 0,
@@ -1695,10 +1695,10 @@
       "readiness": {
         "summaryReady": null,
         "summaryTotal": null,
-        "ready": 1,
-        "degraded": 2,
+        "ready": 2,
+        "degraded": 1,
         "unconfigured": 6,
-        "unavailable": 0,
+        "unavailable": 1,
         "notTested": 2,
         "error": 0
       }

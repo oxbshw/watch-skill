@@ -103,6 +103,21 @@ const SCENARIO = safeScenario()
  * reports no tabs.
  */
 const SESSION_ID = process.env.WATCH_QA_SESSION ?? ''
+
+// The session the viewport passes share.
+//
+// Each pass used to open a session of its own, which meant three agent turns
+// against one server for three photographs of the same conversation. The first
+// answered; the other two sat at "Deep diving..." past three minutes without a
+// single request reaching the provider, so the narrow and compact Chat shots
+// photographed a spinner and were recorded as failures -- a viewport-shaped
+// symptom with no viewport-shaped cause.
+//
+// One turn, photographed three times. The first pass that opens a session
+// publishes its id here and the rest reuse it, so the later passes do no work
+// beyond resizing and clicking, and the three shots are guaranteed to show the
+// same reply rather than three independent races.
+let sessionSeed = SESSION_ID
 /** The directory a created session adopts. Any real directory will do. */
 const SESSION_CWD = process.env.WATCH_QA_CWD ?? process.cwd()
 
@@ -583,7 +598,7 @@ async function run(win, viewport) {
       }).then(function (r) { return r.json() })
     }
 
-    var seeded = ${JSON.stringify(SESSION_ID)}
+    var seeded = ${JSON.stringify(sessionSeed)}
     if (seeded) {
       localStorage['dsh.sessions.current'] = JSON.stringify({ sessionId: seeded })
       return seeded
@@ -604,8 +619,15 @@ async function run(win, viewport) {
         content: [{ type: 'text', text: 'Say hello so this session is no longer blank.' }]
       })
 
-      // Wait for it to land, up to a minute.
-      var deadline = Date.now() + 60000
+      // Wait for it to land. Three minutes, not one: at 60s the narrow and
+      // compact Chat shots photographed a turn still in flight -- the thinking
+      // indicator and a live stop button instead of the reply the shot exists
+      // to show -- while the wide viewport, which happened to answer sooner,
+      // passed. That reads like a layout defect and is really a race against
+      // the budget. The loop still exits the moment the turn settles, so a
+      // fast answer costs nothing; the larger ceiling only stops the capture
+      // from calling a slow answer a missing one.
+      var deadline = Date.now() + 180000
       while (Date.now() < deadline) {
         var listed = await rpc('session.list', {})
         var mine = (listed.result.value.items || []).filter(function (s) { return s.sessionId === id })[0]
@@ -620,6 +642,10 @@ async function run(win, viewport) {
     }
   })()`)
   say('  session: ' + String(opened))
+  // Publish it for the passes that follow. Only a real id: the helper returns
+  // null when creation failed and an 'error: ...' string when it threw, and
+  // seeding either of those would make every later pass reuse the failure.
+  if (typeof opened === 'string' && opened.startsWith('session-')) sessionSeed = opened
   await win.reload()
   await wait(3200)
   await clearOnboarding(win)

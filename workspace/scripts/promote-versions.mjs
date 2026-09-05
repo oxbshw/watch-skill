@@ -84,6 +84,12 @@ export const HISTORICAL = [
 export const FIXTURES = [
   'workspace/tests/first-publish.test.mjs',
   'workspace/tests/stable-versions.test.mjs',
+  // This file. It has to name the versions it promotes *from*, in VERSIONS
+  // above and in the prose explaining the distinction, so scanning itself for
+  // prerelease strings finds its own definition and reports the tree unclean
+  // forever. Rewriting them would erase the mapping and leave a script that
+  // promotes nothing.
+  'workspace/scripts/promote-versions.mjs',
 ]
 
 /** Whether a repository-relative path is a historical record. */

@@ -1,5 +1,100 @@
 # Changelog
 
+## v1.4.0 — 2026-09-05
+
+The first stable release of both products in this repository. Watch Skill
+reaches **1.4.0**, and the twenty `@deepwatch/*` packages reach **0.1.0** — their
+first publication rather than an update.
+
+No product behaviour changed between `1.4.0rc1` and `1.4.0`. The candidate's
+entry below still describes what the software does; this entry describes
+finishing the path that puts it in front of somebody, which turned out to
+contain three defects that only a stable release could expose.
+
+### The first npm publication cannot use trusted publishing
+
+`release-deepwatch.yml` publishes over OIDC with no token path at all. It cannot
+perform the *first* publication, because npm requires a package to already exist
+before a Trusted Publisher can be configured for it — npm's own documented
+prerequisite for `npm trust`, and
+[npm/cli#8544](https://github.com/npm/cli/issues/8544), the request to lift it,
+is still open. PyPI has no such limitation, which is why Watch Core's train
+needs no equivalent step.
+
+So the first publication of the twenty packages uses a short-lived credential
+held by the release owner, through `scripts/first-publish.mjs`, which refuses a
+dirty tree, a wrong digest, a changed file list or dependency graph, a
+`workspace:` fallback, and an order that does not match the manifest graph.
+
+**That one publication is the only DeepWatch release without provenance
+attestation.** Provenance is generated from a CI workload identity and a laptop
+does not have one. Every release after it goes through the workflow, with
+`--provenance` and a protected environment in front of it. Saying so here is
+better than letting somebody find it as a missing badge.
+
+[`docs/releasing.md`](workspace/docs/releasing.md) now carries the
+`npm trust github` loop that configures all twenty publishers from a terminal,
+and the `npm trust list` read-back that proves each one exists — the failure
+being guarded against is a publisher that was silently not created on the
+twentieth package.
+
+### Post-publish verified the wrong version and reported green
+
+`post-publish.yml` triggers on `release: published`. In `release.yml` the GitHub
+Release is created by one job and PyPI receives the distributions from the
+*next* one, so at the instant the workflow started, the newest version on PyPI
+was still the previous release. Resolving "whatever is newest" at that moment
+did not fail — it succeeded against the wrong version. A check that passes for
+the wrong reason is worse than one that breaks.
+
+It now takes the version from the release's own tag and waits, up to ten
+minutes, for PyPI to serve exactly that version before any runner starts.
+Dispatching it by hand with no version still smokes whatever is currently
+newest, because in that case nothing is in flight.
+
+### A stable version published under a prerelease dist-tag
+
+`scripts/first-publish.mjs` hardcoded `--tag preview`. That was correct while
+every version was `0.1.0-preview.N` and silently wrong the moment one was not:
+a stable `0.1.0` published under `preview` leaves `npm i @deepwatch/cli`
+resolving nothing at all, because `latest` would never have been created. The
+bootstrap and the workflow now derive the tag from the version's shape by the
+same rule, and both refuse a prerelease shape neither has a tag for, rather than
+guessing about a publication that cannot be taken back.
+
+`scripts/promote-versions.mjs` is the authority for a version change across the
+tree. It separates the surfaces a promotion must update from the historical
+records it must leave alone — a changelog that says `1.3.0` is not stale, it is
+a record — and `tests/stable-versions.test.mjs` asserts the result: every
+manifest at its stable version, no prerelease sibling dependency, both tag
+prefixes intact, and no bare `v*` trigger that would let one product's tag
+release the other.
+
+### One branch
+
+The repository now has a single branch. Every other branch was deleted only
+after its commits were accounted for as contained, already applied, or
+explicitly rejected with a reason and a condition for revisiting;
+[`docs/branch-consolidation.md`](docs/branch-consolidation.md) records each
+disposition and how to re-check it, because a deleted branch leaves no evidence
+of itself and "merged" and "abandoned" look identical afterwards.
+
+Dependabot stays enabled. A branch list that stays empty because nothing is
+allowed to check dependencies is not a tidy repository.
+
+### The README, and the evidence under it
+
+The root README was rebuilt around the two ways in — the DeepWatch workspace,
+and Watch Skill as an MCP server or Claude Skill — rather than presenting one
+product with the other in a footnote. It states three tool counts separately,
+because 39 standalone MCP tools, 22 DeepWatch `watch_*` tools and 47 advertised
+profile entries are three different numbers that were previously used
+interchangeably.
+
+Every screenshot in it was recaptured from this release's build, in a clean room
+composed only from the sealed artifacts. The version panel in those images reads
+`1.4.0` and `0.1.0` because that is what was running when the shutter fell.
+
 ## v1.4.0rc1 — 2026-09-03 (release candidate)
 
 The 1.4 candidate closes the real DeepWatch authority path: supervised browser

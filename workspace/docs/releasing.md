@@ -42,10 +42,25 @@ npm run check && npm run release:artifacts
 
 ## One-time first publication
 
-Trusted Publisher cannot create a package that does not exist yet. The first
-publication of all twenty packages therefore uses a short-lived npm publisher
-credential held only by the release owner. The repository procedure is
-offline and dry-run by default:
+Trusted Publisher cannot create a package that does not exist yet. This is
+npm's own documented prerequisite for `npm trust`  --  *"The package you're
+configuring must already exist on the npm registry"*  --  and it is not an
+oversight in this repository's setup. PyPI allows a publisher to be configured
+for a name nobody has uploaded yet, which is why Watch Core's train has no
+equivalent step; npm does not, and
+[npm/cli#8544](https://github.com/npm/cli/issues/8544), the request to allow an
+initial publish over OIDC, is still open. Check whether it has been resolved
+before assuming this section still applies.
+
+So the first publication of all twenty packages uses a short-lived npm
+publisher credential held only by the release owner. **That one publication is
+the only DeepWatch release without provenance attestation**, because provenance
+is generated from a CI workload identity and a laptop does not have one. Every
+release after it goes through `release-deepwatch.yml`, which publishes with
+`--provenance` and no token path at all. Say so in the release notes rather
+than letting somebody discover it from a missing badge.
+
+The repository procedure is offline and dry-run by default:
 
 ```bash
 # after release:artifacts, from a clean exact candidate commit
@@ -152,8 +167,11 @@ node scripts/first-publish.mjs --publish --confirm-first-publish
 ```
 
 The script's only write is `npm publish <verified-tarball> --access public
---tag preview`, in the exact dependency order printed by
-`node scripts/publish-order.mjs`. This task must never run that command.
+--tag <derived>`, in the exact dependency order printed by
+`node scripts/publish-order.mjs`. The dist-tag is derived from the version's
+shape by the same rule the workflow uses, so the bootstrap and the workflow
+cannot disagree about a publication that cannot be taken back. This task must
+never run that command.
 
 Current organisation hardening is a prerequisite, not an afterthought. The
 default `Developers` team currently has read/write access: add no members while
@@ -162,13 +180,32 @@ contributors read-only where appropriate, require strong authentication/2FA
 for maintainers, and protect the GitHub `npm` environment with required
 reviewers.
 
-After the first publication, configure a Trusted Publisher separately on all
-twenty package pages: **Settings → Publishing access → GitHub Actions**, with
-repository `oxbshw/watch-skill`, workflow `release-deepwatch.yml`, and
-environment `npm`. Verify the next preview entirely through that OIDC workflow,
-then disable token publishing or restrict the bootstrap token so it cannot
-publish. Until every package has the publisher, the workflow must fail closed.
-There is deliberately no `NODE_AUTH_TOKEN` fallback.
+After the first publication, every one of the twenty packages needs a Trusted
+Publisher of its own. `npm trust` does this from the terminal, which matters at
+twenty packages: the equivalent web flow is **Settings → Publishing access →
+GitHub Actions** repeated twenty times, and a form filled in nineteen times
+correctly is a workflow that fails closed on the twentieth.
+
+```bash
+for name in $(node scripts/publish-order.mjs); do
+  npm trust github "$name" \
+    --file release-deepwatch.yml \
+    --repo oxbshw/watch-skill \
+    --env npm \
+    --allow-publish --yes
+done
+npm trust list @deepwatch/cli
+```
+
+`npm trust list <package>` is the read-back; run it on all twenty before
+trusting the result of the loop, because the failure this guards against is a
+publisher that was silently not created.
+
+Then verify the next release entirely through the OIDC workflow and restrict
+the bootstrap credential so it can no longer publish. Until every package has
+its publisher the workflow must fail closed: there is deliberately no
+`NODE_AUTH_TOKEN` fallback, because a fallback turns a missing publisher into a
+quiet unattested publish instead of a stopped release.
 
 The `npm` Environment must also exist in repository settings with required
 reviewers. That is what makes a release an approval against one exact tag

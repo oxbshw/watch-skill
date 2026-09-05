@@ -12,7 +12,7 @@
     "modelLabel": "Stub Echo Small",
     "core": "connected",
     "coreTransport": "stdio",
-    "coreVersion": "1.4.0rc1",
+    "coreVersion": "1.4.0",
     "requestClassification": {
       "catalogue": 1,
       "providerTest": 7,
@@ -51,7 +51,7 @@
       "scenario": "provider-bind-first-prompt",
       "precondition": "a first-run dialog is on screen in this Electron profile",
       "expected": "the Watch first-run notice: orca mark, the four verbs, an honest readiness count, and two ways out",
-      "observed": "Watch notice visible=false; readiness={\"summaryReady\":1,\"summaryTotal\":12,\"ready\":0,\"degraded\":0,\"unconfigured\":0,\"unavailable\":0,\"notTested\":0,\"error\":0}",
+      "observed": "Watch notice visible=false; readiness={\"summaryReady\":2,\"summaryTotal\":12,\"ready\":0,\"degraded\":0,\"unconfigured\":0,\"unavailable\":0,\"notTested\":0,\"error\":0}",
       "verdict": "pass",
       "facts": {
         "dialogOpen": true,
@@ -68,7 +68,7 @@
         "memoryLedgerVisible": false,
         "compareBoundaryVisible": false,
         "readiness": {
-          "summaryReady": 1,
+          "summaryReady": 2,
           "summaryTotal": 12,
           "ready": 0,
           "degraded": 0,
@@ -78,10 +78,10 @@
           "error": 0
         }
       },
-      "bytes": 181150,
+      "bytes": 183318,
       "width": 1800,
       "height": 1125,
-      "digest": "sha256:fedf8eb52370262d"
+      "digest": "sha256:ad857603951b2fc4"
     },
     {
       "name": "narrow-01-onboarding",
@@ -95,7 +95,7 @@
       "scenario": "provider-bind-first-prompt",
       "precondition": "a first-run dialog is on screen in this Electron profile",
       "expected": "the Watch first-run notice: orca mark, the four verbs, an honest readiness count, and two ways out",
-      "observed": "Watch notice visible=false; readiness={\"summaryReady\":1,\"summaryTotal\":12,\"ready\":0,\"degraded\":0,\"unconfigured\":0,\"unavailable\":0,\"notTested\":0,\"error\":0}",
+      "observed": "Watch notice visible=false; readiness={\"summaryReady\":2,\"summaryTotal\":12,\"ready\":0,\"degraded\":0,\"unconfigured\":0,\"unavailable\":0,\"notTested\":0,\"error\":0}",
       "verdict": "pass",
       "facts": {
         "dialogOpen": true,
@@ -112,7 +112,7 @@
         "memoryLedgerVisible": false,
         "compareBoundaryVisible": false,
         "readiness": {
-          "summaryReady": 1,
+          "summaryReady": 2,
           "summaryTotal": 12,
           "ready": 0,
           "degraded": 0,
@@ -122,10 +122,10 @@
           "error": 0
         }
       },
-      "bytes": 121374,
+      "bytes": 124724,
       "width": 960,
       "height": 1280,
-      "digest": "sha256:e59550b85e14b822"
+      "digest": "sha256:23172f191271061a"
     },
     {
       "name": "compact-01-onboarding",
@@ -139,7 +139,7 @@
       "scenario": "provider-bind-first-prompt",
       "precondition": "a first-run dialog is on screen in this Electron profile",
       "expected": "the Watch first-run notice: orca mark, the four verbs, an honest readiness count, and two ways out",
-      "observed": "Watch notice visible=false; readiness={\"summaryReady\":1,\"summaryTotal\":12,\"ready\":0,\"degraded\":0,\"unconfigured\":0,\"unavailable\":0,\"notTested\":0,\"error\":0}",
+      "observed": "Watch notice visible=false; readiness={\"summaryReady\":2,\"summaryTotal\":12,\"ready\":0,\"degraded\":0,\"unconfigured\":0,\"unavailable\":0,\"notTested\":0,\"error\":0}",
       "verdict": "pass",
       "facts": {
         "dialogOpen": true,
@@ -156,7 +156,7 @@
         "memoryLedgerVisible": false,
         "compareBoundaryVisible": false,
         "readiness": {
-          "summaryReady": 1,
+          "summaryReady": 2,
           "summaryTotal": 12,
           "ready": 0,
           "degraded": 0,
@@ -166,10 +166,10 @@
           "error": 0
         }
       },
-      "bytes": 135483,
+      "bytes": 137193,
       "width": 750,
       "height": 1125,
-      "digest": "sha256:7269a4073e9b393b"
+      "digest": "sha256:5d27e0e15cc9b440"
     },
     {
       "name": "wide-03-workspace",
@@ -254,10 +254,10 @@
           "error": 0
         }
       },
-      "bytes": 170047,
+      "bytes": 86361,
       "width": 1800,
       "height": 1125,
-      "digest": "sha256:410999b7630d5414"
+      "digest": "sha256:cafce68e1d91e458"
     },
     {
       "name": "wide-05-mode-trajectory",
@@ -298,10 +298,10 @@
           "error": 0
         }
       },
-      "bytes": 176198,
+      "bytes": 94533,
       "width": 1800,
       "height": 1125,
-      "digest": "sha256:b2cc928347a24007"
+      "digest": "sha256:d41cf2fcbf7ebfcd"
     },
     {
       "name": "wide-05-mode-watch",
@@ -342,10 +342,10 @@
           "error": 0
         }
       },
-      "bytes": 365685,
+      "bytes": 279168,
       "width": 1800,
       "height": 1125,
-      "digest": "sha256:b4710effb7dc4eb4"
+      "digest": "sha256:4857a501eaed61b5"
     },
     {
       "name": "wide-05-mode-live",
@@ -386,10 +386,10 @@
           "error": 0
         }
       },
-      "bytes": 486124,
+      "bytes": 510641,
       "width": 1800,
       "height": 1125,
-      "digest": "sha256:83efe3643cf7bc92"
+      "digest": "sha256:1fbdcf674cfb3410"
     },
     {
       "name": "wide-05-mode-memory",
@@ -430,10 +430,10 @@
           "error": 0
         }
       },
-      "bytes": 338217,
+      "bytes": 251591,
       "width": 1800,
       "height": 1125,
-      "digest": "sha256:92834531c7547974"
+      "digest": "sha256:70c96f2ba48877f8"
     },
     {
       "name": "wide-05-mode-library",
@@ -474,10 +474,10 @@
           "error": 0
         }
       },
-      "bytes": 291015,
+      "bytes": 204547,
       "width": 1800,
       "height": 1125,
-      "digest": "sha256:58ae076cdfb39e73"
+      "digest": "sha256:65f810db4fadec70"
     },
     {
       "name": "wide-05-mode-compare",
@@ -518,10 +518,10 @@
           "error": 0
         }
       },
-      "bytes": 350149,
+      "bytes": 266214,
       "width": 1800,
       "height": 1125,
-      "digest": "sha256:fd5aa941cf469ce7"
+      "digest": "sha256:e1cb11b39266c6b4"
     },
     {
       "name": "wide-06-settings-general",
@@ -562,10 +562,10 @@
           "error": 0
         }
       },
-      "bytes": 168935,
+      "bytes": 169845,
       "width": 1800,
       "height": 1125,
-      "digest": "sha256:0bcbcc160f78daae"
+      "digest": "sha256:3389abe829e021c3"
     },
     {
       "name": "wide-06-settings-models",
@@ -606,10 +606,10 @@
           "error": 0
         }
       },
-      "bytes": 156357,
+      "bytes": 156940,
       "width": 1800,
       "height": 1125,
-      "digest": "sha256:386c2388211c1881"
+      "digest": "sha256:cfc10ab03bf718c9"
     },
     {
       "name": "wide-07-settings-roles",
@@ -642,7 +642,7 @@
         "readiness": {
           "summaryReady": null,
           "summaryTotal": null,
-          "ready": 0,
+          "ready": 1,
           "degraded": 0,
           "unconfigured": 4,
           "unavailable": 0,
@@ -650,10 +650,10 @@
           "error": 0
         }
       },
-      "bytes": 438157,
+      "bytes": 443289,
       "width": 1800,
       "height": 1125,
-      "digest": "sha256:0dade70b13ef2dc6"
+      "digest": "sha256:fda2c49aae014d7b"
     },
     {
       "name": "wide-07-settings-engines",
@@ -694,10 +694,10 @@
           "error": 0
         }
       },
-      "bytes": 463808,
+      "bytes": 463239,
       "width": 1800,
       "height": 1125,
-      "digest": "sha256:eec476417226fdd6"
+      "digest": "sha256:d8c3fcd4d7b120a5"
     },
     {
       "name": "wide-07-settings-sources",
@@ -738,10 +738,10 @@
           "error": 0
         }
       },
-      "bytes": 425223,
+      "bytes": 425683,
       "width": 1800,
       "height": 1125,
-      "digest": "sha256:0c4e779d2804119d"
+      "digest": "sha256:daf43053172b9d70"
     },
     {
       "name": "wide-07-settings-memory-settings",
@@ -782,10 +782,10 @@
           "error": 0
         }
       },
-      "bytes": 435108,
+      "bytes": 441423,
       "width": 1800,
       "height": 1125,
-      "digest": "sha256:d54d73de32b367f8"
+      "digest": "sha256:a8bf6a7c19e2eed8"
     },
     {
       "name": "wide-07-settings-verification",
@@ -826,10 +826,10 @@
           "error": 0
         }
       },
-      "bytes": 421880,
+      "bytes": 421685,
       "width": 1800,
       "height": 1125,
-      "digest": "sha256:37e20ab61425bbf8"
+      "digest": "sha256:ebe3a9d4994677a9"
     },
     {
       "name": "wide-07-settings-diagnostics",
@@ -843,7 +843,7 @@
       "scenario": "provider-bind-first-prompt",
       "precondition": "the settings dialog is open at the named section",
       "expected": "what this installation consists of, saying so where a value cannot be read",
-      "observed": "Core connected=true via stdio; readiness={\"summaryReady\":null,\"summaryTotal\":null,\"ready\":1,\"degraded\":2,\"unconfigured\":6,\"unavailable\":0,\"notTested\":2,\"error\":0}",
+      "observed": "Core connected=true via stdio; readiness={\"summaryReady\":null,\"summaryTotal\":null,\"ready\":2,\"degraded\":1,\"unconfigured\":6,\"unavailable\":1,\"notTested\":2,\"error\":0}",
       "verdict": "pass",
       "facts": {
         "dialogOpen": true,
@@ -862,18 +862,18 @@
         "readiness": {
           "summaryReady": null,
           "summaryTotal": null,
-          "ready": 1,
-          "degraded": 2,
+          "ready": 2,
+          "degraded": 1,
           "unconfigured": 6,
-          "unavailable": 0,
+          "unavailable": 1,
           "notTested": 2,
           "error": 0
         }
       },
-      "bytes": 436133,
+      "bytes": 437074,
       "width": 1800,
       "height": 1125,
-      "digest": "sha256:0196f1d230aee7db"
+      "digest": "sha256:3f671e4a1c46143a"
     },
     {
       "name": "wide-07-settings-about",
@@ -914,10 +914,10 @@
           "error": 0
         }
       },
-      "bytes": 316287,
+      "bytes": 318641,
       "width": 1800,
       "height": 1125,
-      "digest": "sha256:c96db9b42f3dab8e"
+      "digest": "sha256:413072e7d3b648c9"
     },
     {
       "name": "wide-08-sidebar-collapsed",
@@ -958,10 +958,10 @@
           "error": 0
         }
       },
-      "bytes": 338244,
+      "bytes": 248082,
       "width": 1800,
       "height": 1125,
-      "digest": "sha256:df4de9e59a3819d0"
+      "digest": "sha256:285ba45a08f9d653"
     },
     {
       "name": "narrow-03-workspace",
@@ -1002,10 +1002,10 @@
           "error": 0
         }
       },
-      "bytes": 59829,
+      "bytes": 66799,
       "width": 960,
       "height": 1280,
-      "digest": "sha256:1486c71d643cd093"
+      "digest": "sha256:cdcdeee6aa34b06f"
     },
     {
       "name": "narrow-05-mode-chat",
@@ -1046,10 +1046,10 @@
           "error": 0
         }
       },
-      "bytes": 122879,
+      "bytes": 57969,
       "width": 960,
       "height": 1280,
-      "digest": "sha256:71007dcc92b7cdb7"
+      "digest": "sha256:f756a435ce818cb3"
     },
     {
       "name": "narrow-05-mode-trajectory",
@@ -1090,10 +1090,10 @@
           "error": 0
         }
       },
-      "bytes": 126200,
+      "bytes": 60575,
       "width": 960,
       "height": 1280,
-      "digest": "sha256:166e98cbbfdae279"
+      "digest": "sha256:6511a412253fbc08"
     },
     {
       "name": "narrow-05-mode-watch",
@@ -1134,10 +1134,10 @@
           "error": 0
         }
       },
-      "bytes": 293733,
+      "bytes": 228578,
       "width": 960,
       "height": 1280,
-      "digest": "sha256:7d2c1edfb421d8ed"
+      "digest": "sha256:6f43a9bf84e4d4c5"
     },
     {
       "name": "narrow-05-mode-live",
@@ -1178,10 +1178,10 @@
           "error": 0
         }
       },
-      "bytes": 423698,
+      "bytes": 435996,
       "width": 960,
       "height": 1280,
-      "digest": "sha256:8fd2f5b9f6c23a5f"
+      "digest": "sha256:f471443e584072a1"
     },
     {
       "name": "narrow-05-mode-memory",
@@ -1222,10 +1222,10 @@
           "error": 0
         }
       },
-      "bytes": 268698,
+      "bytes": 203052,
       "width": 960,
       "height": 1280,
-      "digest": "sha256:3d7b96b6c70c4e55"
+      "digest": "sha256:f7410a9f1b746f09"
     },
     {
       "name": "narrow-05-mode-library",
@@ -1266,10 +1266,10 @@
           "error": 0
         }
       },
-      "bytes": 211153,
+      "bytes": 146118,
       "width": 960,
       "height": 1280,
-      "digest": "sha256:9bbf51d2c15b5d87"
+      "digest": "sha256:70f050c6461f2082"
     },
     {
       "name": "narrow-05-mode-compare",
@@ -1310,10 +1310,10 @@
           "error": 0
         }
       },
-      "bytes": 270899,
+      "bytes": 206396,
       "width": 960,
       "height": 1280,
-      "digest": "sha256:47dc2445bec92f62"
+      "digest": "sha256:6fa797cea83c049b"
     },
     {
       "name": "narrow-06-settings-general",
@@ -1354,10 +1354,10 @@
           "error": 0
         }
       },
-      "bytes": 125149,
+      "bytes": 119155,
       "width": 960,
       "height": 1280,
-      "digest": "sha256:50688eb7b99e4493"
+      "digest": "sha256:cab407825b01babc"
     },
     {
       "name": "narrow-06-settings-models",
@@ -1398,10 +1398,10 @@
           "error": 0
         }
       },
-      "bytes": 108995,
+      "bytes": 102982,
       "width": 960,
       "height": 1280,
-      "digest": "sha256:13f2930bf7d81193"
+      "digest": "sha256:b90ff2cb5f4b333d"
     },
     {
       "name": "narrow-07-settings-roles",
@@ -1434,7 +1434,7 @@
         "readiness": {
           "summaryReady": null,
           "summaryTotal": null,
-          "ready": 0,
+          "ready": 1,
           "degraded": 0,
           "unconfigured": 4,
           "unavailable": 0,
@@ -1442,10 +1442,10 @@
           "error": 0
         }
       },
-      "bytes": 345759,
+      "bytes": 341597,
       "width": 960,
       "height": 1280,
-      "digest": "sha256:1e2a13e6925108bc"
+      "digest": "sha256:ce0afc759a66fe42"
     },
     {
       "name": "narrow-07-settings-engines",
@@ -1486,10 +1486,10 @@
           "error": 0
         }
       },
-      "bytes": 359790,
+      "bytes": 354027,
       "width": 960,
       "height": 1280,
-      "digest": "sha256:bdae30a46a77e95f"
+      "digest": "sha256:7f23d4ef45a859a2"
     },
     {
       "name": "narrow-07-settings-sources",
@@ -1530,10 +1530,10 @@
           "error": 0
         }
       },
-      "bytes": 352137,
+      "bytes": 346944,
       "width": 960,
       "height": 1280,
-      "digest": "sha256:ca1f3005bc047a9f"
+      "digest": "sha256:2beb7f22ffa89b25"
     },
     {
       "name": "narrow-07-settings-memory-settings",
@@ -1574,10 +1574,10 @@
           "error": 0
         }
       },
-      "bytes": 356554,
+      "bytes": 353711,
       "width": 960,
       "height": 1280,
-      "digest": "sha256:964b0c70fe82cdbd"
+      "digest": "sha256:67b5957ac75db485"
     },
     {
       "name": "narrow-07-settings-verification",
@@ -1618,10 +1618,10 @@
           "error": 0
         }
       },
-      "bytes": 348959,
+      "bytes": 343287,
       "width": 960,
       "height": 1280,
-      "digest": "sha256:1bedd3583dc6de39"
+      "digest": "sha256:a34f2708f0bf6d8d"
     },
     {
       "name": "narrow-07-settings-diagnostics",
@@ -1635,7 +1635,7 @@
       "scenario": "provider-bind-first-prompt",
       "precondition": "the settings dialog is open at the named section",
       "expected": "what this installation consists of, saying so where a value cannot be read",
-      "observed": "Core connected=true via stdio; readiness={\"summaryReady\":null,\"summaryTotal\":null,\"ready\":1,\"degraded\":2,\"unconfigured\":6,\"unavailable\":0,\"notTested\":2,\"error\":0}",
+      "observed": "Core connected=true via stdio; readiness={\"summaryReady\":null,\"summaryTotal\":null,\"ready\":2,\"degraded\":1,\"unconfigured\":6,\"unavailable\":1,\"notTested\":2,\"error\":0}",
       "verdict": "pass",
       "facts": {
         "dialogOpen": true,
@@ -1654,18 +1654,18 @@
         "readiness": {
           "summaryReady": null,
           "summaryTotal": null,
-          "ready": 1,
-          "degraded": 2,
+          "ready": 2,
+          "degraded": 1,
           "unconfigured": 6,
-          "unavailable": 0,
+          "unavailable": 1,
           "notTested": 2,
           "error": 0
         }
       },
-      "bytes": 352086,
+      "bytes": 346281,
       "width": 960,
       "height": 1280,
-      "digest": "sha256:1c4118ac15056081"
+      "digest": "sha256:06622c4bb4b8396f"
     },
     {
       "name": "narrow-07-settings-about",
@@ -1706,10 +1706,10 @@
           "error": 0
         }
       },
-      "bytes": 261828,
+      "bytes": 255194,
       "width": 960,
       "height": 1280,
-      "digest": "sha256:28895e016adc5227"
+      "digest": "sha256:dfccb1be01a21190"
     },
     {
       "name": "narrow-08-sidebar-collapsed",
@@ -1750,10 +1750,10 @@
           "error": 0
         }
       },
-      "bytes": 280552,
+      "bytes": 264667,
       "width": 960,
       "height": 1280,
-      "digest": "sha256:8dbeede7c7befd1b"
+      "digest": "sha256:652fc1632595d365"
     },
     {
       "name": "compact-03-workspace",
@@ -1794,10 +1794,10 @@
           "error": 0
         }
       },
-      "bytes": 51022,
+      "bytes": 58526,
       "width": 750,
       "height": 1125,
-      "digest": "sha256:3f7ae5b78ca598fa"
+      "digest": "sha256:c4f72c65a9d5e4a3"
     },
     {
       "name": "compact-05-mode-chat",
@@ -1838,10 +1838,10 @@
           "error": 0
         }
       },
-      "bytes": 108805,
+      "bytes": 56325,
       "width": 750,
       "height": 1125,
-      "digest": "sha256:e9e13d5b1e8d5e19"
+      "digest": "sha256:08434de3df62cca5"
     },
     {
       "name": "compact-05-mode-trajectory",
@@ -1882,10 +1882,10 @@
           "error": 0
         }
       },
-      "bytes": 110325,
+      "bytes": 57527,
       "width": 750,
       "height": 1125,
-      "digest": "sha256:940c43c8f22215ff"
+      "digest": "sha256:6345dc63193d8443"
     },
     {
       "name": "compact-05-mode-watch",
@@ -1926,10 +1926,10 @@
           "error": 0
         }
       },
-      "bytes": 279473,
+      "bytes": 226044,
       "width": 750,
       "height": 1125,
-      "digest": "sha256:a74c37fe47e762fe"
+      "digest": "sha256:892cf6849799f90b"
     },
     {
       "name": "compact-05-mode-live",
@@ -1970,10 +1970,10 @@
           "error": 0
         }
       },
-      "bytes": 292954,
+      "bytes": 291139,
       "width": 750,
       "height": 1125,
-      "digest": "sha256:e43f8c249fbc0608"
+      "digest": "sha256:722877cb3b09a151"
     },
     {
       "name": "compact-05-mode-memory",
@@ -2014,10 +2014,10 @@
           "error": 0
         }
       },
-      "bytes": 252304,
+      "bytes": 194668,
       "width": 750,
       "height": 1125,
-      "digest": "sha256:d11ba5c6b09d1d58"
+      "digest": "sha256:47bd26b217d8074c"
     },
     {
       "name": "compact-05-mode-library",
@@ -2058,10 +2058,10 @@
           "error": 0
         }
       },
-      "bytes": 191941,
+      "bytes": 135139,
       "width": 750,
       "height": 1125,
-      "digest": "sha256:80eb3c45f6804156"
+      "digest": "sha256:1d5086c7452d6b0c"
     },
     {
       "name": "compact-05-mode-compare",
@@ -2102,10 +2102,10 @@
           "error": 0
         }
       },
-      "bytes": 263251,
+      "bytes": 209896,
       "width": 750,
       "height": 1125,
-      "digest": "sha256:4e816c99b4695dd0"
+      "digest": "sha256:59e06f7c6f4b0fb1"
     },
     {
       "name": "compact-06-settings-general",
@@ -2146,10 +2146,10 @@
           "error": 0
         }
       },
-      "bytes": 88982,
+      "bytes": 87548,
       "width": 750,
       "height": 1125,
-      "digest": "sha256:e51054fa58f0ee9b"
+      "digest": "sha256:46f575753886cfeb"
     },
     {
       "name": "compact-06-settings-models",
@@ -2190,10 +2190,10 @@
           "error": 0
         }
       },
-      "bytes": 79226,
+      "bytes": 77451,
       "width": 750,
       "height": 1125,
-      "digest": "sha256:145f8b66c25464e6"
+      "digest": "sha256:f38fdf27a8e9fe22"
     },
     {
       "name": "compact-07-settings-roles",
@@ -2226,7 +2226,7 @@
         "readiness": {
           "summaryReady": null,
           "summaryTotal": null,
-          "ready": 0,
+          "ready": 1,
           "degraded": 0,
           "unconfigured": 4,
           "unavailable": 0,
@@ -2234,10 +2234,10 @@
           "error": 0
         }
       },
-      "bytes": 241937,
+      "bytes": 239256,
       "width": 750,
       "height": 1125,
-      "digest": "sha256:3dd7951f33a52434"
+      "digest": "sha256:778e354ef0636c30"
     },
     {
       "name": "compact-07-settings-engines",
@@ -2278,10 +2278,10 @@
           "error": 0
         }
       },
-      "bytes": 249513,
+      "bytes": 248038,
       "width": 750,
       "height": 1125,
-      "digest": "sha256:cc48af908d3bfb38"
+      "digest": "sha256:5b87ec628c991dbc"
     },
     {
       "name": "compact-07-settings-sources",
@@ -2322,10 +2322,10 @@
           "error": 0
         }
       },
-      "bytes": 270394,
+      "bytes": 269573,
       "width": 750,
       "height": 1125,
-      "digest": "sha256:8fd42f5c3e7bec2d"
+      "digest": "sha256:0ce7dfb8a4f2b484"
     },
     {
       "name": "compact-07-settings-memory-settings",
@@ -2366,10 +2366,10 @@
           "error": 0
         }
       },
-      "bytes": 254043,
+      "bytes": 253897,
       "width": 750,
       "height": 1125,
-      "digest": "sha256:bf6021e2e6110831"
+      "digest": "sha256:e66b4e5de7fdaa54"
     },
     {
       "name": "compact-07-settings-verification",
@@ -2410,10 +2410,10 @@
           "error": 0
         }
       },
-      "bytes": 257546,
+      "bytes": 256467,
       "width": 750,
       "height": 1125,
-      "digest": "sha256:34db81cdae228b90"
+      "digest": "sha256:cab37181d3a25929"
     },
     {
       "name": "compact-07-settings-diagnostics",
@@ -2427,7 +2427,7 @@
       "scenario": "provider-bind-first-prompt",
       "precondition": "the settings dialog is open at the named section",
       "expected": "what this installation consists of, saying so where a value cannot be read",
-      "observed": "Core connected=true via stdio; readiness={\"summaryReady\":null,\"summaryTotal\":null,\"ready\":1,\"degraded\":2,\"unconfigured\":6,\"unavailable\":0,\"notTested\":2,\"error\":0}",
+      "observed": "Core connected=true via stdio; readiness={\"summaryReady\":null,\"summaryTotal\":null,\"ready\":2,\"degraded\":1,\"unconfigured\":6,\"unavailable\":1,\"notTested\":2,\"error\":0}",
       "verdict": "pass",
       "facts": {
         "dialogOpen": true,
@@ -2446,18 +2446,18 @@
         "readiness": {
           "summaryReady": null,
           "summaryTotal": null,
-          "ready": 1,
-          "degraded": 2,
+          "ready": 2,
+          "degraded": 1,
           "unconfigured": 6,
-          "unavailable": 0,
+          "unavailable": 1,
           "notTested": 2,
           "error": 0
         }
       },
-      "bytes": 238278,
+      "bytes": 240296,
       "width": 750,
       "height": 1125,
-      "digest": "sha256:9ad2a65dcaa2e76f"
+      "digest": "sha256:e53e83849f32d036"
     },
     {
       "name": "compact-07-settings-about",
@@ -2498,10 +2498,10 @@
           "error": 0
         }
       },
-      "bytes": 221865,
+      "bytes": 219510,
       "width": 750,
       "height": 1125,
-      "digest": "sha256:aaa2ecd88866054f"
+      "digest": "sha256:2e1271bb2874fe06"
     },
     {
       "name": "compact-08-sidebar-collapsed",
@@ -2542,10 +2542,10 @@
           "error": 0
         }
       },
-      "bytes": 270916,
+      "bytes": 216157,
       "width": 750,
       "height": 1125,
-      "digest": "sha256:15a9eb15e5e7802a"
+      "digest": "sha256:b3d5c6a3a3024d50"
     }
   ]
 }

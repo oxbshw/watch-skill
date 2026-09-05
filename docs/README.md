@@ -85,6 +85,8 @@ Runnable counterparts live in the [example catalog](../examples/README.md).
 - [VLM performance](vlm-performance.md) — the measured local vision model:
   revision, latency, memory, and the failure modes a live session exposed.
 - [Benchmarks](../benchmarks/) — methods, fixtures, and committed results.
+- [Branch consolidation](branch-consolidation.md) — what every branch this
+  repository once had contained, and why deleting it lost nothing.
 
 ### Development
 
