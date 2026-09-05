@@ -73,19 +73,31 @@ const recordOf = (over = {}) => ({
   ...over,
 })
 
-/** A Core that answers, and remembers what it was asked. */
+/**
+ * A Core that answers the way the Bridge answers: in a `WatchResult` envelope.
+ *
+ * It used to return the payload directly, and that is why these tests passed
+ * while the product did not. `WatchCoreBridge.request<T>` returns
+ * `Promise<WatchResult<T>>`, so a stub returning `{ verdict }` was testing a
+ * shape nothing implements — and the ledger's own structural interface said
+ * the same wrong thing, so the compiler agreed with both of them.
+ *
+ * `reply` is written as the payload for readability and wrapped here, so a
+ * test says what Core answered and the envelope stays the stub's business.
+ */
 class StubCore extends Service {
   constructor(ctx, config) {
     super(ctx, 'watchCore')
     this.asked = []
-    this.reply = config?.reply ?? { verdict: 'VERIFIED', reason: 'all checks passed' }
+    this.payload = config?.reply ?? { verdict: 'VERIFIED', reason: 'all checks passed' }
+    this.envelope = config?.envelope ?? null
     this.fail = config?.fail ?? false
   }
 
   async request(method, params) {
     this.asked.push({ method, params })
     if (this.fail) throw new Error('bridge unavailable')
-    return this.reply
+    return this.envelope ?? { ok: true, value: this.payload }
   }
 }
 
@@ -372,7 +384,9 @@ describe('the authority rule is enforced by the repository, not by intent', () =
   test('the Host reads Core’s verdict rather than deriving one', () => {
     const source = readFileSync(
       join(ROOT, 'packages', 'watch', 'technology', 'src', 'observation.ts'), 'utf8')
+    assert.match(source, /if \(!result\.ok\)/,
+      'an unsuccessful Bridge result is no longer handled before the payload')
     assert.match(source, /typeof reply\.verdict === 'string' \? reply\.verdict : null/,
-      'the verdict is no longer read straight out of Core’s reply')
+      'the verdict is no longer read out of the envelope’s value')
   })
 })

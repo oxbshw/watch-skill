@@ -242,3 +242,93 @@ describe('Core’s verdict reaches the record it is about', () => {
     assert.equal(row.verdict, null, 'a stranger’s verdict was attached to this receipt')
   })
 })
+describe('replay cannot erase an answer Core gave', () => {
+  // The reproduced sequence: receipt, `pass`, then the same receipt again left
+  // the row at `verdict: null` — and repeating the attestation could not fix
+  // it, because the join thought it had already been applied. The answer was
+  // gone from the Library and from the journal, and nothing said so.
+
+  test('a duplicate receipt does not downgrade a verified row', async () => {
+    const { ctx } = await mount()
+    ctx.emit('watch/execution-recorded', receiptEvent())
+    ctx.emit('watch/attestation-recorded', attestationEvent())
+    await settle()
+    assert.equal((await records(ctx))
+      .find(entry => entry.recordId === 'session-1/agent-1#1/c1#1').verdict, 'VERIFIED')
+
+    // The same receipt again, as a reconcile or a replay delivers it.
+    ctx.emit('watch/execution-recorded', receiptEvent())
+    await settle()
+
+    const row = (await records(ctx)).find(entry => entry.recordId === 'session-1/agent-1#1/c1#1')
+    assert.equal(row.verdict, 'VERIFIED', 'a duplicate receipt erased the verdict')
+    assert.ok((row.tags ?? []).includes('verdict:VERIFIED'))
+    assert.deepEqual(row.evidenceIds, ['vr_abc123'],
+      'the row kept a verdict but lost the record it came from')
+  })
+
+  test('a duplicate receipt carrying a newer execution state keeps both', async () => {
+    // The legitimate case the fix must not break: an execution state really
+    // can change, and the newer observation is the truthful one. What must
+    // survive alongside it is the verdict.
+    const { ctx } = await mount()
+    ctx.emit('watch/execution-recorded', receiptEvent({ state: 'running' }))
+    ctx.emit('watch/attestation-recorded', attestationEvent())
+    await settle()
+    ctx.emit('watch/execution-recorded', receiptEvent({ state: 'completed' }))
+    await settle()
+
+    const row = (await records(ctx)).find(entry => entry.recordId === 'session-1/agent-1#1/c1#1')
+    assert.ok((row.tags ?? []).includes('state:completed'), 'the newer state was lost')
+    assert.ok(!(row.tags ?? []).includes('state:running'), 'the stale state survived')
+    assert.equal(row.verdict, 'VERIFIED', 'the verdict was lost with the state update')
+  })
+
+  test('repeating the attestation after a downgrade still repairs it', async () => {
+    const { ctx } = await mount()
+    ctx.emit('watch/execution-recorded', receiptEvent())
+    ctx.emit('watch/attestation-recorded', attestationEvent())
+    await settle()
+    ctx.emit('watch/execution-recorded', receiptEvent())
+    ctx.emit('watch/attestation-recorded', attestationEvent())
+    await settle()
+
+    const all = (await records(ctx)).filter(e => e.recordId === 'session-1/agent-1#1/c1#1')
+    assert.equal(all.length, 1)
+    assert.equal(all[0].verdict, 'VERIFIED')
+  })
+
+  test('a second verification of the same call is a new answer, not a repeat', async () => {
+    // Idempotency keys on execution identity *and* verification identity. Two
+    // verifications can both say VERIFIED and be answers to different
+    // questions; comparing only the word would keep the first one's evidence.
+    const { ctx } = await mount()
+    ctx.emit('watch/execution-recorded', receiptEvent())
+    ctx.emit('watch/attestation-recorded', attestationEvent())
+    await settle()
+    ctx.emit('watch/attestation-recorded',
+      attestationEvent({ verificationId: 'vr_second' }))
+    await settle()
+
+    const row = (await records(ctx)).find(entry => entry.recordId === 'session-1/agent-1#1/c1#1')
+    assert.equal(row.verdict, 'VERIFIED')
+    assert.deepEqual(row.evidenceIds, ['vr_second'],
+      'a second verification did not replace the evidence link')
+  })
+
+  test('a late attestation for a much earlier receipt still lands', async () => {
+    const { ctx } = await mount()
+    ctx.emit('watch/execution-recorded', receiptEvent())
+    for (let i = 2; i <= 6; i += 1) {
+      ctx.emit('watch/execution-recorded', receiptEvent({
+        idempotencyKey: `session-1/agent-1#1/c${String(i)}#1`, callId: `c${String(i)}`,
+      }))
+    }
+    await settle()
+    ctx.emit('watch/attestation-recorded', attestationEvent())
+    await settle()
+
+    const row = (await records(ctx)).find(entry => entry.recordId === 'session-1/agent-1#1/c1#1')
+    assert.equal(row.verdict, 'VERIFIED', 'a late verdict missed its receipt')
+  })
+})

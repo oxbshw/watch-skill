@@ -374,10 +374,30 @@ export function apply(ctx: Context, config: Config): void {
     ? null
     : new ReceiptJournal(config.receiptsDirectory)
 
-  /** File a record in the Library and, if there is one, in the journal. */
+  /**
+   * File a record in the Library and, if there is one, in the journal.
+   *
+   * A failed append does not fail the call it describes -- the work already
+   * happened, and saying otherwise would be a lie about it. But it is said
+   * out loud, once per degradation, because a product that offers durable
+   * evidence has to report when it is not storing any.
+   */
+  let announcedDegradation: string | null = null
   const file = (record: Parameters<typeof generations.addLive>[0]): void => {
     generations.addLive(record)
-    journal?.append(record)
+    if (journal === null) return
+    if (!journal.append(record)) {
+      const reason = journal.degradedReason() ?? 'unknown'
+      if (announcedDegradation !== reason) {
+        announcedDegradation = reason
+        process.stderr.write(
+          `watch-tools: receipts are NOT being saved to ${journal.path} — ${reason}. `
+          + 'Work still runs and is still indexed for this session, but the record '
+          + 'will not survive a restart. Check the directory exists and is writable.\n')
+      }
+      return
+    }
+    announcedDegradation = null
   }
 
   // Restore what a previous run recorded, before anything new is filed.
@@ -390,6 +410,20 @@ export function apply(ctx: Context, config: Config): void {
   if (journal !== null) {
     const restored = journal.load()
     for (const record of restored.records) generations.addLive(record)
+    if (restored.status === 'unreadable') {
+      // An unreadable store is not an empty one. Returning silently here is
+      // how a permissions problem looked exactly like a first run.
+      process.stderr.write(
+        `watch-tools: the receipt journal at ${journal.path} exists and could not be `
+        + `read — ${restored.reason ?? 'unknown'}. Previous receipts are not available `
+        + 'in this session.\n')
+    }
+    if (restored.repairedBytes > 0) {
+      process.stderr.write(
+        `watch-tools: removed ${String(restored.repairedBytes)} byte(s) of incomplete `
+        + `tail from ${journal.path} — a write was interrupted. Earlier records were `
+        + 'kept.\n')
+    }
     if (restored.damaged > 0) {
       // Said out loud rather than swallowed. A torn last line is the ordinary
       // consequence of a process dying mid-append and costs one record; a
@@ -442,26 +476,37 @@ export function apply(ctx: Context, config: Config): void {
     tags: readonly string[]
   }>()
 
-  /** The verdict already applied to a record, so a repeat is not a rewrite. */
-  const applied = new Map<string, string>()
+  /**
+   * The answer already on a record, so a repeat is not a rewrite.
+   *
+   * Keyed by execution identity and holding *verification* identity as well as
+   * the verdict, because the verdict string alone is not an identity. Two
+   * different verifications of the same call can both say `VERIFIED` and be
+   * different answers about different questions, and comparing only the word
+   * would silently keep the first one's evidence link.
+   */
+  const applied = new Map<string, { verdict: string, verificationId: string | null }>()
 
   /**
-   * Verdicts that arrived before the receipt they belong to.
+   * The last answer Core gave for a call, whether or not it is on the row yet.
    *
-   * `settle()` announces a receipt before `attest()` is started, so in the
-   * ordinary case the receipt is here first. That is not a guarantee: the two
-   * listeners are on a fork that receives events on its own schedule, a
-   * reconciled record can be re-announced, and an attestation for a call this
-   * instance never saw is a real possibility after a reload. Dropping Core's
-   * answer in any of those cases is the wrong trade -- it is the one piece of
-   * information in the exchange that nothing else can reproduce, and losing it
-   * is what left every row in a real room reading `verdict: null`.
+   * Not "pending": it is kept after a successful join, because the row can be
+   * rewritten later. A receipt is re-announced when a record reconciles, when
+   * an event is replayed, and after a reconnect — and each of those files the
+   * receipt again, without a verdict. Something has to remember the answer, or
+   * a duplicate silently downgrades a verified row and no later attestation
+   * can put it back.
    *
-   * So an early verdict waits. Bounded by the same reasoning as the ledger it
-   * mirrors: an attestation belongs to a call from seconds ago, and an entry
-   * older than the ledger's own limit has nothing left to join to.
+   * It also covers the opposite order. `settle()` announces a receipt before
+   * `attest()` is started, so ordinarily the receipt is first; that is a
+   * sequence, not a guarantee. The two listeners are on a fork that receives
+   * events on its own schedule, and after a reload an attestation can name a
+   * call this instance never saw.
+   *
+   * Bounded by the ledger's own horizon: an attestation belongs to a call from
+   * seconds ago, and an entry the ledger has evicted has nothing to join to.
    */
-  const pending = new Map<string, { verdict: string, verificationId: string | null }>()
+  const known = new Map<string, { verdict: string, verificationId: string | null }>()
 
   /** Keep the newest `limit` entries of an insertion-ordered map. */
   const bound = (map: Map<string, unknown>, limit: number): void => {
@@ -488,8 +533,11 @@ export function apply(ctx: Context, config: Config): void {
   ): boolean => {
     const base = indexed.get(recordId)
     if (base === undefined) return false
-    if (applied.get(recordId) === verdict) return false
-    applied.set(recordId, verdict)
+    const already = applied.get(recordId)
+    if (already !== undefined
+      && already.verdict === verdict
+      && already.verificationId === verificationId) return false
+    applied.set(recordId, { verdict, verificationId })
     bound(applied, RECEIPT_LIMIT)
     file({
       recordId,
@@ -574,10 +622,28 @@ export function apply(ctx: Context, config: Config): void {
       })
       bound(indexed, RECEIPT_LIMIT)
 
-      // A verdict that got here first has been waiting for this receipt.
-      const early = pending.get(recordId)
-      if (early !== undefined && joinVerdict(recordId, early.verdict, early.verificationId)) {
-        pending.delete(recordId)
+      // The row was just written from the receipt, so it carries no verdict
+      // whatever it carried a moment ago. If an answer is known for this call,
+      // put it back.
+      //
+      // This covers three sequences with one rule. A verdict that arrived
+      // before its receipt has been waiting. A receipt that arrives *again* --
+      // a reconciled record, a replayed event, a reconnect -- is re-filed,
+      // which is right, because an execution state can legitimately change and
+      // the newer observation is the truthful one. And a verdict that arrives
+      // after either of those still lands.
+      //
+      // The defect this closes: receipt, then `pass`, then the same receipt
+      // again left the row at `verdict: null`, and repeating the attestation
+      // could not repair it because `applied` said it had already been
+      // applied. The answer was gone from the Library and from the journal,
+      // and nothing said so.
+      const answer = known.get(recordId)
+      if (answer !== undefined) {
+        // Forget what was applied: the row no longer has it, so this is a new
+        // write rather than a repeat of one.
+        applied.delete(recordId)
+        joinVerdict(recordId, answer.verdict, answer.verificationId)
       }
     })
 
@@ -616,13 +682,12 @@ export function apply(ctx: Context, config: Config): void {
       const verificationId = typeof attestation.verificationId === 'string'
         ? attestation.verificationId
         : null
-      if (joinVerdict(recordId, verdict, verificationId)) return
-      // The receipt is not here yet, or this exact verdict is already on it.
-      // Only the first of those is worth holding.
-      if (!indexed.has(recordId)) {
-        pending.set(recordId, { verdict, verificationId })
-        bound(pending, RECEIPT_LIMIT)
-      }
+      // Remembered whatever happens, so a receipt that arrives again later can
+      // be repaired from it. Discarding this the moment the join succeeded is
+      // what made the downgrade unrecoverable.
+      known.set(recordId, { verdict, verificationId })
+      bound(known, RECEIPT_LIMIT)
+      joinVerdict(recordId, verdict, verificationId)
     })
 
   ctx.tools.register(defineTool({

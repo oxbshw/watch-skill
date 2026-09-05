@@ -28,7 +28,8 @@
 import { test, describe, after } from 'node:test'
 import assert from 'node:assert/strict'
 import {
-  appendFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync,
+  appendFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync,
+  writeFileSync,
 } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
@@ -268,5 +269,163 @@ describe('a restart does not lose what the Host recorded', () => {
     assert.ok(!/"arguments"/.test(text), 'raw tool arguments reached the journal')
     assert.ok(text.includes('owner-test/totals.json'),
       'the workspace-relative path is the record and should be there')
+  })
+})
+describe('an interrupted write does not take the next one with it', () => {
+  // The reproduced defect: the reader skipped an incomplete final line and
+  // left it on disk. The next append concatenated onto the fragment, returned
+  // success, and produced one unparseable line — so the new record vanished at
+  // the next load, and nothing had failed.
+
+  test('valid, torn, restart, append, restart — everything survives once', async () => {
+    const receipts = room()
+
+    // Three good records.
+    const first = await boot(receipts)
+    for (const call of ['c1', 'c2', 'c3']) {
+      first.emit('watch/execution-recorded', receiptEvent({
+        idempotencyKey: `session-1/agent-1#1/${call}#1`, callId: call,
+      }))
+    }
+    await settle()
+
+    // A write interrupted half way: no trailing newline.
+    appendFileSync(journalPath(receipts),
+      '{"recordId":"session-1/agent-1#1/c4#1","revisionId":"x","title":"wr', 'utf8')
+
+    // Restart. The tail must be repaired before anything else is written.
+    const second = await boot(receipts)
+    assert.equal((await records(second)).length, 3, 'the torn tail cost a good record')
+
+    // A new append after the recovery.
+    second.emit('watch/execution-recorded', receiptEvent({
+      idempotencyKey: 'session-1/agent-1#1/c5#1', callId: 'c5',
+    }))
+    await settle()
+    assert.equal((await records(second)).length, 4)
+
+    // Restart again: the new record must still be there.
+    const third = await boot(receipts)
+    const ids = (await records(third)).map(entry => entry.recordId).sort()
+    assert.deepEqual(ids, [
+      'session-1/agent-1#1/c1#1',
+      'session-1/agent-1#1/c2#1',
+      'session-1/agent-1#1/c3#1',
+      'session-1/agent-1#1/c5#1',
+    ], 'the append after a torn tail did not survive the next restart')
+
+    // And exactly once each.
+    assert.equal(new Set(ids).size, ids.length, 'a record was restored twice')
+  })
+
+  test('the repair removes only the tail, never a good record before it', async () => {
+    const receipts = room()
+    const first = await boot(receipts)
+    first.emit('watch/execution-recorded', receiptEvent())
+    await settle()
+    const before = readFileSync(journalPath(receipts), 'utf8')
+
+    appendFileSync(journalPath(receipts), '{"recordId":"torn', 'utf8')
+    await boot(receipts)
+
+    assert.equal(readFileSync(journalPath(receipts), 'utf8'), before,
+      'the repair rewrote more than the incomplete tail')
+  })
+
+  test('a damaged line in the middle is not truncated away', async () => {
+    // Truncating there would delete every valid record after it, which is a
+    // far larger loss than the one being recovered from.
+    const receipts = room()
+    const first = await boot(receipts)
+    first.emit('watch/execution-recorded', receiptEvent())
+    await settle()
+    appendFileSync(journalPath(receipts), 'not json at all\n', 'utf8')
+    first.emit('watch/execution-recorded', receiptEvent({
+      idempotencyKey: 'session-1/agent-1#1/c9#1', callId: 'c9',
+    }))
+    await settle()
+
+    const second = await boot(receipts)
+    const ids = (await records(second)).map(entry => entry.recordId).sort()
+    assert.deepEqual(ids, ['session-1/agent-1#1/c1#1', 'session-1/agent-1#1/c9#1'],
+      'a mid-file damaged line cost the records after it')
+  })
+})
+
+describe('a store that is not working says so', () => {
+  test('an unreadable store is not reported as an empty one', async () => {
+    const { ReceiptJournal } = await import(
+      pathToFileURL(join(ROOT, 'packages', 'watch', 'tools', 'lib', 'receipt-journal.js')).href)
+    const receipts = room()
+    mkdirSync(receipts, { recursive: true })
+    // A directory where the journal file should be: `existsSync` is true and
+    // every read fails, which is the shape of a store that exists and cannot
+    // be opened.
+    mkdirSync(journalPath(receipts), { recursive: true })
+
+    const journal = new ReceiptJournal(receipts)
+    const loaded = journal.load()
+    assert.equal(loaded.status, 'unreadable',
+      'an unreadable store answered the same way a first run does')
+    assert.notEqual(loaded.reason, null, 'the failure did not say why')
+    assert.deepEqual(loaded.records, [])
+    assert.notEqual(journal.degradedReason(), null)
+  })
+
+  test('a first run is absent, not unreadable', async () => {
+    const { ReceiptJournal } = await import(
+      pathToFileURL(join(ROOT, 'packages', 'watch', 'tools', 'lib', 'receipt-journal.js')).href)
+    const loaded = new ReceiptJournal(room()).load()
+    assert.equal(loaded.status, 'absent')
+    assert.equal(loaded.reason, null)
+    assert.equal(loaded.records.length, 0)
+  })
+
+  test('a failed append is reported, and the record is still indexed', async () => {
+    const { ReceiptJournal } = await import(
+      pathToFileURL(join(ROOT, 'packages', 'watch', 'tools', 'lib', 'receipt-journal.js')).href)
+    const receipts = room()
+    mkdirSync(journalPath(receipts), { recursive: true })
+    const journal = new ReceiptJournal(receipts)
+
+    assert.equal(journal.degradedReason(), null, 'nothing has failed yet')
+    const wrote = journal.append({
+      recordId: 'r1', revisionId: 'r1', title: 't', text: 't',
+      kind: 'document', source: null, runId: null, observedAt: null,
+      verdict: null, tags: [], evidenceIds: [],
+    })
+    assert.equal(wrote, false, 'the append should not have succeeded')
+    assert.notEqual(journal.degradedReason(), null,
+      'a failed append left nothing for a caller to report')
+  })
+
+  test('the journal lives under the profile directory it was given', async () => {
+    // Workspace and profile isolation: two rooms never share a store.
+    const { ReceiptJournal } = await import(
+      pathToFileURL(join(ROOT, 'packages', 'watch', 'tools', 'lib', 'receipt-journal.js')).href)
+    const a = room()
+    const b = room()
+    assert.notEqual(new ReceiptJournal(a).path, new ReceiptJournal(b).path)
+    assert.ok(new ReceiptJournal(a).path.startsWith(a))
+  })
+
+  test('on POSIX the store is owner-only; on Windows it inherits the profile', async () => {
+    // Stated as two different claims because they are. `chmod` is meaningful
+    // on POSIX and is a no-op for access control on Windows, where the file
+    // inherits the profile directory's ACL. Asserting a mode on Windows would
+    // be asserting something that does not decide access there.
+    const receipts = room()
+    const ctx = await boot(receipts)
+    ctx.emit('watch/execution-recorded', receiptEvent())
+    await settle()
+
+    const mode = statSync(journalPath(receipts)).mode & 0o777
+    if (process.platform === 'win32') {
+      assert.ok(existsSync(journalPath(receipts)),
+        'the journal was not created under the profile directory')
+    } else {
+      assert.equal(mode, 0o600, `expected owner-only, got ${mode.toString(8)}`)
+      assert.equal(statSync(receipts).mode & 0o777, 0o700)
+    }
   })
 })

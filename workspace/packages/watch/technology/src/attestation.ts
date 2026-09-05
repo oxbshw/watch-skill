@@ -71,6 +71,15 @@ export type AttestationBasis =
   | 'no_claim_available'
   /** Re-running it would be a side effect, not a check. */
   | 'would_re_execute'
+  /**
+   * The agent asked Core outright, and Core's answer is the tool's own result.
+   *
+   * No contract is built here and none is submitted: `watch_verify` already
+   * ran one. The Host is carrying that answer to the receipt it belongs to,
+   * which is the one case where an attestation exists without the Host having
+   * composed the question.
+   */
+  | 'core_verification'
 
 /** What the Host prepared for one record, before Core has seen it. */
 export interface OperationContract {

@@ -39,7 +39,10 @@
  * @module
  */
 
-import { appendFileSync, chmodSync, existsSync, mkdirSync, readFileSync } from 'node:fs'
+import {
+  appendFileSync, chmodSync, existsSync, mkdirSync, readFileSync, statSync,
+  truncateSync,
+} from 'node:fs'
 import { dirname, join } from 'node:path'
 
 import type { IndexableRecord } from '@deepwatch/dsh-library'
@@ -56,6 +59,18 @@ export interface JournalLoad {
   readonly damaged: number
   /** Lines read in total, damaged included. */
   readonly lines: number
+  /**
+   * How the store answered, so an empty result can be told from a broken one.
+   *
+   * `absent` is a first run and is not a fault. `unreadable` is a store that
+   * exists and could not be opened, which produced the same empty array as a
+   * first run and looked exactly like one.
+   */
+  readonly status: 'ok' | 'absent' | 'unreadable'
+  /** Bytes of unusable tail removed before writing resumed. */
+  readonly repairedBytes: number
+  /** Why the store could not be read, when it could not. */
+  readonly reason: string | null
 }
 
 /** Best-effort permission tightening; a filesystem that cannot is not a failure. */
@@ -88,6 +103,8 @@ function isRecord(value: unknown): value is IndexableRecord {
 /** An append-only journal of execution receipts for one profile. */
 export class ReceiptJournal {
   readonly #path: string
+  /** Set when a write has failed, so the degradation can be reported once. */
+  #degraded: string | null = null
 
   /**
    * @param directory - where the journal lives, created if it is not there.
@@ -120,16 +137,72 @@ export class ReceiptJournal {
       }
       const fresh = !existsSync(this.#path)
       // One write of one complete line. The failure this survives is the
-      // process dying mid-append, which leaves a partial last line that the
-      // reader drops.
+      // process dying mid-append, which leaves a partial last line — repaired
+      // by `load` before writing resumes, because appending after one joins
+      // the new record onto the fragment and loses both.
       appendFileSync(this.#path, `${JSON.stringify(record)}\n`, {
         encoding: 'utf8', mode: OWNER_ONLY_FILE,
       })
       if (fresh) restrict(this.#path, OWNER_ONLY_FILE)
+      this.#degraded = null
       return true
-    } catch {
+    } catch (cause) {
+      this.#degraded = cause instanceof Error ? cause.message : String(cause)
       return false
     }
+  }
+
+  /**
+   * Why durable storage is not working, or null when it is.
+   *
+   * A tool call whose receipt could not be journalled still happened, and
+   * saying otherwise would be a lie about the work. But the record is not
+   * durable, and a product that claims durable evidence has to say when it
+   * does not have any.
+   */
+  degradedReason(): string | null {
+    return this.#degraded
+  }
+
+  /**
+   * Drop an unusable trailing fragment, so the next append starts a line.
+   *
+   * The failure is ordinary: the process dies mid-append and leaves half a
+   * line with no newline after it. Reading tolerated that — and then the next
+   * append concatenated onto the fragment, reported success, and produced one
+   * unparseable line that took the new record down with it. The record was
+   * gone at the next load and nothing had failed.
+   *
+   * Only the *tail* is repaired. A damaged line in the middle is left where it
+   * is: truncating there would delete every valid record after it, which is a
+   * much larger loss than the one being recovered from.
+   *
+   * @returns bytes removed.
+   */
+  #repairTail(): number {
+    let size: number
+    try {
+      size = statSync(this.#path).size
+    } catch {
+      return 0
+    }
+    if (size === 0) return 0
+    let text: string
+    try {
+      text = readFileSync(this.#path, 'utf8')
+    } catch {
+      return 0
+    }
+    // A file ending in a newline has no partial line, whatever else is wrong.
+    if (text.endsWith('\n')) return 0
+    const cut = text.lastIndexOf('\n')
+    const keep = cut === -1 ? 0 : cut + 1
+    try {
+      truncateSync(this.#path, Buffer.byteLength(text.slice(0, keep), 'utf8'))
+    } catch {
+      return 0
+    }
+    return Buffer.byteLength(text.slice(keep), 'utf8')
   }
 
   /**
@@ -140,12 +213,23 @@ export class ReceiptJournal {
    * append costs one record rather than all of them.
    */
   load(): JournalLoad {
-    if (!existsSync(this.#path)) return { records: [], damaged: 0, lines: 0 }
+    if (!existsSync(this.#path)) {
+      return { records: [], damaged: 0, lines: 0, status: 'absent', repairedBytes: 0, reason: null }
+    }
+    // Before anything is read back, make the file safe to append to again.
+    const repairedBytes = this.#repairTail()
     let text: string
     try {
       text = readFileSync(this.#path, 'utf8')
-    } catch {
-      return { records: [], damaged: 0, lines: 0 }
+    } catch (cause) {
+      // A store that exists and cannot be read is not an empty one, and
+      // returning the same empty array for both is how a permissions problem
+      // looked like a first run.
+      const reason = cause instanceof Error ? cause.message : String(cause)
+      this.#degraded = reason
+      return {
+        records: [], damaged: 0, lines: 0, status: 'unreadable', repairedBytes, reason,
+      }
     }
     const lines = text.split('\n').filter(line => line.trim() !== '')
     const byId = new Map<string, IndexableRecord>()
@@ -167,6 +251,13 @@ export class ReceiptJournal {
       // moving it to the end of the Library.
       byId.set(parsed.recordId, parsed)
     }
-    return { records: [...byId.values()], damaged, lines: lines.length }
+    return {
+      records: [...byId.values()],
+      damaged,
+      lines: lines.length,
+      status: 'ok',
+      repairedBytes,
+      reason: null,
+    }
   }
 }

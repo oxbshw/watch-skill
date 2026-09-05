@@ -52,6 +52,7 @@ import { realpathSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { Service } from '@deepseek-ai/cordis'
 import type { Context } from '@deepseek-ai/cordis'
+import type { WatchResult } from '@deepwatch/dsh-contracts'
 import {
   EXECUTION_RECORD_VERSION, boundSummary, executionKey, redactSecrets,
   reconcileExecutionRecords,
@@ -432,14 +433,19 @@ interface ResultLike {
 /**
  * The one thing this module asks of Watch Core.
  *
- * Described structurally rather than imported, so the ledger does not take a
- * dependency on the Bridge package to ask one question. `request` is the
- * Bridge's own method; nothing here can reach past it.
+ * `WatchResult` is imported rather than described. It used to be described --
+ * `Promise<T>`, to avoid a dependency for one question -- and the Bridge
+ * returns `Promise<WatchResult<T>>`. TypeScript agreed with the description,
+ * so `reply.verdict` compiled, read `undefined` off every envelope, and every
+ * receipt in the Library carried `verdict: null` for work Core had verified.
+ *
+ * A structural interface is a copy of a contract that cannot be checked
+ * against it. This one is the contract.
  */
 export interface CoreRequester {
   request<T>(
     method: string, params: Record<string, unknown>, options?: { deadlineMs?: number },
-  ): Promise<T>
+  ): Promise<WatchResult<T>>
 }
 
 /** What Core replies to `watch.verification.run`. Read, never constructed. */
@@ -448,6 +454,58 @@ interface CoreVerificationReply {
   readonly reason?: unknown
   readonly verificationId?: unknown
   readonly verification_id?: unknown
+}
+
+/**
+ * Core's verdict for a verification the agent asked for by name.
+ *
+ * `watch_verify` returns Core's `VerificationOutcome` as its own tool value, so
+ * the answer is already here and does not have to be asked for twice. Anything
+ * else -- another tool, a refusal, a result with no verdict in it -- returns
+ * null and takes the ordinary operation-attestation path.
+ *
+ * Nothing is inferred from the call having succeeded: a `watch_verify` that
+ * ran without error and returned `UNVERIFIED` is an unverified receipt, which
+ * is the honest answer and the one this product exists to keep distinct from a
+ * pass.
+ *
+ * @param record - the settled execution record.
+ * @param resultValue - the tool's own returned value.
+ * @returns the verdict and the record it came from, or null.
+ */
+function declaredVerification(
+  record: ToolExecutionRecord, resultValue: unknown,
+): {
+  verdict: string
+  reason: string | null
+  verificationId: string
+  expectation: string
+  contractDigest: string
+} | null {
+  if (record.toolName !== 'watch_verify') return null
+  if (typeof resultValue !== 'object' || resultValue === null) return null
+  const value = resultValue as Record<string, unknown>
+  // A refusal is `{ ok: false, ... }` and carries no verdict.
+  if (value['ok'] === false) return null
+  const verdict = typeof value['verdict'] === 'string' ? value['verdict'] : null
+  if (verdict === null) return null
+  const id = typeof value['verificationId'] === 'string'
+    ? value['verificationId']
+    : typeof value['verification_id'] === 'string' ? value['verification_id'] : null
+  // Without Core's own id the verdict cannot be opened, and a verdict nobody
+  // can open is the kind of claim this product refuses to make.
+  if (id === null) return null
+  return {
+    verdict,
+    reason: typeof value['reason'] === 'string' ? value['reason'] : null,
+    verificationId: id,
+    expectation: typeof value['expectation'] === 'string'
+      ? value['expectation']
+      : 'a verification the agent asked for',
+    contractDigest: typeof value['contractDigest'] === 'string'
+      ? value['contractDigest']
+      : typeof value['contract_digest'] === 'string' ? value['contract_digest'] : '',
+  }
 }
 
 /** A record still being built, between `tools/execute` and `tools/result`. */
@@ -796,7 +854,33 @@ export class WatchObservation extends Service {
    */
   async attest(
     record: ToolExecutionRecord, argumentsValue: unknown, core: CoreRequester | undefined,
+    resultValue?: unknown,
   ): Promise<Attestation> {
+    // A verification the agent asked for outright already has Core's answer in
+    // the tool's own result. Attesting it the ordinary way asks the wrong
+    // question: `watch_verify` touches no path, so `operationContract` finds
+    // nothing to check and settles `no_contract` -- a completed verification
+    // whose receipt says nobody verified anything. Re-running the contract to
+    // get an association would be worse: two verification records for one
+    // question, and the second one is the one the receipt would point at.
+    //
+    // So the result is carried, not recomputed. Core still decided it; this
+    // only puts its answer on the receipt it belongs to (ADR-002).
+    const declared = declaredVerification(record, resultValue)
+    if (declared !== null) {
+      return this.settleAttestation({
+        idempotencyKey: record.idempotencyKey,
+        contractId: declared.verificationId,
+        basis: 'core_verification',
+        expectation: declared.expectation,
+        contractDigest: declared.contractDigest,
+        coreVerdict: declared.verdict,
+        coreReason: declared.reason,
+        verificationId: declared.verificationId,
+        at: new Date().toISOString(),
+        state: 'answered' satisfies AttestationState,
+      })
+    }
     const contract = operationContract(record, argumentsValue)
     const contractDigest = freezeChecks(contract.checks)
     const base = {
@@ -811,12 +895,8 @@ export class WatchObservation extends Service {
       at: new Date().toISOString(),
     }
 
-    const settle = (attestation: Attestation): Attestation => {
-      this.attestations.set(record.idempotencyKey, attestation)
-      const events = this.ctx as unknown as { emit(name: string, ...args: unknown[]): void }
-      events.emit('watch/attestation-recorded', attestation)
-      return attestation
-    }
+    const settle = (attestation: Attestation): Attestation =>
+      this.settleAttestation(attestation)
 
     // Nothing truthful to ask. Not a failure, and emphatically not a pass.
     if (contract.checks.length === 0) {
@@ -827,15 +907,28 @@ export class WatchObservation extends Service {
       return settle({ ...base, state: 'requested_but_not_run' satisfies AttestationState })
     }
 
-    const verificationId = `ver_${contract.contractId}_${String(Date.now())}`
+    const requestedId = `ver_${contract.contractId}_${String(Date.now())}`
     try {
-      const reply = await core.request<CoreVerificationReply>(
+      const result = await core.request<CoreVerificationReply>(
         'watch.verification.run',
-        verificationRequest(contract, verificationId, this.workspaceRoot(record.sessionId)),
+        verificationRequest(contract, requestedId, this.workspaceRoot(record.sessionId)),
         { deadlineMs: ATTESTATION_DEADLINE_MS },
       )
+      // A Bridge that refused is not a verdict. It could not ask, which is a
+      // different thing from Core declining to answer, and both are different
+      // from a pass. Reporting it as `unavailable` keeps the three apart.
+      if (!result.ok) {
+        return settle({ ...base, state: 'unavailable' satisfies AttestationState })
+      }
+      const reply = result.value
       // Read out of Core's reply. Nothing here decides what it should have been.
       const verdict = typeof reply.verdict === 'string' ? reply.verdict : null
+      // Core's own id for the record it wrote, when it returned one. The id
+      // this call proposed is only a fallback: an evidence link that resolves
+      // to nothing is worse than none, and Core is the one that knows.
+      const answeredId = typeof reply.verificationId === 'string'
+        ? reply.verificationId
+        : typeof reply.verification_id === 'string' ? reply.verification_id : null
       return settle({
         ...base,
         state: verdict === null
@@ -843,13 +936,21 @@ export class WatchObservation extends Service {
           : ('answered' satisfies AttestationState),
         coreVerdict: verdict,
         coreReason: typeof reply.reason === 'string' ? reply.reason : null,
-        verificationId,
+        verificationId: answeredId ?? requestedId,
       })
     } catch {
       // A Bridge that did not answer leaves no verdict, and the record says
       // that rather than inventing one in either direction.
       return settle({ ...base, state: 'unavailable' satisfies AttestationState })
     }
+  }
+
+  /** Record an attestation and announce it, so a surface need not poll. */
+  private settleAttestation(attestation: Attestation): Attestation {
+    this.attestations.set(attestation.idempotencyKey, attestation)
+    const events = this.ctx as unknown as { emit(name: string, ...args: unknown[]): void }
+    events.emit('watch/attestation-recorded', attestation)
+    return attestation
   }
 
   /** The attestation for one record, if it has one. */
@@ -1052,6 +1153,10 @@ export function apply(ctx: Context): void {
   // `tools/result` is an emit carrying the frozen outcome, and upstream
   // contains a listener that throws. The settling half belongs here rather than
   // on a waterfall for exactly that reason.
+  /** The tool's own returned value, when it produced one. */
+  const valueOf = (result: ResultLike): unknown =>
+    result.isError === true ? undefined : result.value
+
   ;(observe as unknown as {
     on(name: 'tools/result', listener: (exec: ExecutionLike, result: ResultLike) => void): void
   }).on('tools/result', (exec, result) => {
@@ -1060,7 +1165,7 @@ export function apply(ctx: Context): void {
     // on a verdict, and a verdict that arrives late is still a verdict about
     // the same frozen question. A rejection cannot escape here — `attest`
     // settles every path into a state — and the `void` says so out loud.
-    void observation.attest(record, exec.arguments, coreOf())
+    void observation.attest(record, exec.arguments, coreOf(), valueOf(result))
   })
 
   // A profile that is torn down should not leave a ledger behind it.
