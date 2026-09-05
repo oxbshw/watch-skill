@@ -643,7 +643,13 @@ def verify_run_cmd(
         if not contract.frozen:
             contract = contract.freeze(created_by="cli")
         bundle, attestation = verify_run(
-            contract, working_dir=working_dir, isolated=not in_process
+            contract,
+            working_dir=working_dir,
+            # Read off the contract, never off a flag. A permission granted at
+            # the command line would not be covered by the digest, so a run
+            # could reach somewhere the frozen contract never agreed to.
+            allowed_origins=list(contract.allowed_origins),
+            isolated=not in_process,
         )
     except WatchSkillError as exc:
         print(json.dumps(exc.to_dict(), indent=2))

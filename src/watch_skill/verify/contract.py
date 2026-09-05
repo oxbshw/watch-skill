@@ -216,6 +216,21 @@ class VerificationContract(BaseModel):
     created_at: str = Field(default_factory=lambda: datetime.now(UTC).isoformat(timespec="seconds"))
     checks: list[Check] = Field(default_factory=list)
     required_assurance: Assurance = Assurance.DETERMINISTIC_LOCAL
+    # Origins the network checks in this contract may reach, and nothing else.
+    #
+    # Part of the frozen agreement rather than a runtime flag, because that is
+    # the only place it is safe: the digest covers it, so a contract cannot be
+    # widened after it was agreed to, and an evidence bundle records exactly
+    # which origins the run was permitted.
+    #
+    # It was missing, and the effect was that `http_request` and `browser_dom`
+    # — two of the fourteen check types — could not be used from the command
+    # line at all. `_assert_public_origin` refuses an origin that is not
+    # allowlisted, the failure text says "add the host to the contract's
+    # allowed_origins", and there was no such field to add it to. A loopback
+    # dev server, which the guard's own docstring calls a legitimate and
+    # common case, was unreachable.
+    allowed_origins: list[str] = Field(default_factory=list)
     # Set by freeze(). A contract without them has not been frozen and cannot
     # be used to judge anything.
     frozen_at: str | None = None
@@ -289,6 +304,7 @@ class VerificationContract(BaseModel):
             created_by=created_by,
             checks=checks,
             required_assurance=self.required_assurance,
+            allowed_origins=list(self.allowed_origins),
             source_prompt=self.source_prompt,
         )
 

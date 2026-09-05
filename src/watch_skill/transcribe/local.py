@@ -102,10 +102,21 @@ def pick_device() -> str:
     it: CI has no GPU and took the CPU path, while a developer machine with one
     took a path CI had never exercised.
     """
-    requested = os.environ.get("WATCHSKILL_WHISPER_DEVICE", "").strip().lower()
-    if requested in {"cpu", "cuda"}:
+    requested = requested_device()
+    if requested is not None:
         return requested
     return "cuda" if has_cuda_gpu() else "cpu"
+
+
+def requested_device() -> str | None:
+    """The device the environment asked for, or None when nobody asked.
+
+    Separated from :func:`pick_device` because the answer decides something
+    beyond where the model loads: a device somebody *chose* is honoured even
+    when it fails, and a device this module *guessed* is not.
+    """
+    requested = os.environ.get("WATCHSKILL_WHISPER_DEVICE", "").strip().lower()
+    return requested if requested in {"cpu", "cuda"} else None
 
 
 def transcribe_local(
@@ -129,13 +140,14 @@ def transcribe_local(
         ) from exc
 
     size = pick_model_size() if model_size == "auto" else model_size
-    device = pick_device()
-    compute = "float16" if device == "cuda" else "int8"
-    print(
-        f"[watch-skill] local whisper: model={size} device={device} ({compute})…",
-        file=sys.stderr,
-    )
-    try:
+
+    def attempt(device: str) -> list[Segment]:
+        """Load and run the model on one device. Raises on any failure."""
+        compute = "float16" if device == "cuda" else "int8"
+        print(
+            f"[watch-skill] local whisper: model={size} device={device} ({compute})…",
+            file=sys.stderr,
+        )
         model = WhisperModel(size, device=device, compute_type=compute)
         raw_segments, _info = model.transcribe(
             str(audio_path),
@@ -143,29 +155,70 @@ def transcribe_local(
             vad_filter=True,
             word_timestamps=word_timestamps,
         )
-        segments = []
-        for s in raw_segments:
-            if not s.text.strip():
+        collected = []
+        for raw in raw_segments:
+            if not raw.text.strip():
                 continue
             words = [
                 Word(start=round(w.start, 2), end=round(w.end, 2), text=w.word.strip())
-                for w in (getattr(s, "words", None) or [])
+                for w in (getattr(raw, "words", None) or [])
                 if w.word.strip()
             ]
-            segments.append(
+            collected.append(
                 Segment(
-                    start=round(s.start, 2),
-                    end=round(s.end, 2),
-                    text=s.text.strip(),
+                    start=round(raw.start, 2),
+                    end=round(raw.end, 2),
+                    text=raw.text.strip(),
                     words=words,
                 )
             )
+        return collected
+
+    device = pick_device()
+    try:
+        segments = attempt(device)
     except Exception as exc:
-        raise TranscriptionError(
-            f"local whisper failed: {exc}",
-            code="transcribe.local_failed",
-            fix="try a smaller model (WATCHSKILL_WHISPER_MODEL=tiny), the "
-                "processor (WATCHSKILL_WHISPER_DEVICE=cpu), or enable cloud STT",
-            details={"model": size, "device": device},
-        ) from exc
+        # A visible NVIDIA GPU and a working CTranslate2 CUDA path are
+        # different claims, and `has_cuda_gpu` can only check the first. On a
+        # machine with the GPU and without a matching cuDNN, loading the model
+        # raises immediately -- and this used to end the transcription there,
+        # reporting "no whisper rung succeeded" on a machine whose processor
+        # transcribes the same clip in four seconds. The advice to set
+        # WATCHSKILL_WHISPER_DEVICE=cpu was real and was buried in an error
+        # nobody sees, on a path that had already given up.
+        #
+        # So a *guessed* CUDA is retried once on the processor. A device
+        # somebody asked for is not: honouring an explicit choice matters more
+        # than succeeding, and silently running elsewhere would make a
+        # deliberate benchmark meaningless.
+        #
+        # This retry cannot rescue the other CUDA failure the module documents
+        # -- a mismatched runtime whose first kernel launch never returns.
+        # That one hangs rather than raising, so there is nothing here to catch
+        # it, and the environment variable remains the way out.
+        if device != "cuda" or requested_device() is not None:
+            raise TranscriptionError(
+                f"local whisper failed: {exc}",
+                code="transcribe.local_failed",
+                fix="try a smaller model (WATCHSKILL_WHISPER_MODEL=tiny), the "
+                    "processor (WATCHSKILL_WHISPER_DEVICE=cpu), or enable cloud STT",
+                details={"model": size, "device": device},
+            ) from exc
+        print(
+            f"[watch-skill] local whisper: CUDA failed ({exc}); "
+            f"retrying on the processor…",
+            file=sys.stderr,
+        )
+        try:
+            segments = attempt("cpu")
+        except Exception as cpu_exc:
+            raise TranscriptionError(
+                f"local whisper failed on the GPU and on the processor: {cpu_exc}",
+                code="transcribe.local_failed",
+                fix="try a smaller model (WATCHSKILL_WHISPER_MODEL=tiny) or "
+                    "enable cloud STT",
+                details={"model": size, "device": "cuda->cpu",
+                         "cuda_error": str(exc)},
+            ) from cpu_exc
+        device = "cpu"
     return Transcript(segments=segments, source=f"whisper-local ({size})")
