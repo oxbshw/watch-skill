@@ -225,6 +225,15 @@ export function resolveNodeCli(
     for (const near of [
       join(entry, 'node_modules', tool, relative),
       join(dirname(entry), 'lib', 'node_modules', tool, relative),
+      // `<...>/node_modules/.bin` is where npm and pnpm put a shim, and the
+      // package it points at is its *sibling*: `<...>/node_modules/<tool>`.
+      // Leaving this case out is what sent a release gate to corepack instead
+      // of to the pnpm that was installed and on PATH. GitHub's
+      // `pnpm/action-setup` puts pnpm at exactly this layout
+      // (`PNPM_HOME=~/setup-pnpm/node_modules/.bin`), so the gate resolved
+      // corepack, corepack tried to download pnpm 12.3.4, and the run died
+      // with `Cannot find module .../corepack/v1/pnpm/12.3.4/bin/pnpm.cjs`.
+      join(dirname(entry), tool, relative),
     ]) {
       if (existsSync(near)) return near
     }
@@ -283,18 +292,25 @@ export function resolveNpm(env: NodeJS.ProcessEnv = process.env): Launcher | nul
  * @returns the launcher, or null when no pnpm this product can run was found.
  */
 export function resolvePnpm(env: NodeJS.ProcessEnv = process.env): Launcher | null {
-  for (const [tool, relative] of [
-    ['pnpm', join('bin', 'pnpm.cjs')],
-    ['corepack', join('dist', 'pnpm.js')],
-  ] as const) {
-    const entry = resolveNodeCli(tool, relative, env)
-    if (entry !== null) {
-      return { command: process.execPath, prefix: [entry], kind: 'node-entry' }
-    }
-  }
+  // pnpm's own entry first: it is the tool, it needs no network, and its
+  // version is whatever the environment installed on purpose.
+  const own = resolveNodeCli('pnpm', join('bin', 'pnpm.cjs'), env)
+  if (own !== null) return { command: process.execPath, prefix: [own], kind: 'node-entry' }
+
+  // Then a real pnpm on PATH. Also offline, also the pinned version.
   if (process.platform !== 'win32') {
     return { command: 'pnpm', prefix: [], kind: 'executable' }
   }
+
+  // corepack last, and only where there is nothing else. corepack is a
+  // version *manager*: asked for pnpm with no pinned `packageManager`, it
+  // resolves the newest release and downloads it. That makes it a network
+  // dependency wearing a launcher's name, and it failed a release gate the
+  // day pnpm 12 shipped -- with the download unfinished and the module it
+  // then loaded absent. It stays as a fallback because on Windows there is no
+  // executable path, and a cached corepack is a working pnpm.
+  const managed = resolveNodeCli('corepack', join('dist', 'pnpm.js'), env)
+  if (managed !== null) return { command: process.execPath, prefix: [managed], kind: 'node-entry' }
   return null
 }
 
