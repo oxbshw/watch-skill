@@ -15,6 +15,32 @@ memory and independent verification.
 - `@deepwatch/dsh-contracts/query/validate`
 - `@deepwatch/dsh-contracts/query/wire`
 
+## Install
+
+```sh
+npm install @deepwatch/dsh-contracts
+```
+
+Rarely on its own. [`@deepwatch/dsh-bundle`](https://github.com/oxbshw/watch-skill/tree/main/workspace/packages/watch/bundle#readme)
+composes this package with the rest of DeepWatch and is what a profile
+normally depends on; installing this one directly is for embedding a
+single piece in a composition you control.
+
+## Requirements
+
+- Node `^22.19.0 || >=24.0.0`
+
+## Stability
+
+`0.1.0-preview.0` — a preview release. The surface may change between previews, and it is published for evaluation rather than for production dependence.
+
+## Side effects
+
+Importing a module from this package evaluates no side effects, so a
+bundler may drop what a build does not use. Mounting it in a host is a
+separate matter: what it then reads or writes is governed by the
+workspace boundary and the host's permissions, not by this flag.
+
 ## Where this fits
 
 These packages are composed together; installing one on its own is rarely

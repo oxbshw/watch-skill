@@ -64,7 +64,8 @@ function range(name, declared) {
  * `@deepwatch/dsh-bundle` is the one somebody installs deliberately, so its
  * page is an install guide rather than a description.
  */
-const HAND_WRITTEN = new Set(['@deepwatch/dsh-bundle'])
+const BUNDLE = '@deepwatch/dsh-bundle'
+const HAND_WRITTEN = new Set([BUNDLE])
 
 /** Every publishable package, with its manifest. */
 function publishable() {
@@ -113,6 +114,51 @@ function page(manifest) {
       lines.push(`- \`${name}@${range(name, declared)}\`${note}`)
     }
     lines.push('')
+  }
+
+  // Everything below is composed from what the manifest already declares,
+  // restated where somebody arriving from a dependency tree will read it. A
+  // page that asserts more than its manifest is a page that will drift.
+  lines.push('## Install', '', '```sh', `npm install ${manifest.name}`, '```', '')
+  if (manifest.name !== BUNDLE) {
+    lines.push(
+      `Rarely on its own. [\`${BUNDLE}\`](${REPO}/tree/main/workspace/packages/watch/bundle#readme)`,
+      'composes this package with the rest of DeepWatch and is what a profile',
+      'normally depends on; installing this one directly is for embedding a',
+      'single piece in a composition you control.',
+      '')
+  }
+
+  const node = manifest.engines?.node
+  if (node !== undefined) {
+    lines.push('## Requirements', '', `- Node \`${node}\``)
+    if (Object.keys(manifest.peerDependencies ?? {}).length > 0) {
+      lines.push('- The peers above, supplied by the host composition')
+    }
+    lines.push('')
+  }
+
+  // The version *is* the stability statement. Deriving the sentence from it
+  // keeps the two from ever disagreeing.
+  const version = manifest.version ?? ''
+  const stability = /-preview\./.test(version)
+    ? 'a preview release. The surface may change between previews, and it is '
+      + 'published for evaluation rather than for production dependence.'
+    : /-(rc|beta|alpha)\./.test(version)
+      ? 'a pre-release. The surface is close to settled but not yet guaranteed.'
+      : 'a stable release.'
+  lines.push('## Stability', '', `\`${version}\` — ${stability}`, '')
+
+  // `sideEffects: false` is a bundler fact about module evaluation, not a claim
+  // about what the package does once a host mounts it. Naming which one is
+  // meant is the difference between an accurate note and a misleading one.
+  if (manifest.sideEffects === false) {
+    lines.push('## Side effects', '',
+      'Importing a module from this package evaluates no side effects, so a',
+      'bundler may drop what a build does not use. Mounting it in a host is a',
+      'separate matter: what it then reads or writes is governed by the',
+      "workspace boundary and the host's permissions, not by this flag.",
+      '')
   }
 
   lines.push(
