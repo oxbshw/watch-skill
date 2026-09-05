@@ -66,6 +66,52 @@ identity — because a document written by a person pressing Save and one writte
 by a script were the same bytes. And the memory store, which is plaintext and
 still says so, is created owner-only where the operating system enforces modes.
 
+### Release closure, continued — three defects a real provider found
+
+The evaluation above ran against a loopback stub. Running the same journey
+against a real provider, from artifacts built for this candidate, found three
+more things. All are fixed here.
+
+**One workspace, not three.** An owner session was asked for
+`owner-test/totals.json`, and the agent created it with the right bytes and the
+right arithmetic. It could not then be verified. Three layers each answered
+"which directory is this relative path in?" from somewhere different: the
+agent's filesystem tools resolved against the Harness session workspace, which
+the Harness derives from the host process's cwd; Watch Core was spawned with an
+empty `cwd` and inherited whatever the Host had; and the verifier, handed no
+`workingDir`, fell back to the directory it happened to be started in. The file
+was real and the verdict was `INCONCLUSIVE` — honest, and worth nothing.
+
+The fix is not a wider verifier. `deepwatch web|desktop --workspace <dir>` names
+the one directory, resolved through its real path so a junction and its target
+are one root; the launcher starts the Host *in* it and exports
+`DEEPWATCH_WORKSPACE` beside it; and Core now reads that variable and has no
+default at all — where nothing was established it stops with
+`verify.workspace_unresolved` and a named fix rather than measuring against
+wherever it happens to be sitting.
+
+**The shell was outside the boundary it was meant to share.** Refused an
+out-of-workspace write twice, the agent reached for `pwsh` instead. That call
+was recorded `scope:not_applicable` — the classification for a call that touches
+no filesystem — because `pwsh` spells its working directory `workdir` and the
+path-argument list knew only `cwd`. Nothing escaped: the pinned Harness sandbox
+is the enforcement authority, and the file outside was untouched. But Watch's
+own record of what happened was wrong, and that record is the product. The
+command string itself stays unscanned, deliberately and now in writing: quoting,
+expansion and redirection decide where bytes land at runtime, so parsing it
+would produce confident wrong answers in both directions.
+
+**A version is not a fingerprint.** The sealed npm artifacts for this candidate
+had been packed three commits behind the accepted source, from a dirty tree, and
+every gate passed — because every gate compared `name@version`, and both byte
+sets wore the same version. Exactly one package differed: `@deepwatch/dsh-memory`
+did not carry the memory-permission hardening. Provenance is now content-bound:
+a sealed manifest ties the exact commit and tree to a SHA-256 over every tarball,
+the wheel and the sdist, and refuses to seal a dirty tree at all. The gate
+rejects a set whose bytes, source, inventory or installed content disagree, and
+`doctor` no longer claims an installation "matches the published composition" —
+nothing has been published, so nothing has ever matched one.
+
 ### `watch-skill notes` — a write-up whose every line is checkable
 
 A readable document for an indexed video: chapters, what was said, what was on

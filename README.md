@@ -510,6 +510,13 @@ From a clone:
 cd workspace && node scripts/bootstrap.mjs
 ```
 
+DeepWatch works in one directory, named once. `deepwatch web --workspace <dir>`
+is the root the agent's files, the shell, Watch containment, the verifier,
+receipts and the Library all resolve a relative path against — so a file the
+agent writes is a file the verifier can find. It defaults to the directory you
+run the command from, and a run that cannot establish a workspace stops with a
+named fix rather than guessing one.
+
 Start at [workspace/docs/setup.md](workspace/docs/setup.md). DeepWatch has its
 own [README](workspace/README.md), ADRs, gate suite and release train.
 
@@ -531,6 +538,7 @@ own [README](workspace/README.md), ADRs, gate suite and release train.
 | [Comparison](docs/comparison.md) | Honest trade-offs against the alternatives |
 | [Engineering decisions](docs/DECISIONS.md) | The reasoning behind non-obvious design choices |
 | [Roadmap](docs/ROADMAP.md) | Planned work and contribution opportunities |
+| [Ecosystem](docs/ecosystem.md) | Where Watch Skill appears, and which of it is coverage rather than an index |
 
 ## Development
 
@@ -546,13 +554,20 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for test tiers, documentation standards, 
 agent-integration checklist. Security and privacy reports are covered by
 [SECURITY.md](SECURITY.md).
 
-## Listed on
+## Written by other people
 
-Independent directories that index Watch Skill. They are maintained by their operators,
-so the details there can lag a release.
+Guides somebody wrote themselves, with their own examples — not a restatement of
+this page.
 
-- [Agent Skills Hub](https://agentskillshub.top/skill/oxbshw/watch-skill/)
-- [Neuralbox](https://neuralbox.tech/oxbshw-watch-skill)
+- [Watch Skill 使用教程：让 Codex 看懂视频和录屏](https://www.opcchina.ai/?p=4329) —
+  wiring Watch Skill into Codex, step by step (Chinese, 2026-08-19)
+- [Watch Skill: AI video analysis and video correction](https://en.aistacknav.com/watch-skill-ai-video-analysis-video-correction/) —
+  setup, operation and troubleshooting, with its own use cases
+
+Watch Skill is also indexed by a number of directories and package registries.
+Those entries are generated from this repository's metadata, so they are a way to
+find the project rather than a review of it — the full list, and what each one
+actually is, is in [docs/ecosystem.md](docs/ecosystem.md).
 
 ---
 
