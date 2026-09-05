@@ -21,13 +21,11 @@ import logging
 import threading
 from collections.abc import Callable
 from datetime import UTC, datetime
-from pathlib import Path
 from typing import Any
 
 from pydantic import ValidationError
 
 from watch_skill.surfaces.bridge.protocol import BridgeError
-from watch_skill.workspace_root import WorkspaceNotEstablished, require_workspace
 from watch_skill.surfaces.bridge.redact import safe_message, scrub
 from watch_skill.surfaces.bridge.wire import (
     AnswerCitation,
@@ -39,6 +37,7 @@ from watch_skill.surfaces.bridge.wire import (
     VerificationCheck,
     VerificationOutcome,
 )
+from watch_skill.workspace_root import WorkspaceNotEstablished, require_workspace
 
 _log = logging.getLogger(__name__)
 
