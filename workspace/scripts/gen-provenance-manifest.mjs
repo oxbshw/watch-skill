@@ -61,6 +61,16 @@ function capture(command, args, cwd = REPO) {
   }
 }
 
+/** Read JSON, or null. */
+function readJson(path) {
+  if (!existsSync(path)) return null
+  try {
+    return JSON.parse(readFileSync(path, 'utf8'))
+  } catch {
+    return null
+  }
+}
+
 /** SHA-256 over a file's bytes, lowercase hex. */
 export function digestFile(path) {
   return createHash('sha256').update(readFileSync(path)).digest('hex')
@@ -87,12 +97,22 @@ export function sourceIdentity(cwd = REPO) {
   }
 }
 
-/** The toolchain that produced a set, for a reader diagnosing a difference. */
+/**
+ * The toolchain that produced a set, for a reader diagnosing a difference.
+ *
+ * pnpm is read from `packageManager` rather than probed. The probe recorded
+ * `null` on Windows — pnpm arrives through a corepack shim that `execFileSync`
+ * cannot exec without a shell — and a manifest field that claims to name the
+ * build toolchain and silently says nothing is worse than one that reads the
+ * pin. The pin is also the more honest answer: it is the version corepack will
+ * use, whatever happens to be first on `PATH`.
+ */
 function toolchain() {
+  const pinned = readJson(join(ROOT, 'package.json'))?.packageManager
   return {
     node: process.version,
     platform: `${process.platform}-${process.arch}`,
-    pnpm: capture('pnpm', ['--version'], ROOT),
+    pnpm: typeof pinned === 'string' ? pinned : capture('pnpm', ['--version'], ROOT),
     python: capture(
       process.platform === 'win32'
         ? join(REPO, '.venv', 'Scripts', 'python.exe')
