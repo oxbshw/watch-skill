@@ -3,7 +3,7 @@
   "note": "Source-derived expectations for a release pack. Per-run facts -- the digest, the size, the commit, the directory -- belong to the inventory written beside the tarballs, never here.",
   "counts": {
     "packages": 20,
-    "files": 410
+    "files": 412
   },
   "publishOrder": [
     "@deepwatch/dsh-client-brand",
@@ -392,7 +392,7 @@
       "name": "@deepwatch/dsh-contracts",
       "version": "0.1.0-preview.0",
       "access": "public",
-      "fileCount": 31,
+      "fileCount": 33,
       "dependencies": {},
       "peerDependencies": {},
       "exports": [
@@ -435,6 +435,8 @@
         "lib/query/wire.js",
         "lib/readiness.d.ts",
         "lib/readiness.js",
+        "lib/workspace.d.ts",
+        "lib/workspace.js",
         "package.json"
       ]
     },
