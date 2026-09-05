@@ -19,6 +19,9 @@ that a credential is *referenced*. No absolute host path appears either: the
 product renders workspace-relative paths (`owner-test/totals.json`), which is
 the redaction contract working rather than a crop.
 
+The files are in [`docs/screenshots/release/`](screenshots/release/), captured at
+1440×900 with a 2× device pixel ratio and resampled to 1920px wide.
+
 | Shot | What it shows | Alt text |
 | --- | --- | --- |
 | `01-workspace-first-run.png` | First run, before any session: the orca mark, the four verbs, an honest readiness count and two ways forward. | DeepWatch first-run screen with the orca mark, the headline "See what happened. Prove what worked.", and an installation status showing two capabilities ready and ten needing setup. |
