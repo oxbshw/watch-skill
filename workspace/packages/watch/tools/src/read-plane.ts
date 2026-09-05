@@ -51,13 +51,14 @@ import type { LlmFailure } from '@deepseek-ai/dsh-llm'
 import { WATCH_QUERY_PROTOCOL_VERSION } from '@deepwatch/dsh-contracts/query'
 import type { IndexableRecord, LibraryIndex, SearchResult } from '@deepwatch/dsh-library'
 import type {
-  CapabilityTally, CoreBlocker, CoreHealthRequest, CoreHealthResponse,
+  CapabilityTally, CoreHealthRequest, CoreHealthResponse,
   LibraryGetRequest, LibraryGetResponse, LibraryIndexGeneration,
   LibraryRecord, LibraryRefreshRequest, LibraryRefreshResponse,
   LibraryIndexState, LibrarySearchRequest, LibrarySearchResponse,
   ProviderTestRequest, ProviderTestResponse,
   RouteReadinessRequest, RouteReadinessResponse,
 } from '@deepwatch/dsh-contracts/query/wire'
+import type { WatchCoreService } from '@deepwatch/dsh-core-bridge'
 import {
   parseCoreHealthRequest, parseLibraryGetRequest, parseLibraryRefreshRequest,
   parseLibrarySearchRequest,
@@ -733,7 +734,7 @@ export function readCoreHealth(
     protocol: WATCH_QUERY_PROTOCOL_VERSION,
     requestId: checked.requestId,
     phase: health.phase,
-    blocker: health.blocker as CoreBlocker,
+    blocker: health.blocker,
     // From the handshake, never from this build's own constants: reporting
     // what the Workspace speaks as though Core had said it is exactly the
     // substitution that made the old panel wrong.
@@ -760,35 +761,17 @@ export function readCoreHealth(
   }
 }
 
-/** The shape of the Bridge this reader depends on, and no more of it. */
-interface WatchCoreLike {
-  health(): {
-    readonly phase: string
-    readonly transport: string | null
-    readonly blocker: string
-    readonly isTestOnlyMock: boolean
-    readonly lastHandshakeAt: string | null
-    readonly restartCount: number
-    readonly handshake: {
-      readonly coreVersion: string
-      readonly coreBuild: string | null
-      readonly protocolVersion: number
-    } | null
-    readonly error: {
-      readonly error: string
-      readonly fix: string
-      readonly details: Readonly<Record<string, unknown>>
-    } | null
-  }
-  capabilities(): readonly {
-    readonly capabilityId: string
-    readonly status: 'implemented' | 'machine_tested' | 'probed' | 'unavailable' | 'not_tested'
-    readonly missing: readonly string[]
-    readonly fixes: readonly string[]
-    readonly lastCheckedAt: string | null
-  }[]
-  isCapable(capabilityId: string): boolean
-}
+/**
+ * The part of the Bridge this reader depends on, and no more of it.
+ *
+ * A `Pick` of the real service rather than a hand-written copy of its shape.
+ * The copy is what let the ledger's `CoreRequester` describe a return type
+ * nothing implemented -- the compiler agreed with the copy for as long as it
+ * took every verdict in the Library to read `null`. `Pick` keeps the "no more
+ * of it" property, which is the reason the narrow type exists, without
+ * restating fields that can drift away from the ones being read.
+ */
+type WatchCoreLike = Pick<WatchCoreService, 'health' | 'capabilities' | 'isCapable'>
 
 /**
  * Count capabilities by what is actually known about each one.

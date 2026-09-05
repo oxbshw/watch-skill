@@ -1153,7 +1153,15 @@ export function apply(ctx: Context): void {
   // `tools/result` is an emit carrying the frozen outcome, and upstream
   // contains a listener that throws. The settling half belongs here rather than
   // on a waterfall for exactly that reason.
-  /** The tool's own returned value, when it produced one. */
+  /**
+   * The tool's own returned value, when it produced one.
+   *
+   * Read here and nowhere later. Upstream describes `value` as
+   * execution-local and deliberately omits it from durable events, so the
+   * frozen result passed to a `tools/result` observer is the only place a
+   * verification's own answer is still available. Deferring the association to
+   * anything reconstructed from stored events would find the value gone.
+   */
   const valueOf = (result: ResultLike): unknown =>
     result.isError === true ? undefined : result.value
 
