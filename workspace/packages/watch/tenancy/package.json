@@ -1,6 +1,6 @@
 {
   "name": "@deepwatch/dsh-tenancy",
-  "version": "0.1.0-preview.0",
+  "version": "0.1.0",
   "description": "Tenants, roles, remote workers, sharing and audit — enforced server-side",
   "type": "module",
   "license": "MIT",

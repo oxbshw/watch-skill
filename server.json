@@ -2,7 +2,7 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.oxbshw/watch-skill",
   "description": "Watch video and live sessions, keep timestamped evidence, and verify an agent's own work.",
-  "version": "1.4.0rc1",
+  "version": "1.4.0",
   "websiteUrl": "https://github.com/oxbshw/watch-skill",
   "repository": {
     "url": "https://github.com/oxbshw/watch-skill",
@@ -13,13 +13,13 @@
       "registryType": "pypi",
       "registryBaseUrl": "https://pypi.org",
       "identifier": "watch-skill",
-      "version": "1.4.0rc1",
+      "version": "1.4.0",
       "runtimeHint": "uvx",
       "runtimeArguments": [
         {
           "type": "named",
           "name": "--from",
-          "value": "watch-skill[standard]==1.4.0rc1",
+          "value": "watch-skill[standard]==1.4.0",
           "description": "Pinned to the version this entry declares. Unpinned, uvx resolves the newest stable release, so a pre-release entry would advertise one version and start another."
         }
       ],

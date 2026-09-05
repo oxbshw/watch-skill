@@ -1,6 +1,6 @@
 {
   "name": "@deepwatch/dsh-client-settings",
-  "version": "0.1.0-preview.0",
+  "version": "0.1.0",
   "description": "Browser half: the Watch Technology & Capability Center — role bindings, engines, sources, memory, verification, diagnostics, about",
   "type": "module",
   "license": "MIT",

@@ -55,6 +55,28 @@ function run(command, args, options = {}) {
   }
 }
 
+/**
+ * The dist-tag a version shape earns, by the same rule the release workflow uses.
+ *
+ * This was hardcoded to `preview`, which was right while every version was
+ * `0.1.0-preview.N` and silently wrong the moment one was not: a stable `0.1.0`
+ * published under `preview` leaves `npm i @deepwatch/cli` resolving nothing,
+ * because `latest` would not exist. A prerelease must never take `latest`, and a
+ * stable release must never take anything else.
+ *
+ * A prerelease shape this train has no tag for is a refusal rather than a guess
+ * — the workflow makes the same call, and the two must not disagree about a
+ * publication that cannot be taken back.
+ */
+export function distTag(version) {
+  if (/-preview\./.test(version)) return 'preview'
+  if (/-rc\./.test(version)) return 'next'
+  if (version.includes('-')) {
+    throw new Error(`${version} is a prerelease this train has no dist-tag for`)
+  }
+  return 'latest'
+}
+
 function npm(args) {
   const spec = resolveNpm()
   if (spec === null) return { code: 1, stdout: '', stderr: 'npm is unavailable' }
@@ -210,7 +232,9 @@ async function main() {
       saveState(statePath, state)
       continue
     }
-    const result = npm(['publish', join(artifacts, item.file), '--access', 'public', '--tag', 'preview'])
+    const result = npm([
+      'publish', join(artifacts, item.file), '--access', 'public', '--tag', distTag(item.version),
+    ])
     if (result.code !== 0) {
       state.failed.push({ name: item.name, version: item.version, category: 'publish_failed' })
       saveState(statePath, state)

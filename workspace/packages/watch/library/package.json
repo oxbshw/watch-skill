@@ -1,6 +1,6 @@
 {
   "name": "@deepwatch/dsh-library",
-  "version": "0.1.0-preview.0",
+  "version": "0.1.0",
   "description": "Library — sources, revisions, index state, search, facets and collections",
   "type": "module",
   "license": "MIT",

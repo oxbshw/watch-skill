@@ -60,7 +60,7 @@ const READY = {
   lastHandshakeAt: '2026-09-01T00:00:00Z',
   restartCount: 1,
   handshake: {
-    coreVersion: '1.4.0rc1',
+    coreVersion: '1.4.0',
     coreBuild: null,
     protocolVersion: 1,
     protocolMin: 1,
@@ -72,7 +72,7 @@ describe('a connected engine is reported as itself', () => {
   test('the version comes from the handshake, not from this build', () => {
     const report = read(bridge(READY))
     assert.equal(report.outcome, 'core_health')
-    assert.equal(report.coreVersion, '1.4.0rc1')
+    assert.equal(report.coreVersion, '1.4.0')
     assert.equal(report.protocolVersion, 1)
     assert.equal(report.protocolMin, 1)
     assert.equal(report.transport, 'stdio')

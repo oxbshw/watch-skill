@@ -51,7 +51,7 @@ jobs:
       core: ${{ steps.classify.outputs.core }}
       workspace: ${{ steps.classify.outputs.workspace }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -100,8 +100,8 @@ jobs:
     if: needs.changes.outputs.core == 'true'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v7
       # the project-pinned ruff, not a floating uvx latest: local and CI
       # must agree on import classification
       - run: uv run --only-group dev ruff check .
@@ -119,8 +119,8 @@ jobs:
         python: ["3.11", "3.12", "3.13"]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v7
         with:
           python-version: ${{ matrix.python }}
       - name: Install ffmpeg (Linux)
@@ -132,14 +132,14 @@ jobs:
       - name: Sync dependencies
         run: uv sync --all-extras
       - name: Cache Playwright browsers
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: |
             ~/.cache/ms-playwright
             ~\AppData\Local\ms-playwright
           key: playwright-${{ runner.os }}-${{ hashFiles('uv.lock') }}
       - name: Cache embedding / whisper models
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: |
             ~/.cache/huggingface

@@ -12,7 +12,7 @@
  */
 
 /** Kept in step with this package's `version` by the test named above. */
-export const VERSION = '0.1.0-preview.0'
+export const VERSION = '0.1.0'
 
 /** The Harness package DeepWatch composes. Official, unforked, unpatched. */
 export const HARNESS_PACKAGE = '@deepseek-ai/dsh'
@@ -39,7 +39,7 @@ export const HARNESS_VERSION = '0.1.1-rc.2'
  * against it, so a release that bumps a package version without regenerating
  * both fails a gate instead of shipping a CLI that vouches for the wrong build.
  */
-export const RELEASE_RUNTIME_DIGEST = 'sha256:d4ba416a2f0e64756628df06cdba212fc5e8c7f35f44f90d84abcc797c92644f'
+export const RELEASE_RUNTIME_DIGEST = 'sha256:75d652f82e8636d3ff60ba77e938e04091b2075ac36549f58600191353993ccd'
 
 /**
  * Whether the `@deepwatch` scope exists on a public registry yet.

@@ -1,6 +1,6 @@
 {
   "name": "@deepwatch/dsh-tools",
-  "version": "0.1.0-preview.0",
+  "version": "0.1.0",
   "description": "Host plugin: Watch capabilities registered as DeepSeek Harness agent tools",
   "type": "module",
   "license": "MIT",

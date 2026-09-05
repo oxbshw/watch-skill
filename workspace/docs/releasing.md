@@ -176,11 +176,13 @@ rather than a consequence of pushing.
 
 ## Dist-tags
 
-| Version | Dist-tag | Why |
+| Version shape | Dist-tag | Why |
 | --- | --- | --- |
-| `0.1.0-preview.0` | `preview` | early, and not what `npm i` should give anyone |
-| `0.1.0-rc.1` | `next` | a candidate, opted into deliberately |
+| `0.1.0-preview.N` | `preview` | early, and not what `npm i` should give anyone |
+| `0.1.0-rc.N` | `next` | a candidate, opted into deliberately |
 | `0.1.0` | `latest` | the version this project stands behind |
+
+The first stable release is `0.1.0`, so it takes `latest`.
 
 A prerelease never takes `latest`. The workflow derives the tag from the
 version and refuses a prerelease shape it has no dist-tag for, so this cannot
@@ -226,7 +228,7 @@ list.
    guessing:
 
    ```bash
-   npm deprecate @deepwatch/dsh-library@0.1.0-preview.0 "incomplete release; use 0.1.0-preview.1"
+   npm deprecate @deepwatch/dsh-library@0.1.0 "incomplete release; use 0.1.1"
    ```
 
 6. **Tag again**, with the new version, and approve the environment.

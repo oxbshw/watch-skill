@@ -1,6 +1,6 @@
 {
   "name": "@deepwatch/dsh-adapters",
-  "version": "0.1.0-preview.0",
+  "version": "0.1.0",
   "description": "Optional adapters: Obsidian vaults and LLMWiki bundles. Watch works fully without either.",
   "type": "module",
   "license": "MIT",

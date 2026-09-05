@@ -8,7 +8,7 @@
   "modelLabel": "Stub Echo Small",
   "core": "connected",
   "coreTransport": "stdio",
-  "coreVersion": "1.4.0rc1",
+  "coreVersion": "1.4.0",
   "requestClassification": {
     "catalogue": 1,
     "providerTest": 7,

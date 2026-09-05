@@ -2,7 +2,7 @@
   "note": "The single source of truth for what is built. docs/implementation-status.md is generated from this file by scripts/gen-status.mjs, which also refuses a claim of 'tested' that names no test or 'implemented' that names no source.",
   "baseline": {
     "dsh": "0.1.1-rc.2 @ b150a551b8d465e31e418e1b2eaf5e79bbb7d28e",
-    "watchCore": "watch-skill 1.4.0rc1, Bridge protocol 1"
+    "watchCore": "watch-skill 1.4.0, Bridge protocol 1"
   },
   "items": [
     {

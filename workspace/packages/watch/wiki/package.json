@@ -1,6 +1,6 @@
 {
   "name": "@deepwatch/dsh-wiki",
-  "version": "0.1.0-preview.0",
+  "version": "0.1.0",
   "description": "Deterministic workspace wiki projections over the memory ledger",
   "type": "module",
   "license": "MIT",

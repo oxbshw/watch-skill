@@ -1,6 +1,6 @@
 {
   "name": "@deepwatch/dsh-sdk",
-  "version": "0.1.0-preview.0",
+  "version": "0.1.0",
   "description": "The third-party Watch capability developer path — declare, probe, observe, request",
   "type": "module",
   "license": "MIT",

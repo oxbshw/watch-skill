@@ -47,7 +47,7 @@ describe('handshake over stdio', () => {
     await withFixture({}, async (ctx) => {
       const result = await ctx.watchCore.connect()
       assert.equal(result.ok, true)
-      assert.equal(result.value.coreVersion, '1.4.0rc1-fixture')
+      assert.equal(result.value.coreVersion, '1.4.0-fixture')
       assert.equal(result.value.protocolVersion, 1)
 
       const health = ctx.watchCore.health()

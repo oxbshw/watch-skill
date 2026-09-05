@@ -526,7 +526,7 @@ export function DiagnosticsSection(
       <h2 style={T.h2}>Versions</h2>
       <div style={T.card}>
         <div style={T.meta}>
-          <Row label="DeepWatch">0.1.0-preview.0</Row>
+          <Row label="DeepWatch">0.1.0</Row>
           <Row label="DeepSeek Harness">0.1.1-rc.2</Row>
           {/* Read from the engine, not from this build's own constant. The
               version beside it used to be typed in, on the screen that
@@ -670,7 +670,7 @@ export function AboutSection(): ReactNode {
       </div>
       <div style={T.card}>
         <div style={T.meta}>
-          <Row label="DeepWatch">0.1.0-preview.0</Row>
+          <Row label="DeepWatch">0.1.0</Row>
           {/* The version the Bridge negotiates, not one this screen can read;
               a build number typed into a component is a claim about somebody
               else's machine. */}

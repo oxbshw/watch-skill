@@ -1,6 +1,6 @@
 {
   "name": "@deepwatch/dsh-memory",
-  "version": "0.1.0-preview.0",
+  "version": "0.1.0",
   "description": "Host plugin: durable, correctable, scoped memory over an append-only event ledger",
   "type": "module",
   "license": "MIT",

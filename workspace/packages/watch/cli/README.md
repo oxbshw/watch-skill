@@ -35,7 +35,7 @@ single piece in a composition you control.
 
 ## Stability
 
-`0.1.0-preview.0` — a preview release. The surface may change between previews, and it is published for evaluation rather than for production dependence.
+`0.1.0` — a stable release.
 
 ## Side effects
 

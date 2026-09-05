@@ -4,7 +4,7 @@
 # gate in tests/ is not allowed to appear here.
 
 deepwatch:
-  version: 0.1.0-preview.0
+  version: 0.1.0
   channel: preview
 
 deepseek_harness:
@@ -16,7 +16,7 @@ deepseek_harness:
 watch_core:
   # The Python engine (oxbshw/watch-skill) this distribution speaks to.
   package: watch-skill
-  min: 1.4.0rc1
+  min: 1.4.0
   max: null
   # The Watch Bridge protocol range this Workspace negotiates.
   protocol_min: 1

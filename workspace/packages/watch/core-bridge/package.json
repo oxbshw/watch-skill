@@ -1,6 +1,6 @@
 {
   "name": "@deepwatch/dsh-core-bridge",
-  "version": "0.1.0-preview.0",
+  "version": "0.1.0",
   "description": "Host plugin: the typed Bridge between DeepSeek Harness and Watch Core",
   "type": "module",
   "license": "MIT",

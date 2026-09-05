@@ -54,7 +54,7 @@ jobs:
       version: ${{ steps.tag.outputs.version }}
       dist-tag: ${{ steps.tag.outputs.dist-tag }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: The tag must name the version the workspace declares
         id: tag
@@ -79,10 +79,10 @@ jobs:
           echo "dist-tag=${tag}" >> "$GITHUB_OUTPUT"
           echo "Releasing ${version} to the ${tag} dist-tag."
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: "22.19.0"
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
         with:
           version: 10.29.1
       - run: pnpm install --frozen-lockfile
@@ -112,7 +112,7 @@ jobs:
           done
           [ "$taken" -eq 0 ] || exit 1
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: deepwatch-tarballs
           path: workspace/.release-artifacts/*.tgz
@@ -132,13 +132,13 @@ jobs:
       id-token: write
       contents: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # No `registry-url:` on purpose. It writes an .npmrc line reading a
       # token out of the environment, and an .npmrc shaped like that is the
       # thing that quietly publishes without provenance when OIDC is
       # misconfigured. The default registry is the one this publishes to.
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: "22.19.0"
       - name: npm new enough for trusted publishing
@@ -146,7 +146,7 @@ jobs:
           npm install --global npm@latest
           npm --version
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: deepwatch-tarballs
           path: workspace/.release-artifacts

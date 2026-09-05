@@ -1,6 +1,6 @@
 {
   "name": "@deepwatch/dsh-client-memory",
-  "version": "0.1.0-preview.0",
+  "version": "0.1.0",
   "description": "Browser half: the Memory product surfaces — taste, timeline, wiki, decisions, lessons, failures, sources",
   "type": "module",
   "license": "MIT",

@@ -1,6 +1,6 @@
 {
   "name": "@deepwatch/dsh-bundle",
-  "version": "0.1.0-preview.0",
+  "version": "0.1.0",
   "description": "DeepWatch's capabilities, installable into an existing DeepSeek Harness profile",
   "type": "module",
   "license": "MIT",

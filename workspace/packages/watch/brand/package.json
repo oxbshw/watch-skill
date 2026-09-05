@@ -1,6 +1,6 @@
 {
   "name": "@deepwatch/dsh-client-brand",
-  "version": "0.1.0-preview.0",
+  "version": "0.1.0",
   "description": "Browser half: the Watch product identity and its semantic status tokens",
   "type": "module",
   "license": "MIT",

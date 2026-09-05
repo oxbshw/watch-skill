@@ -6,7 +6,7 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { test } from 'node:test'
 
-import { EXPECTED_ORDER } from '../scripts/first-publish.mjs'
+import { EXPECTED_ORDER, distTag } from '../scripts/first-publish.mjs'
 import { publishOrder } from '../scripts/publish-order.mjs'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
@@ -21,14 +21,37 @@ test('dry-run is the default and publishing needs two explicit flags', () => {
   assert.match(SOURCE, /process\.argv\.includes\('--publish'\)/)
   assert.match(SOURCE, /--publish also requires --confirm-first-publish/)
   assert.match(SOURCE, /if \(!publishing\)/)
-  assert.ok(SOURCE.indexOf('if (!publishing)') < SOURCE.indexOf("npm(['publish'"))
+  assert.ok(SOURCE.indexOf('if (!publishing)') < SOURCE.indexOf("'publish',"))
 })
 
-test('the only publish command is public preview publication of a tarball', () => {
-  const calls = [...SOURCE.matchAll(/npm\(\['publish',[\s\S]{0,180}?\]\)/g)]
-  assert.equal(calls.length, 1)
-  assert.match(calls[0][0], /'--access', 'public', '--tag', 'preview'/)
+/** The single publish call, for the assertions that read its arguments. */
+function publishCall() {
+  const calls = [...SOURCE.matchAll(/npm\(\[\s*'publish',[\s\S]{0,220}?\]\)/g)]
+  assert.equal(calls.length, 1, 'there must be exactly one publish command')
+  return calls[0][0]
+}
+
+test('the only publish command is a public tarball publication', () => {
+  assert.match(publishCall(), /'--access', 'public'/)
   assert.ok(!SOURCE.includes('shell: true'))
+})
+
+test('the dist-tag is derived from the version, never hardcoded', () => {
+  // It was hardcoded to `preview`, which was right while every version was a
+  // preview and silently wrong the moment one was not: a stable release
+  // published under `preview` leaves `npm i @deepwatch/cli` resolving nothing,
+  // because `latest` would never exist.
+  assert.match(publishCall(), /'--tag', distTag\(/)
+  assert.doesNotMatch(SOURCE, /'--tag', 'preview'/)
+
+  assert.equal(distTag('0.1.0'), 'latest')
+  assert.equal(distTag('1.4.0'), 'latest')
+  assert.equal(distTag('0.1.0-preview.0'), 'preview')
+  assert.equal(distTag('0.1.0-rc.1'), 'next')
+  // A prerelease shape this train has no tag for is a refusal rather than a
+  // guess: the release workflow makes the same call, and the two must not
+  // disagree about a publication that cannot be taken back.
+  assert.throws(() => distTag('0.1.0-beta.1'), /no dist-tag for/)
 })
 
 test('a partial run records created, skipped, failed and remaining packages', () => {

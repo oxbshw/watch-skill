@@ -5,11 +5,11 @@
  * The gap this closes cost a release candidate. Provenance was a digest over
  * the sorted `name@version` list of the composed packages — a real property,
  * and the wrong one. A version is a label a human types; it does not change
- * when the code does. So when `@deepwatch/dsh-memory@0.1.0-preview.0` was
- * packed from a commit that predated its memory-permission hardening, and the
- * accepted source contained that hardening, both byte sets computed the *same*
- * composition digest. The gate reported a match, the tarball was missing
- * `restrictAll`, and nothing in the pipeline could see the difference.
+ * when the code does. So when a `@deepwatch/dsh-memory` tarball was packed from
+ * a commit that predated its memory-permission hardening, and the accepted
+ * source contained that hardening, both byte sets wore one version and computed
+ * the *same* composition digest. The gate reported a match, the tarball was
+ * missing `restrictAll`, and nothing in the pipeline could see the difference.
  *
  * Worse was visible in the artifact set's own inventory once somebody read it:
  * `commit.clean` was `false`. The pack recorded that it had been taken from a

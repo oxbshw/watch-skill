@@ -1,7 +1,7 @@
 /**
  * The process-launch boundary, and the defect that made it worth testing.
  *
- * `@deepwatch/cli@0.1.0-preview.0` could not provision the Harness on Windows
+ * `@deepwatch/cli@0.1.0` could not provision the Harness on Windows
  * at all. `ensureHarness` chose `npm.cmd` and spawned it with `shell: false`;
  * Node has refused to start a batch shim that way since the CVE-2024-27980
  * hardening, and every Node version this CLI declares support for enforces it.

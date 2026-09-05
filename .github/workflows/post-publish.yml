@@ -23,7 +23,7 @@ on:
     inputs:
       version:
         description: >-
-          The published version to verify, e.g. 1.4.0rc1. Leave empty to take
+          The published version to verify, e.g. 1.4.0. Leave empty to take
           whatever PyPI currently resolves as newest.
         required: false
         type: string
@@ -44,7 +44,7 @@ jobs:
         os: [ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: astral-sh/setup-uv@v5
+      - uses: astral-sh/setup-uv@v7
         with:
           python-version: "3.11"
 

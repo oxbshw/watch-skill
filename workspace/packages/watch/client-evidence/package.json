@@ -1,6 +1,6 @@
 {
   "name": "@deepwatch/dsh-client-evidence",
-  "version": "0.1.0-preview.0",
+  "version": "0.1.0",
   "description": "Browser half: verdict and evidence presentation for Watch tool results",
   "type": "module",
   "license": "MIT",

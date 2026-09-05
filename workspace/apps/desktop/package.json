@@ -1,6 +1,6 @@
 {
   "name": "@deepwatch/desktop",
-  "version": "0.1.0-preview.0",
+  "version": "0.1.0",
   "description": "DeepWatch — an Electron shell around the same Workspace packages",
   "type": "module",
   "license": "MIT",

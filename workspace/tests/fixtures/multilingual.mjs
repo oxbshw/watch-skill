@@ -91,7 +91,7 @@ export function evidenceTextFor(sample, extras = {}) {
     direction: sample.direction,
     languageConfidence: null,
     producer: 'watch-core',
-    producerVersion: '1.4.0rc1',
+    producerVersion: '1.4.0',
     translations: [],
     qualityWarnings: [],
     ...extras,
