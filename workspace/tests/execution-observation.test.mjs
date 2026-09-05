@@ -291,6 +291,30 @@ describe('containment is recorded, whatever it decided', () => {
       'a command string was mistaken for a path')
     assert.deepEqual(readScope([], WORKSPACE).scope, 'not_applicable')
   })
+
+  test('the shell is governed by the same root as the filesystem tools', () => {
+    // Found by a real owner session, not by review: refused an out-of-workspace
+    // `write` twice, the agent reached for `pwsh` instead. `pwsh` spells its
+    // working directory `workdir` and this list only knew `cwd`, so the call
+    // yielded no path at all and an execute-class tool aimed outside the
+    // workspace was recorded `not_applicable` — the answer reserved for a call
+    // that touches no filesystem.
+    assert.deepEqual(pathsIn({ command: 'Set-Content x', workdir: 'D:/elsewhere' }),
+      ['D:/elsewhere'], "pwsh's workdir was not read as a path")
+    assert.equal(
+      readScope(pathsIn({ command: 'ls', workdir: 'D:/elsewhere' }), WORKSPACE).scope,
+      'outside_workspace')
+    assert.equal(
+      readScope(pathsIn({ command: 'ls', workdir: WORKSPACE }), WORKSPACE).scope,
+      'inside')
+  })
+
+  test('a match expression is not a location', () => {
+    // `glob` and `grep` take a pattern. Resolving a wildcard as a literal path
+    // would be a confident wrong answer, so they stay unscanned on purpose.
+    assert.deepEqual(pathsIn({ pattern: '**/*.ts' }), [])
+    assert.deepEqual(pathsIn({ pattern: 'TODO|FIXME' }), [])
+  })
 })
 
 describe('the workspace boundary refuses rather than reports', () => {

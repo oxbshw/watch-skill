@@ -178,9 +178,30 @@ const SIDE_EFFECTS: Readonly<Record<string, SideEffectClass>> = {
   exit_plan_mode: 'none',
 }
 
-/** The argument keys that carry a path, by the tools that take them. */
+/**
+ * The argument keys that carry a path, by the tools that take them.
+ *
+ * `workdir` is here because `pwsh` spells its working directory that way while
+ * this list only knew `cwd`. A real owner session found it: the agent was
+ * refused an out-of-workspace `write` twice, reached for the shell instead, and
+ * that call produced no path at all — so {@link readScope} saw an empty list and
+ * returned `not_applicable`, the answer for a call that touches no filesystem.
+ * An execute-class tool aimed at a directory outside the workspace was recorded
+ * as though containment did not apply to it.
+ *
+ * What is deliberately *not* here is `command`. A shell command is not a path
+ * and cannot be parsed into one reliably — quoting, expansion, redirection and
+ * `$(…)` all decide where bytes land at runtime. Scanning it would produce
+ * confident wrong answers in both directions. The declared working directory is
+ * structured and truthful, so it is scanned; the command string stays the
+ * sandbox's business, and that division is stated in the security boundary
+ * documentation rather than implied.
+ *
+ * `pattern` is likewise absent: `glob` and `grep` take a match expression, not
+ * a location, and a wildcard resolved as a literal path would be a fiction.
+ */
 const PATH_KEYS: readonly string[] = [
-  'path', 'file', 'filePath', 'file_path', 'dir', 'directory', 'cwd',
+  'path', 'file', 'filePath', 'file_path', 'dir', 'directory', 'cwd', 'workdir',
   'source', 'destination', 'target', 'paths', 'files',
 ]
 
