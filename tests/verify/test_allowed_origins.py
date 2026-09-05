@@ -29,9 +29,10 @@ from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 import pytest
+from pydantic import ValidationError
 
 from watch_skill.verify import draft_contract
-from watch_skill.verify.contract import VerificationContract
+from watch_skill.verify.contract import ContractError, VerificationContract
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -96,9 +97,10 @@ def test_the_field_exists_and_the_digest_covers_it() -> None:
 
     widened = contract.model_copy(
         update={"allowed_origins": ["http://127.0.0.1:9", "https://example.invalid"]})
-    with pytest.raises(Exception) as raised:
+    with pytest.raises(ContractError) as raised:
         widened.verify_integrity()
     assert "modified after freezing" in str(raised.value)
+    assert raised.value.code == "verify.contract_tampered"
 
 
 def test_a_revision_keeps_the_reach_its_predecessor_was_granted() -> None:
@@ -179,7 +181,7 @@ def test_naming_one_origin_does_not_open_another(served: str, tmp_path: Path) ->
 def test_the_contract_model_still_forbids_unknown_keys() -> None:
     # `extra: forbid` is what made the missing field a hard failure rather than
     # a silently ignored one, and that is worth keeping.
-    with pytest.raises(Exception):
+    with pytest.raises(ValidationError, match="allowed_orgins"):
         VerificationContract.model_validate({
             "contract_id": "x", "checks": [], "allowed_orgins": ["typo"],
         })
