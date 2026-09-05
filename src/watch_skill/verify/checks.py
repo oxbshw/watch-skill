@@ -87,6 +87,61 @@ def _resolve_within(raw: str, ctx: CheckContext) -> Path:
     return candidate
 
 
+def _shown(path: Path, ctx: CheckContext) -> str:
+    """A path as a *record* may carry it: relative to the working directory.
+
+    A check summary is not a debug line. It crosses the Bridge, is indexed into
+    the Library, is rendered in a browser, is exported, and is read back into
+    model context — and it used to carry the resolved absolute path, so a
+    verification that passed announced the operating system user's name and the
+    shape of somebody's disk to every one of those places.
+
+    The contract asked about ``owner-test/totals.json``; that is what the answer
+    should say. Forward slashes, because the record is read on machines that did
+    not write it. A path that somehow lands outside the working directory is
+    named ``<path>`` rather than printed, since there is no relative spelling
+    for it and the absolute one is the thing being avoided.
+    """
+    try:
+        return path.resolve().relative_to(Path(ctx.working_dir).resolve()).as_posix()
+    except ValueError:
+        return "<path>"
+
+
+def _redact_paths(text: str, ctx: CheckContext) -> str:
+    """Rewrite absolute paths out of a diagnostic a check produced.
+
+    The safety net behind :func:`_shown`. Check bodies build their own summaries
+    and can be careful; the messages that arrive from the operating system
+    cannot — ``FileNotFoundError`` quotes the full path it was given, and that
+    string became a summary verbatim.
+
+    Bounded on purpose, in the same spirit as the Host's own redaction: the
+    working directory is replaced by its relative remainder, and any other
+    absolute local path is replaced whole. Nothing else in the string is
+    touched, because a summary also carries digests, pointers and values that a
+    blanket rewrite would corrupt.
+    """
+    if not text:
+        return text
+    root = str(Path(ctx.working_dir).resolve())
+    out = text
+    for spelling in {root, root.replace("\\", "/")}:
+        # The remainder keeps its own separators normalised, so one file reads
+        # the same however the message that named it was built.
+        pattern = re.escape(spelling) + r"[\\/]?([^\s\"'`,;)\]]*)"
+        out = re.sub(
+            pattern,
+            lambda m: (m.group(1) or ".").replace("\\", "/"),
+            out,
+        )
+    # Anything still absolute belongs to no root this check may speak about.
+    out = re.sub(r"(?<![A-Za-z:])[A-Za-z]:[\\/][^\s\"'`,;)\]]*", "<path>", out)
+    out = re.sub(r"(?<![\w:])/(?:home|Users|var|tmp|root|mnt|opt)/[^\s\"'`,;)\]]*",
+                 "<path>", out)
+    return out
+
+
 _PRIVATE_HOST_ERROR = (
     "refusing a request to a private, loopback, or link-local address: an "
     "allowlisted hostname that resolves inward is the classic SSRF shape"
@@ -134,7 +189,7 @@ def _file_exists(check: Check, ctx: CheckContext) -> tuple[CheckStatus, Any, Any
         CheckStatus.PASS if exists == want else CheckStatus.FAIL,
         f"file_exists={want}",
         f"file_exists={exists}",
-        f"{path} {'exists' if exists else 'does not exist'}",
+        f"{_shown(path, ctx)} {'exists' if exists else 'does not exist'}",
     )
 
 
@@ -142,7 +197,7 @@ def _file_digest(check: Check, ctx: CheckContext) -> tuple[CheckStatus, Any, Any
     path = _resolve_within(str(check.params["path"]), ctx)
     if not path.is_file():
         return (CheckStatus.FAIL, check.params.get("sha256"), None,
-                f"{path} does not exist, so it cannot match a digest")
+                f"{_shown(path, ctx)} does not exist, so it cannot match a digest")
     digest = hashlib.sha256()
     with path.open("rb") as handle:
         while chunk := handle.read(1 << 20):
@@ -679,6 +734,14 @@ def run_check(check: Check, ctx: CheckContext) -> CheckResult:
             result.status = CheckStatus.ERROR
             result.summary = f"{type(exc).__name__}: {exc}"
             result.error = {"code": "verify.check_crashed", "message": str(exc)}
+
+    # One place, after every branch above. A summary or error message that
+    # reaches here carrying an absolute path would be indexed, exported and
+    # rendered with it, and the branches that build those messages include the
+    # ones where the operating system wrote them.
+    result.summary = _redact_paths(result.summary or "", ctx)
+    if result.error is not None and isinstance(result.error.get("message"), str):
+        result.error["message"] = _redact_paths(result.error["message"], ctx)
 
     result.ended_at = _now()
     result.duration_seconds = round(time.monotonic() - started, 4)

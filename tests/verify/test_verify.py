@@ -517,3 +517,68 @@ def test_the_read_only_sqlite_uri_keeps_the_path_absolute() -> None:
     # The path inside the URI must still be absolute for the platform.
     inner = uri[len("file://"):-len("?mode=ro")]
     assert inner.startswith("/"), f"URI path is not absolute: {inner!r}"
+
+
+# --- a record does not carry this machine's directory names ------------------
+
+
+def test_a_passing_check_names_the_path_the_contract_asked_about(tmp_path: Path) -> None:
+    """The defect a release screenshot found.
+
+    A check summary crosses the Bridge, is indexed into the Library, rendered in
+    a browser, exported, and read back into model context. It used to carry the
+    *resolved absolute* path, so a verification that passed announced the
+    operating system user's name and the shape of somebody's disk to all of
+    them. The contract asked about ``owner-test/totals.json``; that is what the
+    answer says.
+    """
+    target = tmp_path / "owner-test" / "totals.json"
+    target.parent.mkdir(parents=True)
+    target.write_text('{"total": 60}', encoding="utf-8")
+
+    result = run_check(
+        Check(id="exists", type="file_exists", params={"path": "owner-test/totals.json"}),
+        CheckContext(working_dir=str(tmp_path)),
+    )
+    assert result.status is CheckStatus.PASS
+    assert result.summary == "owner-test/totals.json exists"
+    assert str(tmp_path) not in result.summary
+
+
+def test_a_failing_check_leaks_no_path_either(tmp_path: Path) -> None:
+    result = run_check(
+        Check(id="missing", type="file_exists", params={"path": "no/such/file.json"}),
+        CheckContext(working_dir=str(tmp_path)),
+    )
+    assert result.status is CheckStatus.FAIL
+    assert str(tmp_path) not in result.summary
+    assert "no/such/file.json" in result.summary
+
+
+def test_an_operating_system_error_is_redacted_before_it_becomes_a_summary(
+    tmp_path: Path,
+) -> None:
+    """The half a careful check body cannot cover.
+
+    ``FileNotFoundError`` quotes the full path it was handed, and that string
+    became a summary verbatim. Check bodies build their own summaries and can be
+    careful; the messages the operating system writes cannot be.
+    """
+    result = run_check(
+        Check(id="total", type="json_value",
+              params={"path": "absent.json", "pointer": "/total", "equals": 60}),
+        CheckContext(working_dir=str(tmp_path)),
+    )
+    assert result.status is CheckStatus.ERROR
+    assert str(tmp_path) not in result.summary
+    assert str(tmp_path) not in json.dumps(result.error or {})
+
+
+def test_redaction_keeps_what_a_summary_is_actually_for(tmp_path: Path) -> None:
+    """Bounded, not blanket: a digest and a JSON pointer survive intact."""
+    from watch_skill.verify.checks import _redact_paths
+
+    ctx = CheckContext(working_dir=str(tmp_path))
+    assert _redact_paths("sha256:abc123 digest matches", ctx) == "sha256:abc123 digest matches"
+    assert _redact_paths("/total = 60", ctx) == "/total = 60"
+    assert _redact_paths("digest differs", ctx) == "digest differs"
