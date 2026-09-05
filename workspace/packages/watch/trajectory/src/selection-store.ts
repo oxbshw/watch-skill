@@ -9,10 +9,10 @@
  *
  * A store rather than a value, because several panels need to observe the same
  * change; but the value it holds is the pure `WatchSelection` from
- * `@watchskill/dsh-trajectory`, so every rule about what a selection means
+ * `@deepwatch/dsh-trajectory`, so every rule about what a selection means
  * stays testable without a browser.
  *
- * @module @watchskill/dsh-trajectory/selection-store
+ * @module @deepwatch/dsh-trajectory/selection-store
  */
 
 import type { WatchSelection } from './selection.js'

@@ -20,11 +20,11 @@ import { fileURLToPath } from 'node:url'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { createElement } from 'react'
 
-import { WatchModeView } from '@watchskill/dsh-workspace/mode-views'
-import { LiveModeView } from '@watchskill/dsh-live/live-mode'
-import { LibraryModeView } from '@watchskill/dsh-library/library-mode'
-import { CompareModeView } from '@watchskill/dsh-client-evidence/compare-mode'
-import { MemoryModeView } from '@watchskill/dsh-client-memory/memory-mode'
+import { WatchModeView } from '@deepwatch/dsh-workspace/mode-views'
+import { LiveModeView } from '@deepwatch/dsh-live/live-mode'
+import { LibraryModeView } from '@deepwatch/dsh-library/library-mode'
+import { CompareModeView } from '@deepwatch/dsh-client-evidence/compare-mode'
+import { MemoryModeView } from '@deepwatch/dsh-client-memory/memory-mode'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 

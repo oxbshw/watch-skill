@@ -1,7 +1,7 @@
 /**
  * Deterministic workspace wiki projections.
  *
- * @module @watchskill/dsh-wiki
+ * @module @deepwatch/dsh-wiki
  */
 
 export * from './projection.js'

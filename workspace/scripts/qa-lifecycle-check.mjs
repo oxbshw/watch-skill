@@ -37,10 +37,11 @@ import { readFileSync, existsSync, readdirSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { createHash } from 'node:crypto'
+import { manualPath } from './lib/manual-paths.mjs'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
-const LOG = process.env.WATCH_DESKTOP_LOG ?? 'G:/watch-manual/logs/desktop-main.log'
-const OUT = process.env.WATCH_QA_OUT ?? 'G:/watch-manual/qa/lifecycle'
+const LOG = manualPath('WATCH_DESKTOP_LOG', ['logs', 'desktop-main.log'])
+const OUT = manualPath('WATCH_QA_OUT', ['qa', 'lifecycle'])
 
 const failures = []
 const notes = []

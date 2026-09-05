@@ -21,6 +21,7 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const read = relative => readFileSync(join(ROOT, relative), 'utf8')
 
 const SURFACE = read('packages/watch/workspace/src/client/surface.tsx')
+const THEME = read('packages/watch/brand/src/client/theme.css')
 // The Watch mode body stayed in workspace; the other three moved into the
 // packages that own their capability, because a mode view and the engine
 // behind it belonging to different packages is what created the circular
@@ -68,13 +69,13 @@ test('the mode scaffold', async t => {
   await t.test('a surface owns its own scroll', () => {
     // The page body must never scroll sideways, and a mode that grows has to
     // scroll inside its own region rather than pushing the shell around.
-    assert.match(SURFACE, /overflowY: 'auto'/)
-    assert.match(SURFACE, /minHeight: 0/)
+    assert.match(THEME, /\.watch-mode-root[\s\S]*?overflow-y: auto/)
+    assert.match(THEME, /\.watch-mode-root[\s\S]*?min-height: 0/)
   })
 
   await t.test('offsets are logical, so RTL needs no second stylesheet', () => {
-    assert.match(SURFACE, /borderInlineStart|paddingInlineStart/)
-    assert.doesNotMatch(SURFACE, /borderLeft:|paddingLeft:|marginLeft:/)
+    assert.match(THEME, /border-inline-start|padding-inline-start|margin-inline-start/)
+    assert.doesNotMatch(THEME, /border-left:|padding-left:|margin-left:/)
   })
 
   await t.test('a tool result that cannot be read renders nothing', () => {
@@ -242,14 +243,14 @@ test('the modes are registered as the bodies DSH renders', async t => {
     watch: read('packages/watch/workspace/src/client/index.tsx'),
     live: read('packages/watch/live/src/client/index.tsx'),
     library: read('packages/watch/library/src/client/index.tsx'),
-    compare: read('packages/watch/client-evidence/src/client/index.tsx'),
+    compare: read('packages/watch/client-evidence/src/client/compare-registration.tsx'),
   }
 
   await t.test('each view registration points at a mode body', () => {
     assert.match(REG.watch, /mode\('watch', 'Watch', WatchModeView/)
     assert.match(REG.live, /id: 'live'[\s\S]{0,90}LiveModeView/)
     assert.match(REG.library, /id: 'library'[\s\S]{0,90}LibraryModeView/)
-    assert.match(REG.compare, /id: 'compare'[\s\S]{0,90}CompareModeView/)
+    assert.match(REG.compare, /id: 'compare'[\s\S]{0,120}CompareModeView/)
   })
 
   await t.test('cross-package imports use the plain ESM subpath', () => {
@@ -262,14 +263,14 @@ test('the modes are registered as the bodies DSH renders', async t => {
     // import their own view locally, and it is the view that reaches across.
     for (const [name, source] of Object.entries(BODIES)) {
       assert.match(
-        source, /@watchskill\/dsh-workspace\/surface/,
+        source, /@deepwatch\/dsh-workspace\/surface/,
         `the ${name} body does not use the plain ESM scaffold entry`,
       )
     }
     // And the rule holds everywhere, not only in the files this test names.
     const offenders = []
     for (const file of shippedSources()) {
-      if (/from '@watchskill\/dsh-[a-z-]+\/client'/.test(read(file))) offenders.push(file)
+      if (/from '@deepwatch\/dsh-[a-z-]+\/client'/.test(read(file))) offenders.push(file)
     }
     assert.deepEqual(offenders, [], 'a shipped source imports a loader-wrapped bundle')
   })

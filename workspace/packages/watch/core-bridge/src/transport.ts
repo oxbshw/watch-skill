@@ -7,10 +7,10 @@
  * terminal state — lives above this line, in the service, so a new backend
  * cannot accidentally weaken it.
  *
- * @module @watchskill/dsh-core-bridge/transport
+ * @module @deepwatch/dsh-core-bridge/transport
  */
 
-import type { WatchError, WatchResult } from '@watchskill/dsh-contracts'
+import type { WatchError, WatchResult } from '@deepwatch/dsh-contracts'
 
 /** How a transport identifies itself to the UI. The UI never guesses. */
 export type TransportKind = 'stdio' | 'https' | 'mock'

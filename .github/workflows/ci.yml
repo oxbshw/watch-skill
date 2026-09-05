@@ -1,27 +1,114 @@
 name: CI
 
+# Triggers on everything, and decides inside itself what to run.
+#
+# A workflow-level `paths:` filter cannot be used here. A workflow that does
+# not trigger produces no status at all -- not a failing one, an absent one --
+# so a pull request protected on a check inside it waits forever with nothing
+# to explain the wait. Both halves of this repository therefore trigger on
+# every event, and `changes` decides which expensive matrix actually runs.
 on:
   push:
     branches: [main]
   pull_request:
+  workflow_dispatch:
 
 # Least privilege, stated rather than inherited. The repository default is
 # read today, so this changes nothing now -- it is what keeps a future
 # change to that default from silently handing this workflow write access.
+# Two runs of one workflow may only cancel each other when they are the same
+# kind of run for the same thing, and never on a release branch.
+#
+# This was one line, `${{ github.workflow }}-${{ github.ref }}`, with
+# `cancel-in-progress: true`. For a branch push and a `workflow_dispatch` on
+# that same branch `github.ref` is identical, so both landed in one group and
+# the later run killed the earlier one. On 2026-09-03 a dispatch created at
+# 11:48:51 cancelled the push run created at 11:48:33 for the same commit:
+# eight release-critical jobs went to `cancelled` mid-flight and
+# `workspace-required` failed, correctly, on dependencies that never finished.
+# The pull_request run survived only because its ref is `refs/pull/N/merge`.
+#
+# `github.event_name` in the group keeps the three kinds apart. The guard
+# below then removes automatic cancellation entirely on a release branch,
+# where a half-finished matrix is not evidence and a queued one costs only
+# time. Manual cancellation is unaffected.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: >-
+    ${{ !startsWith(github.ref, 'refs/heads/release/')
+        && !startsWith(github.head_ref, 'release/') }}
+
 permissions:
   contents: read
 
 jobs:
+  # Which half changed. Always runs, so the aggregator below always has
+  # something to gather. The classification itself lives in
+  # .github/changed-half.mjs, where it is tested.
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      core: ${{ steps.classify.outputs.core }}
+      workspace: ${{ steps.classify.outputs.workspace }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Classify the change
+        id: classify
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+          HEAD: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          # Three ways there is nothing to compare against, and all three run
+          # everything: an unnecessary matrix costs minutes, a wrongly skipped
+          # one costs a defect reaching main.
+          #
+          #   - a manual dispatch has no diff at all;
+          #   - a first push to a branch reports an all-zero "before";
+          #   - a force-push reports a "before" that is no longer in the
+          #     repository, because the commit it names was rewritten. That one
+          #     used to be fatal: `git diff` exited 128 with "bad object" and
+          #     the required status went red for a reason that had nothing to
+          #     do with the change. An unreachable base is an unknown base, not
+          #     an error.
+          unclassifiable=''
+          if [ "$EVENT" = "workflow_dispatch" ] || [ -z "${BASE:-}" ] \
+            || [ "$BASE" = "0000000000000000000000000000000000000000" ]; then
+            unclassifiable='no comparable base'
+          elif ! git cat-file -e "${BASE}^{commit}" 2>/dev/null; then
+            unclassifiable="the base $BASE is not in this repository (rewritten history)"
+          fi
+          if [ -n "$unclassifiable" ]; then
+            echo "$unclassifiable; running everything"
+            {
+              echo "core=true"
+              echo "workspace=true"
+            } | tee -a "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git diff --name-only "$BASE" "$HEAD" > changed.txt
+          echo "changed files:"
+          cat changed.txt
+          node .github/changed-half.mjs --stdin < changed.txt
+
   lint:
+    needs: changes
+    if: needs.changes.outputs.core == 'true'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v7
       # the project-pinned ruff, not a floating uvx latest: local and CI
       # must agree on import classification
       - run: uv run --only-group dev ruff check .
 
   test:
+    needs: changes
+    if: needs.changes.outputs.core == 'true'
     strategy:
       fail-fast: false
       matrix:
@@ -32,8 +119,8 @@ jobs:
         python: ["3.11", "3.12", "3.13"]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v7
         with:
           python-version: ${{ matrix.python }}
       - name: Install ffmpeg (Linux)
@@ -45,14 +132,14 @@ jobs:
       - name: Sync dependencies
         run: uv sync --all-extras
       - name: Cache Playwright browsers
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: |
             ~/.cache/ms-playwright
             ~\AppData\Local\ms-playwright
           key: playwright-${{ runner.os }}-${{ hashFiles('uv.lock') }}
       - name: Cache embedding / whisper models
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: |
             ~/.cache/huggingface
@@ -71,3 +158,42 @@ jobs:
           WATCHSKILL_VISION_CHEAP_PROVIDER: anthropic
           WATCHSKILL_VISION_STRONG_PROVIDER: anthropic
           FASTEMBED_CACHE_PATH: ci-model-cache
+
+  # The always-present Core status, and the context branch protection requires.
+  #
+  # It passes only if nothing it gathered failed. A skipped matrix passes only
+  # when the detector said Core was unaffected: a job skipped for any other
+  # reason is a defect in this workflow, not a change that needed no testing.
+  core-required:
+    if: always()
+    needs: [changes, lint, test]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Gather the results
+        env:
+          DETECTOR: ${{ needs.changes.result }}
+          EXPECTED: ${{ needs.changes.outputs.core }}
+          RESULTS: ${{ toJSON(needs) }}
+        run: |
+          set -euo pipefail
+          echo "$RESULTS"
+
+          if [ "$DETECTOR" != "success" ]; then
+            echo "::error::the change detector did not succeed ($DETECTOR)"
+            exit 1
+          fi
+
+          # `grep -q ... && exit 1` would fail the step on a green run: when
+          # grep matches nothing it exits 1, and that becomes the step's status
+          # under `bash -e`. The condition has to be a real `if`.
+          if printf '%s' "$RESULTS" | grep -qE '"result": *"(failure|cancelled)"'; then
+            echo "::error::a required core job failed or was cancelled"
+            exit 1
+          fi
+
+          if [ "$EXPECTED" = "true" ] && printf '%s' "$RESULTS" | grep -qE '"result": *"skipped"'; then
+            echo "::error::Core changed, so no Core job may be skipped"
+            exit 1
+          fi
+
+          echo "every core job succeeded, or was skipped because Core did not change"

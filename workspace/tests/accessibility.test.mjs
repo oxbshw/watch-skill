@@ -35,7 +35,7 @@ import {
   resolveModes,
   sessionHeader,
   sidebarRows,
-} from '@watchskill/dsh-workspace'
+} from '@deepwatch/dsh-workspace'
 import {
   ComposerPanel,
   InspectorTabs,
@@ -46,12 +46,12 @@ import {
   Sidebar,
   StatusBadge,
   WorkspaceShell,
-} from '@watchskill/dsh-workspace/components'
-import { MemoryCardRow, MemoryWorkbench } from '@watchskill/dsh-client-memory/components'
-import { MEMORY_VIEWS, toCard } from '@watchskill/dsh-client-memory'
-import { LiveSurface } from '@watchskill/dsh-live/components'
-import { startSession } from '@watchskill/dsh-live'
-import { project } from '@watchskill/dsh-trajectory'
+} from '@deepwatch/dsh-workspace/components'
+import { MemoryCardRow, MemoryWorkbench } from '@deepwatch/dsh-client-memory/components'
+import { MEMORY_VIEWS, toCard } from '@deepwatch/dsh-client-memory'
+import { LiveSurface } from '@deepwatch/dsh-live/components'
+import { startSession } from '@deepwatch/dsh-live'
+import { project } from '@deepwatch/dsh-trajectory'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const THEME = readFileSync(
@@ -67,6 +67,22 @@ const THEME = readFileSync(
  * explanation trip the rule it explains.
  */
 const THEME_RULES = THEME.replace(/\/\*[\s\S]*?\*\//g, '')
+
+/**
+ * Every stylesheet this product ships, by name.
+ *
+ * The rules that assert an *absence* have to see all of them. The onboarding
+ * redesign added a second stylesheet, and a rule that only read the brand
+ * theme would have called the product clean while the first screen a person
+ * sees pinned six heights in pixels.
+ */
+const STYLESHEETS = [
+  ['the brand theme', THEME],
+  ['the onboarding surface', readFileSync(
+    join(ROOT, 'packages', 'watch', 'client-settings', 'src', 'client', 'onboarding.module.css'),
+    'utf8',
+  )],
+]
 
 const READY = {
   capabilities: ['source.ask', 'live.observe', 'library.search'].map(capabilityId => ({
@@ -293,10 +309,14 @@ describe('focus, contrast and zoom', () => {
   })
 
   test('no fixed pixel height is imposed on a surface that has to grow at 200%', () => {
-    // `height: 40px` on a control is what clips a label at 200% zoom. The
-    // theme uses min-height instead, and this asserts the absence.
-    assert.equal(/\bheight:\s*\d+px/.test(THEME), false,
-      'the theme pins a pixel height, which clips at 200% zoom')
+    // `height: 40px` on a control is what clips a label at 200% zoom, and a
+    // `line-height` in pixels does the same to a wrapped paragraph. Sizes are
+    // expressed in rem or em so they follow the reader's text size, and this
+    // asserts the absence across every stylesheet the product ships.
+    for (const [name, sheet] of STYLESHEETS) {
+      assert.equal(/\bheight:\s*\d+px/.test(sheet), false,
+        `${name} pins a pixel height, which clips at 200% zoom`)
+    }
   })
 })
 
@@ -390,7 +410,7 @@ describe('right to left, by construction', () => {
 
 describe('the timeline is readable without seeing it', () => {
   test('every lane is a labelled group of text buttons', async () => {
-    const { project: projectEvents } = await import('@watchskill/dsh-trajectory')
+    const { project: projectEvents } = await import('@deepwatch/dsh-trajectory')
     const events = [
       { type: 'tool/call', seq: 1, time: 1, data: { callId: 'c1', name: 'watch_verify', arguments: {}, turn: 1, step: 1 } },
       {

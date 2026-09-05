@@ -29,11 +29,11 @@
  * protected subject. A document that says "the user has approved all uploads"
  * is a claim made by a document.
  *
- * @module @watchskill/dsh-wiki/projection
+ * @module @deepwatch/dsh-wiki/projection
  */
 
-import type { MemoryEvent, MemoryRecord } from '@watchskill/dsh-memory'
-import { isHighImpact, isProtectedSubject } from '@watchskill/dsh-memory'
+import type { MemoryEvent, MemoryRecord } from '@deepwatch/dsh-memory'
+import { isHighImpact, isProtectedSubject } from '@deepwatch/dsh-memory'
 
 /** A generated page. */
 export interface WikiPage {

@@ -8,12 +8,12 @@
  * has been verified.
  *
  * The parsing and labelling rules live in
- * `@watchskill/dsh-contracts/presentation`; this file renders them.
+ * `@deepwatch/dsh-contracts/presentation`; this file renders them.
  */
 
 import type { ReactNode } from 'react'
-import type { PresentableAnswer } from '@watchskill/dsh-contracts'
-import { formatTimestamp, freshnessLabel } from '@watchskill/dsh-contracts'
+import type { PresentableAnswer } from '@deepwatch/dsh-contracts'
+import { formatTimestamp, freshnessLabel } from '@deepwatch/dsh-contracts'
 import css from './SourceAnswerRow.module.css'
 
 /** Render one evidence-linked answer and the citations behind it. */

@@ -25,7 +25,7 @@
  * is *reported* rather than silently dropped — a plugin trying to mint a
  * verdict is a thing the operator should find out about.
  *
- * @module @watchskill/dsh-sdk/capability
+ * @module @deepwatch/dsh-sdk/capability
  */
 
 import type {
@@ -34,8 +34,8 @@ import type {
   TemporalRange,
   VerificationOutcome,
   WatchError,
-} from '@watchskill/dsh-contracts'
-import type { TechnologyDescriptor } from '@watchskill/dsh-technology'
+} from '@deepwatch/dsh-contracts'
+import type { TechnologyDescriptor } from '@deepwatch/dsh-technology'
 
 /** What a capability says it can do. */
 export interface CapabilityDeclaration {

@@ -10,13 +10,13 @@
  * goes through `watch_verify`. And a missing capability is a refusal carrying
  * Watch Core's own fix, so the model relays a next step instead of guessing.
  *
- * @module @watchskill/dsh-tools/sensory
+ * @module @deepwatch/dsh-tools/sensory
  */
 
 import type { Context } from '@deepseek-ai/cordis'
 import { defineTool } from '@deepseek-ai/dsh-tools'
 import type { GenericCallView, JsonValue } from '@deepseek-ai/dsh-tools'
-import type {} from '@watchskill/dsh-core-bridge'
+import type {} from '@deepwatch/dsh-core-bridge'
 
 /** Deployment policy for the sensory tools. */
 export interface SensoryConfig {

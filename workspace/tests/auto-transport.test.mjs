@@ -1,12 +1,17 @@
 /**
- * The `auto` transport, and the distinction it rests on.
+ * The `auto` transport: which real engine to try, never whether to use one.
  *
- * An automatic default is only acceptable if it can tell "Watch Core is not on
- * this machine" from "Watch Core is here and would not start". The first is a
- * normal state that deserves a working Workspace and an install prompt; the
- * second is a fault that must be reported. A fallback that cannot tell them
- * apart hides broken engines behind a mock that answers nothing — which is
- * strictly worse than not falling back at all.
+ * `auto` used to fall back to the in-process mock when the command was not
+ * installed, on the reasoning that a machine without Watch Core should still
+ * get a working Workspace. The distinction it rested on — "not installed" is
+ * normal, "installed and broken" is a fault — was real and correctly
+ * implemented, and it still produced the wrong product: a Workspace that
+ * reported itself ready, listed capabilities, and answered every request with
+ * a refusal the surfaces drew as an empty result.
+ *
+ * The Workspace is still fully usable without an engine. What changed is that
+ * it now says so. `core_missing` is a state with a name, a fix and a disabled
+ * Watch surface — not a green screen with nothing behind it.
  */
 
 import { test, describe } from 'node:test'
@@ -17,7 +22,7 @@ import { writeFileSync, mkdtempSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 
 import { Context } from '@deepseek-ai/cordis'
-import WatchCoreService from '@watchskill/dsh-core-bridge'
+import WatchCoreService from '@deepwatch/dsh-core-bridge'
 
 const FIXTURE = join(dirname(fileURLToPath(import.meta.url)), 'fixtures', 'fake-core.mjs')
 
@@ -35,20 +40,24 @@ async function mount(config) {
 }
 
 describe('a machine without Watch Core', () => {
-  test('gets a working Workspace and is told what to install', async () => {
-    const { ctx, fiber } = await mount({
+  test('is reported as missing, and the Workspace stays usable', async () => {
+    const { ctx, fiber, result } = await mount({
       transport: 'auto',
       command: 'watch-core-definitely-not-installed-4182',
       args: ['bridge'],
     })
     try {
+      assert.equal(result.ok, false, 'an absent engine is not a successful connection')
+
       const health = ctx.watchCore.health()
-      assert.equal(health.phase, 'ready', 'the Workspace must remain usable')
-      assert.equal(health.transport, 'mock')
+      assert.equal(health.phase, 'failed')
+      assert.equal(health.blocker, 'core_missing', 'the UI branches on this, not on prose')
+      assert.notEqual(health.transport, 'mock', 'auto must never reach the mock')
+      assert.equal(health.isTestOnlyMock, false)
       assert.equal(
         health.error.error,
         'bridge.core_not_installed',
-        'the reason must survive the fallback, or the UI cannot say what to install',
+        'the reason must survive, or the UI cannot say what to install',
       )
       assert.match(health.error.fix, /pip install watch-skill/)
     } finally {
@@ -56,19 +65,20 @@ describe('a machine without Watch Core', () => {
     }
   })
 
-  test('still refuses every capability, because nothing was tested', async () => {
+  test('claims no capability at all, having spoken to nothing', async () => {
+    // Stronger than the old assertion, which accepted a list of capabilities
+    // all reporting `not_tested`. A list is something a screen can render, and
+    // a screen rendering nine greyed-out rows for an engine that was never
+    // contacted is still a screen describing an engine.
     const { ctx, fiber } = await mount({
       transport: 'auto',
       command: 'watch-core-definitely-not-installed-4182',
       args: ['bridge'],
     })
     try {
-      const capabilities = ctx.watchCore.capabilities()
-      assert.ok(capabilities.length > 0)
-      for (const capability of capabilities) {
-        assert.equal(capability.status, 'not_tested')
-        assert.equal(ctx.watchCore.isCapable(capability.capabilityId), false)
-      }
+      assert.deepEqual([...ctx.watchCore.capabilities()], [])
+      assert.equal(ctx.watchCore.health().handshake, null, 'no handshake, no version to show')
+      assert.equal(ctx.watchCore.health().lastHandshakeAt, null)
     } finally {
       await fiber.dispose()
     }

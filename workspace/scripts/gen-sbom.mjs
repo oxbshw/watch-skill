@@ -20,8 +20,12 @@
  */
 
 import { readFileSync, writeFileSync, existsSync, readdirSync } from 'node:fs'
+import { createHash } from 'node:crypto'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
+
+import { parseLockfilePackages, platformFamily } from './lib/pnpm-lockfile.mjs'
+import { byCodeUnit } from './lib/order.mjs'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const OUTPUT = join(ROOT, 'docs', 'sbom.json')
@@ -39,6 +43,49 @@ const ALLOWED_LICENSES = new Set([
   'MIT OR Apache-2.0', 'Apache-2.0 OR MIT', '(MIT OR Apache-2.0)',
   '(MIT OR CC0-1.0)', 'MPL-2.0',
 ])
+
+/**
+ * Licences reviewed one package at a time, with the reason each is acceptable.
+ *
+ * Deliberately not an addition to `ALLOWED_LICENSES`. That set is what this
+ * distribution ships under; this file is a record of specific packages that
+ * carry something else, what they are, how they reach the repository, and
+ * whether DeepWatch redistributes them. A package with no entry still fails,
+ * and an entry stops covering a package the moment its licence changes.
+ */
+function licenceReview() {
+  const path = join(ROOT, 'inventory', 'licence-review.json')
+  if (!existsSync(path)) return []
+  const parsed = JSON.parse(readFileSync(path, 'utf8'))
+  return (parsed.packages ?? []).map(entry => ({
+    ...entry,
+    pattern: new RegExp(entry.match),
+  }))
+}
+
+/**
+ * What the committed document already says each package is licensed under.
+ *
+ * The last resort, and it needs its reason stated. A licence is only readable
+ * from an installed copy, and pnpm installs one platform's optional packages;
+ * a Windows-only package is simply not on a Linux runner, so regenerating
+ * there turns a known licence into UNKNOWN and the gate objects to a package
+ * nobody touched.
+ *
+ * So a package this machine cannot see keeps the answer a machine that could
+ * see it wrote down. That is a memo, not a review: a package appearing for the
+ * first time is in nobody's document, resolves to UNKNOWN, and still has to be
+ * reviewed deliberately before it passes.
+ */
+function committedLicenses() {
+  const licenses = new Map()
+  if (!existsSync(OUTPUT)) return licenses
+  const document = JSON.parse(readFileSync(OUTPUT, 'utf8'))
+  for (const pkg of document.thirdParty ?? []) {
+    if (pkg.license !== 'UNKNOWN') licenses.set(`${pkg.name}@${pkg.version}`, pkg.license)
+  }
+  return licenses
+}
 
 /** Read a manifest, or null when it is unreadable. */
 function manifest(path) {
@@ -67,17 +114,17 @@ function watchPackages() {
 }
 
 /**
- * Every installed third-party package.
+ * The licence of every package that is actually on disk, by `name@version`.
  *
- * Read from the pnpm store layout rather than from the lockfile, because what
- * is actually on disk is what actually ships, and a lockfile can describe a
- * tree that was never materialized.
+ * Only a lookup table now. What ships is decided from the lockfile; this
+ * answers what each entry is licensed under, which the lockfile does not
+ * record.
  */
-function installedPackages() {
+function installedLicenses() {
   const store = join(ROOT, 'node_modules', '.pnpm')
-  if (!existsSync(store)) return []
+  const licenses = new Map()
+  if (!existsSync(store)) return licenses
 
-  const found = new Map()
   for (const entry of readdirSync(store)) {
     if (entry === 'node_modules' || entry === 'lock.yaml') continue
     const modules = join(store, entry, 'node_modules')
@@ -87,21 +134,85 @@ function installedPackages() {
         ? readdirSync(join(modules, scope)).map(name => `${scope}/${name}`)
         : [scope]
       for (const name of paths) {
-        const found_manifest = manifest(join(modules, name, 'package.json'))
-        if (found_manifest === null || found_manifest.name === undefined) continue
-        const key = `${found_manifest.name}@${found_manifest.version}`
-        if (found.has(key)) continue
-        found.set(key, {
-          name: found_manifest.name,
-          version: found_manifest.version ?? 'unknown',
-          license: normalizeLicense(found_manifest.license ?? found_manifest.licenses),
-          path: null,
-          kind: 'third_party',
-        })
+        const found = manifest(join(modules, name, 'package.json'))
+        if (found === null || found.name === undefined) continue
+        const key = `${found.name}@${found.version ?? 'unknown'}`
+        if (!licenses.has(key)) {
+          licenses.set(key, normalizeLicense(found.license ?? found.licenses))
+        }
       }
     }
   }
-  return [...found.values()].sort((a, b) => a.name.localeCompare(b.name))
+  return licenses
+}
+
+/**
+ * Every third-party package this distribution resolves, from the lockfile.
+ *
+ * The lockfile is the source rather than the installed tree because it names
+ * every platform variant on every machine. See scripts/lib/pnpm-lockfile.mjs
+ * for what went wrong when this was read off disk.
+ *
+ * A platform binary absent from this host takes the licence of an installed
+ * sibling — the same package built for another target. Siblings that disagree
+ * are a real problem rather than something to pick a winner from, so they stop
+ * the build.
+ */
+function thirdPartyPackages() {
+  const locked = parseLockfilePackages(readFileSync(join(ROOT, 'pnpm-lock.yaml'), 'utf8'))
+  const onDisk = installedLicenses()
+
+  const families = new Map()
+  for (const pkg of locked) {
+    const family = platformFamily(pkg.name)
+    if (family === null) continue
+    const license = onDisk.get(`${pkg.name}@${pkg.version}`)
+    if (license === undefined) continue
+    const key = `${family}@${pkg.version}`
+    if (!families.has(key)) families.set(key, new Set())
+    families.get(key).add(license)
+  }
+
+  for (const [family, licenses] of families) {
+    if (licenses.size > 1) {
+      process.stderr.write(
+        `watch: ${family} platform builds disagree on their licence `
+        + `(${[...licenses].sort().join(', ')}). The SBOM cannot state one.
+`,
+      )
+      process.exit(1)
+    }
+  }
+
+  const reviewed = licenceReview()
+  const remembered = committedLicenses()
+
+  return locked
+    .map(pkg => {
+      const family = platformFamily(pkg.name)
+      const inherited = family === null
+        ? undefined
+        : [...(families.get(`${family}@${pkg.version}`) ?? [])][0]
+      // A reviewed family is recorded from its review, on every machine.
+      // pnpm installs only this platform's optional packages, so a licence
+      // read off disk is the Windows answer on Windows and UNKNOWN on Linux —
+      // and the committed document would then depend on who generated it.
+      // What the installed copy declares is still read, in the gate below,
+      // wherever the package is actually present.
+      const decided = reviewed.find(rule => rule.pattern.test(pkg.name))?.sbomLicense
+      return {
+        name: pkg.name,
+        version: pkg.version,
+        license: decided
+          ?? onDisk.get(`${pkg.name}@${pkg.version}`)
+          ?? inherited
+          ?? remembered.get(`${pkg.name}@${pkg.version}`)
+          ?? 'UNKNOWN',
+        path: null,
+        kind: 'third_party',
+      }
+    })
+    .sort((a, b) => byCodeUnit(a.name, b.name) || byCodeUnit(a.version, b.version))
 }
 
 /** Reduce the shapes a `license` field takes to one string. */
@@ -110,6 +221,80 @@ function normalizeLicense(value) {
   if (Array.isArray(value)) return value.map(entry => entry?.type ?? entry).join(' OR ')
   if (value !== null && typeof value === 'object' && 'type' in value) return String(value.type)
   return 'UNKNOWN'
+}
+
+/** The digest pnpm recorded for one patched spec, or null. */
+function lockfileHashFor(lock, spec) {
+  const lines = lock.split(String.fromCharCode(10)).map(line => line.trimEnd())
+  const index = lines.findIndex(line => line.trim() === `'${spec}':` || line.trim() === `${spec}:`)
+  if (index < 0) return null
+  for (const line of lines.slice(index + 1, index + 5)) {
+    const match = /^\s+hash:\s*([0-9a-f]{64})\s*$/.exec(line)
+    if (match !== null) return match[1]
+    if (/^\S/.test(line)) break
+  }
+  return null
+}
+
+/**
+ * Dependencies this repository modifies, and what the modification is.
+ *
+ * A patched dependency is modified source, and a bill of materials that lists
+ * it as an ordinary upstream release is wrong about the most important thing it
+ * records. The digest is the one pnpm verifies on install, so a patch edited
+ * without regenerating this document is a mismatch a reader can act on.
+ *
+ * The scope matters as much as the fact. This is a build-time generator: it
+ * runs during `npm run build` and ships in nothing. The runtime Typert
+ * protocol, Gateway, registry and Connection are the packages a released build
+ * actually executes, and none of them is patched.
+ */
+function patchedDependencies() {
+  const manifest = JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8'))
+  const declared = manifest.pnpm?.patchedDependencies ?? {}
+  const lock = existsSync(join(ROOT, 'pnpm-lock.yaml'))
+    ? readFileSync(join(ROOT, 'pnpm-lock.yaml'), 'utf8')
+    : ''
+
+  return Object.entries(declared).map(([spec, patchPath]) => {
+    const at = spec.lastIndexOf('@')
+    const name = spec.slice(0, at)
+    const version = spec.slice(at + 1)
+    const absolute = join(ROOT, patchPath)
+    const contents = existsSync(absolute) ? readFileSync(absolute) : null
+    const digest = contents === null
+      ? null
+      : createHash('sha256').update(contents).digest('hex')
+    // Read from the block rather than with a regex built out of the spec:
+    // a package name carries slashes, dots and an @, and escaping all of them
+    // into a pattern is a way to get null and not notice.
+    const recorded = lockfileHashFor(lock, spec)
+
+    return {
+      name,
+      upstreamVersion: version,
+      patched: true,
+      patchPath,
+      patchSha256: digest,
+      lockfileHash: recorded,
+      digestsAgree: digest !== null && digest === recorded,
+      scope: 'build-time only; not present in any published runtime artifact',
+      reason:
+        'The generator recognises the @Remote decorator only from a registered '
+        + 'workspace package or an ambient module declaration, so a package that '
+        + 'depends on @deepseek-ai/dsh-typert-protocol through node_modules '
+        + 'generates an empty protocol. The patch adds one branch that accepts a '
+        + 'declaration resolved from the genuinely installed protocol package.',
+      upstreamRepository: 'https://github.com/deepseek-ai/deepseek-harness',
+      license: 'MIT',
+      runtimePackagesUnmodified: [
+        '@deepseek-ai/dsh-typert-protocol',
+        '@deepseek-ai/dsh-api-gateway',
+        '@deepseek-ai/dsh-typert-registry',
+        '@deepseek-ai/dsh-client-connection',
+      ],
+    }
+  })
 }
 
 /**
@@ -147,8 +332,9 @@ function main() {
   const check = process.argv.includes('--check')
 
   const first = watchPackages()
-  const third = installedPackages()
+  const third = thirdPartyPackages()
   const weights = modelWeights()
+  const patched = patchedDependencies()
 
   const problems = []
 
@@ -157,11 +343,28 @@ function main() {
       problems.push(`${pkg.name}: first-party packages must be MIT, found ${pkg.license}`)
     }
   }
+  const declared = installedLicenses()
+  const reviewed = licenceReview()
   for (const pkg of third) {
-    if (!ALLOWED_LICENSES.has(pkg.license)) {
+    if (ALLOWED_LICENSES.has(pkg.license)) continue
+    const entry = reviewed.find(rule => rule.pattern.test(pkg.name))
+    if (entry === undefined) {
       problems.push(
         `${pkg.name}@${pkg.version}: licence ${pkg.license} is not on the allowed list. `
-        + 'Review it and add it deliberately, or remove the dependency.',
+        + 'Review it deliberately in inventory/licence-review.json, or remove the dependency.',
+      )
+      continue
+    }
+    // A reviewed entry still has to describe the licence it was reviewed for.
+    // Checked against what the *installed* copy declares rather than against
+    // the value recorded above, which came from the review and would make
+    // this tautological. A package absent from this platform says nothing
+    // either way; the platform that has it is the one that catches drift.
+    const onDisk = declared.get(`${pkg.name}@${pkg.version}`)
+    if (onDisk !== undefined && !entry.licenses.includes(onDisk)) {
+      problems.push(
+        `${pkg.name}@${pkg.version}: reviewed for ${entry.licenses.join(' / ')} `
+        + `and now declares ${onDisk}. Re-review it in inventory/licence-review.json.`,
       )
     }
   }
@@ -182,6 +385,7 @@ function main() {
     firstParty: first,
     thirdParty: third,
     modelWeights: weights,
+    patchedDependencies: patched,
     counts: {
       firstParty: first.length,
       thirdParty: third.length,

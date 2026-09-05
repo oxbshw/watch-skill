@@ -93,9 +93,29 @@ def test_live_watch_end_to_end(
     assert seen_while_running["state"] == LiveState.RUNNING.value
 
     # --- 3. the cursor is idempotent ---------------------------------------
+    #
+    # Idempotent means the cursor is a position, not a receipt: reading it
+    # again starts from the same place and renumbers nothing. It does not mean
+    # the answer stops growing — the session is still running, and an event
+    # that arrives between the two reads belongs in the second one.
+    #
+    # Asserting the two lists were equal said otherwise, and made this a race
+    # against the stream it was observing: on a slow Windows runner a fifth
+    # event landed between the calls and a correct reply, [1,2,3,4,5], failed
+    # against [1,2,3,4]. What must hold is that the overlap is identical.
     first = live_session.observe(session.session_id, limit=5)
     again = live_session.observe(session.session_id, cursor=first["cursor"], limit=5)
-    assert [e["seq"] for e in first["events"]] == [e["seq"] for e in again["events"]]
+    overlap = again["events"][: len(first["events"])]
+    assert [e["seq"] for e in first["events"]] == [e["seq"] for e in overlap], (
+        "replaying a cursor skipped, reordered or renumbered events: "
+        f"{[e['seq'] for e in first['events']]} then {[e['seq'] for e in again['events']]}"
+    )
+    assert all(
+        before["seq"] == after["seq"]
+        and before["type"] == after["type"]
+        and before["media_ts"] == after["media_ts"]
+        for before, after in zip(first["events"], overlap, strict=True)
+    ), "replaying a cursor returned different events under the same sequence numbers"
     following = live_session.observe(
         session.session_id, cursor=first["next_cursor"], limit=5
     )
@@ -115,6 +135,16 @@ def test_live_watch_end_to_end(
     stopped = live_session.stop_live(session.session_id)
     assert stopped["state"] in (LiveState.STOPPED.value, LiveState.FAILED.value)
     assert stopped["state"] == LiveState.STOPPED.value, stopped.get("error")
+
+    # Now that nothing is producing, the same cursor must return the same batch
+    # exactly. This is the half of idempotence a running stream cannot show,
+    # and the only place it can be asserted without racing the producer.
+    settled = live_session.observe(session.session_id, cursor=first["cursor"], limit=5)
+    repeated = live_session.observe(session.session_id, cursor=first["cursor"], limit=5)
+    assert settled["events"] == repeated["events"], (
+        "a cursor replayed against a stopped session returned a different batch"
+    )
+    assert settled["cursor"] == first["cursor"], "a replay moved the cursor it was given"
 
     from watch_skill.live.finalize import finalize_session
 

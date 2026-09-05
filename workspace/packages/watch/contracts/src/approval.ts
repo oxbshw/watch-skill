@@ -25,7 +25,7 @@
  * - **It names who gave it.** An approval with no subject cannot be audited,
  *   and an unauditable approval is indistinguishable from an assumed one.
  *
- * @module @watchskill/dsh-contracts/approval
+ * @module @deepwatch/dsh-contracts/approval
  */
 
 /** What the person actually agreed to. */

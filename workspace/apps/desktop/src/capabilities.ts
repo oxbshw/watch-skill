@@ -14,7 +14,7 @@
  * permission the app might one day need is how people learn to click through
  * prompts.
  *
- * @module @watchskill/watch-desktop/capabilities
+ * @module @deepwatch/desktop/capabilities
  */
 
 import { spawnSync } from 'node:child_process'

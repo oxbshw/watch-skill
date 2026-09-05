@@ -1,7 +1,7 @@
 /**
  * The Memory surfaces, registered into DSH's slots.
  *
- * @module @watchskill/dsh-client-memory/client
+ * @module @deepwatch/dsh-client-memory/client
  */
 
 import type { Context } from '@deepseek-ai/cordis'

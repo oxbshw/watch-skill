@@ -48,7 +48,7 @@ import {
   switchSession,
   timelineDigest,
   validate,
-} from '@watchskill/dsh-workspace'
+} from '@deepwatch/dsh-workspace'
 
 import {
   ComposerPanel,
@@ -56,7 +56,7 @@ import {
   SensoryTimelineStrip,
   SessionHeaderBar,
   WorkspaceShell,
-} from '@watchskill/dsh-workspace/components'
+} from '@deepwatch/dsh-workspace/components'
 
 // ── fixtures ────────────────────────────────────────────────────────────────
 
@@ -64,7 +64,7 @@ function capability(capabilityId, status, extra = {}) {
   return {
     capabilityId,
     provider: 'watch-core',
-    providerVersion: '1.3.0rc2',
+    providerVersion: '1.4.0',
     status,
     requirements: [],
     detected: {},
@@ -115,7 +115,7 @@ function evidenceRecord(evidenceId, modality, overrides = {}) {
     modality,
     provenance: 'observation',
     producer: 'watch-core',
-    producerVersion: '1.3.0rc2',
+    producerVersion: '1.4.0',
     captureQuality: null,
     gaps: [],
     freshness: 'current',
@@ -338,7 +338,7 @@ describe('the sensory timeline is a projection', () => {
   }
 
   test('the same input builds the same timeline, twice', async () => {
-    const { project } = await import('@watchskill/dsh-trajectory')
+    const { project } = await import('@deepwatch/dsh-trajectory')
     const projection = project(events, 'sess-1')
     const input = { sessionId: 'sess-1', events, projection }
     const first = buildTimeline(input, 'analysis')
@@ -348,7 +348,7 @@ describe('the sensory timeline is a projection', () => {
   })
 
   test('lane assignment says whether evidence or only a record decided it', async () => {
-    const { project } = await import('@watchskill/dsh-trajectory')
+    const { project } = await import('@deepwatch/dsh-trajectory')
     const projection = project(events, 'sess-1')
     const unresolved = buildTimeline({ sessionId: 'sess-1', events, projection }, 'analysis')
     // Only the evidence rows. A verdict also references evidence, and it
@@ -373,7 +373,7 @@ describe('the sensory timeline is a projection', () => {
   })
 
   test('a gap is its own entry, and is never smoothed away', async () => {
-    const { project } = await import('@watchskill/dsh-trajectory')
+    const { project } = await import('@deepwatch/dsh-trajectory')
     const projection = project(events, 'sess-1')
     const map = new Map([
       ['e-visual', evidenceRecord('e-visual', 'visual', { gaps: [{ startMs: 1200, endMs: 1500 }], freshness: 'gap' })],
@@ -402,7 +402,7 @@ describe('the sensory timeline is a projection', () => {
   })
 
   test('collapsing counts what it hid, and flags a hidden gap', async () => {
-    const { project } = await import('@watchskill/dsh-trajectory')
+    const { project } = await import('@deepwatch/dsh-trajectory')
     const projection = project(events, 'sess-1')
     const map = new Map([
       ['e-visual', evidenceRecord('e-visual', 'visual', { gaps: [{ startMs: 1200, endMs: 1500 }] })],
@@ -416,14 +416,14 @@ describe('the sensory timeline is a projection', () => {
   })
 
   test('a FAILED verdict survives the tightest density', async () => {
-    const { project } = await import('@watchskill/dsh-trajectory')
+    const { project } = await import('@deepwatch/dsh-trajectory')
     const projection = project(events, 'sess-1')
     const collapsed = buildTimeline({ sessionId: 'sess-1', events, projection }, 'collapsed')
     assert.ok(collapsed.entries.some(entry => entry.verdict === 'FAILED'))
   })
 
   test('memory records never appear on a sensory lane', async () => {
-    const { recordFromMemoryEvent, withRecords, project } = await import('@watchskill/dsh-trajectory')
+    const { recordFromMemoryEvent, withRecords, project } = await import('@deepwatch/dsh-trajectory')
     const projection = project(events, 'sess-1')
     const memory = recordFromMemoryEvent({
       sessionId: 'sess-1',
@@ -650,7 +650,7 @@ describe('what the shell actually draws', () => {
   })
 
   test('a gap is drawn as a gap, with a glyph as well as a tone', async () => {
-    const { project } = await import('@watchskill/dsh-trajectory')
+    const { project } = await import('@deepwatch/dsh-trajectory')
     const events = [
       toolCall(1, 'c1', 'watch_ask_source'),
       toolResult(2, 'c1', { ok: true, answer: 'x', evidence: [{ evidenceId: 'e1', sourceRevisionId: 'src@rev1', temporalRange: { startMs: 0, endMs: 10 } }] }),
@@ -682,7 +682,7 @@ describe('what the shell actually draws', () => {
   })
 
   test('the shell renders exactly one session id, whichever mode is open', async () => {
-    const { project } = await import('@watchskill/dsh-trajectory')
+    const { project } = await import('@deepwatch/dsh-trajectory')
     const projection = project([], 'sess-1')
     const timeline = buildTimeline({ sessionId: 'sess-1', events: [], projection }, 'compact')
     for (const mode of WORKSPACE_MODES) {
@@ -719,7 +719,7 @@ describe('what the shell actually draws', () => {
   })
 
   test('DSH’s operations rows are rendered, marked as upstream’s', async () => {
-    const { project } = await import('@watchskill/dsh-trajectory')
+    const { project } = await import('@deepwatch/dsh-trajectory')
     const projection = project([], 'sess-1')
     const markup = renderToStaticMarkup(createElement(WorkspaceShell, {
       sessionId: 'sess-1',

@@ -18,7 +18,8 @@ fix → proof loop over an agent's own work. Python 3.11+, MIT.
 | `src/watch_skill/surfaces/` | MCP, CLI, REST. Thin wrappers only. |
 | `skills/` | The ten agent skills. Canonical location — the skills CLI reads it. |
 | `commands/` | Slash commands for the Claude Code plugin. |
-| `adapters/` | Framework and harness adapters. No engine logic. |
+| `src/watch_skill/integrations/` | Framework adapters. No engine logic. |
+| `templates/agent-integration/` | What a contributor copies to add an agent. |
 | `tests/` | Mirrors the `src/` layout. |
 | `docs/agents/` | One page per supported agent, each with an honest status. |
 
@@ -36,8 +37,8 @@ gate. Do not add network calls to the offline suite.
 
 ## Rules that are not negotiable
 
-- **The engine is agent-agnostic.** No harness-specific branching in
-  `src/watch_skill/`. That belongs in `adapters/` or a skill.
+- **The engine is agent-agnostic.** No harness-specific branching in the
+  engine. That belongs in `src/watch_skill/integrations/` or a skill.
 - **Surfaces stay thin.** MCP, CLI, and REST wrap the same functions. A
   behaviour that exists in one and not the others is a bug.
 - **Every bug fix ships a regression test**, and the test must fail against
@@ -80,11 +81,30 @@ gate. Do not add network calls to the offline suite.
   write no request code. Add the model defaults to
   `health/vision_setup.py` and a price to `vision/prices.json` — moving that
   file's `as_of` date is part of the edit.
-- **An agent**: start from `templates/agent-adapter/`. One config block, one
+- **An agent**: start from `templates/agent-integration/`. One config block, one
   page in `docs/agents/`, one validation run.
 - **A skill**: a directory under `skills/` with a `SKILL.md`. The
   `description` is a trigger surface — write the phrasings a user would
   actually type, not a summary.
+
+## Commits
+
+A conventional prefix, then a plain declarative subject saying what changed
+and why — not what you did to find out.
+
+- Author each commit with the human identity accountable for the change.
+- Describe the product change and the reason for it. Nothing else belongs in
+  a commit message.
+- Keep the `Co-Authored-By` trailers of real human co-authors.
+- Do not add co-author trailers for anything that is not a person, and do not
+  add generated-by notices.
+
+`npm run verify:commits` (in `workspace/`) checks commit metadata on a branch
+and fails on any of the above. It reads authorship and trailers only — it does
+not police prose, and product documentation about supported integrations is
+unaffected by it.
+
+Do not rewrite shared history unless the maintainer has asked you to.
 
 ## Style
 

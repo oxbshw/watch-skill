@@ -62,7 +62,7 @@ not have:
 | [#116](https://github.com/bradautomates/claude-video/pull/116) non-English videos yield no transcript | original-language captions are preferred over auto-translations ([`acquire/ytdlp.py`](../src/watch_skill/acquire/ytdlp.py)) |
 | [#113](https://github.com/bradautomates/claude-video/pull/113)–[#115](https://github.com/bradautomates/claude-video/pull/115) caption language and PO-token failures | a caption ladder with a documented fallback order |
 | [#107](https://github.com/bradautomates/claude-video/issues/107)–[#110](https://github.com/bradautomates/claude-video/issues/110) Windows encoding and permission errors | Windows is a first-class CI target |
-| [#117](https://github.com/bradautomates/claude-video/issues/117), [#122](https://github.com/bradautomates/claude-video/issues/122) ffmpeg 8+ removed `-vsync` | `-vsync` is not used anywhere in the pipeline, so the removal is a no-op here |
+| [#117](https://github.com/bradautomates/claude-video/issues/117), [#122](https://github.com/bradautomates/claude-video/issues/122) ffmpeg 8+ removed `-vsync` | the video and audio pipelines never used it; the benchmark frame extractor did, and now passes `-fps_mode:v passthrough` instead ([`bench/video_backends/realmedia.py`](../src/watch_skill/bench/video_backends/realmedia.py)). `watch-skill doctor` names the 5.1 floor that option implies |
 
 None of this is a criticism of its author. A project that gets popular faster
 than one person can maintain it is a normal outcome, and the code was good

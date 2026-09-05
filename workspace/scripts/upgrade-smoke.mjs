@@ -37,8 +37,10 @@ import { spawnSync } from 'node:child_process'
 import {
   existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync, rmSync,
 } from 'node:fs'
-import { join, dirname, resolve, basename } from 'node:path'
+import { join, dirname, basename } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { ensureCli } from './lib/dsh-cli.mjs'
+import { packageNameOf } from './lib/packed.mjs'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const HOME = process.env.WATCH_UPGRADE_HOME ?? join(ROOT, '.dsh-upgrade')
@@ -73,19 +75,16 @@ function run(command, args, options = {}) {
 }
 
 /** Locate the `dsh` CLI, whichever tree it was installed into. */
+/**
+ * The pinned DSH CLI, installed into the harness's own directory if absent.
+ *
+ * This used to search two fixed places and, finding neither, print an
+ * instruction to create `../watch-smoke` by hand. That made a documented gate
+ * depend on an undocumented sibling, and CI -- which has no such directory --
+ * never ran it at all.
+ */
 function findCli() {
-  for (const dir of [
-    join(ROOT, 'node_modules', '@deepseek-ai', 'dsh'),
-    join(ROOT, '..', 'watch-smoke', 'node_modules', '@deepseek-ai', 'dsh'),
-  ]) {
-    if (!existsSync(join(dir, 'package.json'))) continue
-    const manifest = JSON.parse(readFileSync(join(dir, 'package.json'), 'utf8'))
-    const bin = typeof manifest.bin === 'string' ? manifest.bin : manifest.bin?.dsh
-    if (bin === undefined) continue
-    const entry = resolve(dir, bin)
-    if (existsSync(entry)) return { entry, version: manifest.version }
-  }
-  return null
+  return ensureCli(ROOT)
 }
 
 /** The bundle's transitive first-party dependencies, deepest first. */
@@ -107,7 +106,7 @@ function bundlePackages() {
     for (const dependency of Object.keys(found.manifest.dependencies ?? {})) visit(dependency)
     order.push(found.dir)
   }
-  for (const dependency of Object.keys(byName.get('@watchskill/dsh-bundle')?.manifest.dependencies ?? {})) {
+  for (const dependency of Object.keys(byName.get('@deepwatch/dsh-bundle')?.manifest.dependencies ?? {})) {
     visit(dependency)
   }
   order.push('packages/watch/bundle')
@@ -162,9 +161,9 @@ function linkTarballs(tarballs) {
   const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'))
   const overrides = {}
   for (const tarball of tarballs) {
-    const name = basename(tarball).replace(/-\d+\.\d+\.\d+.*\.tgz$/, '')
-    const scoped = `@${name.replace(/^watchskill-/, 'watchskill/')}`
-    overrides[scoped] = `file:${tarball.replace(/\\/g, '/')}`
+    // The name comes out of the tarball, not out of its filename. See
+    // `scripts/lib/packed.mjs` for what a packed filename loses.
+    overrides[packageNameOf(tarball)] = `file:${tarball.replace(/\\/g, '/')}`
   }
   manifest.pnpm = { ...manifest.pnpm, overrides: { ...manifest.pnpm?.overrides, ...overrides } }
   writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, 'utf8')
@@ -313,14 +312,14 @@ function main() {
   const manifest = JSON.parse(
     readFileSync(join(HOME, 'profiles', PROFILE, 'package.json'), 'utf8'))
   const bundles = manifest.dsh?.profile?.bundles ?? []
-  if (!bundles.includes('@watchskill/dsh-bundle')) {
+  if (!bundles.includes('@deepwatch/dsh-bundle')) {
     problems.push('the Watch bundle is no longer in the profile layer stack')
   }
-  if (bundles.filter(entry => entry === '@watchskill/dsh-bundle').length > 1) {
+  if (bundles.filter(entry => entry === '@deepwatch/dsh-bundle').length > 1) {
     problems.push('the Watch bundle is listed twice in the layer stack')
   }
 
-  const installedVersion = manifest.dependencies?.['@watchskill/dsh-bundle'] ?? ''
+  const installedVersion = manifest.dependencies?.['@deepwatch/dsh-bundle'] ?? ''
   if (!installedVersion.includes('upgrade-b')) {
     problems.push(
       `the profile still resolves ${installedVersion}; the upgrade did not take effect`,
@@ -355,7 +354,7 @@ function main() {
   )
   const rollbackManifest = JSON.parse(
     readFileSync(join(HOME, 'profiles', PROFILE, 'package.json'), 'utf8'))
-  const rolledBackTo = rollbackManifest.dependencies?.['@watchskill/dsh-bundle'] ?? ''
+  const rolledBackTo = rollbackManifest.dependencies?.['@deepwatch/dsh-bundle'] ?? ''
   const rollbackWorked = rollback.status === 0 && rolledBackTo.includes('upgrade-a')
   const stateAfterRollback = readState(stateDir)
 

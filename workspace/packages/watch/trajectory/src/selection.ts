@@ -15,7 +15,7 @@
  *
  * Everything here is pure. A selection is a value, not a store.
  *
- * @module @watchskill/dsh-trajectory/selection
+ * @module @deepwatch/dsh-trajectory/selection
  */
 
 import type { WatchTrajectoryRecord } from './events.js'

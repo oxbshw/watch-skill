@@ -14,7 +14,7 @@
  * believed they were enabling the power to watch, and no amount of wording in a
  * tooltip fixes a control that does two things.
  *
- * @module @watchskill/dsh-live/sources-catalogue
+ * @module @deepwatch/dsh-live/sources-catalogue
  */
 
 import type { SourceAvailability } from './capture.js'

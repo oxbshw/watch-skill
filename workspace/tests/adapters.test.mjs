@@ -20,7 +20,7 @@
 import { test, describe } from 'node:test'
 import assert from 'node:assert/strict'
 
-import { buildWiki, pageAt, slugFor } from '@watchskill/dsh-wiki'
+import { buildWiki, pageAt, slugFor } from '@deepwatch/dsh-wiki'
 import {
   backlinks,
   danglingLinks,
@@ -36,7 +36,7 @@ import {
   toLlmWiki,
   toVault,
   vaultUri,
-} from '@watchskill/dsh-adapters'
+} from '@deepwatch/dsh-adapters'
 
 function record(overrides = {}) {
   const now = '2026-08-27T10:00:00.000Z'
@@ -343,8 +343,8 @@ describe('both adapters say what they have not proven', () => {
     // The dependency direction is the guarantee. Nothing in the memory, wiki,
     // contracts or tools packages may import an adapter — if one did, an
     // optional integration would have become a requirement.
-    const wiki = await import('@watchskill/dsh-wiki')
-    const memory = await import('@watchskill/dsh-memory')
+    const wiki = await import('@deepwatch/dsh-wiki')
+    const memory = await import('@deepwatch/dsh-memory')
     for (const surface of [wiki, memory]) {
       for (const name of Object.keys(surface)) {
         assert.equal(/obsidian|llmwiki/i.test(name), false,

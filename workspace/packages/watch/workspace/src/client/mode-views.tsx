@@ -13,12 +13,12 @@
  * `inspect`. That selection is the supported subset, and it is rendered in
  * full. Everything the surface cannot reach is named rather than mocked.
  *
- * @module @watchskill/dsh-workspace/client/mode-views
+ * @module @deepwatch/dsh-workspace/client/mode-views
  */
 
 import type { ReactNode } from 'react'
-import { parseVerdict } from '@watchskill/dsh-contracts'
-import type { PresentableCheck } from '@watchskill/dsh-contracts'
+import { parseVerdict } from '@deepwatch/dsh-contracts'
+import type { PresentableCheck } from '@deepwatch/dsh-contracts'
 import { EmptyState, Facts, ModeSurface, Note, Panel, readToolResult } from './surface.js'
 import type { ModeViewProps } from './surface.js'
 

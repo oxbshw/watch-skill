@@ -15,7 +15,7 @@
  * statement the person made look identical, which is precisely the confusion
  * that makes personalization feel arbitrary.
  *
- * @module @watchskill/dsh-memory/projector
+ * @module @deepwatch/dsh-memory/projector
  */
 
 import type { MemoryRecord } from './records.js'

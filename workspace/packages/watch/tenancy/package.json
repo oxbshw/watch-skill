@@ -1,9 +1,26 @@
 {
-  "name": "@watchskill/dsh-tenancy",
-  "version": "0.1.0-preview.0",
-  "description": "Tenants, roles, remote workers, sharing and audit \u2014 enforced server-side",
+  "name": "@deepwatch/dsh-tenancy",
+  "version": "0.1.0",
+  "description": "Tenants, roles, remote workers, sharing and audit — enforced server-side",
   "type": "module",
   "license": "MIT",
+  "author": "Sayed Allam",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/oxbshw/watch-skill.git",
+    "directory": "workspace/packages/watch/tenancy"
+  },
+  "homepage": "https://github.com/oxbshw/watch-skill/tree/main/workspace#readme",
+  "bugs": {
+    "url": "https://github.com/oxbshw/watch-skill/issues"
+  },
+  "keywords": [
+    "deepwatch",
+    "deepseek-harness",
+    "watch-skill",
+    "tenancy",
+    "workspace"
+  ],
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
   "exports": {
@@ -17,7 +34,14 @@
     "lib/**/*.js",
     "lib/**/*.d.ts"
   ],
+  "sideEffects": false,
+  "engines": {
+    "node": "^22.19.0 || >=24.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "dependencies": {
-    "@watchskill/dsh-contracts": "workspace:^"
+    "@deepwatch/dsh-contracts": "workspace:^"
   }
 }

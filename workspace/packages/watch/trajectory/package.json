@@ -1,9 +1,26 @@
 {
-  "name": "@watchskill/dsh-trajectory",
-  "version": "0.1.0-preview.0",
+  "name": "@deepwatch/dsh-trajectory",
+  "version": "0.1.0",
   "description": "Watch records inside the DeepSeek Harness Trajectory, with unified selection, deep links and replay",
   "type": "module",
   "license": "MIT",
+  "author": "Sayed Allam",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/oxbshw/watch-skill.git",
+    "directory": "workspace/packages/watch/trajectory"
+  },
+  "homepage": "https://github.com/oxbshw/watch-skill/tree/main/workspace#readme",
+  "bugs": {
+    "url": "https://github.com/oxbshw/watch-skill/issues"
+  },
+  "keywords": [
+    "deepwatch",
+    "deepseek-harness",
+    "watch-skill",
+    "trajectory",
+    "replay"
+  ],
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
   "exports": {
@@ -13,8 +30,18 @@
     },
     "./package.json": "./package.json"
   },
-  "files": ["lib/**/*.js", "lib/**/*.d.ts"],
+  "files": [
+    "lib/**/*.js",
+    "lib/**/*.d.ts"
+  ],
+  "sideEffects": false,
+  "engines": {
+    "node": "^22.19.0 || >=24.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "dependencies": {
-    "@watchskill/dsh-contracts": "workspace:^"
+    "@deepwatch/dsh-contracts": "workspace:^"
   }
 }

@@ -12,7 +12,7 @@
  * identity to share (no Symbol, no instanceof, no singleton state), so a
  * client bundle can inline it without duplicating a shared instance.
  *
- * @module @watchskill/dsh-contracts
+ * @module @deepwatch/dsh-contracts
  */
 
 /** The Bridge protocol version this build of the Workspace speaks. */
@@ -114,6 +114,40 @@ export type BridgePhase =
   | 'degraded'
   | 'failed'
 
+/**
+ * Why Watch Core is not usable, in one word a screen can act on.
+ *
+ * The taxonomy exists because "disconnected" is not an answer anybody can do
+ * anything with. Each of these implies a different next step, and telling them
+ * apart is the difference between "install Watch Core" and "your Workspace and
+ * your engine are different versions".
+ *
+ * `connected` is in the same union deliberately: a health object always
+ * carries a blocker, so no screen has to infer readiness from the absence of
+ * a field.
+ */
+export type BridgeBlocker =
+  /** Handshake succeeded and the contract matched. Nothing is blocked. */
+  | 'connected'
+  /** The configured executable is not on this machine. */
+  | 'core_missing'
+  /** The executable exists but has no `bridge` command. */
+  | 'bridge_surface_missing'
+  /** The process started and the handshake did not complete. */
+  | 'handshake_failed'
+  /** Both sides ran, and cannot speak the same protocol version. */
+  | 'protocol_mismatch'
+  /** Protocol matched; one or more contract families did not. */
+  | 'contract_mismatch'
+  /** The process died after connecting. */
+  | 'core_crashed'
+  /** The process is alive and did not answer in time. */
+  | 'core_timeout'
+  /** The breaker is open after repeated failures. */
+  | 'circuit_open'
+  /** A test or fixture explicitly selected the mock backend. */
+  | 'test_only_mock'
+
 /** The health projection the browser half renders. */
 export interface WatchCoreHealth {
   readonly phase: BridgePhase
@@ -122,6 +156,25 @@ export interface WatchCoreHealth {
   readonly handshake: HandshakeResult | null
   /** Populated when phase is 'failed' or 'degraded'. */
   readonly error: WatchError | null
+  /**
+   * Why the product is in this state, whatever the phase says.
+   *
+   * Carried separately from `error` because a screen needs to branch on it,
+   * and branching on a message string is how a UI comes to depend on prose.
+   */
+  readonly blocker: BridgeBlocker
+  /**
+   * True only when the backend is the in-process mock.
+   *
+   * Every surface that could present data as observed reads this first. It is
+   * a separate field rather than `transport === 'mock'` so that adding a
+   * second fake backend cannot quietly bypass the check.
+   */
+  readonly isTestOnlyMock: boolean
+  /** ISO-8601 of the last successful handshake, null if there has never been one. */
+  readonly lastHandshakeAt: string | null
+  /** How many times the Bridge has started a Core process this session. */
+  readonly restartCount: number
   /** ISO-8601 of the last state change. */
   readonly changedAt: string
 }
@@ -389,3 +442,9 @@ export * from './presentation.js'
 export * from './digests.js'
 export * from './language.js'
 export * from './approval.js'
+export * from './readiness.js'
+export * from './bindings.js'
+export * from './failures.js'
+export * from './paths.js'
+export * from './execution.js'
+export * from './workspace.js'

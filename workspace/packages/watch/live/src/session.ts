@@ -33,10 +33,10 @@
  * was trimmed. A buffer that silently forgot a gap would let a long session
  * end up looking cleaner than a short one.
  *
- * @module @watchskill/dsh-live/session
+ * @module @deepwatch/dsh-live/session
  */
 
-import type { TemporalRange } from '@watchskill/dsh-contracts'
+import type { TemporalRange } from '@deepwatch/dsh-contracts'
 
 /** What a live session is watching. */
 export type LiveKind = 'file_replay' | 'stream' | 'browser'

@@ -35,9 +35,9 @@ import {
   rankResults,
   searchPlan,
   withRevision,
-} from '@watchskill/dsh-library'
+} from '@deepwatch/dsh-library'
 
-import { LibrarySurface, RevisionHistory } from '@watchskill/dsh-library/components'
+import { LibrarySurface, RevisionHistory } from '@deepwatch/dsh-library/components'
 
 function revision(sourceId, number, overrides = {}) {
   return {
@@ -282,7 +282,7 @@ describe('facets come from the results, not from the schema', () => {
 
 describe('the Library is not memory', () => {
   test('nothing the Library exports carries memory’s vocabulary', async () => {
-    const library = await import('@watchskill/dsh-library')
+    const library = await import('@deepwatch/dsh-library')
     const names = Object.keys(library)
     for (const forbidden of ['MemoryRecord', 'MemoryLedger', 'toCard', 'recordsForView', 'availableOperations']) {
       assert.equal(names.includes(forbidden), false, `the Library re-exports ${forbidden}`)

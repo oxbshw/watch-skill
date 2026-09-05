@@ -6,7 +6,7 @@
  * runtime sanitization, because either alone would fail — is assert that their
  * own output was observed, current or proven.
  *
- * @module @watchskill/dsh-sdk
+ * @module @deepwatch/dsh-sdk
  */
 
 export * from './capability.js'

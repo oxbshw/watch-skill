@@ -7,8 +7,10 @@ ones you will see. No real provider has been contacted.
 
 ## Before you start
 
-Web is at `http://127.0.0.1:8931`. Desktop is already open; if it was closed,
-run `npx electron .` in `apps/desktop`.
+Start a fresh artifact-built Web profile as described in
+[setup.md](setup.md), then use the loopback URL printed by that process. For a
+Desktop smoke, run the locally installed Electron binary from
+`apps/desktop`; no previous process is assumed to exist.
 
 The workspace runs without a provider. Perception, memory, verification and the
 browser all work offline, and Diagnostics lists which capabilities are ready and
@@ -39,10 +41,11 @@ supply with `openai-completions`, not a separate feature.
 
 ## Testing the connection
 
-**Fetch available models** in the provider dialog is the connection test. It
-calls the endpoint and reports what came back. There is no separate "test"
-button, so this is the step that tells you whether the base URL, protocol and
-key are right before you spend a turn on it.
+**Fetch available models** in the provider dialog interrogates the configured
+endpoint and lets you adopt returned models. It proves discovery only. After
+assigning an exact provider/model in **Role Bindings**, choose **Run provider
+test**. That one bounded model request is the fact that changes the binding
+from “Configured · not tested” to Ready; saving a credential never does.
 
 If it returns nothing, the dialog says so and notes that unlisted model IDs can
 still be sent directly.
@@ -67,12 +70,35 @@ your shell cannot be silently shadowed by one stored in the UI.
 
 On Desktop, Watch's own vault uses Electron `safeStorage`, which is OS-backed.
 
-The key is not written to `settings.yaml`, which holds UI state only. Confirm
-this yourself after entering one:
+The key is not written to `settings.yaml`, which holds UI state only.
+
+Provider consent and evidence/media egress are separate boundaries. Saving a
+provider credential or testing a one-token role request authorizes neither a
+video upload nor evidence transmission. Watch Core remains local-only by
+default; cloud perception requires its own user-controlled opt-in and policy
+check before a key is read or a request is built. The agent cannot flip either
+setting.
+
+Confirm that yourself after entering one — without printing either file. A
+credential file is not a thing to display: a terminal keeps scrollback, a
+screen share carries it, and the answer you actually want is *which store holds
+it*, not what the value is.
 
 ```bash
-cat "$DSH_HOME/.credentials.yaml"
+# The credential store exists and only you can read it. No contents.
+ls -l "$DSH_HOME/.credentials.yaml"
 ```
+
+```bash
+# settings.yaml holds UI state, and the key is not among its fields.
+grep -c 'apiKey\|api_key' "$DSH_HOME/settings.yaml"   # expect 0
+```
+
+In the product itself, **Settings, Models** shows the provider with a stored
+credential and where it came from — the credential store or an inherited
+environment variable. That reading comes from the credentials service, which is
+the authority; the file listing above only confirms the store is where you
+expect it to be.
 
 ## Binding the provider to a role
 
@@ -142,14 +168,62 @@ The distinction that matters in a report: whether the agent said it worked, and
 whether verification agreed. Those are different observations and this product
 exists to keep them apart.
 
+## Reusing your credential for a test room
+
+A test room can reach an existing credential without a copy of it:
+`dsh-credentials-local` takes the credentials document's location as
+configuration, so a profile can name a document that already exists and let the
+provider resolve the value per request. Nothing is duplicated and no plaintext
+moves.
+
+**That reference is opt-in, and it must stay that way.** The room builders take
+it as an explicit flag and add nothing without one, because a profile pointed at
+your document makes every credential write in that room land in your document.
+
+**Synthetic QA never gets one.** `scripts/qa-e2e-run.mjs` resets the provider
+state it is about to configure — that is what makes it repeatable — so it now
+resolves which document it has been aimed at *before* it starts anything, and
+refuses to run against any store outside its own room
+(`scripts/lib/qa-credential-store.mjs`). The refusal names the document and the
+profile line that aimed it there.
+
+This is a regression, not a precaution. A QA pass was once pointed at a real
+credentials document so a journey could reuse the provider; it configured a
+provider through the UI, and the save added a second entry to that document
+beside the key in use. `tests/qa-credential-containment.test.mjs` builds a
+synthetic owner store, points a throwaway room at it, runs the real script, and
+asserts the file is byte-identical afterwards — same digest, same size, same
+modification time.
+
+A real provider belongs in an owner journey, which is a separate run against a
+room built with the reference on purpose.
+
+## Removing one entry by name
+
+If a store has picked up an entry you did not intend — a test key beside your
+real one — remove it from the product rather than by editing the file.
+
+**Settings, Models.** Each configured provider row names the credential
+reference it stores. Find the row for the unwanted reference by its name, choose
+**Edit**, and remove the key; if the reference is the only thing that row holds,
+**Remove provider** on that row deletes the entry outright.
+
+Do this by entry name. Do not open the document to decide which line to delete:
+the name is enough to identify the row, and a store with two entries is exactly
+the case where reading the file puts the key you meant to keep on screen.
+
 ## Removing the credential afterwards
 
-Settings, Models, **Edit** on the provider, and remove the key. To confirm it is
-gone from disk:
+Settings, Models, **Edit** on the provider, and remove the key.
 
-```bash
-cat "$DSH_HOME/.credentials.yaml"
-```
+To confirm it is gone, read the state rather than the file. **Settings,
+Models** shows the provider with no stored credential, and Diagnostics reports
+the role as unconfigured. If you want a check outside the UI, ask the provider
+rather than the disk:
+
+Use **Run provider test** on the affected Role Bindings row. With the key
+removed it reports the missing credential without displaying a value. There
+is no `deepwatch providers test` command in this candidate.
 
 If you exported a key into your shell instead, unset it and restart the host;
 the environment layer takes precedence and will otherwise keep the provider

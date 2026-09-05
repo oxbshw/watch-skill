@@ -18,7 +18,7 @@
  * where no such store exists is a platform that says so instead of quietly
  * writing the key next to the data.
  *
- * @module @watchskill/watch-desktop/vault
+ * @module @deepwatch/desktop/vault
  */
 
 import {

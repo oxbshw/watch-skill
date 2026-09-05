@@ -1,0 +1,324 @@
+# Publish the twenty DeepWatch packages to npm.
+#
+# This has never run. It cannot run by accident either: the only trigger is a
+# `deepwatch-v*` tag, there is no `workflow_dispatch`, and the publish job sits
+# behind a protected `npm` Environment that a human has to approve. Those three
+# together are the reason a release is a decision rather than a side effect of
+# pushing something.
+#
+# Watch Core releases on its own train, `core-v*`, in release.yml. They were one
+# workflow on `v*` once, which meant a tag intended for one product built and
+# published the other from whatever the tree happened to contain.
+#
+# **No token path exists.** npm verifies this workflow's OIDC identity against
+# a Trusted Publisher configured once per package, at
+# https://www.npmjs.com/package/<name>/access. There is deliberately no
+# `NODE_AUTH_TOKEN` fallback: a fallback is what turns a misconfigured trusted
+# publisher into a silent, unattested publish.
+#
+# **Nothing is published twice and nothing is published half-way.** Every
+# version is checked against the registry before the first upload, the order is
+# derived from the dependency graph so each version resolves the moment it is
+# public, and a failure part-way through prints exactly what did and did not
+# reach the registry.
+#
+# **A half-finished release is resumable, on one condition.** `publish-plan.mjs`
+# asks the registry for the integrity of what it already holds and compares it
+# with the tarball this run would upload. A version whose bytes match is
+# skipped -- it is already done -- and a version that exists with *different*
+# bytes stops the release outright. "Already published" and "already published
+# from this build" are different questions, and only the second one makes a
+# resume safe. See docs/releasing.md; an npm version cannot be republished, so
+# where the plan refuses, the recovery is a new version and never a retry.
+#
+# **The publish job publishes what the verify job sealed.** It packs nothing.
+# It downloads the sealed set, verifies it against the content-bound provenance
+# manifest, and uploads those exact files.
+
+name: release-deepwatch
+
+on:
+  push:
+    tags: ["deepwatch-v*"]
+
+# Read-only by default. `id-token: write` is granted to the publish job alone,
+# because an OIDC token minted in a job that also runs project code is a token
+# that project code can reach.
+permissions:
+  contents: read
+
+concurrency:
+  group: release-deepwatch-${{ github.ref }}
+  cancel-in-progress: false
+
+defaults:
+  run:
+    working-directory: workspace
+
+jobs:
+  verify:
+    name: Verify the tag and pack the artifacts
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      version: ${{ steps.tag.outputs.version }}
+      dist-tag: ${{ steps.tag.outputs.dist-tag }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: The tag must name the version the workspace declares
+        id: tag
+        run: |
+          version="${GITHUB_REF_NAME#deepwatch-v}"
+          declared=$(node -p "require('./package.json').version")
+          if [ "$version" != "$declared" ]; then
+            echo "::error::${GITHUB_REF_NAME} does not name workspace version ${declared}."
+            exit 1
+          fi
+
+          # A prerelease must never take `latest`. Somebody running
+          # `npm i @deepwatch/cli` is asking for the version this project
+          # stands behind, and a dist-tag is the only thing that answers.
+          case "$version" in
+            *-preview.*) tag=preview ;;
+            *-rc.*)      tag=next ;;
+            *-*)         echo "::error::${version} is a prerelease this train has no dist-tag for."; exit 1 ;;
+            *)           tag=latest ;;
+          esac
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+          echo "dist-tag=${tag}" >> "$GITHUB_OUTPUT"
+          echo "Releasing ${version} to the ${tag} dist-tag."
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22.19.0"
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 10.29.1
+      - run: pnpm install --frozen-lockfile
+
+      - name: Every gate, before anything is packed
+        run: npm run check
+
+      - name: Pack, and read what came out
+        run: npm run pack
+
+      - name: Install the tarballs into a clean project and run the CLI
+        run: |
+          npm run verify:packed
+          npm run verify:packed-exec
+
+      # Sealed here and nowhere else. The manifest binds this commit and tree
+      # to a digest over every artifact, so the publish job can prove the
+      # tarballs it received are the ones this job built rather than something
+      # it produced itself. A candidate once shipped artifacts packed three
+      # commits behind the accepted head and every gate passed, because every
+      # gate compared `name@version` and both byte sets wore the same version.
+      - name: Seal the packed set, and verify the seal
+        run: |
+          npm run release:seal
+          node scripts/verify-provenance.mjs \
+            --artifacts .release-artifacts \
+            --manifest .release-artifacts-provenance.json \
+            --expect-commit "$GITHUB_SHA"
+
+      # A version already on the registry cannot be republished, so finding out
+      # here is the difference between a refused release and a half-done one.
+      #
+      # `npm view` is asked about every package, and the answer decides one of
+      # three things rather than two. A version nobody has published is
+      # published. A version the registry holds *with these exact bytes* is
+      # skipped, which is what makes a release that died at the fourteenth
+      # package resumable at the fourteenth package. A version the registry
+      # holds with different bytes stops everything: that release cannot be
+      # completed at this version by anyone, and pretending otherwise ships a
+      # scope whose halves came from different commits.
+      - name: Plan what to publish, and refuse a version that is already spent
+        run: |
+          node scripts/publish-plan.mjs \
+            --artifacts .release-artifacts \
+            --out .release-artifacts/publish-plan.json
+          cat .release-artifacts/publish-plan.json
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: deepwatch-tarballs
+          path: |
+            workspace/.release-artifacts/*.tgz
+            workspace/.release-artifacts/SHA256SUMS
+            workspace/.release-artifacts/packed-artifacts.json
+            workspace/.release-artifacts/publish-plan.json
+            workspace/.release-artifacts-provenance.json
+          if-no-files-found: error
+          retention-days: 7
+
+  publish:
+    name: Publish to npm
+    needs: verify
+    runs-on: ubuntu-latest
+    # A protected Environment: a human approves, and the approval is recorded
+    # against this exact tag.
+    environment:
+      name: npm
+      url: https://www.npmjs.com/package/@deepwatch/cli
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+
+      # No `registry-url:` on purpose. It writes an .npmrc line reading a
+      # token out of the environment, and an .npmrc shaped like that is the
+      # thing that quietly publishes without provenance when OIDC is
+      # misconfigured. The default registry is the one this publishes to.
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22.19.0"
+      - name: npm new enough for trusted publishing
+        run: |
+          npm install --global npm@latest
+          npm --version
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: deepwatch-tarballs
+          path: workspace-artifacts
+
+      - name: Put the sealed set back where the manifest describes it
+        run: |
+          set -euo pipefail
+          mkdir -p .release-artifacts
+          cp ../workspace-artifacts/workspace/.release-artifacts/* .release-artifacts/
+          cp ../workspace-artifacts/workspace/.release-artifacts-provenance.json .
+          ls -l .release-artifacts
+
+      # The manifest is checked before the first upload, not after. A publish
+      # job that trusts whatever arrived in an artifact is a publish job that
+      # will eventually upload something nobody built -- and an npm version is
+      # spent the instant that happens.
+      - name: These are the bytes the verify job sealed
+        run: |
+          node scripts/verify-provenance.mjs \
+            --artifacts .release-artifacts \
+            --manifest .release-artifacts-provenance.json \
+            --expect-commit "$GITHUB_SHA"
+
+      # Re-planned against the registry rather than replayed from the artifact.
+      # Between the two jobs sits a human approving an Environment, and the
+      # only honest answer to "what is already published" is the one taken now.
+      - name: Re-plan against the registry, at the moment of publishing
+        run: |
+          node scripts/publish-plan.mjs \
+            --artifacts .release-artifacts \
+            --out .release-artifacts/publish-plan.json
+
+      # Dependency order, derived from the manifests. Each version resolves the
+      # moment it is public, so nobody can install a package whose dependency
+      # is still ten seconds away.
+      - name: Publish in dependency order
+        run: |
+          set -u
+          published=""
+          skipped=""
+          status=0
+          for name in $(node scripts/publish-order.mjs); do
+            action=$(node -e "
+              const plan = require('./.release-artifacts/publish-plan.json');
+              const entry = plan.entries.find(item => item.name === process.argv[1]);
+              process.stdout.write(entry === undefined ? 'missing' : entry.action);
+            " "$name")
+            file=".release-artifacts/$(echo "${name#@}" | tr '/' '-')-${{ needs.verify.outputs.version }}.tgz"
+            if [ "$action" = "skip" ]; then
+              echo "Skipping ${name}: the registry already holds these exact bytes"
+              skipped="${skipped} ${name}"
+              continue
+            fi
+            if [ "$action" != "publish" ]; then
+              echo "::error::${name}: the plan says ${action}."
+              status=1
+              break
+            fi
+            if [ ! -f "$file" ]; then
+              echo "::error::${name}: ${file} was not packed."
+              status=1
+              break
+            fi
+            echo "Publishing ${name} to ${{ needs.verify.outputs.dist-tag }}"
+            if npm publish "$file" --provenance --access public \
+                 --tag "${{ needs.verify.outputs.dist-tag }}"; then
+              published="${published} ${name}"
+            else
+              echo "::error::${name} failed to publish."
+              status=1
+              break
+            fi
+          done
+
+          # A partial release is a fact about the registry, and it has to be
+          # stated. Silence here is what leaves somebody guessing which half of
+          # a scope is live.
+          echo "### DeepWatch ${{ needs.verify.outputs.version }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "dist-tag: \`${{ needs.verify.outputs.dist-tag }}\`" >> "$GITHUB_STEP_SUMMARY"
+          if [ -n "$skipped" ]; then
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "Already on the registry with identical bytes, skipped:${skipped}" >> "$GITHUB_STEP_SUMMARY"
+          fi
+          if [ "$status" -ne 0 ]; then
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "**This release is incomplete.**" >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "Published:${published:- nothing}" >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "A published version cannot be replaced. Re-running this workflow is" >> "$GITHUB_STEP_SUMMARY"
+            echo "safe: it re-plans against the registry and resumes at the first" >> "$GITHUB_STEP_SUMMARY"
+            echo "package that is not already published from this exact build." >> "$GITHUB_STEP_SUMMARY"
+            echo "See docs/releasing.md." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "Published:${published:- nothing new}" >> "$GITHUB_STEP_SUMMARY"
+          fi
+          exit "$status"
+
+  # A version-pinned smoke, on the platforms this distribution supports, and
+  # only after the publish job succeeded. Pinned because "latest" is not the
+  # claim being checked: the claim is that *this* version installs and runs.
+  smoke:
+    name: npx the published version
+    needs: [verify, publish]
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22.19.0"
+
+      # No checkout. The point is that somebody with nothing but node can run
+      # the published CLI, and a source tree on disk would weaken that.
+      - name: The published CLI resolves and reports its own version
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="${{ needs.verify.outputs.version }}"
+
+          # npm accepts a publish before every replica serves it.
+          for attempt in $(seq 1 30); do
+            if npm view "@deepwatch/cli@${version}" version >/dev/null 2>&1; then
+              echo "@deepwatch/cli@${version} is on the registry (after ${attempt} check(s))"
+              break
+            fi
+            if [ "$attempt" -eq 30 ]; then
+              echo "::error::@deepwatch/cli@${version} never appeared on the registry."
+              exit 1
+            fi
+            sleep 10
+          done
+
+          reported=$(npx --yes "@deepwatch/cli@${version}" --version)
+          echo "reported: ${reported}"
+          test "${reported}" = "${version}"

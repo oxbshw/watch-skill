@@ -96,6 +96,27 @@ function main() {
       where('does not return module.exports, so materializing it yields nothing')
     }
 
+    // A bundle inlines its dependencies, so its map arrives carrying the full
+    // text of every third-party module it pulled in. Publishing that
+    // redistributes somebody else's source inside a DeepWatch package, under a
+    // licence the notices never mentioned, and it debugs nothing here. The
+    // entries stay so a stack frame still resolves; only the text goes.
+    const mapPath = `${bundlePath}.map`
+    if (existsSync(mapPath)) {
+      const map = JSON.parse(readFileSync(mapPath, 'utf8'))
+      const leaked = (map.sources ?? []).filter((source, at) =>
+        source.includes('node_modules')
+        && map.sourcesContent?.[at] !== null
+        && map.sourcesContent?.[at] !== undefined)
+      if (leaked.length > 0) {
+        where(`its source map embeds the text of ${String(leaked.length)} third-party `
+          + 'module(s), which this distribution does not redistribute')
+      }
+      if ((map.sources ?? []).some(source => /^([A-Za-z]:|\/)/.test(source))) {
+        where('its source map names an absolute path from the machine that built it')
+      }
+    }
+
     const requested = new Set([
       ...BASELINE,
       ...(manifest.dsh.client.external ?? []),

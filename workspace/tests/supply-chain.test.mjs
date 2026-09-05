@@ -29,9 +29,9 @@ import {
   OCR_ENGINES,
   RAPID_OCR,
   mayDistributeWeights,
-} from '@watchskill/dsh-technology'
-import { EXPECTED_SCHEMA_DIGESTS, WATCH_PROTOCOL_MIN, WATCH_PROTOCOL_VERSION } from '@watchskill/dsh-contracts'
-import { STORE_SCHEMA_VERSION, migrationPreflight } from '@watchskill/watch-desktop'
+} from '@deepwatch/dsh-technology'
+import { EXPECTED_SCHEMA_DIGESTS, WATCH_PROTOCOL_MIN, WATCH_PROTOCOL_VERSION } from '@deepwatch/dsh-contracts'
+import { STORE_SCHEMA_VERSION, migrationPreflight } from '@deepwatch/desktop'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const SBOM = JSON.parse(readFileSync(join(ROOT, 'docs', 'sbom.json'), 'utf8'))
@@ -62,7 +62,7 @@ describe('nothing ships without an established right to ship it', () => {
   })
 
   test('the attribution the brand renders is the one the README carries', async () => {
-    const brand = await import('@watchskill/dsh-client-brand')
+    const brand = await import('@deepwatch/dsh-client-brand')
     const readme = readFileSync(join(ROOT, 'README.md'), 'utf8')
     // Whitespace-normalised on both sides. These are legal statements and have
     // to be the same words everywhere; they are also prose, and prose in a
@@ -76,7 +76,7 @@ describe('nothing ships without an established right to ship it', () => {
   })
 
   test('the disclosure travels with the attribution, never alone', async () => {
-    const brand = await import('@watchskill/dsh-client-brand')
+    const brand = await import('@deepwatch/dsh-client-brand')
     // Attribution without the disclosure reads as an endorsement that was
     // never given, so the brand renders both together and the README says both.
     const flat = text => text.replace(/\s+/g, ' ').trim()
@@ -170,7 +170,7 @@ describe('a build can be checked rather than trusted', () => {
       const dir = mkdtempSync(join(tmpdir(), 'watch-eol-'))
       mkdirSync(join(dir, 'src'), { recursive: true })
       const write = (name, body) => { writeFileSync(join(dir, name), body.split('\n').join(eol)) }
-      write('package.json', '{\n  "name": "@watchskill/sample",\n  "version": "0.0.0"\n}\n')
+      write('package.json', '{\n  "name": "@deepwatch/sample",\n  "version": "0.0.0"\n}\n')
       write('tsconfig.json', '{\n  "compilerOptions": {}\n}\n')
       write(join('src', 'index.ts'), 'export const answer = 42\n')
       return dir

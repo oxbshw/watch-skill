@@ -24,7 +24,7 @@ Add the skills library as a Pi skills directory — the SKILL.md files
 document the CLI exactly the way Pi skills expect:
 
 ```
-pi --skills-dir C:\path\to\watch-skill\adapters\claude-skill\skills
+pi --skills-dir <watch-skill-checkout>\skills
 ```
 
 (or add the directory to your Pi settings' skills paths; Pi also loads

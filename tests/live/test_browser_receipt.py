@@ -70,9 +70,15 @@ def test_every_declared_browser_channel_produces_evidence(
     point: a live source that silently stops reporting one kind of evidence
     is indistinguishable from a page that simply did not do that thing.
     """
+    # The uncaught exception is thrown eight seconds in rather than at the
+    # page's 350 ms default. This is not a longer wait to settle a race: it
+    # moves the failure to a moment capture is running, which is the
+    # precondition of the claim below. At the default the error can precede
+    # the first screenshot entirely, and a clip "around" it would span a range
+    # that was never captured.
     session = live_session.start_live(
-        f"{app.base_url}/", kind="browser", fps=3.0, audio=False,
-        allow_local=True)
+        f"{app.base_url}/?error_after_ms=8000", kind="browser", fps=3.0,
+        audio=False, allow_local=True)
     try:
         # Wait for the slowest channel rather than a fixed sleep: the page
         # error is thrown on a timer, and the accessibility flip is on a
@@ -82,14 +88,34 @@ def test_every_declared_browser_channel_produces_evidence(
         assert got, browser_receipt(session.session_id).render()
 
         # Cut a clip so the rolling-buffer channel has something to report.
+        #
+        # No wait here: `clip_around` waits for the far side of the window
+        # itself and stops as soon as the answer is final. Waiting for the
+        # newest frame to pass the far edge, as this did, proved nothing about
+        # the near edge and succeeded instantly on a fast machine.
         events = live_session.observe(session.session_id, limit=400)["events"]
-        anchor = min(e["media_ts"] for e in events
-                     if e["type"] == "error") if any(
-                         e["type"] == "error" for e in events) else 1.0
-        assert _wait_for(
-            lambda: (buf.newest_frame_media_ts(session.session_id) or 0.0)
-            > anchor + 3.5 or None, timeout=60.0)
-        assert buf.clip_around(session.session_id, anchor, before=3.0, after=3.0)
+        oldest = buf.oldest_frame_media_ts(session.session_id)
+        assert oldest is not None, "capture produced no frames at all"
+        errors = sorted(event["media_ts"] for event in events
+                        if event["type"] == "error")
+        covered = [ts for ts in errors if ts - 3.0 >= oldest]
+
+        if covered:
+            clip = buf.clip_around(
+                session.session_id, covered[0], before=3.0, after=3.0)
+            assert clip.is_file(), "the clip was recorded but not written"
+        else:
+            # Capture started after every error this page threw. The promise
+            # is then the refusal, and it must name the cause rather than hand
+            # back a window that was never captured.
+            _frames, why = buf.await_clip_window(
+                session.session_id, errors[0] - 3.0, errors[0] + 3.0,
+                timeout=15.0) if errors else ([], None)
+            assert why is not None and "no frame was ever captured" in why, why
+            # The channel still needs a clip, from a moment that does exist.
+            clip = buf.clip_around(
+                session.session_id, oldest + 3.0, before=3.0, after=3.0)
+            assert clip.is_file()
     finally:
         live_session.stop_live(session.session_id)
 

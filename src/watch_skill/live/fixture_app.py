@@ -50,7 +50,9 @@ _SPLASH = """<!doctype html>
 <style>body{{font:16px system-ui;margin:0;background:#0b1020;color:#e6ecff;
 display:grid;place-items:center;height:100vh}}</style></head>
 <body><main><h1>Order Desk</h1><p id="splash">Loading the order…</p></main>
-<script>setTimeout(function(){{ location.assign('/app'); }}, {delay});</script>
+<script>setTimeout(function(){{
+  location.assign('/app' + location.search);
+}}, {delay});</script>
 </body></html>
 """
 
@@ -104,10 +106,24 @@ _APP = """<!doctype html>
  }}, 900);
  fetch('/api/broken').catch(function () {{}});
  console.error('order pipeline check failed: settlement service unreachable');
- setTimeout(function () {{ throw new Error('unhandled: settlement retry exhausted'); }}, 350);
+ setTimeout(function () {{ throw new Error('unhandled: settlement retry exhausted'); }}, {error_after_ms});
 </script>
 </body></html>
 """
+
+
+def _int_param(path: str, name: str, default: int) -> int:
+    """One non-negative integer from a query string, or the default."""
+    from urllib.parse import parse_qs, urlparse
+
+    raw = parse_qs(urlparse(path).query).get(name, [])
+    if not raw:
+        return default
+    try:
+        value = int(raw[0])
+    except (TypeError, ValueError):
+        return default
+    return value if 0 <= value <= 600_000 else default
 
 
 @dataclass
@@ -161,7 +177,13 @@ class _Handler(BaseHTTPRequestHandler):
             self._html(200, _SPLASH.format(delay=delay))
         elif path == "/app":
             fixed = state.status == FIXED_STATUS
+            # When the uncaught exception is thrown, in milliseconds after the
+            # page loads. A test asserting that media exists on *both* sides of
+            # a failure needs the failure to happen while capture is running;
+            # at the 350 ms default it can precede the first screenshot
+            # entirely, and then the claim is not false so much as untestable.
             self._html(200, _APP.format(
+                error_after_ms=_int_param(self.path, "error_after_ms", 350),
                 order=state.order_id,
                 state=state.status,
                 invalid="false" if fixed else "true",

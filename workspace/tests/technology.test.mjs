@@ -32,7 +32,7 @@ import {
   notTested,
   routeOcr,
   unchecked,
-} from '@watchskill/dsh-technology'
+} from '@deepwatch/dsh-technology'
 
 /** Health for a technology that is genuinely working. */
 function ready(id) {

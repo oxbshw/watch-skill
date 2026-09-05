@@ -22,10 +22,10 @@
  *
  * This module is pure. It takes records and events and returns view models; it
  * holds no ledger, opens no database and performs no operation. The service in
- * `@watchskill/dsh-memory` does all of that, and keeping the browser half
+ * `@deepwatch/dsh-memory` does all of that, and keeping the browser half
  * unable to reach it is what stops a UI from becoming a second writer.
  *
- * @module @watchskill/dsh-client-memory/views
+ * @module @deepwatch/dsh-client-memory/views
  */
 
 import type {
@@ -33,7 +33,7 @@ import type {
   MemoryEvent,
   MemoryRecord,
   MemoryScope,
-} from '@watchskill/dsh-memory'
+} from '@deepwatch/dsh-memory'
 
 /** The Memory surfaces, in tab order. */
 export type MemoryView =

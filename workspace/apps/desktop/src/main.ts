@@ -13,7 +13,7 @@
  * Electron installed, and a static import would make the whole build depend on
  * a 100MB binary in order to check a supervisor.
  *
- * @module @watchskill/watch-desktop/main
+ * @module @deepwatch/desktop/main
  */
 
 import { join } from 'node:path'

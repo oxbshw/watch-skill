@@ -21,11 +21,11 @@
  * receipt; silently re-pointing it at the new revision would be worse, because
  * the citation would then be to something nobody observed.
  *
- * @module @watchskill/dsh-library/sources
+ * @module @deepwatch/dsh-library/sources
  */
 
-import type { EvidenceRecord, Freshness, TemporalRange } from '@watchskill/dsh-contracts'
-import type { ScriptTag } from '@watchskill/dsh-technology'
+import type { EvidenceRecord, Freshness, TemporalRange } from '@deepwatch/dsh-contracts'
+import type { ScriptTag } from '@deepwatch/dsh-technology'
 
 /** What kind of thing a source is. */
 export type SourceKind = 'video' | 'audio' | 'page' | 'stream' | 'document' | 'screen_capture'

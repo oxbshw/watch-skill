@@ -128,14 +128,29 @@ def _playwright_ready() -> tuple[bool, str]:
 def _probe_playwright() -> tuple[bool, str]:
     fix = "playwright install chromium"
     try:
-        from playwright.sync_api import sync_playwright  # noqa: PLC0415
+        import playwright  # noqa: F401, PLC0415
     except ImportError:
         return False, "pip install 'watch-skill[loop]' && playwright install chromium"
-    try:
-        with sync_playwright() as p:
-            path = p.chromium.executable_path
-    except Exception:  # noqa: BLE001 - any driver problem means not ready
+    # Playwright's sync manager creates an asyncio driver. Starting it inside
+    # one of the Bridge worker threads and then tearing the process down can
+    # leave a pending driver task whose traceback includes the user's install
+    # path on stderr. Probe in a short child instead: its two streams are
+    # captured and discarded, and only the executable path crosses back.
+    probe = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            "from playwright.sync_api import sync_playwright; "
+            "p=sync_playwright().start(); print(p.chromium.executable_path); p.stop()",
+        ],
+        capture_output=True,
+        text=True,
+        timeout=20,
+        check=False,
+    )
+    if probe.returncode != 0:
         return False, fix
+    path = probe.stdout.strip().splitlines()[-1] if probe.stdout.strip() else ""
     return (bool(path) and os.path.exists(path)), fix
 
 

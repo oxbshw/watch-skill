@@ -10,7 +10,7 @@
  * list, the routing rules and the qualification maths. Nothing in it can start
  * a process, and nothing in it reaches the filesystem.
  *
- * @module @watchskill/dsh-technology/descriptors
+ * @module @deepwatch/dsh-technology/descriptors
  */
 
 export * from './descriptor.js'

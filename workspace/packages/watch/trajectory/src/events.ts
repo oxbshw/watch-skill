@@ -16,10 +16,10 @@
  * that Watch Core resolves; the text of the evidence lives at Watch Core and
  * is fetched when someone opens it.
  *
- * @module @watchskill/dsh-trajectory/events
+ * @module @deepwatch/dsh-trajectory/events
  */
 
-import type { Verdict } from '@watchskill/dsh-contracts'
+import type { Verdict } from '@deepwatch/dsh-contracts'
 
 /**
  * The Watch event family.

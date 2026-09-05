@@ -6,7 +6,7 @@
  * server. That split is what makes the security posture assertable rather than
  * reviewable.
  *
- * @module @watchskill/watch-desktop
+ * @module @deepwatch/desktop
  */
 
 export * from './security.js'

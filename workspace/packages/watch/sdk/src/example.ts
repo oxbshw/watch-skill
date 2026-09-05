@@ -9,10 +9,10 @@
  * unglamorous — it is the shape of the thing that matters: declare, probe,
  * observe, submit, and never claim.
  *
- * @module @watchskill/dsh-sdk/example
+ * @module @deepwatch/dsh-sdk/example
  */
 
-import type { TechnologyDescriptor } from '@watchskill/dsh-technology'
+import type { TechnologyDescriptor } from '@deepwatch/dsh-technology'
 import {
   createCapabilityHost,
   type CapabilityDeclaration,

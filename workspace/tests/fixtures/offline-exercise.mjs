@@ -39,7 +39,7 @@ const scratch = mkdtempSync(join(tmpdir(), 'watch-offline-'))
 try {
   // ── the offline policy itself ─────────────────────────────────────────────
   await step('composer refuses every widening of egress', async () => {
-    const { defaultComposer, proposeChange } = await import('@watchskill/dsh-workspace')
+    const { defaultComposer, proposeChange } = await import('@deepwatch/dsh-workspace')
     const base = defaultComposer()
     if (!base.privacy.offlineOnly) throw new Error('the default is not offline')
     for (const change of [
@@ -53,7 +53,7 @@ try {
 
   // ── provider and engine routing ───────────────────────────────────────────
   await step('OCR routing excludes every egress route offline', async () => {
-    const technology = await import('@watchskill/dsh-technology')
+    const technology = await import('@deepwatch/dsh-technology')
     const health = new Map(
       technology.OCR_ENGINES.map(engine => [engine.id, { usable: true, state: 'ready' }]))
     for (const quality of ['fast', 'balanced', 'best']) {
@@ -69,7 +69,7 @@ try {
   })
 
   await step('every technology descriptor is inspected without contacting it', async () => {
-    const technology = await import('@watchskill/dsh-technology')
+    const technology = await import('@deepwatch/dsh-technology')
     for (const engine of technology.OCR_ENGINES) {
       // The whole point: reading capability truth is a local operation. A
       // descriptor that probed on read would reach out here.
@@ -81,7 +81,7 @@ try {
 
   // ── the Bridge transport ──────────────────────────────────────────────────
   await step('the Bridge mock transport does no networking', async () => {
-    const bridge = await import('@watchskill/dsh-core-bridge')
+    const bridge = await import('@deepwatch/dsh-core-bridge')
     // The mock backend is what a profile falls back to when the engine is
     // absent. It must not phone anywhere to discover that.
     if (typeof bridge.MockTransport === 'function') {
@@ -93,7 +93,7 @@ try {
   // ── memory: compile, retrieve, project, export ────────────────────────────
   await step('the memory service runs a whole turn locally', async () => {
     const { Context } = await import('@deepseek-ai/cordis')
-    const memory = await import('@watchskill/dsh-memory')
+    const memory = await import('@deepwatch/dsh-memory')
     const directory = join(scratch, 'memory')
     const ctx = new Context()
     const fiber = await ctx.plugin(memory.default, { mode: 'local_personal', directory })
@@ -116,8 +116,8 @@ try {
 
   // ── projections, wiki, adapters ───────────────────────────────────────────
   await step('wiki projections and both adapters run locally', async () => {
-    const wiki = await import('@watchskill/dsh-wiki')
-    const adapters = await import('@watchskill/dsh-adapters')
+    const wiki = await import('@deepwatch/dsh-wiki')
+    const adapters = await import('@deepwatch/dsh-adapters')
     const now = '2026-08-28T10:00:00.000Z'
     const record = {
       memoryId: 'mem_1', kind: 'decision', subjectScope: 'project', scopeId: 'p1',
@@ -141,7 +141,7 @@ try {
 
   // ── library search and the technology centre ──────────────────────────────
   await step('library search plans and facets locally', async () => {
-    const library = await import('@watchskill/dsh-library')
+    const library = await import('@deepwatch/dsh-library')
     // A semantic path that fetched an embedding would appear here.
     library.searchPlan({ lexical: true, semantic: true })
     library.searchPlan({ lexical: true, semantic: false })
@@ -160,8 +160,8 @@ try {
 
   // ── trajectory, timeline, compare, selection ──────────────────────────────
   await step('projections and comparisons are pure folds', async () => {
-    const trajectory = await import('@watchskill/dsh-trajectory')
-    const workspace = await import('@watchskill/dsh-workspace')
+    const trajectory = await import('@deepwatch/dsh-trajectory')
+    const workspace = await import('@deepwatch/dsh-workspace')
     const events = [
       { type: 'tool/call', seq: 1, time: 1, data: { callId: 'c1', name: 'watch_verify', arguments: {}, turn: 1, step: 1 } },
       {
@@ -177,7 +177,7 @@ try {
 
   // ── the capability SDK ────────────────────────────────────────────────────
   await step('a third-party capability submits without a network', async () => {
-    const sdk = await import('@watchskill/dsh-sdk')
+    const sdk = await import('@deepwatch/dsh-sdk')
     const gateway = {
       mintEvidence: async () => ({ ok: true, evidenceId: 'ev_1' }),
       readEvidence: async () => null,
@@ -194,7 +194,7 @@ try {
 
   // ── tenancy: workers, audit, sharing ──────────────────────────────────────
   await step('the worker coordinator and audit log are local', async () => {
-    const tenancy = await import('@watchskill/dsh-tenancy')
+    const tenancy = await import('@deepwatch/dsh-tenancy')
     const coordinator = new tenancy.Coordinator()
     coordinator.register({
       workerId: 'w1', tenantId: 't1', displayName: 'w', capabilities: [],
@@ -212,7 +212,7 @@ try {
 
   // ── the desktop: capability detection and updates ─────────────────────────
   await step('desktop capability detection probes locally only', async () => {
-    const desktop = await import('@watchskill/watch-desktop')
+    const desktop = await import('@deepwatch/desktop')
     // Version probes of local binaries. None of these may resolve a hostname.
     desktop.detectCapabilities()
     desktop.prepareAppData(join(scratch, 'appdata'))
@@ -220,7 +220,7 @@ try {
   })
 
   await step('the updater verifies a package without fetching one', async () => {
-    const desktop = await import('@watchskill/watch-desktop')
+    const desktop = await import('@deepwatch/desktop')
     const { generateKeyPairSync, sign, createHash } = await import('node:crypto')
     const { privateKey, publicKey } = generateKeyPairSync('ed25519')
     const bytes = Buffer.from('a local package')
@@ -257,7 +257,15 @@ try {
         cwd: process.cwd(), encoding: 'utf8', timeout: 120_000,
       })
       if (result.status !== 0) {
-        throw new Error(`${script} --check exited ${String(result.status)}`)
+        // Carry what the child said. "exited 1" alone is readable on the
+        // machine that can simply re-run it, and useless on a CI runner whose
+        // tree is gone by the time anyone reads the log — which is exactly
+        // where a host-dependent generator fails and nowhere else.
+        const said = `${result.stderr ?? ''}${result.stdout ?? ''}`
+          .split('\n').map(line => line.trim()).filter(line => line !== '')
+          .slice(0, 6).join(' | ')
+        throw new Error(
+          `${script} --check exited ${String(result.status)}${said === '' ? '' : `: ${said}`}`)
       }
     }
   })

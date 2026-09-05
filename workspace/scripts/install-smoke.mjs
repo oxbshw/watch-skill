@@ -19,8 +19,10 @@
 
 import { spawnSync } from 'node:child_process'
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync, rmSync } from 'node:fs'
-import { join, dirname, resolve, basename } from 'node:path'
+import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { ensureCli } from './lib/dsh-cli.mjs'
+import { packageNameOf } from './lib/packed.mjs'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const HOME = join(ROOT, '.dsh-home')
@@ -70,7 +72,7 @@ function bundleDependencies() {
     for (const dependency of Object.keys(found.manifest.dependencies ?? {})) visit(dependency)
     order.push(found.dir)
   }
-  const bundle = byName.get('@watchskill/dsh-bundle')
+  const bundle = byName.get('@deepwatch/dsh-bundle')
   for (const dependency of Object.keys(bundle?.manifest.dependencies ?? {})) visit(dependency)
   return order
 }
@@ -112,20 +114,16 @@ function fail(message, detail) {
 }
 
 /** Locate the `dsh` CLI entry, whichever tree it was installed into. */
+/**
+ * The pinned DSH CLI, installed into the harness's own directory if absent.
+ *
+ * This used to search two fixed places and, finding neither, print an
+ * instruction to create `../watch-smoke` by hand. That made a documented gate
+ * depend on an undocumented sibling, and CI -- which has no such directory --
+ * never ran it at all.
+ */
 function findCli() {
-  const candidates = [
-    join(ROOT, 'node_modules', '@deepseek-ai', 'dsh'),
-    join(ROOT, '..', 'watch-smoke', 'node_modules', '@deepseek-ai', 'dsh'),
-  ]
-  for (const dir of candidates) {
-    if (!existsSync(join(dir, 'package.json'))) continue
-    const manifest = JSON.parse(readFileSync(join(dir, 'package.json'), 'utf8'))
-    const bin = typeof manifest.bin === 'string' ? manifest.bin : manifest.bin?.dsh
-    if (bin === undefined) continue
-    const entry = resolve(dir, bin)
-    if (existsSync(entry)) return { entry, version: manifest.version }
-  }
-  return null
+  return ensureCli(ROOT)
 }
 
 /**
@@ -169,9 +167,9 @@ function pack(relativeDir) {
 /**
  * Point the profile's package manager at the packed tarballs.
  *
- * The bundle depends on `@watchskill/dsh-core-bridge` and
- * `@watchskill/dsh-tools` by version range, which is correct: once published,
- * that is exactly how a user's `dsh plugin add @watchskill/dsh-bundle`
+ * The bundle depends on `@deepwatch/dsh-core-bridge` and
+ * `@deepwatch/dsh-tools` by version range, which is correct: once published,
+ * that is exactly how a user's `dsh plugin add @deepwatch/dsh-bundle`
  * resolves them. Passing sibling tarballs on the command line does not satisfy
  * a registry range, so this run needs overrides to close the loop locally.
  *
@@ -185,8 +183,9 @@ function linkLocalTarballs(tarballs) {
   const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'))
   const overrides = {}
   for (const tarball of tarballs) {
-    const name = basename(tarball).replace(/-\d.*$/, '').replace(/^watchskill-/, '@watchskill/')
-    overrides[name] = `file:${tarball.split('\\').join('/')}`
+    // The name comes out of the tarball, not out of its filename. See
+    // `scripts/lib/packed.mjs` for what a packed filename loses.
+    overrides[packageNameOf(tarball)] = `file:${tarball.split('\\').join('/')}`
   }
   manifest.pnpm = { ...manifest.pnpm, overrides }
   writeFileSync(manifestPath, `${JSON.stringify(manifest, undefined, 2)}\n`)
@@ -252,7 +251,7 @@ function main() {
   if (!existsSync(manifestPath)) fail(`the profile manifest was not created at ${manifestPath}`)
   const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'))
   const bundles = manifest.dsh?.profile?.bundles ?? []
-  if (!bundles.includes('@watchskill/dsh-bundle')) {
+  if (!bundles.includes('@deepwatch/dsh-bundle')) {
     fail(
       'DSH did not reconcile the Watch bundle into the profile layer stack.',
       `dsh.profile.bundles = ${JSON.stringify(bundles)}`,
@@ -294,7 +293,7 @@ function main() {
   process.stdout.write('removing the bundle\n')
   const removal = run(
     process.execPath,
-    [cli.entry, 'plugin', '--profile', PROFILE, 'remove', '@watchskill/dsh-bundle'],
+    [cli.entry, 'plugin', '--profile', PROFILE, 'remove', '@deepwatch/dsh-bundle'],
     { env, cwd: ROOT },
   )
   if (removal.status !== 0) {

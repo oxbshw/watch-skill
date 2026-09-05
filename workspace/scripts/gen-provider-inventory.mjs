@@ -28,6 +28,7 @@
 import { readFileSync, writeFileSync, existsSync, readdirSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { manualRoot } from './lib/manual-paths.mjs'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const OUT = join(ROOT, 'inventory', 'dsh-providers.json')
@@ -53,7 +54,7 @@ function moduleSource(document) {
     ' * `@earendil-works/pi-ai`. Do not edit: the catalogue is the source of',
     ' * truth and this is a count of it.',
     ' *',
-    ' * @module @watchskill/dsh-client-settings/providers',
+    ' * @module @deepwatch/dsh-client-settings/providers',
     ' */',
     '',
     '/** Every provider route the pinned DSH ships. */',
@@ -84,9 +85,16 @@ function moduleSource(document) {
 
 const TREES = [
   process.env.WATCH_DSH_TREE,
-  'G:/watch-smoke/node_modules',
-  'G:/watch-manual/dsh-home/profiles/web/node_modules',
+  // The CLI the smoke gates provision is a complete install of the pinned
+  // DSH, and it carries `@deepseek-ai/dsh` itself -- which is what makes the
+  // version knowable. The manual profile is listed after the workspace on
+  // purpose: it holds the runtime packages but not the CLI, so a scan of it
+  // reports `unknown` and a fraction of the bundles. Preferring whichever tree
+  // merely exists made the inventory depend on whether anyone had built a
+  // profile on this machine.
+  join(manualRoot(), 'dsh-cli', 'node_modules'),
   join(ROOT, 'node_modules'),
+  join(manualRoot(), 'dsh-home', 'profiles', 'web', 'node_modules'),
 ].filter(path => path !== undefined)
 
 /** Find pi-ai's provider directory under whichever tree has a DSH install. */

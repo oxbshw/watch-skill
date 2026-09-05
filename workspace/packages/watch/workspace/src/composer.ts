@@ -24,7 +24,7 @@
  * Narrowing is deliberately free. An agent that decides it does not need the
  * camera should not need permission to stop using it.
  *
- * @module @watchskill/dsh-workspace/composer
+ * @module @deepwatch/dsh-workspace/composer
  */
 
 // ── the eight sections ──────────────────────────────────────────────────────

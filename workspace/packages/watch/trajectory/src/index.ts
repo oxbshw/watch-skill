@@ -11,7 +11,7 @@
  *   memory influenced a turn and which record did it. They are not evidence
  *   and cannot be cited as any.
  *
- * @module @watchskill/dsh-trajectory
+ * @module @deepwatch/dsh-trajectory
  */
 
 export * from './events.js'

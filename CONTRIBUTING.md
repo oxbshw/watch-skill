@@ -20,7 +20,7 @@ The single most useful contribution right now: get your agent into
 [the matrix](docs/agents/README.md). It takes about 20 minutes — one
 config block, one doc page, one validation run — and there is a full
 walkthrough plus skeletons in
-[`templates/agent-adapter/`](templates/agent-adapter/README.md). No
+[`templates/agent-integration/`](templates/agent-integration/README.md). No
 engine code involved; you don't need to understand the pipeline. If you
 actually run the 3-step smoke test in your agent, paste the transcript
 in the PR and your row gets the machine-tested grade.
@@ -34,8 +34,24 @@ uv run watch-skill doctor      # bootstraps ffmpeg + yt-dlp
 uv run pytest -q               # must be green before you start
 ```
 
-Python 3.11+. The dev venv pins 3.11 (`.python-version`) because the native
-deps (onnxruntime, CTranslate2) publish wheels there first.
+### Which Python, and why the dev venv pins the oldest one
+
+Watch Skill supports **3.11, 3.12 and 3.13**. `requires-python` says
+`>=3.11`, the classifiers list all three, and CI runs every one of them on
+Linux and Windows.
+
+`.python-version` says `3.11`, and that is deliberate: it is the
+**compatibility floor**, not a preference and not the newest thing that works.
+Developing on the oldest supported interpreter is what makes a 3.12-only
+syntax or standard-library call fail on the machine that wrote it, in seconds,
+rather than in a matrix job twenty minutes later — and a floor nobody develops
+on is a floor that quietly rises. It also happens to be where onnxruntime and
+CTranslate2 publish wheels first, which is a convenience rather than the
+reason.
+
+Change it only as part of deliberately raising the minimum supported version:
+`requires-python`, the classifiers, the CI matrix and this paragraph move
+together, and `tests/test_python_version_policy.py` fails until they agree.
 
 ## Architecture rules (non-negotiable)
 
@@ -74,8 +90,25 @@ deps (onnxruntime, CTranslate2) publish wheels there first.
 ## Commits
 
 Conventional commits (`feat:`, `fix:`, `docs:`, `test:`, `refactor:`,
-`chore:`). Commit at working increments. Never commit `bin/`, caches, `.env`,
+`chore:`, and `release:` for a version promotion or a release-path change).
+Commit at working increments. Never commit `bin/`, caches, `.env`,
 or index databases (`.gitignore` already covers these — keep it that way).
+
+A commit message describes the product change and the reason for it. Nothing
+else belongs in one.
+
+**Authorship is a person.** Every commit is authored by the human accountable
+for the change, and real human co-authors keep their `Co-Authored-By`
+trailers. Trailers naming something that is not a person do not belong in the
+history, and neither do generated-by notices: the trailer field is how this
+project records who is answerable for a change, and an entry that names no one
+answerable makes it mean less.
+
+`npm run verify:commits` enforces that, and it reads commit *metadata* only.
+It does not read prose, and product documentation about supported integrations
+is outside its scope.
+
+Shared history is not rewritten without the maintainer asking for it.
 
 ## Adding a vision provider
 

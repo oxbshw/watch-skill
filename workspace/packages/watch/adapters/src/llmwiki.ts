@@ -21,11 +21,11 @@
  * and discarded rather than trusted, and the discarding is tested with a
  * bundle that asserts all of them at once.
  *
- * @module @watchskill/dsh-adapters/llmwiki
+ * @module @deepwatch/dsh-adapters/llmwiki
  */
 
-import type { MemoryEvent, MemoryRecord } from '@watchskill/dsh-memory'
-import { isHighImpact, isProtectedSubject } from '@watchskill/dsh-memory'
+import type { MemoryEvent, MemoryRecord } from '@deepwatch/dsh-memory'
+import { isHighImpact, isProtectedSubject } from '@deepwatch/dsh-memory'
 
 /** The five files an LLMWiki bundle carries. */
 export interface LlmWikiBundle {

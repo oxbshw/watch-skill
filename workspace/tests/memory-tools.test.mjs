@@ -15,7 +15,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
 import { Context } from '@deepseek-ai/cordis'
-import WatchMemoryService, { applyMemoryTools } from '@watchskill/dsh-memory'
+import WatchMemoryService, { applyMemoryTools } from '@deepwatch/dsh-memory'
 
 const SCOPE = {
   userId: 'user_1',

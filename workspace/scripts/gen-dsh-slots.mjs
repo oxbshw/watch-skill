@@ -50,16 +50,31 @@
 import { readFileSync, writeFileSync, existsSync, readdirSync, statSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { manualRoot } from './lib/manual-paths.mjs'
+import { byCodeUnit } from './lib/order.mjs'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const OUT = join(ROOT, 'inventory', 'dsh-slots.json')
 
-/** Trees that may hold a real DSH install, in preference order. */
+/**
+ * Trees that may hold a real DSH install, in preference order.
+ *
+ * The workspace's own `node_modules` comes first now, and the reason is the
+ * whole point of this inventory being committed: it is the tree the lockfile
+ * defines, so every machine and every CI runner reads the same one. The
+ * manual-QA trees are a fallback for a checkout that has not installed yet,
+ * and preferring them made the answer depend on whether somebody had built a
+ * profile on this machine — the same defect as reading the SBOM off disk.
+ *
+ * It used to be second, because the workspace did not carry
+ * `@deepseek-ai/dsh` and so could not report a version. It carries it now:
+ * `@deepwatch/cli` declares it as an exact optional peer.
+ */
 const CANDIDATES = [
   process.env.WATCH_DSH_TREE,
-  'G:/watch-smoke/node_modules',
-  'G:/watch-manual/dsh-home/profiles/web/node_modules',
   join(ROOT, 'node_modules'),
+  join(manualRoot(), 'dsh-cli', 'node_modules'),
+  join(manualRoot(), 'dsh-home', 'profiles', 'web', 'node_modules'),
 ].filter(path => path !== undefined)
 
 /**
@@ -73,6 +88,31 @@ const CATALOGUE
 
 /** A call site, for the slots the catalogue leaves out. */
 const RENDER_SLOT = /renderSlot\(\s*["']([a-z][a-zA-Z0-9]*(?:\.[a-zA-Z0-9]+)+)["']/g
+
+/**
+ * Where `@deepseek-ai/dsh` states its version in a tree, hoisted or not.
+ *
+ * npm puts it at `@deepseek-ai/dsh/package.json`. pnpm does not hoist a
+ * package nothing imports directly, so in a pnpm tree it lives inside
+ * `.pnpm/@deepseek-ai+dsh@<version>_<hash>/node_modules/`. Looking only at
+ * the hoisted path meant a pnpm workspace could never name its own baseline:
+ * this inventory said `0.1.1-rc.2` on a machine that happened to have an npm
+ * install of the CLI lying around and `unknown` on CI, and a committed
+ * artifact that reads differently depending on the machine is not evidence.
+ */
+function dshManifest(tree) {
+  const hoisted = join(tree, '@deepseek-ai', 'dsh', 'package.json')
+  if (existsSync(hoisted)) return hoisted
+
+  const store = join(tree, '.pnpm')
+  if (!existsSync(store)) return null
+  for (const entry of readdirSync(store).sort()) {
+    if (!entry.startsWith('@deepseek-ai+dsh@')) continue
+    const nested = join(store, entry, 'node_modules', '@deepseek-ai', 'dsh', 'package.json')
+    if (existsSync(nested)) return nested
+  }
+  return null
+}
 
 function* clientBundles(dir, depth = 0) {
   if (depth > 8) return
@@ -96,7 +136,11 @@ function* clientBundles(dir, depth = 0) {
 function scanTree(tree) {
   const slots = new Map()
   let bundles = 0
-  for (const path of clientBundles(tree)) {
+  // Sorted, because `readdirSync` returns whatever order the filesystem
+  // enumerates in — sorted on NTFS, hash order on ext4 — and this loop used
+  // to let the first file to mention a slot decide who is credited with it.
+  // See the call-site branch below for the other half of that defect.
+  for (const path of [...clientBundles(tree)].sort(byCodeUnit)) {
     bundles += 1
     const source = readFileSync(path, 'utf8')
     const owner = /@deepseek-ai[\\/]([^\\/]+)/.exec(path)?.[1] ?? 'unknown'
@@ -114,10 +158,20 @@ function scanTree(tree) {
     }
     for (const match of source.matchAll(RENDER_SLOT)) {
       const name = match[1]
-      if (slots.has(name)) continue
-      slots.set(name, {
-        kind: 'unknown', scope: 'unknown', declaredBy: new Set([owner]), source: 'call-site',
-      })
+      const existing = slots.get(name)
+      if (existing === undefined) {
+        slots.set(name, {
+          kind: 'unknown', scope: 'unknown', declaredBy: new Set([owner]), source: 'call-site',
+        })
+        continue
+      }
+      // A bundle that renders a slot the catalogue already described is still
+      // a bundle that uses it, and `declaredBy` is the list of who does.
+      // Skipping it entirely made the answer depend on read order: whichever
+      // file the filesystem handed over first was credited and the rest were
+      // not, so `shell.overlay` named the layout package on one machine and
+      // not on another with the identical tree.
+      existing.declaredBy.add(owner)
     }
   }
 
@@ -134,14 +188,22 @@ function main() {
   let tree
   let slots = new Map()
   let bundles = 0
-  for (const candidate of CANDIDATES) {
-    if (!existsSync(candidate)) continue
-    const found = scanTree(candidate)
-    if (found.slots.size === 0) continue
-    tree = candidate
-    slots = found.slots
-    bundles = found.bundles
-    break
+  // Two passes. A tree that carries `@deepseek-ai/dsh` can say which DSH it
+  // is, and an inventory that cannot name its version is not one anybody can
+  // check a bump against -- so those are preferred outright, and a tree
+  // without it is used only when nothing better exists.
+  const identifiable = candidate => dshManifest(candidate) !== null
+  for (const pass of [identifiable, () => true]) {
+    for (const candidate of CANDIDATES) {
+      if (!existsSync(candidate) || !pass(candidate)) continue
+      const found = scanTree(candidate)
+      if (found.slots.size === 0) continue
+      tree = candidate
+      slots = found.slots
+      bundles = found.bundles
+      break
+    }
+    if (tree !== undefined) break
   }
 
   if (tree === undefined) {
@@ -158,9 +220,10 @@ function main() {
   }
 
   // The DSH version these came from, so a bump that moves a slot is visible.
-  let version = 'unknown'
-  const manifest = join(tree, '@deepseek-ai', 'dsh', 'package.json')
-  if (existsSync(manifest)) version = JSON.parse(readFileSync(manifest, 'utf8')).version
+  const manifest = dshManifest(tree)
+  const version = manifest === null
+    ? 'unknown'
+    : JSON.parse(readFileSync(manifest, 'utf8')).version
 
   const document = {
     generatedBy: 'scripts/gen-dsh-slots.mjs',
@@ -177,7 +240,7 @@ function main() {
       + 'treats unknown exactly as strictly as single.',
     bundlesScanned: bundles,
     slots: Object.fromEntries(
-      [...slots.entries()].sort(([a], [b]) => a.localeCompare(b))
+      [...slots.entries()].sort(([a], [b]) => byCodeUnit(a, b))
         .map(([name, entry]) => [name, {
           kind: entry.kind,
           scope: entry.scope,
@@ -190,8 +253,38 @@ function main() {
   const json = `${JSON.stringify(document, null, 2)}\n`
 
   if (check) {
-    if (!existsSync(OUT) || readFileSync(OUT, 'utf8') !== json) {
+    // `bundlesScanned` counts what this machine had to read, not anything
+    // DSH guarantees: a full CLI install and a profile tree reach the same
+    // slot contract through different numbers of files. Comparing it made
+    // the gate fail on whose machine ran it, which is the defect the SBOM
+    // had. The contract is what has to match.
+    const contract = value => JSON.stringify({
+      dshVersion: value.dshVersion,
+      slots: value.slots,
+    })
+    const committed = existsSync(OUT) ? JSON.parse(readFileSync(OUT, 'utf8')) : null
+    if (committed === null || contract(committed) !== contract(document)) {
       process.stderr.write('watch: inventory/dsh-slots.json is stale — run `node scripts/gen-dsh-slots.mjs`\n')
+      // Say *what* is stale. "Stale" alone is a serviceable message on the
+      // machine that can re-run the generator and read the diff, and a
+      // useless one on a CI runner whose tree nobody can inspect afterwards.
+      if (committed !== null) {
+        if (committed.dshVersion !== document.dshVersion) {
+          process.stderr.write(
+            `       DSH version: committed ${String(committed.dshVersion)}, `
+            + `scanned ${String(document.dshVersion)}\n`)
+        }
+        const names = [...new Set([
+          ...Object.keys(committed.slots ?? {}),
+          ...Object.keys(document.slots ?? {}),
+        ])].sort()
+        for (const name of names) {
+          const before = JSON.stringify(committed.slots?.[name] ?? null)
+          const after = JSON.stringify(document.slots?.[name] ?? null)
+          if (before === after) continue
+          process.stderr.write(`       ${name}\n         committed ${before}\n         scanned   ${after}\n`)
+        }
+      }
       process.exit(1)
     }
     process.stdout.write(`dsh-slots: current — ${String(slots.size)} slot(s)\n`)

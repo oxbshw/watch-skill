@@ -45,7 +45,7 @@ import {
   sharedOwner,
   strongestRole,
   workerCanRun,
-} from '@watchskill/dsh-tenancy'
+} from '@deepwatch/dsh-tenancy'
 
 // ── the two tenants ─────────────────────────────────────────────────────────
 

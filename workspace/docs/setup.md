@@ -59,8 +59,13 @@ output.
 Build a local profile and serve it:
 
 ```bash
-node scripts/manual-profile.mjs
+WATCH_CORE_BIN=<path to the installed watch-skill> node scripts/manual-profile.mjs
 ```
+
+Watch Core is required rather than optional here: the profile refuses to build
+without one instead of composing a Bridge that answers from the test-only mock.
+Add `--from-artifacts` to build from the packed release candidate, which
+verifies all twenty archives against their recorded digests first.
 
 The script prints the exact command to serve what it built, including the
 `DSH_HOME` and the overlay path. Seed the demo fixtures with
@@ -70,7 +75,7 @@ The script prints the exact command to serve what it built, including the
 For the Desktop application:
 
 ```bash
-cd apps/desktop && npx electron .
+cd apps/desktop && pnpm exec electron .
 ```
 
 Its application data, DSH home and log directory come from `app.getPath()` and
@@ -86,7 +91,7 @@ OpenAI-compatible servers, where the key is stored, and how to remove it.
 
 | Capability | Needs | Without it |
 | --- | --- | --- |
-| Watch Core | `pip install watch-skill` | the Bridge runs its mock backend and every capability reports `not_tested` |
+| Watch Core | install the candidate wheel with `watch-skill[loop]` | `auto` attempts the real stdio Bridge and reports unavailable/error; it never falls back to mock |
 | OCR, ASR | Python and the engine you choose | Perception shows the engine as not installed |
 | Video and audio sources | ffmpeg | those sources are not offered as startable |
 | Desktop | Electron, installed by `pnpm install` | the Web application is unaffected |

@@ -1,9 +1,26 @@
 {
-  "name": "@watchskill/dsh-contracts",
-  "version": "0.1.0-preview.0",
+  "name": "@deepwatch/dsh-contracts",
+  "version": "0.1.0",
   "description": "Watch Bridge wire contracts shared by the Host plugins and the browser halves",
   "type": "module",
   "license": "MIT",
+  "author": "Sayed Allam",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/oxbshw/watch-skill.git",
+    "directory": "workspace/packages/watch/contracts"
+  },
+  "homepage": "https://github.com/oxbshw/watch-skill/tree/main/workspace#readme",
+  "bugs": {
+    "url": "https://github.com/oxbshw/watch-skill/issues"
+  },
+  "keywords": [
+    "deepwatch",
+    "deepseek-harness",
+    "watch-skill",
+    "contracts",
+    "protocol"
+  ],
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
   "exports": {
@@ -11,7 +28,33 @@
       "types": "./lib/index.d.ts",
       "default": "./lib/index.js"
     },
+    "./identity": {
+      "types": "./lib/identity.d.ts",
+      "default": "./lib/identity.js"
+    },
+    "./query": {
+      "types": "./lib/query.d.ts",
+      "default": "./lib/query.js"
+    },
+    "./query/wire": {
+      "types": "./lib/query/wire.d.ts",
+      "default": "./lib/query/wire.js"
+    },
+    "./query/validate": {
+      "types": "./lib/query/validate.d.ts",
+      "default": "./lib/query/validate.js"
+    },
     "./package.json": "./package.json"
   },
-  "files": ["lib/**/*.js", "lib/**/*.d.ts"]
+  "files": [
+    "lib/**/*.js",
+    "lib/**/*.d.ts"
+  ],
+  "sideEffects": false,
+  "engines": {
+    "node": "^22.19.0 || >=24.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
 }

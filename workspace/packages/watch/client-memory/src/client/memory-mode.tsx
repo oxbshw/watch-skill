@@ -12,15 +12,15 @@
  * profile actually has, and states the mode rather than implying content that
  * has not been recorded.
  *
- * @module @watchskill/dsh-client-memory/client/memory-mode
+ * @module @deepwatch/dsh-client-memory/client/memory-mode
  */
 
 import { useState } from 'react'
 import type { ReactNode } from 'react'
-import { EmptyState, ModeSurface, Note } from '@watchskill/dsh-workspace/surface'
-import type { ModeViewProps } from '@watchskill/dsh-workspace/surface'
+import { EmptyState, ModeSurface, Note } from '@deepwatch/dsh-workspace/surface'
+import type { ModeViewProps } from '@deepwatch/dsh-workspace/surface'
 import { MemoryWorkbench } from './components.js'
-import type { MemoryEvent } from '@watchskill/dsh-memory'
+import type { MemoryEvent } from '@deepwatch/dsh-memory'
 import type { MemoryCard, MemoryView } from '../views.js'
 
 /** What the Memory body needs beyond the standard view props. */

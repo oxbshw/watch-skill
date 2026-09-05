@@ -12,15 +12,15 @@
  *     may mint those (ADR-002);
  *   - `transport: 'mock'` reaches the UI, so no screen can imply a real engine.
  *
- * @module @watchskill/dsh-core-bridge/transport/mock
+ * @module @deepwatch/dsh-core-bridge/transport/mock
  */
 
-import type { CapabilityTruth, HandshakeResult, WatchResult } from '@watchskill/dsh-contracts'
+import type { CapabilityTruth, HandshakeResult, WatchResult } from '@deepwatch/dsh-contracts'
 import {
   EXPECTED_SCHEMA_DIGESTS,
   WATCH_PROTOCOL_VERSION,
   watchError,
-} from '@watchskill/dsh-contracts'
+} from '@deepwatch/dsh-contracts'
 import type { Transport, TransportEvent, TransportRequest } from '../transport.js'
 
 /** Capabilities the product declares, every one of them unproven here. */

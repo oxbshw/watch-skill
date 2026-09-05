@@ -7,14 +7,48 @@
  * be identical everywhere it appears, because it is a legal statement rather
  * than a design element.
  *
- * @module @watchskill/dsh-client-brand/identity
+ * @module @deepwatch/dsh-client-brand/identity
  */
 
 /** What the product is called. Never "DeepSeek" anything. */
-export const PRODUCT_NAME = 'Watch Workspace'
+export const PRODUCT_NAME = 'DeepWatch'
 
 /** The short form, for a tab title or a cramped header. */
 export const PRODUCT_SHORT_NAME = 'Watch'
+
+/**
+ * The document title this product should be showing.
+ *
+ * The `<title>` belongs to DSH's built HTML shell, which this distribution
+ * does not fork, and DSH's session layer rewrites it on every navigation as
+ * `<session> — <foundation>`. Left alone that reads
+ * `Say hello — DeepSeek Harness · DeepWatch`: two products named in one tab,
+ * and the wrong one first.
+ *
+ * So both names come off before ours goes back on, and ours comes off *first*
+ * — the observer that calls this fires on the change this makes, and a version
+ * that stripped only the foundation appended a second `· DeepWatch` each time.
+ *
+ * @param current - the title as it stands right now.
+ * @param foundation - the shell's own title, from before hydration.
+ */
+export function productTitle(current: string, foundation: string): string {
+  const ours = ` · ${PRODUCT_NAME}`
+  let text = current
+  while (text.endsWith(ours)) text = text.slice(0, -ours.length)
+  if (foundation !== '') {
+    for (const separator of [' — ', ' · ', ' - ', ' | ']) {
+      const suffix = `${separator}${foundation}`
+      if (text.endsWith(suffix)) {
+        text = text.slice(0, -suffix.length)
+        break
+      }
+    }
+  }
+  return text === '' || text === foundation || text === PRODUCT_NAME
+    ? PRODUCT_NAME
+    : `${text} · ${PRODUCT_NAME}`
+}
 
 /**
  * Attribution to the upstream project.
@@ -23,7 +57,7 @@ export const PRODUCT_SHORT_NAME = 'Watch'
  * says so; the alternative — quietly shipping someone else's foundation — is
  * both wrong and against the MIT notice this distribution inherits.
  */
-export const ATTRIBUTION = 'Built on DeepSeek Harness · Extended by Watch Skill'
+export const ATTRIBUTION = 'Built on DeepSeek Harness · Powered by Watch Skill'
 
 /**
  * The independence disclosure.
@@ -32,7 +66,7 @@ export const ATTRIBUTION = 'Built on DeepSeek Harness · Extended by Watch Skill
  * read as endorsement, and no such endorsement exists.
  */
 export const INDEPENDENCE =
-  'Watch Skill is an independent project and is not affiliated with or endorsed by DeepSeek.'
+  'DeepWatch and Watch Skill are independent projects and are not affiliated with or endorsed by DeepSeek.'
 
 /** One line for a tooltip or an empty state. */
 export const TAGLINE =

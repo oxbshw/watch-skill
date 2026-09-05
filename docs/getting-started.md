@@ -128,7 +128,7 @@ If you ran the installer, `watch-skill setup` already registered the MCP
 server — restart Claude Code and skip to the smoke test. Otherwise:
 
 ```bash
-claude mcp add watch-skill -- uv --directory "C:\path\to\watch-skill" run watch-skill serve
+claude mcp add watch-skill -- uv --directory "<watch-skill-checkout>" run watch-skill serve
 ```
 
 (or add it to `.mcp.json` in your project — see

@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "watch-skill"
-version = "1.3.0rc2"
+version = "1.4.0"
 description = "Give any agent a video input: watch, index, ask, and iterate on video via MCP, CLI, REST, and Python."
 # readme is produced by hatch-fancy-pypi-readme below: the file's relative
 # paths only resolve on GitHub, and PyPI renders the description standalone.
@@ -14,7 +14,7 @@ license = { text = "MIT" }
 authors = [{ name = "oxbshw" }]
 keywords = ["video", "agents", "mcp", "vision", "transcription", "ffmpeg", "yt-dlp"]
 classifiers = [
-    "Development Status :: 5 - Production/Stable",
+    "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
@@ -85,15 +85,12 @@ packages = ["src/watch_skill"]
 [tool.hatch.build.targets.sdist]
 include = [
     "/src",
-    "/tests",
     "/scripts",
     "/docs",
     "/examples",
-    "/adapters",
     "/skills",
     "/commands",
     "/templates",
-    "/benchmarks",
     "/app/src",
     "/app/scripts",
     "/app/package.json",
@@ -120,7 +117,37 @@ exclude = [
     "**/out",
     "**/__pycache__",
     "**/*.tsbuildinfo",
+    # DeepWatch is a different product with its own release, and
+    # `workspace/upstream/deepseek-harness/` inside it is a script-managed
+    # checkout of somebody else's source that git does not track. Both were
+    # reaching the sdist -- 332 files, most of them a vendored third party --
+    # because hatchling walks the filesystem and nothing here said not to.
+    "/workspace",
+    "**/upstream",
+    # Only stray READMEs survived the include list, which is not a decision
+    # anybody made. A directory in a source distribution should be there
+    # because somebody chose it.
+    "/benchmarks",
 ]
+
+# What the source distribution ships, and why each entry is in it.
+#
+# `src` and `pyproject.toml` build the package. `README`, `LICENSE`,
+# `CHANGELOG`, `SECURITY`, `CONTRIBUTING` and `llms.txt` are the documents a
+# source release is expected to carry. `docs`, `examples`, `skills`,
+# `templates` and `commands` are product content the package refers to --
+# `templates/agent-integration/AGENTS.example.md` is a file a user copies into
+# *their* project, not this repository's contributor guide, and the `.example`
+# in its name is what keeps the two from being read as one thing. `app` is the
+# workspace viewer's source. `scripts` are the maintenance entry points the
+# docs name.
+#
+# What is deliberately absent, each for its own reason: `workspace` is a
+# separate product, `upstream` is a vendored third party git does not track,
+# `tests` would publish credential-shaped fixtures for no one's benefit, and
+# `benchmarks` contributed nothing but stray READMEs.
+#
+# `tests/test_sdist_contents.py` holds this policy to it.
 
 # PyPI renders the long description on its own, so every relative path in
 # README.md would be a broken image or a dead link there. Rewrite them to

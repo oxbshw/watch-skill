@@ -55,6 +55,7 @@ A contract is written, **frozen**, and digested *before* the run it judges.
   "contract_id": "checkout-v1",
   "title": "Checkout writes a real order",
   "required_assurance": "isolated_local",
+  "allowed_origins": ["http://127.0.0.1:8080"],
   "checks": [
     {"id": "ledger_exists", "type": "file_exists", "required": true,
      "params": {"path": "orders.db"}},
@@ -73,6 +74,18 @@ A contract is written, **frozen**, and digested *before* the run it judges.
 watch-skill verify run checkout-v1.json --dir .
 ```
 
+`allowed_origins` is the list of origins the network checks in this contract
+may reach, and nothing else. It belongs to the contract rather than to a
+command-line flag for one reason: **the digest covers it**, so a contract
+cannot be widened after it was agreed to, and the evidence bundle records
+exactly what the run was permitted to reach. A permission handed in at run time
+would be a permission the frozen agreement never made.
+
+An origin that is not listed is not a failed check. It is an **inconclusive**
+one, named in the run's `limitations`, because nothing was learned about the
+target — "we checked and it is false" and "we could not check" are different
+answers and this product does not collapse them.
+
 Freezing computes a SHA-256 over the contract's canonical form (sorted keys,
 no insignificant whitespace). After that:
 
@@ -88,21 +101,35 @@ success while being measured against it is not being measured.
 
 `watch-skill verify checks` prints what this build can run.
 
+Fourteen of them, and this table is the whole list. It used to name nine and
+then say DOM-locator and browser-console assertions were "not implemented",
+which had stopped being true — a reader took the page at its word and did not
+reach for a check that was there.
+
 | Type | Decides |
 |---|---|
 | `file_exists` | A path is (or is not) a file |
 | `file_digest` | A file's SHA-256 equals an expected value |
+| `directory_manifest` | A directory holds exactly the files it should; missing and unexpected are reported apart, because one is work that did not happen and the other is work nobody described |
 | `json_value` | A JSON Pointer (RFC 6901) resolves to an expected value |
 | `json_schema` | A document validates against a schema |
 | `sqlite_query` | A parameterised SELECT returns expected rows or a row count |
 | `http_request` | Method/status/headers/body against an allowlisted origin |
+| `browser_dom` | A locator's presence, absence, visibility, text, value or attribute in a real page, loaded headless |
 | `command_exit` | A process exits with an expected code |
 | `numeric_invariant` | A number is within bounds, or equals a value within a tolerance |
 | `visual_absent` | A term does not appear in the OCR evidence |
+| `live_console` | Browser errors recorded in a live session's persisted event log |
+| `live_evidence` | A live-capture artifact is still in the rolling buffer, and its bytes digest to what was recorded |
+| `human_approval` | A named side effect was approved by a person, read from a store the acting agent cannot write |
 
-Not implemented: DOM locator, accessibility, browser-console and
-failed-request assertions, and test-report ingestion. They are absent rather
+Still absent: accessibility assertions and test-report ingestion. Absent rather
 than stubbed, because a check that always passes is worse than no check.
+
+Three of them can only answer INCONCLUSIVE where a weaker design would answer
+PASS. `live_console` with no browser evidence at all says so rather than
+reporting "no errors": an empty log is not proof a page threw nothing, it is
+proof nobody looked.
 
 ## Safety rules that are not negotiable
 
@@ -116,7 +143,9 @@ than stubbed, because a check that always passes is worse than no check.
   symlink out of the sandbox is caught by the same test as `../..`.
 - **HTTP origins are allowlisted, and the resolved addresses are checked.** A
   permitted hostname that resolves to `169.254.169.254` or loopback is refused
-  unless that origin was explicitly allowlisted. Redirects are not followed.
+  unless that origin was explicitly allowlisted in the contract's
+  `allowed_origins`. Redirects are not followed. A loopback dev server is a
+  legitimate target and is reached by naming it, not by an exception.
 - **The verifier subprocess gets an allowlisted environment.** Provider keys do
   not reach it. A denylist was not used: it would leak every key added after it
   was written.

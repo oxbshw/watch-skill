@@ -15,7 +15,7 @@
  *    fallback to guessing from the conversation. The model is told, in its
  *    system prompt, that this is the contract.
  *
- * @module @watchskill/dsh-tools
+ * @module @deepwatch/dsh-tools
  */
 
 import { randomUUID } from 'node:crypto'
@@ -23,22 +23,26 @@ import type { Context } from '@deepseek-ai/cordis'
 import s from '@deepseek-ai/schemastery'
 import { defineTool } from '@deepseek-ai/dsh-tools'
 import { applyLibrarySearch } from './library-search.js'
+import { applyReadPlane } from './read-plane.js'
+import { LibraryGenerations } from './library-generations.js'
 import type { GenericCallView, JsonValue } from '@deepseek-ai/dsh-tools'
 import type {} from '@deepseek-ai/dsh-system-prompt'
-import type {} from '@watchskill/dsh-core-bridge'
-import type { EvidenceRecord, VerificationOutcome, WatchResult } from '@watchskill/dsh-contracts'
+import type {} from '@deepwatch/dsh-core-bridge'
+import type { EvidenceRecord, VerificationOutcome, WatchResult } from '@deepwatch/dsh-contracts'
 import { SENSORY_GUIDANCE, applySensoryTools } from './sensory.js'
 import { applyMemory } from './memory.js'
 import { BROWSER_GUIDANCE, applyBrowserTools } from './browser.js'
 
 export { SENSORY_GUIDANCE, applySensoryTools } from './sensory.js'
 export { applyMemory } from './memory.js'
+export { LibraryGenerations } from './library-generations.js'
+export type { IndexGeneration, RefreshOutcome } from './library-generations.js'
 export { BROWSER_GUIDANCE, applyBrowserTools } from './browser.js'
 export type { BrowserConfig } from './browser.js'
 export type { SensoryConfig } from './sensory.js'
 
 export const name = 'watch-tools'
-export const inject = ['tools', 'watchCore', 'systemPrompt']
+export const inject = ['tools', 'watchCore', 'systemPrompt', 'llm', 'watchProvenance']
 
 /** Deployment policy for the Watch tool surface. */
 export interface Config {
@@ -62,6 +66,13 @@ export interface Config {
    * search, not one that guesses at a convenient directory.
    */
   readonly libraryRoots?: readonly string[]
+  /**
+   * Which workspace this host answers for.
+   *
+   * Read-plane cursors are bound to it, so a cursor issued here cannot be
+   * replayed against another workspace's snapshot.
+   */
+  readonly workspaceScope?: string
 }
 
 /** Schemastery validation for the tool-surface policy. */
@@ -69,7 +80,7 @@ export const Config: s<Config> = s.object({
   queryTimeoutMs: s.number().step(1).min(1_000).default(120_000),
   verifyTimeoutMs: s.number().step(1).min(1_000).default(60_000),
   readTimeoutMs: s.number().step(1).min(1_000).default(30_000),
-  liveStartTimeoutMs: s.number().step(1).min(1_000).default(60_000),
+  liveStartTimeoutMs: s.number().step(1).min(1_000).default(75_000),
   actTimeoutMs: s.number().step(1).min(1_000).default(60_000),
   observeTimeoutMs: s.number().step(1).min(1_000).default(30_000),
 })
@@ -318,7 +329,169 @@ export function apply(ctx: Context, config: Config): void {
   // Library search runs on the host because that is the only place that can
   // read the evidence store: a client plugin gets no config, and ctx.remote
   // is an event bus rather than a query client.
-  applyLibrarySearch(ctx, { roots: config.libraryRoots ?? [] })
+  const roots = config.libraryRoots ?? []
+  // One owner for the index, and it is the thing that can replace it. The
+  // tool and the read plane both read through it, so a refresh either side
+  // asks for is the same refresh and there is never a second index to drift.
+  const generations = new LibraryGenerations({ roots })
+  const library = applyLibrarySearch(ctx, { roots, generations })
+
+  // The same index, reachable by the surfaces as well as by the agent. A
+  // `conversation.view` entry is handed `{ inspect, onInspectDone }` and
+  // nothing else, so without this the Library mode has no way to obtain the
+  // records it renders and defaults to an empty array.
+  applyReadPlane(ctx, {
+    index: library.index,
+    scope: config.workspaceScope ?? 'default',
+    generations,
+  })
+
+  /**
+   * Index an execution receipt the moment the Host records one.
+   *
+   * The gap this closes: the evaluation produced 76 tool actions and a Library
+   * with nothing in it. Not because indexing failed — because nothing indexed a
+   * receipt until somebody pressed Refresh, and Refresh reads evidence roots on
+   * disk that did not contain an in-memory receipt from four seconds ago. A
+   * feature reachable only by winning that race is not reachable.
+   *
+   * A receipt is filed as a `document`, which is the least-wrong kind the
+   * source vocabulary already has for something textual, and tagged so it stays
+   * filterable without widening a closed union that the client's filters and
+   * the wire contract both depend on.
+   *
+   * `verdict` is deliberately null. A receipt is what happened; whether it was
+   * right is Core's answer and arrives, if it arrives, as an attestation.
+   */
+  /**
+   * What each receipt was indexed as, so a later verdict can be joined to it.
+   *
+   * Bounded by the same reasoning as the ledger it mirrors: an attestation
+   * arrives seconds after its receipt or not at all, so an entry older than the
+   * ledger's own limit has nothing left to join to.
+   */
+  const indexed = new Map<string, {
+    title: string
+    text: string
+    runId: string | null
+    observedAt: string | null
+    tags: readonly string[]
+  }>()
+
+  ;(ctx as unknown as { on(name: string, listener: (payload: unknown) => void): void })
+    .on('watch/execution-recorded', (payload) => {
+      const record = payload as {
+        idempotencyKey?: unknown
+        toolName?: unknown
+        sessionId?: unknown
+        startedAt?: unknown
+        inputSummary?: unknown
+        outputSummary?: unknown
+        sideEffect?: unknown
+        scope?: unknown
+        paths?: unknown
+        state?: unknown
+      }
+      const recordId = typeof record.idempotencyKey === 'string' ? record.idempotencyKey : null
+      if (recordId === null) return
+      const tool = typeof record.toolName === 'string' ? record.toolName : 'tool'
+      const paths = Array.isArray(record.paths) ? record.paths.filter(
+        (entry): entry is string => typeof entry === 'string') : []
+      generations.addLive({
+        recordId,
+        revisionId: recordId,
+        title: paths.length === 0 ? tool : `${tool} — ${paths.join(', ')}`,
+        kind: 'document',
+        // Searchable text, already redacted and bounded by the ledger that
+        // produced it. Nothing is re-derived here from anything unredacted.
+        text: [
+          tool,
+          typeof record.inputSummary === 'string' ? record.inputSummary : '',
+          typeof record.outputSummary === 'string' ? record.outputSummary : '',
+          ...paths,
+        ].join(' '),
+        source: null,
+        runId: typeof record.sessionId === 'string' ? record.sessionId : null,
+        observedAt: typeof record.startedAt === 'string' ? record.startedAt : null,
+        verdict: null,
+        tags: [
+          'execution-receipt',
+          `tool:${tool}`,
+          ...typeof record.sideEffect === 'string' ? [`effect:${record.sideEffect}`] : [],
+          ...typeof record.scope === 'string' ? [`scope:${record.scope}`] : [],
+          ...typeof record.state === 'string' ? [`state:${record.state}`] : [],
+        ],
+        evidenceIds: [],
+      })
+      indexed.set(recordId, {
+        title: paths.length === 0 ? tool : `${tool} — ${paths.join(', ')}`,
+        text: [
+          tool,
+          typeof record.inputSummary === 'string' ? record.inputSummary : '',
+          typeof record.outputSummary === 'string' ? record.outputSummary : '',
+          ...paths,
+        ].join(' '),
+        runId: typeof record.sessionId === 'string' ? record.sessionId : null,
+        observedAt: typeof record.startedAt === 'string' ? record.startedAt : null,
+        tags: [
+          'execution-receipt',
+          `tool:${tool}`,
+          ...typeof record.sideEffect === 'string' ? [`effect:${record.sideEffect}`] : [],
+          ...typeof record.scope === 'string' ? [`scope:${record.scope}`] : [],
+          ...typeof record.state === 'string' ? [`state:${record.state}`] : [],
+        ],
+      })
+    })
+
+  /**
+   * Put Core's verdict on the receipt it belongs to.
+   *
+   * The comment above says a receipt's verdict "arrives, if it arrives, as an
+   * attestation". It did arrive — `watch/attestation-recorded` carries Core's
+   * verdict, keyed by the same idempotency key the receipt was indexed under —
+   * and nothing was listening, so every record in the Library carried
+   * `verdict: null` for the whole life of the feature. The Library's own
+   * VERIFIED/FAILED filter could match nothing, and Compare, which ranks
+   * verdict-bearing records first, had none to rank.
+   *
+   * Re-indexing under the same `recordId` replaces the row; the `revisionId`
+   * moves so a reader can tell the answered record from the one that was filed
+   * before Core replied. A verdict is only ever written when Core returned one:
+   * a null stays null, because the absence of a verdict is the thing the
+   * product exists to keep distinguishable from a pass.
+   */
+  ;(ctx as unknown as { on(name: string, listener: (payload: unknown) => void): void })
+    .on('watch/attestation-recorded', (payload) => {
+      const attestation = payload as {
+        idempotencyKey?: unknown
+        coreVerdict?: unknown
+        verificationId?: unknown
+      }
+      const recordId = typeof attestation.idempotencyKey === 'string'
+        ? attestation.idempotencyKey
+        : null
+      const verdict = typeof attestation.coreVerdict === 'string' ? attestation.coreVerdict : null
+      if (recordId === null || verdict === null) return
+      const base = indexed.get(recordId)
+      if (base === undefined) return
+      generations.addLive({
+        recordId,
+        revisionId: `${recordId}#verdict`,
+        title: base.title,
+        kind: 'document',
+        // The verdict joins the searchable text so the Library's own filter and
+        // a person typing "VERIFIED" find the same rows.
+        text: `${base.text} ${verdict}`,
+        source: null,
+        runId: base.runId,
+        observedAt: base.observedAt,
+        verdict,
+        tags: [...base.tags, `verdict:${verdict}`],
+        evidenceIds: typeof attestation.verificationId === 'string'
+          ? [attestation.verificationId]
+          : [],
+      })
+    })
 
   ctx.tools.register(defineTool({
     name: 'watch_verify',
@@ -345,6 +518,24 @@ export function apply(ctx: Context, config: Config): void {
         items: { type: 'string' },
         description: 'Optional prior evidence to check the expectation against.',
       },
+      checks: {
+        type: 'array',
+        // A lossless JSON node per item rather than a spelled-out object: the
+        // `params` of a check vary by its type, Core owns those shapes and
+        // validates them, and a second schema here would be a second place for
+        // the two sides to disagree about what a check is.
+        items: { type: 'json' },
+        description:
+          'The executable checks that decide the verdict. An expectation without checks is a '
+          + 'sentence, and a sentence returns UNVERIFIED — which is the honest answer and not a '
+          + 'pass. Each check is `{ id, type, params }`. Types: file_exists `{path}`, '
+          + 'file_digest `{path, sha256}`, json_value `{path, pointer, equals}` with an RFC 6901 '
+          + 'pointer, command_exit `{command: [argv], cwd?, exit_code?}`, numeric_invariant, '
+          + 'directory_manifest, json_schema, sqlite_query, http_request. Paths are relative to '
+          + 'the workspace. Watch Core runs these itself, in its own isolated verifier — you are '
+          + 'naming the question, not answering it, and a check you write cannot see anything you '
+          + 'tell it.',
+      },
     },
     output: {
       ...JSON_OUTPUT,
@@ -367,6 +558,11 @@ export function apply(ctx: Context, config: Config): void {
           expectation: args.expectation,
           sourceId: args.source_id ?? null,
           evidenceIds: args.evidence_ids ?? [],
+          // Forwarded verbatim. Core validates the shapes, freezes the
+          // contract and refuses anything it cannot evaluate; a second
+          // validation here would be a second place for the two sides to
+          // disagree about what was asked.
+          checks: args.checks ?? [],
           // Minted here so the verdict, the receipt and the Trajectory record
           // all hang off one id the user can follow.
           verificationId: `ver_${randomUUID()}`,
@@ -409,3 +605,12 @@ function abortOf(exec: { readonly signal?: AbortSignal }): { signal?: AbortSigna
 export default { name: 'watch-tools', inject, apply }
 
 export * from './library-search.js'
+
+/**
+ * The read plane's public face.
+ *
+ * Exported because Typert analyses a package's public export graph: a Remote
+ * that is only reachable through an internal module is not discovered, and no
+ * host or client artifact is emitted for it.
+ */
+export * from './read-plane.js'

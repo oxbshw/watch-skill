@@ -22,12 +22,12 @@
  * real Obsidian installation opens the URI, and that is reported as
  * NOT MACHINE TESTED rather than assumed.
  *
- * @module @watchskill/dsh-adapters/obsidian
+ * @module @deepwatch/dsh-adapters/obsidian
  */
 
-import type { MemoryRecord } from '@watchskill/dsh-memory'
-import type { WikiPage, WikiProjection, ValidatedEdit } from '@watchskill/dsh-wiki'
-import { diffUserEdit, validateUserEdit } from '@watchskill/dsh-wiki'
+import type { MemoryRecord } from '@deepwatch/dsh-memory'
+import type { WikiPage, WikiProjection, ValidatedEdit } from '@deepwatch/dsh-wiki'
+import { diffUserEdit, validateUserEdit } from '@deepwatch/dsh-wiki'
 
 /** One file as it would sit in a vault. */
 export interface VaultFile {

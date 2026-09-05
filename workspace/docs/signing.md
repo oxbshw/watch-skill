@@ -66,7 +66,7 @@ npm run verify:signing
 
 Independently of any credential it validates that `build.appId` is a
 reverse-DNS identifier (a signature is bound to it), that `build.productName` is
-exactly `Watch Workspace`, and that `build.win.icon`, `build.mac.icon` and
+exactly `DeepWatch`, and that `build.win.icon`, `build.mac.icon` and
 `build.linux.icon` are all set.
 
 Then, for the current platform, it checks whether each secret above is present.

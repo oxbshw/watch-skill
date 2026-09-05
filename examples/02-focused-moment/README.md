@@ -37,11 +37,11 @@ transcript:
   [00:07] really really long trunks
   [00:12] and that's cool
 frames (open with any image viewer):
-  t=00:03  C:\Users\hp\.watch-skill\frames\4b0f48e4f4ae6e02\escalation\watch-skill-esc-plabq0tp\frame_0003.jpg
-  t=00:04  C:\Users\hp\.watch-skill\frames\4b0f48e4f4ae6e02\escalation\watch-skill-esc-plabq0tp\frame_0004.jpg
-  t=00:05  C:\Users\hp\.watch-skill\frames\4b0f48e4f4ae6e02\frame_0001.jpg
-  t=00:08  C:\Users\hp\.watch-skill\frames\4b0f48e4f4ae6e02\frame_0002.jpg
-  t=00:10  C:\Users\hp\.watch-skill\frames\4b0f48e4f4ae6e02\frame_0003.jpg
+  t=00:03  %USERPROFILE%\.watch-skill\frames\4b0f48e4f4ae6e02\escalation\watch-skill-esc-plabq0tp\frame_0003.jpg
+  t=00:04  %USERPROFILE%\.watch-skill\frames\4b0f48e4f4ae6e02\escalation\watch-skill-esc-plabq0tp\frame_0004.jpg
+  t=00:05  %USERPROFILE%\.watch-skill\frames\4b0f48e4f4ae6e02\frame_0001.jpg
+  t=00:08  %USERPROFILE%\.watch-skill\frames\4b0f48e4f4ae6e02\frame_0002.jpg
+  t=00:10  %USERPROFILE%\.watch-skill\frames\4b0f48e4f4ae6e02\frame_0003.jpg
 ```
 
 The `escalation\...` frames were densely re-sampled by a previous `ask`

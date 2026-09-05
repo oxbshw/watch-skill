@@ -175,7 +175,7 @@ const REQUIREMENTS = [
     ['tests/memory-product.test.mjs', 'tests/memory-rules.test.mjs', 'tests/security.test.mjs'], [], true),
 
   R('dod.surfaces-web', '25 / Product surfaces',
-    'Watch Workspace Web works local and single-user hosted.',
+    'DeepWatch Web works local and single-user hosted.',
     'PASS',
     'Local Web runs: the real DSH Web Host serving the Watch bundle on loopback, with Watch Core spawned as a child over stdio and the Watch client bundle served to the browser.',
     ['scripts/manual-profile.mjs', 'packages/watch/bundle/cordis.patch.yml'],
@@ -201,9 +201,9 @@ const REQUIREMENTS = [
     'One provider experience for all external connections, one Technology Center for local engines, unified Role Bindings for every capability.',
     'PASS',
     'Role bindings sit over DSH Models and Providers with no second credential store; the Technology Center owns local engine descriptors and lifecycle.',
-    ['packages/watch/technology/src/descriptor.ts'],
-    ['tests/technology.test.mjs'],
-    ['The DSH Settings surface that edits bindings is inherited from upstream; Watch adds no editor of its own, and none was exercised in a browser here.'], false),
+    ['packages/watch/technology/src/descriptor.ts', 'packages/watch/client-settings/src/client/role-bindings.tsx'],
+    ['tests/technology.test.mjs', 'tests/binding-flow.test.mjs', 'scripts/qa-e2e.mjs'],
+    ['The provider form remains DSH-owned; DeepWatch contributes the unified Role Bindings editor and tests it in the required browser journey.'], true),
 
   R('dod.ocr-optional', '25 / Product surfaces',
     'DeepSeek-OCR an optional worker with a revision pin, licence/provenance, resource receipt, and a usable CPU fallback.',
@@ -257,7 +257,7 @@ const REQUIREMENTS = [
   R('foundation.03-core-regression', '39.5.3',
     'Watch Core passes its regression gates and legacy surfaces are not broken.',
     'PASS', 'Full Python suite green against the repository-equivalent configuration.',
-    ['upstream/deepseek-harness.lock'], ['docs/release-candidate-audit.md'],
+    ['upstream/deepseek-harness.lock'], ['docs/history/release-candidate-audit-02343ca.md'],
     ['Run in the watch-skill repository; the count and exit code are recorded in the audit.'], true),
 
   R('foundation.04-first-journey', '39.5.4',

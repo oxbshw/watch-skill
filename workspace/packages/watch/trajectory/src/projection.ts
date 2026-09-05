@@ -11,7 +11,7 @@
  * makes that assertable rather than assumed — two runs over the same log
  * produce the same hash, and a change to what a record carries changes it.
  *
- * @module @watchskill/dsh-trajectory/projection
+ * @module @deepwatch/dsh-trajectory/projection
  */
 
 import type {

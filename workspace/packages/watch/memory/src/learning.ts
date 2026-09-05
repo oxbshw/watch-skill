@@ -26,7 +26,7 @@
  * alongside it, because the alternative is a system that learns its way past
  * its own guardrails one favourable trade at a time.
  *
- * @module @watchskill/dsh-memory/learning
+ * @module @deepwatch/dsh-memory/learning
  */
 
 /**

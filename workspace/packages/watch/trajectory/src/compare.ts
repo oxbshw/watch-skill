@@ -19,7 +19,7 @@
  * compared by revision, range and digest. Compare holds no evidence payloads,
  * so it cannot become a second place where evidence lives.
  *
- * @module @watchskill/dsh-trajectory/compare
+ * @module @deepwatch/dsh-trajectory/compare
  */
 
 import type { WatchTrajectoryRecord } from './events.js'

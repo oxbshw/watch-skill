@@ -1,9 +1,26 @@
 {
-  "name": "@watchskill/dsh-wiki",
-  "version": "0.1.0-preview.0",
+  "name": "@deepwatch/dsh-wiki",
+  "version": "0.1.0",
   "description": "Deterministic workspace wiki projections over the memory ledger",
   "type": "module",
   "license": "MIT",
+  "author": "Sayed Allam",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/oxbshw/watch-skill.git",
+    "directory": "workspace/packages/watch/wiki"
+  },
+  "homepage": "https://github.com/oxbshw/watch-skill/tree/main/workspace#readme",
+  "bugs": {
+    "url": "https://github.com/oxbshw/watch-skill/issues"
+  },
+  "keywords": [
+    "deepwatch",
+    "deepseek-harness",
+    "watch-skill",
+    "wiki",
+    "documentation"
+  ],
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
   "exports": {
@@ -17,7 +34,14 @@
     "lib/**/*.js",
     "lib/**/*.d.ts"
   ],
+  "sideEffects": false,
+  "engines": {
+    "node": "^22.19.0 || >=24.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "dependencies": {
-    "@watchskill/dsh-memory": "workspace:^"
+    "@deepwatch/dsh-memory": "workspace:^"
   }
 }

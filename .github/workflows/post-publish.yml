@@ -1,0 +1,143 @@
+name: Post-publish
+
+# What can only be checked after something has been published.
+#
+# `uvx --from "watch-skill[standard]"` resolves from PyPI. Before a release
+# lands there is nothing on PyPI for this candidate to resolve *to*, so the
+# job used to sit in the ordinary pull-request check list permanently skipped
+# — a required-looking context that never ran, next to jobs that did. A check
+# that is always grey teaches a reader to ignore grey.
+#
+# So the published smoke lives here, where it can only run when there is
+# something published to smoke: after a release publishes, or on an explicit
+# dispatch by whoever just published. The candidate equivalent — the same
+# assertions against the wheel this commit builds — stays in `Install`, where
+# it runs on every pull request.
+#
+# This workflow publishes nothing. It reads what is already on PyPI.
+#
+# It pins the version it is verifying rather than resolving "whatever is
+# newest", and that is not belt and braces.
+#
+# `published` used to fire *before* the upload it is meant to check: in
+# release.yml the GitHub Release was created by one job and PyPI received the
+# distributions from the next, so at the instant this workflow started, the
+# newest version on PyPI was still the previous release. Resolving "whatever is
+# newest" at that moment did not fail -- it succeeded against the wrong version
+# and reported green, which is the worst of the three outcomes.
+#
+# release.yml no longer completes its GitHub Release until PyPI has accepted
+# the upload, so the ordering defect is fixed at its source. The pin stays,
+# because two things are still true: PyPI accepts an upload before its CDN
+# serves the file, and a `workflow_dispatch` with a version typed into it must
+# verify *that* version. Reading the version off the tag is also what lets the
+# failure be honest -- "1.4.0 never appeared on PyPI" instead of a green run
+# against 1.3.0.
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: >-
+          The published version to verify, e.g. 1.4.0. Leave empty to take
+          whatever PyPI currently resolves as newest.
+        required: false
+        type: string
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  # Decide what is being verified before three runners start racing the upload.
+  version:
+    name: Resolve the version
+    runs-on: ubuntu-latest
+    outputs:
+      spec: ${{ steps.pick.outputs.spec }}
+      version: ${{ steps.pick.outputs.version }}
+    steps:
+      - name: Pick the version and wait for PyPI to serve it
+        shell: bash
+        run: |
+          set -euo pipefail
+          requested="${{ inputs.version }}"
+
+          # A release event knows exactly which version it is about, and the
+          # tag is the only trustworthy source for it.
+          if [ -z "$requested" ] && [ "${{ github.event_name }}" = "release" ]; then
+            tag="${{ github.event.release.tag_name }}"
+            requested="${tag#core-v}"
+            echo "release ${tag} -> version ${requested}"
+          fi
+
+          if [ -z "$requested" ]; then
+            # Dispatch with no version: smoke whatever PyPI currently serves as
+            # newest. Nothing is in flight, so there is nothing to wait for.
+            echo "no version pinned; verifying whatever PyPI resolves as newest"
+            echo "spec=watch-skill[standard]" >> "$GITHUB_OUTPUT"
+            echo "version=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # Up to ten minutes. PyPI accepts an upload before its CDN serves
+          # the file, so a release event can arrive ahead of the first
+          # successful resolve even now that the upload precedes it.
+          url="https://pypi.org/pypi/watch-skill/${requested}/json"
+          for attempt in $(seq 1 60); do
+            code=$(curl -sS -o /dev/null -w '%{http_code}' "$url" || echo 000)
+            if [ "$code" = "200" ]; then
+              echo "watch-skill ${requested} is on PyPI (after ${attempt} check(s))"
+              echo "spec=watch-skill[standard]==${requested}" >> "$GITHUB_OUTPUT"
+              echo "version=${requested}" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            echo "attempt ${attempt}: ${url} -> ${code}"
+            sleep 10
+          done
+
+          echo "::error::watch-skill ${requested} never appeared on PyPI."
+          echo "::error::Either the publish job failed or it is still awaiting approval."
+          exit 1
+
+  uvx:
+    name: uvx from PyPI
+    needs: version
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: astral-sh/setup-uv@v7
+        with:
+          python-version: "3.11"
+
+      # No checkout. The point is that a person with nothing but uv can run
+      # the published package, so a source tree on disk would weaken it.
+      - name: uvx resolves and runs the published package
+        shell: bash
+        run: |
+          set -euo pipefail
+          spec='${{ needs.version.outputs.spec }}'
+          requested='${{ needs.version.outputs.version }}'
+          echo "resolving $spec"
+          reported=$(uvx --from "$spec" watch-skill --version)
+          echo "reported: $reported"
+          test -n "$reported"
+          if [ -n "$requested" ]; then
+            test "$reported" = "$requested"
+          fi
+
+      - name: The published package carries the Bridge surface
+        shell: bash
+        run: |
+          set -euo pipefail
+          spec='${{ needs.version.outputs.spec }}'
+          uvx --from "$spec" watch-skill bridge --help > bridge-help.txt
+          grep -qi "bridge" bridge-help.txt

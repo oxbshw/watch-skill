@@ -22,7 +22,7 @@
  * turns every access check into a question about which identity is currently
  * in play, and the answer is wrong exactly once before it matters.
  *
- * @module @watchskill/dsh-tenancy/identity
+ * @module @deepwatch/dsh-tenancy/identity
  */
 
 /** A tenant: the boundary nothing crosses without an explicit share. */

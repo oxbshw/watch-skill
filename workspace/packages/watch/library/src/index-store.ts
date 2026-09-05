@@ -29,7 +29,7 @@
  * carries its own limit, and a caller can pass an `AbortSignal`. An unbounded
  * search over a large corpus is a denial of service you wrote yourself.
  *
- * @module @watchskill/dsh-library/index-store
+ * @module @deepwatch/dsh-library/index-store
  */
 
 import type { SearchHit, SearchResult } from './search.js'
@@ -258,6 +258,19 @@ export class LibraryIndex {
 
   get health(): IndexHealth {
     return this.#health
+  }
+
+  /**
+   * One record by id, or undefined.
+   *
+   * A direct lookup rather than a search. The read plane's `get` was briefly
+   * implemented as a search with `limit: 1` whose single result was then
+   * compared to the requested id, which reports every record except the
+   * first-ranked one as missing. `#documents` is already keyed by record id;
+   * this is the accessor that key exists for.
+   */
+  record(recordId: string): IndexableRecord | undefined {
+    return this.#documents.get(recordId)
   }
 
   get size(): number {

@@ -25,11 +25,22 @@ Two fixtures come out of it:
     checked against each other.
 
 The MP4s are **not committed**. They are a few hundred kilobytes each and
-regenerate byte-for-byte deterministically from this script on any machine
-with ffmpeg (plus a system TTS voice for the speech fixture), which is
-cheaper than carrying media in the tree. ``manifest.json`` *is* committed:
-it is the ground truth, and it records the digests of the media it was
-proven against so a stale fixture cannot be scored as a fresh one.
+regenerate from this script in about ten seconds on any machine with ffmpeg
+(plus a system TTS voice for the speech fixture), which is cheaper than
+carrying media in the tree. ``manifest.json`` *is* committed: it is the ground
+truth, and it records the digests of the media it was proven against so a
+stale fixture cannot be scored as a fresh one.
+
+What regenerates identically is the **content**: every cut lands on the same
+frame, every event keeps its colour identity, every cue keeps its interval,
+because this script chose all of them. The **bytes** do not. Encoding the same
+frames with a different ffmpeg produces a different file -- ffmpeg 9 wrote
+visual_events.mp4 fifteen bytes larger than the build the committed manifest
+records, with a different digest and the same ground truth. So treat a digest
+mismatch as "regenerated here" rather than "corrupt", and re-record the
+manifest only alongside the measurements it is the truth for: the digests
+exist to stop a stale fixture being scored as a fresh one, not to assert that
+two machines encode alike.
 
 Ground truth here is verified, not asserted. Before the manifest is
 written, every occurrence is sampled back out of the encoded video and its
@@ -401,7 +412,9 @@ def extract_frame_at_index(video: Path, frame_index: int, out: Path) -> None:
     _run([
         _ffmpeg(), "-y", "-hide_banner", "-loglevel", "error",
         "-i", str(video),
-        "-vf", f"select=eq(n\\,{frame_index})", "-vsync", "0",
+        "-vf", f"select=eq(n\\,{frame_index})",
+        # See realmedia.py: `-vsync` is gone in ffmpeg 9.
+        "-fps_mode:v", "passthrough",
         "-frames:v", "1", "-q:v", "2", str(out),
     ])
 

@@ -20,14 +20,14 @@
  * would teach them it can, and is broken. Both are worse than one line saying
  * the engine is not connected and what to do about it.
  *
- * @module @watchskill/dsh-workspace/modes
+ * @module @deepwatch/dsh-workspace/modes
  */
 
 import type {
   CapabilityStatus,
   CapabilityTruth,
   WatchCoreHealth,
-} from '@watchskill/dsh-contracts'
+} from '@deepwatch/dsh-contracts'
 
 /** The product modes, in the order they are presented. */
 export type WorkspaceMode =

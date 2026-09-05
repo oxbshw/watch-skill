@@ -20,49 +20,129 @@
 
 name: workspace
 
+# Triggers on everything, and decides inside itself what to run.
+#
+# This used to filter on `paths: workspace/**`. A workflow that does not
+# trigger produces no status at all -- not a failing one, an absent one -- so a
+# Core-only pull request protected on a check inside this workflow would wait
+# forever with nothing to explain the wait. The filtering moved into `changes`
+# below, which always runs.
 on:
+  # `main` only, deliberately. This used to be `['**']`, which produced a
+  # second full suite for every branch commit that already had a pull request
+  # — two runs emitting the same required context, `workspace-required`, for
+  # one SHA. Two conclusions for one context is a check nobody can read, and
+  # it is what made a cancelled push run sit beside a successful pull-request
+  # run for the same commit. The pull request is the canonical execution;
+  # `workflow_dispatch` is how a full run is forced without one.
   push:
-    branches: ['**']
-    paths:
-      - 'workspace/**'
-      - '.github/workflows/workspace-ci.yml'
+    branches: [main]
   pull_request:
-    paths:
-      - 'workspace/**'
-      - '.github/workflows/workspace-ci.yml'
   workflow_dispatch:
 
 # Pinned, not floating. A toolchain that drifts turns a red build into a
 # question about the runner instead of a question about the change.
 #
-# NODE_VERSION is the floor declared in package.json `engines`. Local
-# validation for this release candidate ran on 22.18.0, which is *below* that
-# floor; CI holds the declared contract rather than the machine's accident.
+# NODE_VERSION is the floor declared in package.json `engines`, which CI holds
+# rather than whatever a contributor's machine happens to run.
 env:
   NODE_VERSION: '22.19.0'
   PNPM_VERSION: '10.29.1'
 
+# Two runs of one workflow may only cancel each other when they are the same
+# kind of run for the same thing, and never on a release branch.
+#
+# This was one line, `${{ github.workflow }}-${{ github.ref }}`, with
+# `cancel-in-progress: true`. For a branch push and a `workflow_dispatch` on
+# that same branch `github.ref` is identical, so both landed in one group and
+# the later run killed the earlier one. On 2026-09-03 a dispatch created at
+# 11:48:51 cancelled the push run created at 11:48:33 for the same commit:
+# eight release-critical jobs went to `cancelled` mid-flight and
+# `workspace-required` failed, correctly, on dependencies that never finished.
+# The pull_request run survived only because its ref is `refs/pull/N/merge`.
+#
+# `github.event_name` in the group keeps the three kinds apart. The guard
+# below then removes automatic cancellation entirely on a release branch,
+# where a half-finished matrix is not evidence and a queued one costs only
+# time. Manual cancellation is unaffected.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: >-
+    ${{ !startsWith(github.ref, 'refs/heads/release/')
+        && !startsWith(github.head_ref, 'release/') }}
 
 jobs:
+  # Which half changed. Always runs, so `workspace-required` always has
+  # something to gather. The classification lives in .github/changed-half.mjs,
+  # where it is tested against the cases a monorepo actually sees.
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      core: ${{ steps.classify.outputs.core }}
+      workspace: ${{ steps.classify.outputs.workspace }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Classify the change
+        id: classify
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+          HEAD: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          # Three ways there is nothing to compare against, and all three run
+          # everything: an unnecessary matrix costs minutes, a wrongly skipped
+          # one costs a defect reaching main.
+          #
+          #   - a manual dispatch has no diff at all;
+          #   - a first push to a branch reports an all-zero "before";
+          #   - a force-push reports a "before" that is no longer in the
+          #     repository, because the commit it names was rewritten. That one
+          #     used to be fatal: `git diff` exited 128 with "bad object" and
+          #     the required status went red for a reason that had nothing to
+          #     do with the change. An unreachable base is an unknown base, not
+          #     an error.
+          unclassifiable=''
+          if [ "$EVENT" = "workflow_dispatch" ] || [ -z "${BASE:-}" ] \
+            || [ "$BASE" = "0000000000000000000000000000000000000000" ]; then
+            unclassifiable='no comparable base'
+          elif ! git cat-file -e "${BASE}^{commit}" 2>/dev/null; then
+            unclassifiable="the base $BASE is not in this repository (rewritten history)"
+          fi
+          if [ -n "$unclassifiable" ]; then
+            echo "$unclassifiable; running everything"
+            {
+              echo "core=true"
+              echo "workspace=true"
+            } | tee -a "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git diff --name-only "$BASE" "$HEAD" > changed.txt
+          echo "changed files:"
+          cat changed.txt
+          node .github/changed-half.mjs --stdin < changed.txt
+
   # Everything whose answer is the same on every platform: types, lint, unit
   # tests, composition, and the generated-artifact freshness gates. Run once,
   # because running it three times costs three times as much to learn one fact.
   check:
+    needs: changes
+    if: needs.changes.outputs.workspace == 'true'
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: workspace
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
         with:
           version: ${{ env.PNPM_VERSION }}
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: ${{ env.NODE_VERSION }}
           # Keyed on the lockfile, so a dependency change cannot be served a
@@ -86,7 +166,7 @@ jobs:
       - name: Gates
         run: npm run check
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: failure()
         with:
           name: check-failure
@@ -95,8 +175,215 @@ jobs:
             workspace/**/*.log
           retention-days: 7
 
+  # Who a commit says it is from.
+  #
+  # Its own job because it needs the branch's history, and the other jobs
+  # deliberately take a shallow checkout — a gate that needed `fetch-depth: 0`
+  # everywhere would slow every one of them down to check a property of the
+  # commits rather than of the code.
+  #
+  # It reads commit metadata only. The repository's documentation discusses
+  # Claude Code as a supported integration, which is a product fact; this is
+  # about who a commit claims to be from.
+  commit-metadata:
+    needs: changes
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: workspace
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: No assistant attribution in commit metadata
+        run: node scripts/verify-commits.mjs
+
+  # The build, from a checkout that has never been built.
+  #
+  # `check` and `platform` both start on a fresh runner, which sounds like this
+  # and is not: each builds once, so their first compilation is also their only
+  # one. Neither can observe the state a contributor's machine is in — full of
+  # ignored build output that a compilation happily resolves — and neither can
+  # tell an idempotent build from one that only works the first time.
+  #
+  # That gap shipped a red pipeline. A client half imported
+  # `@deepwatch/dsh-tools/remote`, which is generated, ignored, and therefore
+  # invisible to `git status`. `npm run check` passed locally with 1309 tests
+  # green while every CI job failed on TS2307 for a module plainly present in
+  # the author's tree.
+  #
+  # So this builds a copy containing only what git carries, twice, and checks
+  # that the second build changes nothing. It is its own job rather than a line
+  # in `npm run check` because its subject is a different tree — and because
+  # when it fails, "the cold build is broken" should be the name on the failure
+  # rather than a step buried inside a suite.
+  cold-build:
+    needs: changes
+    if: needs.changes.outputs.workspace == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: workspace
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: pnpm/action-setup@v6
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+          cache-dependency-path: workspace/pnpm-lock.yaml
+
+      # The gate installs into its own copy. This install is what the gate
+      # itself needs to run, and it warms the store that copy installs from.
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Cold build
+        run: npm run verify:clean-build
+
+  # What a publish would actually upload.
+  #
+  # `npm run check` measures the workspace from inside it, where a workspace
+  # link or a path alias can make a broken package look whole. This packs the
+  # twenty tarballs, installs them into a project that has never seen this
+  # repository, and runs the CLI through every runner. Nothing is published:
+  # the release workflow is the only thing that publishes, and it has never
+  # run.
+  packed-artifacts:
+    needs: changes
+    if: needs.changes.outputs.workspace == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: workspace
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: pnpm/action-setup@v6
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+          cache-dependency-path: workspace/pnpm-lock.yaml
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        run: npm run build
+
+      # `verify:release-sequence` runs `release:artifacts` itself, and checks
+      # the worktree before, between and after the commands the release guide
+      # gives in that order. Packing used to write a tracked file, so the guide's
+      # second command refused a dirty tree — a defect no job could see, because
+      # the jobs that packed never looked at `git status` afterwards.
+      - name: Pack, install from the tarballs, run every runner, keep the tree clean
+        run: npm run verify:release-sequence
+
+      - name: Two packs of this commit produce the same twenty archives
+        run: npm run verify:pack-reproducible
+
+      # With tarballs on disk, this also reads every document inside them --
+      # which is the copy a person sees on the registry page.
+      - name: Nothing stale, unfinished or personal on the release surface
+        run: npm run verify:release-surface
+
+  # The real Web journey: stock DSH Host, artifact-built DeepWatch profile,
+  # packed Watch Core and an OpenRouter-compatible loopback provider. The
+  # uploaded report is intentionally smaller than the local diagnostic set.
+  browser-e2e:
+    needs: changes
+    if: needs.changes.outputs.workspace == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: workspace
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: pnpm/action-setup@v6
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+          cache-dependency-path: workspace/pnpm-lock.yaml
+
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+
+      - name: Install and build
+        run: |
+          pnpm install --frozen-lockfile
+          npm run build
+          npm run pack
+
+      - name: Install packed Watch Core browser runtime
+        working-directory: .
+        run: |
+          set -euo pipefail
+          core_root="$RUNNER_TEMP/deepwatch-e2e-core"
+          uv build --wheel --out-dir "$core_root/dist"
+          wheel=$(find "$core_root/dist" -maxdepth 1 -name '*.whl' -print -quit)
+          test -n "$wheel"
+          uv venv "$core_root/venv"
+          uv pip install --python "$core_root/venv" "${wheel}[loop]"
+          "$core_root/venv/bin/python" -m playwright install --with-deps chromium
+          echo "WATCH_CORE_BIN=$core_root/venv/bin/watch-skill" >> "$GITHUB_ENV"
+
+      - name: Build the fresh artifact profile
+        env:
+          WATCH_MANUAL_ROOT: ${{ runner.temp }}/deepwatch-e2e-profile
+        run: node scripts/manual-profile.mjs --rebuild --from-artifacts
+
+      - name: Browser journey
+        env:
+          WATCH_MANUAL_ROOT: ${{ runner.temp }}/deepwatch-e2e-profile
+        run: |
+          set -euo pipefail
+          dsh_home="$WATCH_MANUAL_ROOT/dsh-home"
+          cli=$(node -p "require('$dsh_home/manual-profile.json').cliEntry")
+          overlay=$(node -p "require('$dsh_home/manual-profile.json').overlay")
+          DSH_HOME="$dsh_home" node "$cli" --profile web --patch "$overlay" \
+            --no-open --host 127.0.0.1 --port 8931 > "$RUNNER_TEMP/deepwatch-e2e-host.log" 2>&1 &
+          host_pid=$!
+          trap 'kill "$host_pid" 2>/dev/null || true; wait "$host_pid" 2>/dev/null || true' EXIT
+          ready=0
+          for attempt in $(seq 1 120); do
+            if curl --fail --silent http://127.0.0.1:8931/ >/dev/null; then ready=1; break; fi
+            sleep 1
+          done
+          test "$ready" -eq 1
+          xvfb-run --auto-servernum node scripts/qa-e2e-run.mjs \
+            --url http://127.0.0.1:8931 --home "$WATCH_MANUAL_ROOT" --out qa/e2e
+
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: browser-e2e-${{ runner.os }}
+          path: workspace/qa/e2e/ci-report.json
+          if-no-files-found: error
+          retention-days: 7
+
   # The parts only the operating system itself can answer.
   platform:
+    needs: changes
+    if: needs.changes.outputs.workspace == 'true'
     strategy:
       # Never cancel the siblings on one failure. "It broke on macOS" and "it
       # broke everywhere" are different findings, and fail-fast hides which.
@@ -108,13 +395,13 @@ jobs:
       run:
         working-directory: workspace
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
         with:
           version: ${{ env.PNPM_VERSION }}
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
@@ -122,6 +409,19 @@ jobs:
 
       - name: Install
         run: pnpm install --frozen-lockfile
+
+      # The same step the `check` job runs, and for the same reason: several
+      # tests read the pinned DSH source rather than a description of it, and a
+      # fresh clone has no checkout because `upstream/deepseek-harness/` is
+      # script-managed and never vendored.
+      #
+      # It was missing here, so `default-model.test.mjs` failed on all three
+      # runners with `ENOENT ... cordis.patch.yml` — a red platform job that
+      # said nothing about any platform. `check` had the step and passed, which
+      # is exactly why it went unnoticed: the green job was the one that could
+      # not have caught it.
+      - name: Pinned upstream baseline
+        run: node scripts/upstream-sync.mjs
 
       - name: Build
         run: npm run build
@@ -134,8 +434,96 @@ jobs:
       - name: Signing configuration
         run: npm run verify:signing
 
+      # Watch Core, so `core-integration.test.mjs` runs the real engine instead
+      # of skipping. That suite is the only thing in the repository that proves
+      # the two halves of the product agree -- framing, protocol negotiation,
+      # contract digests and capability truth, across two languages and two
+      # processes -- and every other Bridge test drives a JavaScript fixture
+      # that agrees with this build by construction.
+      #
+      # It skipped for the whole life of the branch, silently, because no CI
+      # job had ever installed Core. A skip that reads as a pass is how the
+      # Bridge came to be described by the architecture and absent from the
+      # engine.
+      - name: Install Watch Core
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+
+      - name: Build and install Watch Core
+        working-directory: .
+        shell: bash
+        run: |
+          uv venv .venv-core
+          uv pip install --python .venv-core --quiet .
+          # `$GITHUB_WORKSPACE`, not `$PWD`. Bash on a Windows runner reports
+          # `/d/a/watch-skill/...`, which is an MSYS path that Node's `spawn`
+          # cannot resolve -- the whole suite failed there with ENOENT on a
+          # file that was sitting exactly where the message said it was.
+          # GitHub sets GITHUB_WORKSPACE to the native path on every platform.
+          root="$GITHUB_WORKSPACE"
+
+          # Two more installs, outside the working tree, because the packed
+          # suite asks a different question than the ordinary one. A developer
+          # venv is an install of the *source*; it can import a module the
+          # wheel does not ship, and has. `packed` is the wheel a user would
+          # download, and `nobridge` is that same wheel with the command
+          # deleted from the installed package -- a Core predating the Bridge
+          # surface rather than a fixture imitating one.
+          outside="$(dirname "$root")/watch-core-ci"
+          mkdir -p "$outside"
+          uv build --wheel --out-dir "$outside/dist"
+          uv venv "$outside/packed"
+          wheel=$(find "$outside/dist" -maxdepth 1 -name '*.whl' -print -quit)
+          test -n "$wheel"
+          uv pip install --python "$outside/packed" --quiet "${wheel}[loop]"
+          uv venv "$outside/nobridge"
+          uv pip install --python "$outside/nobridge" --quiet "$wheel"
+          python scripts/disable_bridge_command.py "$outside/nobridge"
+
+          exe() {
+            if [ -x "$1/bin/watch-skill" ]; then echo "$1/bin/watch-skill"
+            else echo "$1/Scripts/watch-skill.exe"; fi
+          }
+          {
+            echo "WATCH_CORE_COMMAND=$(exe "$root/.venv-core")"
+            echo "WATCH_CORE_PACKED=$(exe "$outside/packed")"
+            echo "WATCH_CORE_NO_BRIDGE=$(exe "$outside/nobridge")"
+            # This job provisions the engine, so its packed suite may not skip.
+            echo "WATCH_CORE_PACKED_REQUIRED=1"
+          } >> "$GITHUB_ENV"
+
+          # Verify the provisioning, loudly.
+          #
+          # The packed suite skips itself when it cannot find a Core with a
+          # `bridge` command, and a skip reads as a pass: the whole matrix was
+          # green while that suite ran nowhere, twice.
+          #
+          # Checked in Python rather than with `grep`. The engine renders help
+          # through Rich, and reading it back through a pipe depends on the
+          # console encoding that pipe negotiates -- the word was plainly in
+          # the output and the pipeline did not find it.
+          python scripts/disable_bridge_command.py --verify-has-bridge "$(exe "$outside/packed")"
+          python scripts/disable_bridge_command.py --verify-lacks-bridge "$(exe "$outside/nobridge")"
+
+          packed_python() {
+            if [ -x "$outside/packed/bin/python" ]; then echo "$outside/packed/bin/python"
+            else echo "$outside/packed/Scripts/python.exe"; fi
+          }
+          if [ "$RUNNER_OS" = "Linux" ]; then
+            "$(packed_python)" -m playwright install --with-deps chromium
+          else
+            "$(packed_python)" -m playwright install chromium
+          fi
+
       - name: Tests
         run: npm test
+
+      # A gate that verifies must not also write. The SBOM used to enumerate
+      # node_modules, so Linux and Windows each rewrote the other's entries and
+      # nobody noticed, because nothing ever looked at the tree afterwards.
+      - name: The gates changed nothing
+        run: git diff --exit-code
 
       # Electron ships chrome-sandbox without the root ownership and setuid bit
       # the SUID sandbox requires, and refuses to start rather than run
@@ -160,7 +548,7 @@ jobs:
         if: runner.os != 'Linux'
         run: node scripts/desktop-smoke.mjs
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: failure()
         with:
           name: platform-failure-${{ matrix.os }}
@@ -168,3 +556,47 @@ jobs:
             workspace/**/*.log
             workspace/qa/**
           retention-days: 7
+
+  # The always-present Workspace status, and the context branch protection
+  # requires.
+  #
+  # A required check that is skipped never reports at all, and a branch
+  # protected on a check that never reports can never merge. So the required
+  # context is this job rather than the matrix beneath it: it runs on every
+  # push and every pull request whatever changed, and passes only if nothing it
+  # gathered failed. A skipped matrix passes only when the detector said the
+  # Workspace was unaffected -- a job skipped for any other reason is a defect
+  # in this workflow, not a change that needed no testing.
+  workspace-required:
+    if: always()
+    needs: [changes, check, cold-build, commit-metadata, packed-artifacts, browser-e2e, platform]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Gather the results
+        env:
+          DETECTOR: ${{ needs.changes.result }}
+          EXPECTED: ${{ needs.changes.outputs.workspace }}
+          RESULTS: ${{ toJSON(needs) }}
+        run: |
+          set -euo pipefail
+          echo "$RESULTS"
+
+          if [ "$DETECTOR" != "success" ]; then
+            echo "::error::the change detector did not succeed ($DETECTOR)"
+            exit 1
+          fi
+
+          # `grep -q ... && exit 1` would fail the step on a green run: when
+          # grep matches nothing it exits 1, and that becomes the step's status
+          # under `bash -e`. The condition has to be a real `if`.
+          if printf '%s' "$RESULTS" | grep -qE '"result": *"(failure|cancelled)"'; then
+            echo "::error::a required workspace job failed or was cancelled"
+            exit 1
+          fi
+
+          if [ "$EXPECTED" = "true" ] && printf '%s' "$RESULTS" | grep -qE '"result": *"skipped"'; then
+            echo "::error::the Workspace changed, so no Workspace job may be skipped"
+            exit 1
+          fi
+
+          echo "every workspace job succeeded, or was skipped because the Workspace did not change"

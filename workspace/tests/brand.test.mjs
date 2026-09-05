@@ -20,9 +20,10 @@ import {
   PRODUCT_NAME,
   STATUS_TONE,
   isSuccessTone,
+  productTitle,
   tokenFor,
   toneFor,
-} from '@watchskill/dsh-client-brand'
+} from '@deepwatch/dsh-client-brand'
 
 describe('the success tone', () => {
   test('exactly one status reaches it, and it is VERIFIED', () => {
@@ -86,9 +87,60 @@ describe('tokens, not hex', () => {
   })
 })
 
+describe('the document title', () => {
+  // DSH's shell owns the `<title>` and its session layer rewrites it as
+  // `<session> — DeepSeek Harness`. A tab that then reads
+  // `Say hello — DeepSeek Harness · DeepWatch` names two products, and the one
+  // the person opened comes second.
+  const FOUNDATION = 'DeepSeek Harness'
+
+  test('the foundation name comes off before ours goes on', () => {
+    assert.equal(
+      productTitle(`Say hello — ${FOUNDATION}`, FOUNDATION),
+      'Say hello · DeepWatch')
+  })
+
+  test('a bare shell title becomes the product name alone', () => {
+    assert.equal(productTitle(FOUNDATION, FOUNDATION), 'DeepWatch')
+    assert.equal(productTitle('', FOUNDATION), 'DeepWatch')
+  })
+
+  test('applying it twice changes nothing', () => {
+    // The observer that calls this fires on the change it makes. A version
+    // that only stripped the foundation appended another ` · DeepWatch` every
+    // time it ran, and the tab grew without limit.
+    const once = productTitle(`Say hello — ${FOUNDATION}`, FOUNDATION)
+    assert.equal(productTitle(once, FOUNDATION), once)
+    assert.equal(productTitle(productTitle(once, FOUNDATION), FOUNDATION), once)
+  })
+
+  test('a title already carrying two copies is repaired, not extended', () => {
+    assert.equal(
+      productTitle('Say hello · DeepWatch · DeepWatch', FOUNDATION),
+      'Say hello · DeepWatch')
+  })
+
+  test('a session title that merely mentions the foundation is kept', () => {
+    // Only a trailing suffix is the shell's; the same words inside a session
+    // title are the person's own text.
+    assert.equal(
+      productTitle(`${FOUNDATION} notes — ${FOUNDATION}`, FOUNDATION),
+      `${FOUNDATION} notes · DeepWatch`)
+  })
+
+  test('every separator DSH might use is handled', () => {
+    for (const separator of [' — ', ' · ', ' - ', ' | ']) {
+      assert.equal(
+        productTitle(`Say hello${separator}${FOUNDATION}`, FOUNDATION),
+        'Say hello · DeepWatch',
+        `${separator} was not recognised`)
+    }
+  })
+})
+
 describe('identity and attribution', () => {
   test('the product is named Watch, not DeepSeek anything', () => {
-    assert.equal(PRODUCT_NAME, 'Watch Workspace')
+    assert.equal(PRODUCT_NAME, 'DeepWatch')
     assert.ok(!PRODUCT_NAME.toLowerCase().includes('deepseek'))
   })
 
