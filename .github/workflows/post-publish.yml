@@ -61,19 +61,41 @@ jobs:
     outputs:
       spec: ${{ steps.pick.outputs.spec }}
       version: ${{ steps.pick.outputs.version }}
+      skip: ${{ steps.pick.outputs.skip }}
     steps:
       - name: Pick the version and wait for PyPI to serve it
+        id: pick
         shell: bash
         run: |
           set -euo pipefail
           requested="${{ inputs.version }}"
 
           # A release event knows exactly which version it is about, and the
-          # tag is the only trustworthy source for it.
-          if [ -z "$requested" ] && [ "${{ github.event_name }}" = "release" ]; then
+          # tag is the only trustworthy source for it -- but only if the tag
+          # belongs to this train. Two products release from this repository
+          # and `release: published` carries no filter, so a `deepwatch-v*`
+          # release reached this job too. `${tag#core-v}` strips nothing from
+          # a tag that does not start with it, so the version became the
+          # literal string `deepwatch-v0.1.0`, and the loop below spent ten
+          # minutes asking PyPI for it before failing with "watch-skill
+          # deepwatch-v0.1.0 never appeared on PyPI" -- a red check on a
+          # release that had done nothing wrong.
+          if [ "${{ github.event_name }}" = "release" ]; then
             tag="${{ github.event.release.tag_name }}"
-            requested="${tag#core-v}"
-            echo "release ${tag} -> version ${requested}"
+            case "$tag" in
+              core-v*) ;;
+              *)
+                echo "${tag} is not a Watch Core release; nothing on PyPI changed."
+                echo "spec=" >> "$GITHUB_OUTPUT"
+                echo "version=" >> "$GITHUB_OUTPUT"
+                echo "skip=true" >> "$GITHUB_OUTPUT"
+                exit 0
+                ;;
+            esac
+            if [ -z "$requested" ]; then
+              requested="${tag#core-v}"
+              echo "release ${tag} -> version ${requested}"
+            fi
           fi
 
           if [ -z "$requested" ]; then
@@ -108,6 +130,9 @@ jobs:
   uvx:
     name: uvx from PyPI
     needs: version
+    # A release from the other train resolved no version, and there is nothing
+    # for three runners to install.
+    if: needs.version.outputs.skip != 'true'
     strategy:
       fail-fast: false
       matrix:

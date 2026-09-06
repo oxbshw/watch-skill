@@ -2,10 +2,34 @@
 /**
  * One-time npm bootstrap for the first @deepwatch publication.
  *
- * Dry-run is the default and never contacts npm. `--check-access` performs
- * the read-only identity/organisation probes. Publishing additionally needs
+ * This exists because of an ordering npm imposes and nothing here can avoid:
+ * a Trusted Publisher is configured *on a package*, and a package that has
+ * never been published has no page to configure it on. `release-deepwatch.yml`
+ * has no token path at all, deliberately — so the very first version of each
+ * of the twenty has to be uploaded by the release owner, from a machine, with
+ * an ordinary authenticated npm session. Every publication after that one goes
+ * through the workflow, and this script is never run again.
+ *
+ * Dry-run is the default and never contacts npm. `--check-access` performs the
+ * read-only identity and organisation probes. Publishing additionally needs
  * both `--publish` and `--confirm-first-publish`; there is intentionally no
  * environment-variable shortcut.
+ *
+ * **The registry decision is not made here.** It was, once, and it was made
+ * badly: `npm view <name>@<version>` was run, a zero exit meant "already
+ * published, skip" and any non-zero exit meant "absent, publish". Both halves
+ * are wrong in a way that only shows up on a bad day. A version that exists
+ * with *different bytes* was skipped silently, shipping a scope whose halves
+ * came from different commits; and a network blip, an expired credential or a
+ * registry 503 was read as proof of absence, which is how an outage turns into
+ * twenty duplicate uploads. `publish-plan.mjs` already asks the right question
+ * — it compares the registry's integrity against the tarball this run would
+ * upload, and distinguishes absence from failure by npm's own `E404` — so this
+ * script asks it rather than keeping a second, worse opinion.
+ *
+ * One policy, in one place: **publish what is absent, skip what is
+ * demonstrably identical, refuse what conflicts, and stop on anything it
+ * cannot tell apart.**
  */
 
 import { spawnSync } from 'node:child_process'
@@ -15,6 +39,7 @@ import { basename, dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { resolveNpm } from './lib/process.mjs'
+import { buildPlan } from './publish-plan.mjs'
 import { publishOrder } from './publish-order.mjs'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
@@ -56,6 +81,40 @@ function run(command, args, options = {}) {
 }
 
 /**
+ * npm's own words, with anything secret taken out of them.
+ *
+ * The previous version captured npm's output and threw it away, then told the
+ * operator to "authenticate with a short-lived, 2FA-protected publisher token"
+ * — the same sentence for an expired session, a 403 from the wrong account, a
+ * proxy refusing CONNECT and a registry that was simply down. Three of those
+ * four are not fixed by making a token, and the one message sent the operator
+ * to do the one thing that would not help.
+ *
+ * So npm gets to say what happened. What it must not say is a credential:
+ * bearer tokens, npm's own `npm_` tokens, basic-auth headers and `_authToken`
+ * lines are replaced before anything reaches a console or a state file.
+ *
+ * @param text - raw subprocess output.
+ * @returns the same text with credential-shaped runs replaced.
+ */
+export function sanitize(text) {
+  return String(text)
+    .replace(/\bnpm_[A-Za-z0-9]{16,}/g, 'npm_[redacted]')
+    .replace(/(_authToken\s*=\s*)\S+/gi, '$1[redacted]')
+    .replace(/(authorization\s*:\s*)(bearer|basic)\s+\S+/gi, '$1$2 [redacted]')
+    .replace(/\b[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\b/g, '[redacted-jwt]')
+    .replace(/(:\/\/)[^:@/\s]+:[^@/\s]+@/g, '$1[redacted]@')
+    .trim()
+}
+
+/** The last few lines of npm's diagnostics, sanitized, for a console. */
+function diagnostics(result, lines = 12) {
+  const text = sanitize(`${result.stderr}\n${result.stdout}`)
+  if (text === '') return '(npm produced no output)'
+  return text.split('\n').filter(line => line.trim() !== '').slice(-lines).join('\n')
+}
+
+/**
  * The dist-tag a version shape earns, by the same rule the release workflow uses.
  *
  * This was hardcoded to `preview`, which was right while every version was
@@ -79,7 +138,9 @@ export function distTag(version) {
 
 function npm(args) {
   const spec = resolveNpm()
-  if (spec === null) return { code: 1, stdout: '', stderr: 'npm is unavailable' }
+  if (spec === null) {
+    return { code: 1, stdout: '', stderr: 'npm is unavailable: nothing named npm is on PATH' }
+  }
   return run(spec.command, [...spec.prefix, ...args], { cwd: ROOT })
 }
 
@@ -173,26 +234,84 @@ export function verifyArtifacts(directory) {
   return verified
 }
 
+/**
+ * Who npm thinks is running this, and what that says about publishing.
+ *
+ * Two probes, and neither of them is proof of permission. `whoami` proves a
+ * credential resolves to an account. `org ls` proves that account's role in
+ * the organisation the scope belongs to. What neither can prove is that npm
+ * will accept a publish: the scope is empty, so there is no package ACL to
+ * read, and a 2FA policy, a token with the wrong type, or an org billing
+ * state are all invisible to a read-only probe and all decisive at upload.
+ *
+ * This used to claim otherwise. `npm access list packages @deepwatch`
+ * returning zero was recorded as `access: 'verified'` — and for an empty scope
+ * that command succeeds and prints nothing, which is exactly the state where
+ * nothing has been verified at all. The honest report says what was actually
+ * established and names the first upload as the thing that settles the rest.
+ *
+ * Nothing here prints a user name, a token or npm configuration.
+ */
 function checkAccess() {
   const identity = npm(['whoami', '--registry=https://registry.npmjs.org/'])
   if (identity.code !== 0 || identity.stdout.trim() === '') {
-    throw new Error('npm identity check failed; authenticate with a short-lived, 2FA-protected publisher token')
+    throw new Error(
+      'npm has no authenticated identity for registry.npmjs.org.\n'
+      + `npm said:\n${diagnostics(identity)}\n\n`
+      + 'If this is an expired or absent session, sign in as the release owner:\n'
+      + '  npm login --registry=https://registry.npmjs.org/ --auth-type=web\n'
+      + 'If it is a network or proxy failure, the message above says so and a new '
+      + 'credential will not help.')
   }
-  const access = npm(['access', 'list', 'packages', '@deepwatch', '--json'])
-  if (access.code !== 0) {
-    throw new Error('npm organisation access check failed for @deepwatch')
+
+  // The scope is an npm organisation, so the account's role in it is the
+  // closest read-only thing to a publish right. Reported, not asserted.
+  const org = npm(['org', 'ls', 'deepwatch', '--json'])
+  let role = 'unknown'
+  if (org.code === 0) {
+    try {
+      const members = JSON.parse(org.stdout)
+      const mine = Object.entries(members).find(([member]) => member === identity.stdout.trim())
+      role = mine === undefined ? 'not_a_member' : String(mine[1])
+    } catch {
+      role = 'unreadable'
+    }
+  } else {
+    role = 'unreadable'
   }
-  // Deliberately report only that the checks passed. User names, tokens and
-  // npm configuration do not belong in a release artifact.
-  return { identity: 'verified', organisation: '@deepwatch', access: 'verified' }
+
+  const listing = npm(['access', 'list', 'packages', '@deepwatch', '--json'])
+  const scope = listing.code === 0
+    ? (listing.stdout.trim() === '' || listing.stdout.trim() === '{}' ? 'empty' : 'populated')
+    : 'unreadable'
+
+  if (role === 'not_a_member') {
+    throw new Error(
+      'the authenticated account is not a member of the `deepwatch` organisation, '
+      + 'so it cannot publish into the @deepwatch scope.')
+  }
+
+  // Deliberately no user name, no token, no npm configuration: a release
+  // artifact records that the checks ran and what they established, not who.
+  return {
+    identity: 'authenticated',
+    organisation: '@deepwatch',
+    role,
+    scopeListing: scope,
+    publishPermission: 'not_provable_before_upload',
+    note: 'whoami and org membership are read-only probes. npm settles publish '
+      + 'permission at the first upload, and that upload is the first package in '
+      + 'the order below.',
+  }
 }
 
 function initialState(mode, artifacts, access) {
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     mode,
     artifacts: resolve(artifacts),
     access,
+    plan: [],
     created: [],
     skipped: [],
     failed: [],
@@ -204,6 +323,29 @@ function saveState(path, state) {
   writeFileSync(path, `${JSON.stringify(state, null, 2)}\n`, 'utf8')
 }
 
+/**
+ * The registry decision for every package, in publish order.
+ *
+ * Delegated whole to `publish-plan.mjs` so this path and the workflow's path
+ * cannot drift into two policies. A single refusal fails everything before the
+ * first upload: an npm version can never be replaced, so a set that disagrees
+ * with the registry is a decision for a person and not a thing to work around.
+ */
+function planRegistry(artifacts) {
+  const plan = buildPlan({ artifacts })
+  if (!plan.ok) {
+    const refusals = plan.entries
+      .filter(entry => entry.action === 'refuse')
+      .map(entry => `  ${entry.name}: ${entry.reason}`)
+      .join('\n')
+    throw new Error(
+      `the registry plan refuses this set:\n${refusals}\n\n`
+      + 'A published version can never be replaced. The recovery is a new version, '
+      + 'not a retry. See docs/releasing.md.')
+  }
+  return plan
+}
+
 async function main() {
   const artifacts = resolve(option('artifacts', join(ROOT, '.release-artifacts')))
   const statePath = resolve(option('state', join(artifacts, 'first-publish-state.json')))
@@ -213,37 +355,76 @@ async function main() {
 
   gitClean()
   const verified = verifyArtifacts(artifacts)
-  const access = wantsAccess ? checkAccess() : { identity: 'not_checked', organisation: '@deepwatch', access: 'not_checked' }
+  const access = wantsAccess
+    ? checkAccess()
+    : { identity: 'not_checked', organisation: '@deepwatch', role: 'not_checked' }
   const state = initialState(publishing ? 'publish' : 'dry-run', artifacts, access)
   saveState(statePath, state)
 
   if (!publishing) {
     process.stdout.write(`first-publish dry-run: verified ${String(verified.length)} public tarballs\n`)
+    if (wantsAccess) {
+      process.stdout.write(
+        `npm identity: ${access.identity}; role in ${access.organisation}: ${access.role}; `
+        + `scope listing: ${access.scopeListing}\n`
+        + 'Publish permission is settled by npm at the first upload, not by these probes.\n')
+    }
     process.stdout.write('No registry write was attempted. Add --check-access for read-only npm access checks.\n')
     return 0
   }
   if (!confirmed) throw new Error('--publish also requires --confirm-first-publish')
 
+  // Asked once, before the first upload, and recorded. Between planning and
+  // publishing sits nothing but this loop, so re-asking per package would only
+  // add twenty round trips and twenty more chances to misread an outage.
+  const plan = planRegistry(artifacts)
+  state.plan = plan.entries.map(entry => ({
+    name: entry.name, version: entry.version, action: entry.action, reason: entry.reason,
+  }))
+  saveState(statePath, state)
+
+  const decision = new Map(plan.entries.map(entry => [entry.name, entry]))
   for (const item of verified) {
-    const present = npm(['view', `${item.name}@${item.version}`, 'version', '--json'])
-    if (present.code === 0) {
-      state.skipped.push({ name: item.name, version: item.version, reason: 'already_exists' })
+    const entry = decision.get(item.name)
+    if (entry === undefined) {
+      throw new Error(`${item.name} has no registry decision; refusing to guess`)
+    }
+    if (entry.action === 'skip') {
+      process.stdout.write(`skip      ${item.name} — ${entry.reason}\n`)
+      state.skipped.push({ name: item.name, version: item.version, reason: entry.reason })
       state.remaining.shift()
       saveState(statePath, state)
       continue
     }
+
+    process.stdout.write(`publish   ${item.name}@${item.version}\n`)
     const result = npm([
       'publish', join(artifacts, item.file), '--access', 'public', '--tag', distTag(item.version),
     ])
     if (result.code !== 0) {
-      state.failed.push({ name: item.name, version: item.version, category: 'publish_failed' })
+      const said = diagnostics(result)
+      state.failed.push({
+        name: item.name, version: item.version, category: 'publish_failed', npm: said,
+      })
       saveState(statePath, state)
-      throw new Error(`${item.name} failed; inspect the redacted npm console output and resume from the state report`)
+      process.stderr.write(`\nnpm refused ${item.name}@${item.version}:\n${said}\n\n`)
+      throw new Error(
+        `${item.name} failed. ${String(state.created.length)} package(s) reached the registry `
+        + `and are recorded in ${statePath}. Re-running re-plans against the registry and `
+        + 'resumes at the first package that is not already published from this exact build.')
     }
     state.created.push({ name: item.name, version: item.version })
     state.remaining.shift()
     saveState(statePath, state)
   }
+
+  process.stdout.write(
+    `\nfirst-publish: ${String(state.created.length)} published, `
+    + `${String(state.skipped.length)} already present with identical bytes\n`)
+  process.stdout.write(
+    'These uploads carry no registry provenance attestation: they were made from a '
+    + 'machine, not from the OIDC-authenticated workflow. Configure a Trusted '
+    + 'Publisher for each package now, and every later release will be attested.\n')
   return 0
 }
 

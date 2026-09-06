@@ -2,10 +2,13 @@
 
 Host plugin: durable, correctable, scoped memory over an append-only event ledger
 
-Part of **DeepWatch** — the Web and Desktop agent product built on the
-official [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)
-packages and powered by [Watch Skill](https://github.com/oxbshw/watch-skill) for perception, evidence,
-memory and independent verification.
+Part of **DeepWatch** — the agent workspace built on the official
+[DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)
+and powered by [Watch Skill](https://github.com/oxbshw/watch-skill) for perception, evidence, memory and
+independent verification.
+
+> **Host plugin — runs beside the agent in the DSH process.**
+> Composed by the bundle. Off unless a profile turns it on.
 
 ## Exports
 
@@ -37,10 +40,24 @@ composes this package with the rest of DeepWatch and is what a profile
 normally depends on; installing this one directly is for embedding a
 single piece in a composition you control.
 
+## Configuration
+
+Supplied by the host when it mounts this plugin.
+
+| Option | Type | |
+| --- | --- | --- |
+| `mode` | `MemoryMode` | What this profile permits. |
+| `directory` | `string` | Directory for the ledger and the Markdown projections. |
+| `inferredThreshold` | `number` | Confidence at or above which an inferred, low-impact memory acts. |
+| `tokenBudget` | `number` | Hard ceiling on what memory may cost one turn. |
+| `writeProjections` | `boolean` | Write `taste.md` and friends whenever memory changes. |
+
 ## Requirements
 
 - Node `^22.19.0 || >=24.0.0`
 - The peers above, supplied by the host composition
+
+A writable directory for the ledger. The store is plaintext; it is created owner-only where the operating system enforces file modes, and there is no encryption at rest in this release.
 
 ## Stability
 
@@ -62,10 +79,12 @@ workspace boundary and the host's permissions, not by this flag.
 
 ## Where this fits
 
-These packages are composed together; installing one on its own is rarely
-what you want. The whole picture, the gates it has to pass, and how to run
-DeepWatch is in the
-[workspace README](https://github.com/oxbshw/watch-skill/tree/main/workspace#readme).
+An append-only event ledger under the workspace boundary. `@deepwatch/dsh-wiki` projects it into pages and `@deepwatch/dsh-client-memory` presents it.
+
+The twenty packages and how they compose:
+[the package map](https://github.com/oxbshw/watch-skill/blob/main/workspace/docs/packages.md).
+Running DeepWatch, and the gates a change has to pass:
+[the workspace README](https://github.com/oxbshw/watch-skill/tree/main/workspace#readme).
 
 ## Attribution
 

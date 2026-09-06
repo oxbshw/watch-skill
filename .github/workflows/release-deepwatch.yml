@@ -141,6 +141,17 @@ jobs:
             --out .release-artifacts/publish-plan.json
           cat .release-artifacts/publish-plan.json
 
+      # Written here rather than in the release job, because this is the job
+      # that has the tree, the manifest and the inventory. The release job
+      # deliberately has only what it downloads.
+      - name: Release notes, from the set that was actually sealed
+        run: |
+          node scripts/gen-release-notes.mjs \
+            --artifacts .release-artifacts \
+            --manifest .release-artifacts-provenance.json \
+            --out .release-artifacts/release-notes.md
+          cat .release-artifacts/release-notes.md
+
       - uses: actions/upload-artifact@v7
         with:
           name: deepwatch-tarballs
@@ -149,6 +160,7 @@ jobs:
             workspace/.release-artifacts/SHA256SUMS
             workspace/.release-artifacts/packed-artifacts.json
             workspace/.release-artifacts/publish-plan.json
+            workspace/.release-artifacts/release-notes.md
             workspace/.release-artifacts-provenance.json
           if-no-files-found: error
           retention-days: 7
@@ -322,3 +334,110 @@ jobs:
           reported=$(npx --yes "@deepwatch/cli@${version}" --version)
           echo "reported: ${reported}"
           test "${reported}" = "${version}"
+
+  # The announcement, after the thing it announces.
+  #
+  # This train had no release job at all. Twenty packages reached npm and the
+  # tag that published them stayed a bare tag: no page to link, no downloadable
+  # tarballs for anyone not installing from a registry, and — the one that
+  # matters here — no home for the DSH bundle, which is the artifact somebody
+  # with an existing Harness actually wants.
+  #
+  # It sits after `publish` and not after `smoke`, for the same reason Core's
+  # does. Publication is the irreversible half; once twenty versions are live,
+  # a Release that does not exist because one runner could not reach the
+  # registry is a worse state than one that exists beside a red smoke. The
+  # `report` job below states both.
+  github-release:
+    name: Complete the GitHub Release
+    needs: [verify, publish]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: deepwatch-tarballs
+          path: sealed
+
+      # The same set, checked again on the way out. An asset attached to a
+      # Release is what people download for years, and "it came from the right
+      # artifact" is a claim a digest makes and a filename does not.
+      - name: The assets are the sealed ones
+        run: |
+          set -euo pipefail
+          cd sealed/workspace/.release-artifacts
+          sha256sum -c SHA256SUMS
+
+      - name: GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          body_path: sealed/workspace/.release-artifacts/release-notes.md
+          prerelease: ${{ needs.verify.outputs.dist-tag != 'latest' }}
+          files: |
+            sealed/workspace/.release-artifacts/*.tgz
+            sealed/workspace/.release-artifacts/SHA256SUMS
+            sealed/workspace/.release-artifacts/packed-artifacts.json
+            sealed/workspace/.release-artifacts/publish-plan.json
+            sealed/workspace/.release-artifacts-provenance.json
+
+  # What actually happened, stated once, whatever the outcome. A release that
+  # publishes twenty packages and then fails to announce them is a real state
+  # somebody has to act on, and reading three job badges to reconstruct it is
+  # how a partial release gets mistaken for a failed one.
+  report:
+    name: Report what reached which registry
+    if: always()
+    needs: [verify, publish, smoke, github-release]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Summarise
+        env:
+          VERIFY: ${{ needs.verify.result }}
+          PUBLISH: ${{ needs.publish.result }}
+          SMOKE: ${{ needs.smoke.result }}
+          RELEASE: ${{ needs.github-release.result }}
+          VERSION: ${{ needs.verify.outputs.version }}
+        run: |
+          set -uo pipefail
+          {
+            echo "### DeepWatch ${VERSION:-unknown} (${GITHUB_REF_NAME})"
+            echo ""
+            echo "| Stage | Result | Reversible |"
+            echo "| --- | --- | --- |"
+            echo "| Verify and seal | ${VERIFY} | yes |"
+            echo "| npm | ${PUBLISH} | **no** |"
+            echo "| Published smoke | ${SMOKE} | yes |"
+            echo "| GitHub Release | ${RELEASE} | yes |"
+            echo ""
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "$PUBLISH" = "success" ] && { [ "$SMOKE" != "success" ] || [ "$RELEASE" != "success" ]; }; then
+            {
+              echo "**This release is incomplete, and the irreversible half succeeded.**"
+              echo ""
+              echo "The twenty \`@deepwatch/*\` packages are on npm at ${VERSION}. An npm"
+              echo "version can never be replaced, so do not re-run this workflow to"
+              echo "\"finish\" it expecting a different publish: it re-plans against the"
+              echo "registry and will correctly skip everything already published from"
+              echo "this build. Recover the remaining stages on their own -- the Release"
+              echo "from this run's sealed \`deepwatch-tarballs\` artifact."
+              echo "See workspace/docs/releasing.md."
+            } >> "$GITHUB_STEP_SUMMARY"
+          elif [ "$PUBLISH" != "success" ]; then
+            {
+              echo "**Check the publish job before assuming nothing was published.**"
+              echo ""
+              echo "The publish step stops at the first failure and names what it had"
+              echo "already uploaded. Everything after npm is gated on it, so no Release"
+              echo "was created; re-running is safe and resumes at the first package"
+              echo "that is not already published from this exact build."
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+          # The job's own result mirrors the release's, so a partial publish is
+          # a red check rather than a green one with a note in it.
+          [ "$VERIFY" = "success" ] && [ "$PUBLISH" = "success" ] \
+            && [ "$SMOKE" = "success" ] && [ "$RELEASE" = "success" ]

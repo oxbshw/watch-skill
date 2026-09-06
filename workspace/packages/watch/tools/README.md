@@ -2,10 +2,13 @@
 
 Host plugin: Watch capabilities registered as DeepSeek Harness agent tools
 
-Part of **DeepWatch** — the Web and Desktop agent product built on the
-official [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)
-packages and powered by [Watch Skill](https://github.com/oxbshw/watch-skill) for perception, evidence,
-memory and independent verification.
+Part of **DeepWatch** — the agent workspace built on the official
+[DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)
+and powered by [Watch Skill](https://github.com/oxbshw/watch-skill) for perception, evidence, memory and
+independent verification.
+
+> **Host plugin — runs beside the agent in the DSH process.**
+> Composed by the bundle. This is where Watch's capabilities become agent tools.
 
 ## Exports
 
@@ -43,10 +46,29 @@ composes this package with the rest of DeepWatch and is what a profile
 normally depends on; installing this one directly is for embedding a
 single piece in a composition you control.
 
+## Configuration
+
+Supplied by the host when it mounts this plugin.
+
+| Option | Type | |
+| --- | --- | --- |
+| `queryTimeoutMs` | `number` | Deadline for a source query, which may involve perception work. |
+| `verifyTimeoutMs` | `number` | Deadline for one verification contract. |
+| `readTimeoutMs` | `number` | Deadline for a search or a moment lookup. |
+| `coldReadTimeoutMs` | `number` | Deadline for the first read after the engine connects. |
+| `liveStartTimeoutMs` | `number` | Deadline for starting a live session, which may launch a browser. |
+| `actTimeoutMs` | `number` | Deadline for one browser action, including its re-observation. |
+| `observeTimeoutMs` | `number` | Deadline for a page observation. |
+| `libraryRoots` *(optional)* | `readonly string[]` | Directories the library index may read. |
+| `workspaceScope` *(optional)* | `string` | Which workspace this host answers for. |
+| `receiptsDirectory` *(optional)* | `string` | Where execution receipts are journalled, so they survive a restart. |
+
 ## Requirements
 
 - Node `^22.19.0 || >=24.0.0`
 - The peers above, supplied by the host composition
+
+`@deepwatch/dsh-core-bridge` mounted in the same context.
 
 ## Stability
 
@@ -68,10 +90,12 @@ workspace boundary and the host's permissions, not by this flag.
 
 ## Where this fits
 
-These packages are composed together; installing one on its own is rarely
-what you want. The whole picture, the gates it has to pass, and how to run
-DeepWatch is in the
-[workspace README](https://github.com/oxbshw/watch-skill/tree/main/workspace#readme).
+Registers the 22 `watch_*` tools an agent is offered, and turns each tool call into a receipt. It records what a call did; it never decides whether the work was correct.
+
+The twenty packages and how they compose:
+[the package map](https://github.com/oxbshw/watch-skill/blob/main/workspace/docs/packages.md).
+Running DeepWatch, and the gates a change has to pass:
+[the workspace README](https://github.com/oxbshw/watch-skill/tree/main/workspace#readme).
 
 ## Attribution
 

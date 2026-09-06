@@ -254,6 +254,85 @@ describe('what reaches the registry, and in what order', () => {
   })
 })
 
+describe('the npm release ends in something a person can link to', () => {
+  test('DeepWatch completes a GitHub Release, and only after npm accepted', () => {
+    // This train had no release job at all. Twenty packages reached the
+    // registry and the tag that published them stayed a bare tag: nothing to
+    // link, and — the one that mattered — no file to download for anybody
+    // installing the bundle into an existing Harness without a registry.
+    const release = job(DEEPWATCH, 'github-release')
+    assert.match(release, /needs: \[verify, publish\]/)
+    assert.match(release, /action-gh-release/)
+    assert.match(release, /contents: write/)
+
+    // Announcement after publication, the same ordering Core had to be
+    // corrected into. The verify job must not create it.
+    assert.ok(!job(DEEPWATCH, 'verify').includes('action-gh-release'))
+    assert.ok(!job(DEEPWATCH, 'publish').includes('action-gh-release'))
+  })
+
+  test('the assets are the sealed set, checked again on the way out', () => {
+    const release = job(DEEPWATCH, 'github-release')
+    assert.match(release, /sha256sum -c SHA256SUMS/)
+    assert.ok(release.indexOf('sha256sum -c SHA256SUMS') < release.indexOf('action-gh-release'),
+      'the digests must be checked before the assets are attached')
+    assert.ok(!release.includes('npm run pack'), 'the release job must not build anything')
+
+    // The tarballs are the DSH distribution. There is no separate archive
+    // format, and inventing one by renaming a `.tgz` would be a format nothing
+    // reads.
+    assert.match(release, /\*\.tgz/)
+    assert.match(release, /SHA256SUMS/)
+    assert.match(release, /provenance\.json/)
+  })
+
+  test('a prerelease is labelled one, from the dist-tag the tag earned', () => {
+    const release = job(DEEPWATCH, 'github-release')
+    assert.match(release, /prerelease: \$\{\{ needs\.verify\.outputs\.dist-tag != 'latest' \}\}/)
+  })
+
+  test('the release notes describe the set that was sealed, not a remembered one', () => {
+    const verify = job(DEEPWATCH, 'verify')
+    assert.match(verify, /gen-release-notes\.mjs/)
+    assert.ok(verify.indexOf('npm run release:seal') < verify.indexOf('gen-release-notes.mjs'),
+      'the notes are written from the sealed inventory')
+    assert.match(job(DEEPWATCH, 'github-release'), /body_path/)
+  })
+
+  test('a partial npm release is reported as the state it is', () => {
+    const report = job(DEEPWATCH, 'report')
+    assert.match(report, /if: always\(\)/)
+    assert.match(report, /This release is incomplete/)
+    assert.match(report, /\[ "\$PUBLISH" = "success" \]/)
+  })
+})
+
+describe('one repository, two trains, and no crossed wires', () => {
+  test('the published smoke ignores a release from the other train', () => {
+    // `release: published` carries no tag filter, and this workflow stripped
+    // `core-v` from whatever tag arrived. A `deepwatch-v0.1.0` release
+    // therefore asked PyPI for `watch-skill` version `deepwatch-v0.1.0`,
+    // sixty times over ten minutes, and failed — a red check on a release that
+    // had done nothing wrong.
+    const post = readFileSync(join(WORKFLOWS, 'post-publish.yml'), 'utf8')
+    assert.match(post, /case "\$tag" in\s*\n\s*core-v\*\)/)
+    assert.match(post, /is not a Watch Core release/)
+    assert.match(post, /skip=true/)
+    assert.match(post, /if: needs\.version\.outputs\.skip != 'true'/)
+  })
+
+  test('the step whose outputs the jobs read actually has that id', () => {
+    // `outputs: spec: ${{ steps.pick.outputs.spec }}` with no `id: pick` on the
+    // step resolves to an empty string, silently. The workflow has never run,
+    // so nothing had ever noticed.
+    const post = readFileSync(join(WORKFLOWS, 'post-publish.yml'), 'utf8')
+    for (const output of [...post.matchAll(/\$\{\{\s*steps\.([A-Za-z0-9_-]+)\.outputs/g)]) {
+      assert.match(post, new RegExp(`id: ${output[1]}\\b`),
+        `post-publish.yml reads steps.${output[1]}.outputs but has no step with that id`)
+    }
+  })
+})
+
 test('the required workspace result includes the real browser journey', () => {
   const workflow = readFileSync(join(WORKFLOWS, 'workspace-ci.yml'), 'utf8')
   const browser = job(workflow, 'browser-e2e')

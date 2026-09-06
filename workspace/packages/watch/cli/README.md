@@ -2,10 +2,13 @@
 
 DeepWatch — set up and run the agent workspace built on DeepSeek Harness and powered by Watch Skill
 
-Part of **DeepWatch** — the Web and Desktop agent product built on the
-official [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)
-packages and powered by [Watch Skill](https://github.com/oxbshw/watch-skill) for perception, evidence,
-memory and independent verification.
+Part of **DeepWatch** — the agent workspace built on the official
+[DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)
+and powered by [Watch Skill](https://github.com/oxbshw/watch-skill) for perception, evidence, memory and
+independent verification.
+
+> **Installed on purpose.**
+> Anyone who wants the whole DeepWatch workspace and does not already run a DeepSeek Harness. This is the package behind the `deepwatch` command.
 
 ## Exports
 
@@ -29,15 +32,25 @@ Provided by the host rather than installed here:
 npm install @deepwatch/cli
 ```
 
-Rarely on its own. [`@deepwatch/dsh-bundle`](https://github.com/oxbshw/watch-skill/tree/main/workspace/packages/watch/bundle#readme)
-composes this package with the rest of DeepWatch and is what a profile
-normally depends on; installing this one directly is for embedding a
-single piece in a composition you control.
+## Example
+
+Set up once, then serve a workspace:
+
+> Pending the `deepwatch-v0.1.0` release — see Install above.
+
+```sh
+npm install -g @deepwatch/cli
+deepwatch doctor              # what is installed, what is missing
+deepwatch setup               # build the runtime, compose the profile
+deepwatch web --workspace ./my-project
+```
 
 ## Requirements
 
 - Node `^22.19.0 || >=24.0.0`
 - The peers above, supplied by the host composition
+
+Node ≥ 22.19. Python 3.11–3.13 with `watch-skill` installed for the perception and verification half; `deepwatch doctor` reports what is missing and `deepwatch setup` offers to fetch what it can.
 
 ## Stability
 
@@ -59,10 +72,12 @@ workspace boundary and the host's permissions, not by this flag.
 
 ## Where this fits
 
-These packages are composed together; installing one on its own is rarely
-what you want. The whole picture, the gates it has to pass, and how to run
-DeepWatch is in the
-[workspace README](https://github.com/oxbshw/watch-skill/tree/main/workspace#readme).
+It composes `@deepwatch/dsh-bundle` into a DeepSeek Harness profile, manages the runtime that profile needs, and serves it. Everything it installs is one of the other nineteen packages.
+
+The twenty packages and how they compose:
+[the package map](https://github.com/oxbshw/watch-skill/blob/main/workspace/docs/packages.md).
+Running DeepWatch, and the gates a change has to pass:
+[the workspace README](https://github.com/oxbshw/watch-skill/tree/main/workspace#readme).
 
 ## Attribution
 

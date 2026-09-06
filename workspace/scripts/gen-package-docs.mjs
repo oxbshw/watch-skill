@@ -8,9 +8,25 @@
  * `@deepwatch/dsh-library` from a dependency tree needs one paragraph telling
  * them what it is, what it is part of, and what it needs.
  *
- * Composed rather than written, from what each manifest already declares: its
- * description, its exports, its peers. Twenty hand-written pages drift, and a
- * page that drifts is worse than a short one that cannot.
+ * Composed rather than written, from three sources that each know something the
+ * others do not:
+ *
+ * - **the manifest** — description, exports, peers, engines, version;
+ * - **`src/index.ts`** — the `Config` interface a host actually reads, with the
+ *   doc comment on each field, so the configuration section cannot drift from
+ *   the code it describes;
+ * - **`docs/package-notes.json`** — the prose neither of those can carry: who
+ *   should install this, what it needs first, and where it sits.
+ *
+ * The notes file exists because the first version of this composed pages from
+ * the manifest alone, and twenty pages then said the same four things. A
+ * reader arriving at `@deepwatch/dsh-library` from a dependency tree learned
+ * that it was "Part of DeepWatch" and that they probably did not want it —
+ * which is true, and is not an answer to what it does or what it needs.
+ *
+ * Hand-editing a generated README is still wrong: the next run overwrites it
+ * and `--check` says so first. Edit `docs/package-notes.json` instead, which is
+ * the one file here a person is meant to write.
  *
  * The LICENSE is copied because npm ships whatever `LICENSE` file is beside a
  * manifest, and a package declaring `"license": "MIT"` with no text in the
@@ -29,6 +45,56 @@ import { byCodeUnit } from './lib/order.mjs'
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const REPO = 'https://github.com/oxbshw/watch-skill'
 const LICENSE = readFileSync(join(ROOT, '..', 'LICENSE'), 'utf8')
+
+/** The hand-written half: audience, prerequisites, example, placement. */
+const NOTES = JSON.parse(readFileSync(join(ROOT, 'docs', 'package-notes.json'), 'utf8'))
+
+/**
+ * The `Config` a host supplies, read out of the source that defines it.
+ *
+ * Parsed rather than imported: these are TypeScript sources, this script runs
+ * before and after the build, and a documentation generator that only works on
+ * a built tree is one that stops being run.
+ *
+ * Newlines are normalised first. A Windows checkout has CRLF, CI has LF, and a
+ * generator whose output depends on that produces a file that is permanently
+ * stale on one of the two.
+ *
+ * @param dir - the package directory.
+ * @returns `{ name, type, doc }` per field, in declaration order.
+ */
+function configFields(dir) {
+  const source = join(dir, 'src', 'index.ts')
+  if (!existsSync(source)) return []
+  const text = readFileSync(source, 'utf8').replace(/\r\n/g, '\n')
+  const start = text.indexOf('export interface Config {')
+  if (start < 0) return []
+  const end = text.indexOf('\n}', start)
+  if (end < 0) return []
+  const body = text.slice(start + 'export interface Config {'.length, end)
+
+  const fields = []
+  // One doc comment (optional) followed by one `readonly name: type`. The
+  // comment is collapsed to its first sentence: a package page is a summary,
+  // and the twelve-line explanations in these files belong in the source.
+  const shape = /(?:\/\*\*([\s\S]*?)\*\/\s*)?readonly\s+([A-Za-z0-9_]+)(\??):\s*([^\n]+?)\s*$/gm
+  for (const match of body.matchAll(shape)) {
+    const doc = (match[1] ?? '')
+      .split('\n')
+      .map(line => line.replace(/^\s*\*ered?\s?/, '').replace(/^\s*\*\s?/, '').trim())
+      .filter(line => line !== '')
+      .join(' ')
+      .trim()
+    const sentence = /^(.*?[.!?])(\s|$)/.exec(doc)
+    fields.push({
+      name: match[2],
+      optional: match[3] === '?',
+      type: match[4].replace(/,$/, '').trim(),
+      doc: sentence === null ? doc : sentence[1],
+    })
+  }
+  return fields
+}
 
 /**
  * Whether anything under the `@deepwatch` scope is on the registry.
@@ -106,16 +172,28 @@ function publishable() {
   return found.sort((a, b) => byCodeUnit(a.manifest.name, b.manifest.name))
 }
 
-/** The page for one package, from what its manifest already says. */
-function page(manifest) {
+/** The page for one package, from its manifest, its Config and its notes. */
+function page(manifest, dir) {
+  const note = NOTES.packages?.[manifest.name] ?? {}
+  const role = note.role ?? 'shared'
   const lines = [`# ${manifest.name}`, '', manifest.description, '']
 
   lines.push(
-    'Part of **DeepWatch** — the Web and Desktop agent product built on the',
-    'official [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)',
-    `packages and powered by [Watch Skill](${REPO}) for perception, evidence,`,
-    'memory and independent verification.',
+    'Part of **DeepWatch** — the agent workspace built on the official',
+    '[DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)',
+    `and powered by [Watch Skill](${REPO}) for perception, evidence, memory and`,
+    'independent verification.',
     '')
+
+  // The first question a reader has, answered before anything else: is this a
+  // thing I install, or a thing that arrived in my tree? Twenty pages that all
+  // open with "Part of DeepWatch" answer it for none of them.
+  const label = NOTES.roles?.[role]
+  if (label !== undefined) {
+    lines.push(`> **${label}.**`, ...(note.audience === undefined ? [] : [`> ${note.audience}`]), '')
+  } else if (note.audience !== undefined) {
+    lines.push(`> ${note.audience}`, '')
+  }
 
   const subpaths = Object.keys(manifest.exports ?? {})
     .filter(entry => entry !== './package.json')
@@ -132,8 +210,8 @@ function page(manifest) {
     const optional = manifest.peerDependenciesMeta ?? {}
     lines.push('## Peers', '', 'Provided by the host rather than installed here:', '')
     for (const [name, declared] of peers.sort(([a], [b]) => byCodeUnit(a, b))) {
-      const note = optional[name]?.optional === true ? ' — optional' : ''
-      lines.push(`- \`${name}@${range(name, declared)}\`${note}`)
+      const marker = optional[name]?.optional === true ? ' — optional' : ''
+      lines.push(`- \`${name}@${range(name, declared)}\`${marker}`)
     }
     lines.push('')
   }
@@ -155,7 +233,7 @@ function page(manifest) {
       '')
   }
   lines.push('```sh', `npm install ${manifest.name}`, '```', '')
-  if (manifest.name !== BUNDLE) {
+  if (role !== 'product') {
     lines.push(
       `Rarely on its own. [\`${BUNDLE}\`](${REPO}/tree/main/workspace/packages/watch/bundle#readme)`,
       'composes this package with the rest of DeepWatch and is what a profile',
@@ -164,13 +242,49 @@ function page(manifest) {
       '')
   }
 
+  if (note.example !== undefined) {
+    lines.push('## Example', '')
+    if (note.example.caption !== undefined) lines.push(note.example.caption, '')
+    // An example that installs from the registry is an install command like
+    // any other, and it is far enough down the page that the callout above the
+    // Install block no longer counts as nearby. Repeated rather than moved:
+    // the reader who scrolled to a worked example is exactly the one who will
+    // paste it without scrolling back up.
+    if (registryStatus() === 'unpublished' && note.example.code.includes('@deepwatch/')) {
+      lines.push(`> Pending the \`${firstPublicationTag()}\` release — see Install above.`, '')
+    }
+    lines.push(`\`\`\`${note.example.lang ?? 'sh'}`, note.example.code, '```', '')
+  }
+
+  // Read out of the `Config` interface rather than restated beside it. The
+  // defaults live in the schema and the prose lives in the doc comments, so a
+  // field added to the code appears here on the next run and a field removed
+  // stops appearing.
+  const fields = configFields(dir)
+  if (fields.length > 0) {
+    lines.push(
+      '## Configuration',
+      '',
+      'Supplied by the host when it mounts this plugin.',
+      '',
+      '| Option | Type | |',
+      '| --- | --- | --- |')
+    for (const field of fields) {
+      lines.push(`| \`${field.name}\`${field.optional ? ' *(optional)*' : ''} `
+        + `| \`${field.type}\` | ${field.doc} |`)
+    }
+    lines.push('')
+  }
+
   const node = manifest.engines?.node
-  if (node !== undefined) {
-    lines.push('## Requirements', '', `- Node \`${node}\``)
+  if (node !== undefined || note.prerequisites !== undefined) {
+    lines.push('## Requirements', '')
+    if (node !== undefined) lines.push(`- Node \`${node}\``)
     if (Object.keys(manifest.peerDependencies ?? {}).length > 0) {
       lines.push('- The peers above, supplied by the host composition')
     }
     lines.push('')
+    if (note.prerequisites !== undefined) lines.push(note.prerequisites, '')
   }
 
   // The version *is* the stability statement. Deriving the sentence from it
@@ -211,13 +325,13 @@ function page(manifest) {
       '')
   }
 
+  lines.push('## Where this fits', '')
+  if (note.fits !== undefined) lines.push(note.fits, '')
   lines.push(
-    '## Where this fits',
-    '',
-    'These packages are composed together; installing one on its own is rarely',
-    'what you want. The whole picture, the gates it has to pass, and how to run',
-    'DeepWatch is in the',
-    `[workspace README](${REPO}/tree/main/workspace#readme).`,
+    'The twenty packages and how they compose:',
+    `[the package map](${REPO}/blob/main/workspace/docs/packages.md).`,
+    'Running DeepWatch, and the gates a change has to pass:',
+    `[the workspace README](${REPO}/tree/main/workspace#readme).`,
     '',
     '## Attribution',
     '',
@@ -238,7 +352,7 @@ function main() {
 
   for (const { dir, manifest } of publishable()) {
     const files = [[join(dir, 'LICENSE'), LICENSE]]
-    if (!HAND_WRITTEN.has(manifest.name)) files.push([join(dir, 'README.md'), page(manifest)])
+    if (!HAND_WRITTEN.has(manifest.name)) files.push([join(dir, 'README.md'), page(manifest, dir)])
 
     for (const [path, content] of files) {
       const current = existsSync(path) ? readFileSync(path, 'utf8') : null

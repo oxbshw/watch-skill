@@ -1,0 +1,135 @@
+{
+  "$comment": "Per-package prose that a manifest cannot carry, merged into each package's README by scripts/gen-package-docs.mjs. Keep this file the only hand-written source: editing a generated README is overwritten by the next `npm run package-docs`, and `package-docs:check` will say so. `role` decides whether the page opens as a product or as an internal dependency; `audience` answers 'should I be installing this?'; `fits` is where it sits in the composition. See docs/packages.md for the same map in one place.",
+  "roles": {
+    "product": "Installed on purpose",
+    "host-plugin": "Host plugin — runs beside the agent in the DSH process",
+    "browser-half": "Browser half — runs in the workspace UI",
+    "shared": "Shared contract — depended on by both halves",
+    "optional": "Optional extra — nothing requires it"
+  },
+  "packages": {
+    "@deepwatch/cli": {
+      "role": "product",
+      "audience": "Anyone who wants the whole DeepWatch workspace and does not already run a DeepSeek Harness. This is the package behind the `deepwatch` command.",
+      "prerequisites": "Node ≥ 22.19. Python 3.11–3.13 with `watch-skill` installed for the perception and verification half; `deepwatch doctor` reports what is missing and `deepwatch setup` offers to fetch what it can.",
+      "example": {
+        "caption": "Set up once, then serve a workspace:",
+        "code": "npm install -g @deepwatch/cli\ndeepwatch doctor              # what is installed, what is missing\ndeepwatch setup               # build the runtime, compose the profile\ndeepwatch web --workspace ./my-project"
+      },
+      "fits": "It composes `@deepwatch/dsh-bundle` into a DeepSeek Harness profile, manages the runtime that profile needs, and serves it. Everything it installs is one of the other nineteen packages."
+    },
+    "@deepwatch/dsh-bundle": {
+      "role": "product",
+      "audience": "Anyone already running a DeepSeek Harness who wants to add Watch to it without moving to a different product.",
+      "prerequisites": "A DSH installation at the pinned baseline, and `watch-skill` on `PATH` for anything that needs Core.",
+      "fits": "The single package a profile names. It declares `dsh.bundle.patch`, so `dsh plugin add` reconciles thirteen Watch packages into the profile's layer stack in one step."
+    },
+    "@deepwatch/dsh-core-bridge": {
+      "role": "host-plugin",
+      "audience": "Composed by the bundle. Install it directly only to speak to Watch Core from a host of your own.",
+      "prerequisites": "`watch-skill` reachable on `PATH`, or an explicit `command`. Without one the Bridge reports `core_missing` and leaves the workspace usable with Watch features disabled — it does not fall back to a mock.",
+      "fits": "The only thing that talks to Watch Core. Every other package reaches Core through it, which is what makes Core the sole source of a verdict."
+    },
+    "@deepwatch/dsh-tools": {
+      "role": "host-plugin",
+      "audience": "Composed by the bundle. This is where Watch's capabilities become agent tools.",
+      "prerequisites": "`@deepwatch/dsh-core-bridge` mounted in the same context.",
+      "fits": "Registers the 22 `watch_*` tools an agent is offered, and turns each tool call into a receipt. It records what a call did; it never decides whether the work was correct."
+    },
+    "@deepwatch/dsh-memory": {
+      "role": "host-plugin",
+      "audience": "Composed by the bundle. Off unless a profile turns it on.",
+      "prerequisites": "A writable directory for the ledger. The store is plaintext; it is created owner-only where the operating system enforces file modes, and there is no encryption at rest in this release.",
+      "fits": "An append-only event ledger under the workspace boundary. `@deepwatch/dsh-wiki` projects it into pages and `@deepwatch/dsh-client-memory` presents it."
+    },
+    "@deepwatch/dsh-library": {
+      "role": "host-plugin",
+      "audience": "Composed by the bundle.",
+      "prerequisites": "A Bridge connected to Core, and `libraryRoots` naming the directories the index may read — empty by default, so a deployment that has not said where its evidence lives gets a tool reporting nothing to search rather than one guessing.",
+      "fits": "The catalogue behind the Library screen: sources, revisions, index state, search, facets and collections."
+    },
+    "@deepwatch/dsh-live": {
+      "role": "host-plugin",
+      "audience": "Composed by the bundle. Needed for live and browser sessions.",
+      "prerequisites": "Core built with the `[loop]` extra, and a browser installed by `playwright install chromium`, for anything that drives a page.",
+      "fits": "One clock across streams, with cursors, declared gaps, a bounded buffer and a reconnect policy — so \"what was on screen when that was said\" has an answer rather than a guess."
+    },
+    "@deepwatch/dsh-technology": {
+      "role": "host-plugin",
+      "audience": "Composed by the bundle.",
+      "prerequisites": "DSH Models and Providers configured in the host profile.",
+      "fits": "Where \"this model can see images\" is recorded, and where a capability is bound to a role. The Settings surface reads it; nothing else guesses at a model's abilities."
+    },
+    "@deepwatch/dsh-trajectory": {
+      "role": "host-plugin",
+      "audience": "Composed by the bundle.",
+      "fits": "Puts Watch records inside the Harness Trajectory, so a receipt, a verdict and the turn that produced them share one selection, one deep link and one replay."
+    },
+    "@deepwatch/dsh-wiki": {
+      "role": "host-plugin",
+      "audience": "Composed by the bundle.",
+      "prerequisites": "`@deepwatch/dsh-memory` mounted, since the ledger is what it projects.",
+      "fits": "Deterministic projections over the memory ledger: the same ledger produces the same pages, so a wiki page is a view and never a second copy of the truth."
+    },
+    "@deepwatch/dsh-tenancy": {
+      "role": "host-plugin",
+      "audience": "Composed by the bundle. Relevant to a shared or multi-user deployment.",
+      "fits": "Tenants, roles, remote workers, sharing and audit — decided server-side. A browser half may render a permission; it may not grant one."
+    },
+    "@deepwatch/dsh-workspace": {
+      "role": "browser-half",
+      "audience": "Composed by the bundle and loaded by the DSH client loader.",
+      "fits": "The product shell: modes, header, inspector and the sensory timeline every other surface mounts into."
+    },
+    "@deepwatch/dsh-client-evidence": {
+      "role": "browser-half",
+      "audience": "Composed by the bundle and loaded by the DSH client loader.",
+      "fits": "How a verdict looks: the result card, the check list, the contract digest, and Compare for two runs of the same contract. It presents what Core decided and decides nothing itself."
+    },
+    "@deepwatch/dsh-client-memory": {
+      "role": "browser-half",
+      "audience": "Composed by the bundle and loaded by the DSH client loader.",
+      "fits": "The Memory surfaces — taste, timeline, wiki, decisions, lessons, failures and sources — over the ledger `@deepwatch/dsh-memory` keeps."
+    },
+    "@deepwatch/dsh-client-settings": {
+      "role": "browser-half",
+      "audience": "Composed by the bundle and loaded by the DSH client loader.",
+      "fits": "The Technology & Capability Center: role bindings, engines, sources, memory, verification and diagnostics. This is the screen that says what is ready and what is missing."
+    },
+    "@deepwatch/dsh-client-remotes": {
+      "role": "browser-half",
+      "audience": "Composed by the bundle and loaded by the DSH client loader.",
+      "fits": "Mounts Watch's generated Typert Remote into `ctx.remote`, so every client call reaches the host through one generated, type-checked surface instead of hand-written fetches."
+    },
+    "@deepwatch/dsh-client-brand": {
+      "role": "browser-half",
+      "audience": "Composed by the bundle. Install it directly to build a surface that matches Watch's identity.",
+      "fits": "The product identity and the semantic status tokens every other surface reads, plus the attribution and independence statements the product renders."
+    },
+    "@deepwatch/dsh-contracts": {
+      "role": "shared",
+      "audience": "Anyone implementing either side of the Bridge — a host plugin, a browser half, or a client of your own.",
+      "prerequisites": "None. Types and schemas only; it pulls in nothing at runtime.",
+      "fits": "The wire shapes both halves agree on. Changing a shape here changes both sides at once, which is the reason it is a package rather than two copies."
+    },
+    "@deepwatch/dsh-sdk": {
+      "role": "optional",
+      "audience": "Third parties building a Watch capability of their own.",
+      "prerequisites": "A DSH host to mount into.",
+      "example": {
+        "caption": "The four verbs a capability gets:",
+        "code": "import { declare, probe, observe, request } from '@deepwatch/dsh-sdk'"
+      },
+      "fits": "The supported extension path: declare a capability, probe whether its prerequisites hold, observe what happens, request work. It is how a capability joins the composition without patching it."
+    },
+    "@deepwatch/dsh-adapters": {
+      "role": "optional",
+      "audience": "Anyone exporting Watch's memory into another tool. Nothing depends on it.",
+      "example": {
+        "caption": "Export the wiki as an Obsidian vault:",
+        "code": "import { buildWiki, toVault } from '@deepwatch/dsh-adapters'\n\nconst vault = toVault(buildWiki(records), { name: 'Watch' })"
+      },
+      "fits": "Obsidian vaults and LLMWiki bundles, generated from the ledger. An edit in an exported vault is a proposal, never a change: Watch is the record and the folder is a copy."
+    }
+  }
+}

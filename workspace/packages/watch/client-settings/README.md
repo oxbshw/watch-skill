@@ -2,10 +2,13 @@
 
 Browser half: the Watch Technology & Capability Center — role bindings, engines, sources, memory, verification, diagnostics, about
 
-Part of **DeepWatch** — the Web and Desktop agent product built on the
-official [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)
-packages and powered by [Watch Skill](https://github.com/oxbshw/watch-skill) for perception, evidence,
-memory and independent verification.
+Part of **DeepWatch** — the agent workspace built on the official
+[DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)
+and powered by [Watch Skill](https://github.com/oxbshw/watch-skill) for perception, evidence, memory and
+independent verification.
+
+> **Browser half — runs in the workspace UI.**
+> Composed by the bundle and loaded by the DSH client loader.
 
 ## Exports
 
@@ -63,10 +66,12 @@ workspace boundary and the host's permissions, not by this flag.
 
 ## Where this fits
 
-These packages are composed together; installing one on its own is rarely
-what you want. The whole picture, the gates it has to pass, and how to run
-DeepWatch is in the
-[workspace README](https://github.com/oxbshw/watch-skill/tree/main/workspace#readme).
+The Technology & Capability Center: role bindings, engines, sources, memory, verification and diagnostics. This is the screen that says what is ready and what is missing.
+
+The twenty packages and how they compose:
+[the package map](https://github.com/oxbshw/watch-skill/blob/main/workspace/docs/packages.md).
+Running DeepWatch, and the gates a change has to pass:
+[the workspace README](https://github.com/oxbshw/watch-skill/tree/main/workspace#readme).
 
 ## Attribution
 

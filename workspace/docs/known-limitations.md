@@ -175,9 +175,35 @@ Until then `deepwatch setup --artifacts <dir>` is the supported path and it is
 the one both acceptance passes use. `doctor` reports the composition it was
 built to compose and says outright that no registry can confirm it.
 
-The desktop application is `private` and is not published by this release. The
-Electron shell starts and its context isolation holds — `npm run smoke:desktop`
-reports that — but there is no installer distributed here.
+## There is no desktop application to download
+
+This is the one deliverable that the product names and does not have, so it is
+stated plainly rather than left as an absence somebody has to notice.
+
+`@deepwatch/desktop` is `private` and is not published. What *does* work is the
+shell itself: `npm run smoke:desktop` launches the real Electron runtime, and
+its context isolation holds. That is a build check on a machine with a desktop
+session. It is not a distribution, and the two have been confused before.
+
+Nothing here produces an installer. The `build` block in
+`apps/desktop/package.json` is electron-builder configuration — `appId`,
+`productName`, per-platform icons — for a builder that is **not a dependency of
+this workspace and that no script invokes**. Reading that block as a packaging
+pipeline is the mistake it invites: there is no packaging script, no signing
+identity, no notarisation step, and no CI job that would run one.
+
+`deepwatch desktop` used to say the app came "from a platform installer" and to
+get it "from the project releases". No release has ever carried a desktop
+asset, so that sentence sent people looking for a file nobody makes. It now
+says this release distributes no desktop application, names `deepwatch web` as
+the supported way to run the same workspace, and keeps `DEEPWATCH_DESKTOP_BIN`
+for anyone who has built the shell themselves.
+
+**What finishing it would take**, so the size of the gap is legible: a
+packaging script, a code-signing certificate for Windows, an Apple Developer
+identity and notarisation for macOS, per-platform CI runners, and a release job
+that attaches the outputs. None of that is present, and none of it can be
+improvised at release time.
 
 ## The first-run headline is upstream's
 

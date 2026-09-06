@@ -2,10 +2,13 @@
 
 Host plugin: the typed Bridge between DeepSeek Harness and Watch Core
 
-Part of **DeepWatch** — the Web and Desktop agent product built on the
-official [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)
-packages and powered by [Watch Skill](https://github.com/oxbshw/watch-skill) for perception, evidence,
-memory and independent verification.
+Part of **DeepWatch** — the agent workspace built on the official
+[DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)
+and powered by [Watch Skill](https://github.com/oxbshw/watch-skill) for perception, evidence, memory and
+independent verification.
+
+> **Host plugin — runs beside the agent in the DSH process.**
+> Composed by the bundle. Install it directly only to speak to Watch Core from a host of your own.
 
 ## Exports
 
@@ -35,10 +38,30 @@ composes this package with the rest of DeepWatch and is what a profile
 normally depends on; installing this one directly is for embedding a
 single piece in a composition you control.
 
+## Configuration
+
+Supplied by the host when it mounts this plugin.
+
+| Option | Type | |
+| --- | --- | --- |
+| `transport` | `'auto' | 'stdio' | 'mock'` | How to reach Watch Core. |
+| `command` | `string` | Executable that starts Watch Core in Bridge mode. |
+| `args` | `string[]` |  |
+| `cwd` | `string` | Working directory for the child. |
+| `startupTimeoutMs` | `number` |  |
+| `requestTimeoutMs` | `number` | Deadline applied to a request that does not carry its own. |
+| `dataDir` | `string` | Profile-scoped data directory for the engine. |
+| `autoConnect` | `boolean` | Connect during plugin activation rather than on first use. |
+| `failuresBeforeOpen` | `number` | Consecutive connection failures before the Bridge stops trying. |
+| `initialCooldownMs` | `number` | First cooldown after the circuit opens. |
+| `maxCooldownMs` | `number` | Ceiling for the cooldown, so backoff cannot grow without bound. |
+
 ## Requirements
 
 - Node `^22.19.0 || >=24.0.0`
 - The peers above, supplied by the host composition
+
+`watch-skill` reachable on `PATH`, or an explicit `command`. Without one the Bridge reports `core_missing` and leaves the workspace usable with Watch features disabled — it does not fall back to a mock.
 
 ## Stability
 
@@ -60,10 +83,12 @@ workspace boundary and the host's permissions, not by this flag.
 
 ## Where this fits
 
-These packages are composed together; installing one on its own is rarely
-what you want. The whole picture, the gates it has to pass, and how to run
-DeepWatch is in the
-[workspace README](https://github.com/oxbshw/watch-skill/tree/main/workspace#readme).
+The only thing that talks to Watch Core. Every other package reaches Core through it, which is what makes Core the sole source of a verdict.
+
+The twenty packages and how they compose:
+[the package map](https://github.com/oxbshw/watch-skill/blob/main/workspace/docs/packages.md).
+Running DeepWatch, and the gates a change has to pass:
+[the workspace README](https://github.com/oxbshw/watch-skill/tree/main/workspace#readme).
 
 ## Attribution
 

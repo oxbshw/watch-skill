@@ -168,22 +168,33 @@ export async function runWeb(invocation: Invocation): Promise<number> {
 /**
  * `deepwatch desktop`.
  *
- * The desktop application is distributed as a signed installer per platform
- * rather than through npm, so this does not download one. It launches an
- * installed DeepWatch if `DEEPWATCH_DESKTOP_BIN` names it, and otherwise says
- * where to get it — which is the honest answer for a command that cannot
- * fabricate an application.
+ * This does not download an application, and it used to say the reason was
+ * that the application is "distributed as a signed installer per platform" —
+ * which sent a person to "the project releases" to find one. There is not one.
+ * No release has ever carried a desktop asset, `@deepwatch/desktop` is
+ * `private`, and the `build` block in its manifest is electron-builder
+ * configuration for a builder that is not a dependency and that no script
+ * invokes. The Electron shell starts and its context isolation holds
+ * (`npm run smoke:desktop` proves that on a machine with a desktop session),
+ * and none of that is a download.
+ *
+ * So the message says the true thing instead: this release does not distribute
+ * a desktop application, `deepwatch web` is the supported way to run the same
+ * workspace, and `DEEPWATCH_DESKTOP_BIN` remains the escape hatch for somebody
+ * who has built the shell themselves. A command that points at a file nobody
+ * produces is worse than one that admits the gap.
  */
 export function runDesktop(invocation: Invocation): Promise<number> {
   const binary = process.env['DEEPWATCH_DESKTOP_BIN']
   if (typeof binary !== 'string' || binary === '') {
     process.stderr.write(
-      'deepwatch: the DeepWatch desktop app is installed from a platform installer,\n'
-      + '           not from npm, so there is nothing here to start.\n\n'
-      + '           Install it from the project releases, then run it from your\n'
-      + '           applications list — or set DEEPWATCH_DESKTOP_BIN to its\n'
-      + '           executable and run this again.\n\n'
-      + '           `deepwatch web` runs the same workspace in your browser now.\n')
+      'deepwatch: this release does not distribute a desktop application, so there\n'
+      + '           is nothing here to start. No installer is published and none is\n'
+      + '           built from this repository.\n\n'
+      + '           `deepwatch web` runs the same workspace in your browser, with\n'
+      + '           the same profile and the same evidence.\n\n'
+      + '           If you have built the Electron shell yourself, set\n'
+      + '           DEEPWATCH_DESKTOP_BIN to its executable and run this again.\n')
     return Promise.resolve(2)
   }
   // The desktop shell hosts the same Harness, so it needs the same one root.

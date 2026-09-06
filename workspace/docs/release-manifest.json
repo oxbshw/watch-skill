@@ -54,13 +54,13 @@
       {
         "name": "@deepwatch/dsh-adapters",
         "version": "0.1.0",
-        "integrity": "sha256:1072396e5f88b31e93476497e751e1f124f0ed1c93bb92625630ed42f8c5c992",
+        "integrity": "sha256:4b4a891dccd81f0074ebcd8762b76967b41aafc662be2a28bff2183b3626d865",
         "sourceFiles": 6
       },
       {
         "name": "@deepwatch/dsh-client-brand",
         "version": "0.1.0",
-        "integrity": "sha256:46a1bb17e35dd712c324318cd0124769268815c1a79adaf5d1b1b0e51916ba61",
+        "integrity": "sha256:b21a630f53f713cbd123a5926f6d4e6e3240ab127f214b8766a96db8cb9b21d8",
         "sourceFiles": 10
       },
       {
@@ -72,103 +72,103 @@
       {
         "name": "@deepwatch/cli",
         "version": "0.1.0",
-        "integrity": "sha256:9a8c781e2e5a8cc6df955479491a8f173ef762afbcef23f827daa31c99501e59",
+        "integrity": "sha256:78bca60c85f351f7730f8e1d72df0f6994284676d4a0d5dd1e86edb115f0c65b",
         "sourceFiles": 12
       },
       {
         "name": "@deepwatch/dsh-client-evidence",
         "version": "0.1.0",
-        "integrity": "sha256:40c1243c07a769f8a462ce94d8274d8563d36ab836d1cf7fc3aa2921d74157ca",
+        "integrity": "sha256:2ab7f3c07a2336416b277ed16f8405f552420d1b125c2a3842d35287b7382f7d",
         "sourceFiles": 18
       },
       {
         "name": "@deepwatch/dsh-client-memory",
         "version": "0.1.0",
-        "integrity": "sha256:d33fc6082ccf5b13d980e039dd7c905437b6344948dacab2399a51cc09023ba0",
+        "integrity": "sha256:fcb7f63e11d1901bf11b95abf0859fab3f8e990a2427856dc5c749c10d36fa8d",
         "sourceFiles": 10
       },
       {
         "name": "@deepwatch/dsh-client-remotes",
         "version": "0.1.0",
-        "integrity": "sha256:ff6553441685c42ec972d356e36c3fc9eb4302227404c1ce3a1c635d5d228e83",
+        "integrity": "sha256:8e6d697c9fa75f04e7a30c58458384a50f4f06167fda118fd7e71fc17f47cbb8",
         "sourceFiles": 6
       },
       {
         "name": "@deepwatch/dsh-client-settings",
         "version": "0.1.0",
-        "integrity": "sha256:216a54a9c93ba8662f2798fba41d5cae612eb6639f410e0b46c96ebab31bd5b9",
+        "integrity": "sha256:4f14420170364fe7a5062488d9637212207f23689563d0d00b04403ecdd475d9",
         "sourceFiles": 16
       },
       {
         "name": "@deepwatch/dsh-contracts",
         "version": "0.1.0",
-        "integrity": "sha256:55e86b129c8b37bbf2a4f13659d83ec87179415589e2f5765c7c5abb920a810d",
+        "integrity": "sha256:468022fe57daaed3969913b56c9cdf2278954bc9175fcbf9f4bccbf550dfefc1",
         "sourceFiles": 18
       },
       {
         "name": "@deepwatch/dsh-core-bridge",
         "version": "0.1.0",
-        "integrity": "sha256:7e36b7b60857cc3d8bb6d99563c0e8c10bbcf8374115b341562eccd6b4b7e51e",
+        "integrity": "sha256:5fea8ce919d5a9283f6c77b1cf485fcf3ed67054711cfff2da128501fb503658",
         "sourceFiles": 7
       },
       {
         "name": "@deepwatch/dsh-library",
         "version": "0.1.0",
-        "integrity": "sha256:d21faeba29d4cf8809c52ee37fa32a63b2d2304d4008b580489b11a3b7c8ebe6",
+        "integrity": "sha256:401e2af3df62b8851a6a771ecc359dd9ff84742682f449db727c58fa1e51a432",
         "sourceFiles": 15
       },
       {
         "name": "@deepwatch/dsh-live",
         "version": "0.1.0",
-        "integrity": "sha256:2c8920db9ac2a4925d5eaec40f31e042996624e2ae132989148ff44e4a00a2e4",
+        "integrity": "sha256:f0dc803cf915060c8a4e51edebab10bd49fc3b963f23aa531916188ec3df0162",
         "sourceFiles": 14
       },
       {
         "name": "@deepwatch/dsh-memory",
         "version": "0.1.0",
-        "integrity": "sha256:623ba55d37e404a15abcd1eceaee190f884759f536ec9ba45496b5b73383227a",
+        "integrity": "sha256:8b2d49c0177425c8f7f6f2d05aa7e2b2ec83a585057f202565d3b50b2b7880c7",
         "sourceFiles": 11
       },
       {
         "name": "@deepwatch/dsh-sdk",
         "version": "0.1.0",
-        "integrity": "sha256:77ff31552f7dfb3b010fb267d68d945df85b5a077149c69c448c68311c4743c3",
+        "integrity": "sha256:deb748a13d44828e53939d98b671803c7b91712730378a2ff2b5c07b455eb7a6",
         "sourceFiles": 7
       },
       {
         "name": "@deepwatch/dsh-technology",
         "version": "0.1.0",
-        "integrity": "sha256:b3c93285c7af0e3d8f271243a656e0676971af59aadaf449ea6780f8a8d8127c",
+        "integrity": "sha256:cef3e6474d86b3280006b5e64cca18246065f7ded7be46ce3e69e676e87aa624",
         "sourceFiles": 15
       },
       {
         "name": "@deepwatch/dsh-tenancy",
         "version": "0.1.0",
-        "integrity": "sha256:78181e4db90013d6266afe778eda8d6ff8978dc1083ee7c1e0e7a3abb8505b59",
+        "integrity": "sha256:ca06f01c842e44212e5688f68b8321ea79b8da7137a7c93c4bf6462ea7a60bc8",
         "sourceFiles": 9
       },
       {
         "name": "@deepwatch/dsh-tools",
         "version": "0.1.0",
-        "integrity": "sha256:a46bcc94436e553ecd9b04360843784ee56f0461b6a8c54d0d2d2461bc38b790",
+        "integrity": "sha256:6341eac0ff8470fb22ecd1354c974137917214f77a1d8c2da33e33d1cc6bb165",
         "sourceFiles": 11
       },
       {
         "name": "@deepwatch/dsh-trajectory",
         "version": "0.1.0",
-        "integrity": "sha256:cfd15a3cb03c7dd6b00a3b00eec8f6352096d46b8e9c8a2227ddc1a3922c66e5",
+        "integrity": "sha256:890b4a674cd7b052b8b0c08e3340031bae6f558f4b7e1de9c9d6c22e02768dc3",
         "sourceFiles": 10
       },
       {
         "name": "@deepwatch/dsh-wiki",
         "version": "0.1.0",
-        "integrity": "sha256:89739fad97e29c9f71ff1549111f7d3f7459e422693caa4287ebe4b8c00d2d16",
+        "integrity": "sha256:79054edb4ce37b4ef857c171d9d73b18233cc6aff57908c8ef960637be9ff9a9",
         "sourceFiles": 5
       },
       {
         "name": "@deepwatch/dsh-workspace",
         "version": "0.1.0",
-        "integrity": "sha256:7d7820f09ac84ec4663e22891dae4af579cdf1ab9dc59730e544b94773e6a819",
+        "integrity": "sha256:2a7bf73b1557209cdbf682e21b5268a7dc74adb1eac46e83ac35f0ff65724903",
         "sourceFiles": 15
       },
       {
@@ -189,7 +189,7 @@
       "creators": [
         "Tool: watch-gen-release-manifest"
       ],
-      "created": "2026-09-06T16:43:44Z"
+      "created": "2026-09-06T18:01:44Z"
     },
     "packages": [
       {
@@ -204,7 +204,7 @@
         "checksums": [
           {
             "algorithm": "SHA256",
-            "checksumValue": "1072396e5f88b31e93476497e751e1f124f0ed1c93bb92625630ed42f8c5c992"
+            "checksumValue": "4b4a891dccd81f0074ebcd8762b76967b41aafc662be2a28bff2183b3626d865"
           }
         ]
       },
@@ -220,7 +220,7 @@
         "checksums": [
           {
             "algorithm": "SHA256",
-            "checksumValue": "46a1bb17e35dd712c324318cd0124769268815c1a79adaf5d1b1b0e51916ba61"
+            "checksumValue": "b21a630f53f713cbd123a5926f6d4e6e3240ab127f214b8766a96db8cb9b21d8"
           }
         ]
       },
@@ -252,7 +252,7 @@
         "checksums": [
           {
             "algorithm": "SHA256",
-            "checksumValue": "9a8c781e2e5a8cc6df955479491a8f173ef762afbcef23f827daa31c99501e59"
+            "checksumValue": "78bca60c85f351f7730f8e1d72df0f6994284676d4a0d5dd1e86edb115f0c65b"
           }
         ]
       },
@@ -268,7 +268,7 @@
         "checksums": [
           {
             "algorithm": "SHA256",
-            "checksumValue": "40c1243c07a769f8a462ce94d8274d8563d36ab836d1cf7fc3aa2921d74157ca"
+            "checksumValue": "2ab7f3c07a2336416b277ed16f8405f552420d1b125c2a3842d35287b7382f7d"
           }
         ]
       },
@@ -284,7 +284,7 @@
         "checksums": [
           {
             "algorithm": "SHA256",
-            "checksumValue": "d33fc6082ccf5b13d980e039dd7c905437b6344948dacab2399a51cc09023ba0"
+            "checksumValue": "fcb7f63e11d1901bf11b95abf0859fab3f8e990a2427856dc5c749c10d36fa8d"
           }
         ]
       },
@@ -300,7 +300,7 @@
         "checksums": [
           {
             "algorithm": "SHA256",
-            "checksumValue": "ff6553441685c42ec972d356e36c3fc9eb4302227404c1ce3a1c635d5d228e83"
+            "checksumValue": "8e6d697c9fa75f04e7a30c58458384a50f4f06167fda118fd7e71fc17f47cbb8"
           }
         ]
       },
@@ -316,7 +316,7 @@
         "checksums": [
           {
             "algorithm": "SHA256",
-            "checksumValue": "216a54a9c93ba8662f2798fba41d5cae612eb6639f410e0b46c96ebab31bd5b9"
+            "checksumValue": "4f14420170364fe7a5062488d9637212207f23689563d0d00b04403ecdd475d9"
           }
         ]
       },
@@ -332,7 +332,7 @@
         "checksums": [
           {
             "algorithm": "SHA256",
-            "checksumValue": "55e86b129c8b37bbf2a4f13659d83ec87179415589e2f5765c7c5abb920a810d"
+            "checksumValue": "468022fe57daaed3969913b56c9cdf2278954bc9175fcbf9f4bccbf550dfefc1"
           }
         ]
       },
@@ -348,7 +348,7 @@
         "checksums": [
           {
             "algorithm": "SHA256",
-            "checksumValue": "7e36b7b60857cc3d8bb6d99563c0e8c10bbcf8374115b341562eccd6b4b7e51e"
+            "checksumValue": "5fea8ce919d5a9283f6c77b1cf485fcf3ed67054711cfff2da128501fb503658"
           }
         ]
       },
@@ -364,7 +364,7 @@
         "checksums": [
           {
             "algorithm": "SHA256",
-            "checksumValue": "d21faeba29d4cf8809c52ee37fa32a63b2d2304d4008b580489b11a3b7c8ebe6"
+            "checksumValue": "401e2af3df62b8851a6a771ecc359dd9ff84742682f449db727c58fa1e51a432"
           }
         ]
       },
@@ -380,7 +380,7 @@
         "checksums": [
           {
             "algorithm": "SHA256",
-            "checksumValue": "2c8920db9ac2a4925d5eaec40f31e042996624e2ae132989148ff44e4a00a2e4"
+            "checksumValue": "f0dc803cf915060c8a4e51edebab10bd49fc3b963f23aa531916188ec3df0162"
           }
         ]
       },
@@ -396,7 +396,7 @@
         "checksums": [
           {
             "algorithm": "SHA256",
-            "checksumValue": "623ba55d37e404a15abcd1eceaee190f884759f536ec9ba45496b5b73383227a"
+            "checksumValue": "8b2d49c0177425c8f7f6f2d05aa7e2b2ec83a585057f202565d3b50b2b7880c7"
           }
         ]
       },
@@ -412,7 +412,7 @@
         "checksums": [
           {
             "algorithm": "SHA256",
-            "checksumValue": "77ff31552f7dfb3b010fb267d68d945df85b5a077149c69c448c68311c4743c3"
+            "checksumValue": "deb748a13d44828e53939d98b671803c7b91712730378a2ff2b5c07b455eb7a6"
           }
         ]
       },
@@ -428,7 +428,7 @@
         "checksums": [
           {
             "algorithm": "SHA256",
-            "checksumValue": "b3c93285c7af0e3d8f271243a656e0676971af59aadaf449ea6780f8a8d8127c"
+            "checksumValue": "cef3e6474d86b3280006b5e64cca18246065f7ded7be46ce3e69e676e87aa624"
           }
         ]
       },
@@ -444,7 +444,7 @@
         "checksums": [
           {
             "algorithm": "SHA256",
-            "checksumValue": "78181e4db90013d6266afe778eda8d6ff8978dc1083ee7c1e0e7a3abb8505b59"
+            "checksumValue": "ca06f01c842e44212e5688f68b8321ea79b8da7137a7c93c4bf6462ea7a60bc8"
           }
         ]
       },
@@ -460,7 +460,7 @@
         "checksums": [
           {
             "algorithm": "SHA256",
-            "checksumValue": "a46bcc94436e553ecd9b04360843784ee56f0461b6a8c54d0d2d2461bc38b790"
+            "checksumValue": "6341eac0ff8470fb22ecd1354c974137917214f77a1d8c2da33e33d1cc6bb165"
           }
         ]
       },
@@ -476,7 +476,7 @@
         "checksums": [
           {
             "algorithm": "SHA256",
-            "checksumValue": "cfd15a3cb03c7dd6b00a3b00eec8f6352096d46b8e9c8a2227ddc1a3922c66e5"
+            "checksumValue": "890b4a674cd7b052b8b0c08e3340031bae6f558f4b7e1de9c9d6c22e02768dc3"
           }
         ]
       },
@@ -492,7 +492,7 @@
         "checksums": [
           {
             "algorithm": "SHA256",
-            "checksumValue": "89739fad97e29c9f71ff1549111f7d3f7459e422693caa4287ebe4b8c00d2d16"
+            "checksumValue": "79054edb4ce37b4ef857c171d9d73b18233cc6aff57908c8ef960637be9ff9a9"
           }
         ]
       },
@@ -508,7 +508,7 @@
         "checksums": [
           {
             "algorithm": "SHA256",
-            "checksumValue": "7d7820f09ac84ec4663e22891dae4af579cdf1ab9dc59730e544b94773e6a819"
+            "checksumValue": "2a7bf73b1557209cdbf682e21b5268a7dc74adb1eac46e83ac35f0ff65724903"
           }
         ]
       },

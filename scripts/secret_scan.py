@@ -100,6 +100,9 @@ DELIBERATE: dict[tuple[str, str], str] = {
         "the same controls, on the half of the gate that reads the documents",
     ("tests/bench/test_video_backend_adapter.py", "bearer authorization header"):
         "a parametrised fixture proving the redactor catches an Authorization header",
+    ("workspace/tests/first-publish.test.mjs", "bearer authorization header"):
+        "a fabricated Authorization header proving first-publish.mjs sanitizes npm's "
+        "own diagnostics before they reach a console or a release state file",
     ("workspace/tests/execution-observation.test.mjs", "bearer authorization header"):
         "fixtures proving the execution ledger strips a credential out of a shell "
         "command line before the record is stored",
