@@ -370,7 +370,7 @@ jobs:
           sha256sum -c SHA256SUMS
 
       - name: GitHub Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           body_path: sealed/workspace/.release-artifacts/release-notes.md
           prerelease: ${{ needs.verify.outputs.dist-tag != 'latest' }}
