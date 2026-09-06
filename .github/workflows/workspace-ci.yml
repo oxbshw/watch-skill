@@ -314,6 +314,23 @@ jobs:
       - name: Two packs of this commit produce the same twenty archives
         run: npm run verify:pack-reproducible
 
+      # Printed so the digests this Linux runner produced can be compared with
+      # the ones a release owner packed on their own machine.
+      #
+      # That comparison is what makes a first publication safe to make locally.
+      # npm requires a package to exist before a Trusted Publisher can be
+      # configured for it, so the first upload of each of the twenty is made by
+      # hand — and the `deepwatch-v*` tag then re-packs on Linux and asks the
+      # registry whether what it holds is these same bytes. If the two
+      # platforms disagree, `publish-plan.mjs` refuses every package as
+      # "already published with DIFFERENT bytes", and the release cannot be
+      # completed at that version by anyone. Better to learn that from a log
+      # than from a tag.
+      - name: The digests this platform produced
+        run: |
+          echo "commit: $GITHUB_SHA"
+          cat .release-artifacts/SHA256SUMS
+
       # With tarballs on disk, this also reads every document inside them --
       # which is the copy a person sees on the registry page.
       - name: Nothing stale, unfinished or personal on the release surface
