@@ -15,7 +15,7 @@ else, a smaller tool is a reasonable choice.
 | | Watch Skill | [claude-video](https://github.com/bradautomates/claude-video) | [mcp-video-analyzer](https://github.com/guimatheus92/mcp-video-analyzer) | [screenpipe](https://github.com/screenpipe/screenpipe) | Upload to a frontier model |
 |---|---|---|---|---|---|
 | Stars | 267 | 14,528 | 42 | 20,816 | — |
-| Last release | v1.2.0, 2026-08-08 | v0.2.0, 2026-06-29 | active | active | — |
+| Last release | v1.4.0, 2026-09-06 | v0.2.0, 2026-06-29 | active | active | — |
 | Last commit | 2026-08-09 | 2026-06-30 | 2026-08-04 | 2026-08-08 | — |
 | Open PRs | 1 | 71 | — | — | — |
 | Frames + OCR + transcript | yes | yes | yes | screen only | varies |
