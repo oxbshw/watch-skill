@@ -232,13 +232,20 @@ describe('the commands with side effects refuse before they do harm', () => {
     }
   })
 
-  test('desktop says where the app comes from rather than pretending to fetch one', () => {
+  test('desktop admits there is no application rather than sending somebody to find one', () => {
+    // It used to say the app arrives "from a platform installer" and to install
+    // it "from the project releases". No release has ever carried a desktop
+    // asset, `@deepwatch/desktop` is private, and the electron-builder block in
+    // its manifest names a builder that is not a dependency and that no script
+    // runs -- so that sentence sent a person looking for a file nobody makes.
     const box = sandbox()
     try {
       const ran = deepwatch(['desktop'], { DEEPWATCH_HOME: box.dir })
       assert.equal(ran.code, 2)
-      assert.match(ran.stderr, /platform installer/)
+      assert.match(ran.stderr, /does not distribute a desktop application/)
       assert.match(ran.stderr, /deepwatch web/, 'it names the thing that does work now')
+      assert.doesNotMatch(ran.stderr, /from the project releases/,
+        'there is no release asset to send anybody to')
     } finally {
       box.dispose()
     }

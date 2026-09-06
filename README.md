@@ -328,7 +328,7 @@ More: **[architecture](docs/architecture.md)** ·
 | Visual scene description | — | a model that can see images |
 | Browser capture / THE LOOP | with `[loop]` | `playwright install chromium` |
 | Memory | off | enable in Settings; the store is plaintext and says so |
-| Desktop app | not distributed | run the web workspace |
+| Desktop app | not distributed — [no installer exists](workspace/docs/known-limitations.md) | run `deepwatch web` |
 
 DeepWatch starts, and stays useful, with no provider configured: verification,
 containment, the Library and local perception are all local. What needs a
