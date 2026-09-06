@@ -101,11 +101,36 @@ def test_gallery_covers_every_agent_that_has_art() -> None:
 
 
 def test_the_front_page_points_at_the_gallery_rather_than_repeating_it() -> None:
-    """One grid, in one place, and the README says where it is."""
+    """One grid, in one place — but a signpost is not a second grid.
+
+    This asserted zero avatars on the front page, which was the right rule
+    written one notch too tightly. What it exists to prevent is a *duplicate
+    gallery*: twenty-six avatars in two files, drifting apart, with nobody sure
+    which one is the index. What it also prevented was the thing a front page
+    is for — showing a visitor at a glance that their editor is on the list,
+    and sending them to the matrix to find out how far.
+
+    So the bound is a size rather than a ban. A handful of recognisable marks
+    that link onward is a signpost. Anything approaching the full set is the
+    gallery again, and the gallery has a page.
+    """
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
     assert "docs/agents/README.md" in readme, "the README must link the agent index"
-    grid = readme.count("docs/assets/agents/")
-    assert grid == 0, f"the README grew {grid} avatar(s) back; the gallery lives in docs/agents/"
+
+    shown = readme.count("docs/assets/agents/")
+    everything = len([
+        page
+        for page in AGENTS_DIR.glob("*.md")
+        if page.name not in {"README.md", "frameworks.md"} and _has_avatar(page)
+    ])
+    assert shown <= 12, (
+        f"the README shows {shown} avatars of {everything}; past a dozen this is "
+        "the gallery again, and the gallery lives in docs/agents/"
+    )
+    assert shown < everything, (
+        "the README shows every avatar there is, which makes it the gallery "
+        "rather than a pointer to it"
+    )
 
 
 def test_pages_without_art_are_still_reachable() -> None:
