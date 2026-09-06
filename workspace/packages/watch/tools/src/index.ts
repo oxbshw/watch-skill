@@ -67,6 +67,14 @@ export interface Config {
   readonly verifyTimeoutMs: number
   /** Deadline for a search or a moment lookup. */
   readonly readTimeoutMs: number
+  /**
+   * Deadline for the first read after the engine connects.
+   *
+   * Separate from `readTimeoutMs` because the first semantic search pays for
+   * an embedding model load and the ordinary deadline does not cover it. See
+   * `SensoryConfig.coldReadTimeoutMs`.
+   */
+  readonly coldReadTimeoutMs: number
   /** Deadline for starting a live session, which may launch a browser. */
   readonly liveStartTimeoutMs: number
   /** Deadline for one browser action, including its re-observation. */
@@ -105,6 +113,7 @@ export const Config: s<Config> = s.object({
   queryTimeoutMs: s.number().step(1).min(1_000).default(120_000),
   verifyTimeoutMs: s.number().step(1).min(1_000).default(60_000),
   readTimeoutMs: s.number().step(1).min(1_000).default(30_000),
+  coldReadTimeoutMs: s.number().step(1).min(1_000).default(180_000),
   liveStartTimeoutMs: s.number().step(1).min(1_000).default(75_000),
   actTimeoutMs: s.number().step(1).min(1_000).default(60_000),
   observeTimeoutMs: s.number().step(1).min(1_000).default(30_000),

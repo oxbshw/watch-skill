@@ -22,6 +22,18 @@ import type {} from '@deepwatch/dsh-core-bridge'
 export interface SensoryConfig {
   /** Deadline for a search or a moment lookup. */
   readonly readTimeoutMs: number
+  /**
+   * Deadline for the first read after the engine connects.
+   *
+   * A semantic search loads an embedding model into the Core process on first
+   * use. Measured on a fast laptop against 1.4.0: the first
+   * `watch.library.search` in a freshly started Core took longer than 30s and
+   * came back `bridge.deadline_exceeded`; the next one, in the same process,
+   * answered in 4.4s. The ordinary read deadline is right for a read and
+   * wrong for a load, and the read that pays for the load is the first one a
+   * person makes after opening the product.
+   */
+  readonly coldReadTimeoutMs: number
   /** Deadline for starting a live session, which may launch a browser. */
   readonly liveStartTimeoutMs: number
 }
@@ -106,17 +118,33 @@ function abortOf(exec: { readonly signal?: AbortSignal }): { signal?: AbortSigna
 
 /** Register the search, moment and live tools. */
 export function applySensoryTools(ctx: Context, config: SensoryConfig): void {
+  /**
+   * Which connection this process has already warmed.
+   *
+   * Keyed on the Bridge's restart count rather than a boolean: a Core that
+   * exits and is restarted is a new process with a cold model, and a flag set
+   * before the restart would spend the ordinary deadline on the load again.
+   */
+  let warmedFor: number | null = null
+
   /** Issue one Bridge read and normalize its two outcomes. */
   const read = async (
     method: string,
     params: Record<string, unknown>,
     exec: { readonly signal?: AbortSignal },
-    deadlineMs = config.readTimeoutMs,
+    deadlineMs?: number,
   ): Promise<JsonValue> => {
+    const restarts = ctx.watchCore.health().restartCount
+    const budget = deadlineMs
+      ?? (warmedFor === restarts ? config.readTimeoutMs : config.coldReadTimeoutMs)
     const result = await ctx.watchCore.request(method, params, {
-      deadlineMs,
+      deadlineMs: budget,
       ...abortOf(exec),
     })
+    // Only a read that came back proves the process is warm. A refusal for any
+    // other reason leaves the question open, and the cost of being wrong here
+    // is one more generous deadline rather than a wrong answer.
+    if (result.ok) warmedFor = restarts
     return asJson(result.ok ? result.value : refusal(result.error))
   }
 

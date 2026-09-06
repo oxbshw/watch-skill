@@ -12,6 +12,7 @@ from pathlib import Path
 
 import typer
 from rich.console import Console
+from rich.markup import escape
 
 # Pin the output encoding to UTF-8.
 #
@@ -43,6 +44,22 @@ _console = Console(stderr=True)
 _STATUS_STYLE = {"ok": "green", "warn": "yellow", "fail": "red"}
 
 
+def _plain(value: object) -> str:
+    """Text that was not written as markup, rendered as what it says.
+
+    Rich reads ``[...]`` as a style tag and drops what it cannot resolve.
+    Every instruction this CLI gives for installing an extra contains one --
+    ``pip install "watch-skill[perceive, index, mcp]"`` reached the terminal
+    as ``pip install "watch-skill"``, which reinstalls what the reader
+    already has and leaves them exactly as stuck. The JSON was right the
+    whole time, so nothing looked broken.
+
+    Applies to anything this process did not author as markup: a fix string,
+    an exception, a path, and above all a model's own words.
+    """
+    return escape(str(value))
+
+
 def _render_report(report) -> None:
     from rich.table import Table
 
@@ -55,7 +72,7 @@ def _render_report(report) -> None:
         detail = check.message
         if check.fix_applied:
             detail += f" (auto-fixed: {check.fix_applied})"
-        table.add_row(check.name, f"[{style}]{check.status}[/{style}]", detail)
+        table.add_row(check.name, f"[{style}]{check.status}[/{style}]", _plain(detail))
     _console.print(table)
 
 
@@ -145,7 +162,7 @@ def watch(
         }
         if preset not in presets:
             _console.print(
-                f"[red]error:[/red] unknown --detail {detail!r}; "
+                f"[red]error:[/red] unknown --detail {_plain(repr(detail))}; "
                 f"expected one of: {', '.join(presets)}"
             )
             raise typer.Exit(code=2) from None
@@ -177,7 +194,7 @@ def watch(
             use_cache=not no_cache,
         )
     except WatchSkillError as exc:
-        _console.print(f"[red]error:[/red] {exc}")
+        _console.print(f"[red]error:[/red] {_plain(exc)}")
         print(json.dumps(exc.to_dict(), indent=2))
         raise typer.Exit(code=1) from None
     if index and result.perception is not None:
@@ -777,7 +794,7 @@ def notes(
     try:
         document = build_notes(video)
     except WatchSkillError as exc:
-        _console.print(f"[red]error:[/red] {exc}")
+        _console.print(f"[red]error:[/red] {_plain(exc)}")
         print(json.dumps(exc.to_dict(), indent=2))
         raise typer.Exit(code=1) from None
 
@@ -1313,7 +1330,7 @@ def setup(
     _console.print("[bold]Detected agents:[/bold]")
     for t in targets:
         state = "already configured" if t.configured else "will configure"
-        _console.print(f"  - {t.label}  ({state}; {t.config_path})")
+        _console.print(f"  - {_plain(t.label)}  ({state}; {_plain(t.config_path)})")
     todo = [t for t in targets if not t.configured]
     if not todo:
         print("Everything already configured. Restart the agents to pick it up.")
@@ -1322,7 +1339,8 @@ def setup(
         raise typer.Exit(code=0)
     for t in todo:
         changed, message = configure_agent(t)
-        _console.print(("[green]+[/green] " if changed else "[yellow]=[/yellow] ") + message)
+        _console.print(
+            ("[green]+[/green] " if changed else "[yellow]=[/yellow] ") + _plain(message))
     print("\nDone. Restart each agent, then try: \"watch this video ...\" in its chat.")
 
 
@@ -1368,7 +1386,11 @@ def _verify_vision_live() -> None:
     if not text:
         print("Vision call returned empty output — check the provider/model config.")
         raise typer.Exit(code=1)
-    _console.print(f"[green]Vision OK[/green] — the model described the probe frame as:\n  {text}")
+    # The model's own words, so markup is switched off rather than escaped by
+    # habit: observed content decides nothing about how this terminal renders.
+    _console.print(
+        f"[green]Vision OK[/green] — the model described the probe frame as:\n  "
+        f"{_plain(text)}")
 
 
 @app.command("setup-vision")
@@ -1427,7 +1449,7 @@ def setup_vision(
             print(json.dumps(exc.to_dict(), indent=2))
             raise typer.Exit(code=1) from None
         note = f" (backup: {backup.name})" if backup else ""
-        _console.print(f"[green]+[/green] {provider} configured -> {env}{note}")
+        _console.print(f"[green]+[/green] {_plain(provider)} configured -> {_plain(env)}{_plain(note)}")
     elif provider == "ollama":
         import shutil
         import subprocess
@@ -1455,7 +1477,8 @@ def setup_vision(
                 raise typer.Exit(code=1)
         env, backup = vs.configure_ollama(model=chosen)
         note = f" (backup: {backup.name})" if backup else ""
-        _console.print(f"[green]+[/green] Ollama configured ({chosen}) -> {env}{note}")
+        _console.print(
+            f"[green]+[/green] Ollama configured ({_plain(chosen)}) -> {_plain(env)}{_plain(note)}")
     else:
         supported = " | ".join([*vs.CLOUD_PROVIDER_DEFAULTS, "ollama"])
         print(f"Unknown provider: {provider!r} (expected {supported}).")

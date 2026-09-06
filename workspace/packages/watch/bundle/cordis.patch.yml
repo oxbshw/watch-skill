@@ -159,6 +159,16 @@
       config:
         queryTimeoutMs: 120000
         verifyTimeoutMs: 60000
+        # A read is quick; the first read of a session is not. A semantic
+        # search loads an embedding model into the Core process on first use,
+        # and that load is what the first `watch_search_sources` after the
+        # product opens actually waits for. Measured against 1.4.0 on a fast
+        # laptop: 30003ms and `bridge.deadline_exceeded` cold, 4388ms warm in
+        # the same process. So the ordinary deadline stays short enough to
+        # report a genuine hang, and the first read after each connection is
+        # given room for the load instead.
+        readTimeoutMs: 30000
+        coldReadTimeoutMs: 180000
         # Where execution receipts are journalled, beside the memory store and
         # for the same reason: a record the Host makes about your workspace
         # belongs in your profile, not in a process that is about to exit.
