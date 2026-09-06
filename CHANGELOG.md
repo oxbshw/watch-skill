@@ -1,15 +1,111 @@
 # Changelog
 
-## v1.4.0 — 2026-09-05
+## v1.4.0 — 2026-09-06
 
 The first stable release of both products in this repository. Watch Skill
 reaches **1.4.0**, and the twenty `@deepwatch/*` packages reach **0.1.0** — their
 first publication rather than an update.
 
-No product behaviour changed between `1.4.0rc1` and `1.4.0`. The candidate's
-entry below still describes what the software does; this entry describes
-finishing the path that puts it in front of somebody, which turned out to
-contain three defects that only a stable release could expose.
+Most of what follows is about finishing the path that puts this in front of
+somebody. That turned out to contain defects a candidate could not expose,
+because several of them are only reachable by installing the sealed artifacts
+into a room and using the product the way a person would. Two acceptance
+passes now do exactly that — one with no provider anywhere near it, one driving
+a real agent through the real profile — and everything under **What the
+acceptance rooms found** was found by running them.
+
+### What the acceptance rooms found
+
+**The first search of a session never answered.** `watch_search_sources` is the
+tool an agent reaches for to find which source mentioned something, and in
+DeepWatch it hung the first time it was used. Not slowly: measured with a
+fifteen-minute client deadline against a fresh engine, the first
+`watch.library.search` did not return at all, while a second issued afterwards
+in the same process answered in 51 seconds and a third in 1.2. The cause was
+written down in this repository already — the embedding stack deadlocks when
+numpy's C extension is first imported from a worker thread — and the MCP server
+had warmed on its main thread since that was found there. The Bridge answers on
+a bounded pool of its own and never did. It does now, from one shared
+implementation, and the same measurement reads 677ms, 507ms, 506ms.
+
+**Core answered, and the receipt said nobody had asked.** The Host requests a
+verdict through the Bridge, whose `request` returns a discriminated envelope.
+The ledger declared its own structural interface saying the reply came back
+directly, and read `reply.verdict` off the envelope — `undefined` on every
+call. Every execution receipt in the Library read `verdict: null` for work Core
+had verified. The ledger now imports the real contract, so the compiler has an
+opinion the next time either side moves, and a Bridge that refuses reads as
+`unavailable` rather than becoming a verdict.
+
+**A verification the agent asked for was attested from nothing.**
+`watch_verify` touches no path, so the operation contract found nothing to
+check and settled `no_contract` — a completed verification whose receipt said
+nobody verified anything. Core's answer was in the tool's own result the whole
+time; it is now carried to the receipt, with Core's verification id, and
+without running a second contract to obtain the association.
+
+**Every agent verification was INCONCLUSIVE.** `watch_verify` never sent
+`workingDir`, and Core refuses to guess one — deliberately, because the version
+that guessed measured against whatever directory its own process started in.
+So a file the agent had just written correctly came back INCONCLUSIVE, for
+everyone, silently. The session's own directory is now sent.
+
+**A receipt could be listed and not opened.** Its record id was its idempotency
+key, which is a path shape, and the query contract refuses those by design —
+`libraryGet` answered `rejected` for every row the Library had just listed.
+Receipts are filed under a derived id the same contract accepts.
+
+**A replayed receipt erased an answer.** Re-filing a receipt — which happens on
+reconciliation, on replay and after a reconnect — rewrote the row without the
+verdict, and the idempotency map said the verdict had already been applied, so
+no later attestation could put it back. The answer is now remembered rather
+than discarded, and repeat delivery repairs the row instead of losing it.
+
+**An interrupted write cost the next record too.** A process dying mid-append
+leaves a partial last line. The reader skipped it and left it on disk, so the
+next append concatenated onto the fragment and produced one unparseable line —
+the new record vanished at the next load and nothing had failed. The tail is
+now repaired before writing resumes, and only ever the tail.
+
+**A store that was not storing said nothing.** An unreadable journal returned
+the same empty answer a first run does, and a failed append returned success.
+Both are now reported, once per reason, naming the file and what to do.
+
+**The receipts directory was world-readable.** The store only narrowed a
+directory it had created itself, and the ordinary case is the other one. A
+hosted runner found `0o755` where the test asked for `0o700`.
+
+**`doctor` deleted the instruction it was giving.** On a base install it tells
+you which optional tiers are missing and how to add them — and the terminal
+printed `pip install "watch-skill"`, because Rich reads `[...]` as a style tag
+and drops what it cannot resolve. The command left standing reinstalls what the
+reader already has. The `--json` output carried the whole string the whole
+time, which is why nothing looked broken.
+
+**Three fixes named extras that do not exist.** `uv sync --extra transcribe`
+and `uv sync --extra vlm` both shipped; neither group has ever been declared.
+`watch-skill[attest]` appeared in three messages and a docstring for a real
+signing path that had no installable group at all — that one is now declared.
+Every extra-naming message also offers the pip form, because `uv sync` only
+works from a checkout.
+
+**The documented first command did not work.** `pip install watch-skill`
+installs no perception, no retrieval and no MCP server, so `watch-skill watch`
+stopped at `perceive.missing_dependency` on the first video for anyone who
+followed the README exactly. The quick start installs `[standard]` now and says
+what the bare package is for.
+
+### What the front page claimed
+
+"Evidence it cannot fake" is a claim about an adversary and was never the one
+being made. "Every path is checked" is true of the paths a tool *declares* and
+not of a shell command's own semantics. "No self-healing" was wrong without a
+qualifier, because `watch-skill doctor` repairs dependencies and that is the
+point of it. Local dependencies, downloaded models and hosted providers were
+listed as alternatives when they differ in cost, in where the data goes and in
+what they can do at all. Each of those is now stated as what it is, and two
+known limitations that this release fixed no longer describe themselves as
+open.
 
 ### A visible GPU is not a working one, and a transcript was lost to it
 
