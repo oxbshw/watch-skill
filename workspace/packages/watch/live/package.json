@@ -1,9 +1,34 @@
 {
-  "name": "@watchskill/dsh-live",
-  "version": "0.1.0-preview.0",
-  "description": "Live mode \u2014 cursors, gaps, clocks, reconnect and a bounded buffer",
+  "name": "@deepwatch/dsh-live",
+  "version": "0.1.0",
+  "description": "Live mode — cursors, gaps, clocks, reconnect and a bounded buffer",
   "type": "module",
   "license": "MIT",
+  "author": "Sayed Allam",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/oxbshw/watch-skill.git",
+    "directory": "workspace/packages/watch/live"
+  },
+  "homepage": "https://github.com/oxbshw/watch-skill/tree/main/workspace#readme",
+  "bugs": {
+    "url": "https://github.com/oxbshw/watch-skill/issues"
+  },
+  "keywords": [
+    "deepwatch",
+    "deepseek-harness",
+    "watch-skill",
+    "live",
+    "capture"
+  ],
+  "dsh": {
+    "client": {
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-slots"
+      ],
+      "platform": "web"
+    }
+  },
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
   "exports": {
@@ -37,14 +62,6 @@
       "default": "./lib/synthetic-source.js"
     }
   },
-  "dsh": {
-    "client": {
-      "inject": [
-        "@deepseek-ai/dsh-client-ui-slots"
-      ],
-      "platform": "web"
-    }
-  },
   "files": [
     "lib/index.js",
     "lib/client.js",
@@ -52,8 +69,20 @@
     "lib/**/*.js",
     "lib/**/*.d.ts"
   ],
+  "sideEffects": false,
+  "engines": {
+    "node": "^22.19.0 || >=24.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "bundle": "tsdown"
+  },
+  "dependencies": {
+    "@deepwatch/dsh-client-brand": "workspace:^",
+    "@deepwatch/dsh-contracts": "workspace:^",
+    "@deepwatch/dsh-workspace": "workspace:^"
   },
   "peerDependencies": {
     "@deepseek-ai/cordis": "catalog:",
@@ -64,10 +93,5 @@
     "@deepseek-ai/dsh-client-ui-slots": "catalog:",
     "@types/react": "~18.3.1",
     "react": "^18.2.0"
-  },
-  "dependencies": {
-    "@watchskill/dsh-client-brand": "workspace:^",
-    "@watchskill/dsh-contracts": "workspace:^",
-    "@watchskill/dsh-workspace": "workspace:^"
   }
 }

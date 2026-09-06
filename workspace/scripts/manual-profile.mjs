@@ -33,11 +33,18 @@ import { spawnSync } from 'node:child_process'
 import {
   existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync, rmSync, copyFileSync,
 } from 'node:fs'
-import { join, dirname, resolve, basename, sep } from 'node:path'
+import { join, dirname, basename, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { manualPath } from './lib/manual-paths.mjs'
+import { ensureCli } from './lib/dsh-cli.mjs'
+import { packageNameOf } from './lib/packed.mjs'
+import { withPinnedPnpm } from './lib/pnpm-shim.mjs'
+import { resolvePnpm } from './lib/process.mjs'
+import { verifyArtifacts } from './first-publish.mjs'
+import { acknowledgeUpstreamNotice } from './lib/compose.mjs'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
-const HOME = process.env.WATCH_MANUAL_HOME ?? 'G:/watch-manual/dsh-home'
+const HOME = manualPath('WATCH_MANUAL_HOME', ['dsh-home'])
 /** Windows paths in a YAML overlay read better, and parse safer, as POSIX. */
 const posixPath = value => value.split(sep).join('/')
 
@@ -45,11 +52,29 @@ const PACKED = join(HOME, 'packed')
 const PROFILE = 'web'
 const FIXTURES = join(ROOT, 'fixtures', 'manual')
 
-/** Where Watch Core lives on this machine. */
-const CORE_CANDIDATES = [
-  'F:/New folder (5)/local project/.venv/Scripts/watch-skill.exe',
-  'F:/New folder (5)/local project/.venv/bin/watch-skill',
-]
+/**
+ * Where Watch Core's executable might be, in preference order.
+ *
+ * This was two absolute paths into one maintainer's checkout, on a drive and
+ * under a directory name nobody else has. Everyone else got the mock backend
+ * and a line of output saying so, which reads like a decision rather than a
+ * machine that could not find something sitting in its own virtualenv.
+ *
+ * Core lives in this repository now, so the repository's own venv is the
+ * first place to look. WATCH_CORE_BIN overrides for a Core installed
+ * elsewhere.
+ */
+function coreCandidates(env = process.env) {
+  const explicit = env.WATCH_CORE_BIN
+  const repoRoot = join(ROOT, '..')
+  return [
+    ...(typeof explicit === 'string' && explicit !== '' ? [explicit] : []),
+    join(repoRoot, '.venv', 'Scripts', 'watch-skill.exe'),
+    join(repoRoot, '.venv', 'bin', 'watch-skill'),
+    join(ROOT, '.venv', 'Scripts', 'watch-skill.exe'),
+    join(ROOT, '.venv', 'bin', 'watch-skill'),
+  ]
+}
 
 function fail(message, detail) {
   process.stderr.write(`\nwatch: ${message}\n`)
@@ -94,29 +119,16 @@ function removeTree(target) {
   }
 }
 
+/**
+ * The pinned DSH CLI, installed into the harness's own directory if absent.
+ *
+ * This used to search two fixed places and, finding neither, print an
+ * instruction to create `../watch-smoke` by hand. That made a documented gate
+ * depend on an undocumented sibling, and CI -- which has no such directory --
+ * never ran it at all.
+ */
 function findCli() {
-  // `WATCH_DSH_CLI` first, then the workspace's own install, then a
-  // `watch-smoke` checkout beside either the workspace or the repository.
-  //
-  // The two-levels-up entry is not redundant: the workspace used to be the
-  // repository root, so one level up reached its siblings. It is a
-  // subdirectory now, and the sibling it wants is a level further out.
-  const candidates = [
-    process.env.WATCH_DSH_CLI,
-    join(ROOT, 'node_modules', '@deepseek-ai', 'dsh'),
-    join(ROOT, '..', 'watch-smoke', 'node_modules', '@deepseek-ai', 'dsh'),
-    join(ROOT, '..', '..', 'watch-smoke', 'node_modules', '@deepseek-ai', 'dsh'),
-  ].filter(path => path !== undefined)
-
-  for (const dir of candidates) {
-    if (!existsSync(join(dir, 'package.json'))) continue
-    const manifest = JSON.parse(readFileSync(join(dir, 'package.json'), 'utf8'))
-    const bin = typeof manifest.bin === 'string' ? manifest.bin : manifest.bin?.dsh
-    if (bin === undefined) continue
-    const entry = resolve(dir, bin)
-    if (existsSync(entry)) return { entry, version: manifest.version }
-  }
-  return null
+  return ensureCli(ROOT)
 }
 
 /** The bundle's transitive first-party dependencies, deepest first. */
@@ -138,11 +150,50 @@ function bundlePackages() {
     for (const dependency of Object.keys(found.manifest.dependencies ?? {})) visit(dependency)
     order.push(found.dir)
   }
-  for (const dependency of Object.keys(byName.get('@watchskill/dsh-bundle')?.manifest.dependencies ?? {})) {
+  for (const dependency of Object.keys(byName.get('@deepwatch/dsh-bundle')?.manifest.dependencies ?? {})) {
     visit(dependency)
   }
   order.push('packages/watch/bundle')
   return order
+}
+
+/**
+ * Pin the profile to the pnpm this repository builds with.
+ *
+ * `dsh plugin` forwards to whatever `pnpm` resolves to in the profile
+ * directory, and nothing there pinned one. With Corepack installed that means
+ * the newest pnpm: 11.24.0 on the machine this was found on, against the
+ * 10.29.1 the workspace uses. pnpm 11 no longer reads `pnpm.overrides` from
+ * package.json, and `pnpm.overrides` is precisely how the profile points at
+ * the packed Watch tarballs -- so every Watch package was silently dropped
+ * from the resolution and `plugin add` failed with a libuv assertion rather
+ * than anything that named the cause.
+ *
+ * Stamping `packageManager` into the profile manifest is what makes the
+ * profile reproducible: Corepack reads it from the directory the command runs
+ * in, so the same version installs the bundle as built it.
+ */
+function pinProfilePackageManager() {
+  const profileDir = join(HOME, 'profiles', PROFILE)
+  const manifestPath = join(profileDir, 'package.json')
+  const workspace = JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8'))
+  const spec = workspace.packageManager
+  if (typeof spec !== 'string' || !/^pnpm@\d+\.\d+\.\d+$/.test(spec)) {
+    fail('the workspace pins no exact pnpm', `package.json packageManager is ${String(spec)}`)
+  }
+  // DSH owns this file's shape -- it carries the `dsh.profile.bundles` block
+  // that says which layers compose -- so this only ever edits one field of an
+  // existing manifest. Writing a minimal one here instead produced a profile
+  // that installed all fourteen Watch packages and composed none of them,
+  // because the bundle list was not in the file DSH then declined to replace.
+  if (!existsSync(manifestPath)) return
+  const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'))
+  if (manifest.packageManager === spec) return
+  manifest.packageManager = spec
+  writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}
+`, 'utf8')
+  process.stdout.write(`pinned the profile to ${spec}
+`)
 }
 
 /**
@@ -160,21 +211,82 @@ function bundlePackages() {
  */
 function clearStaleInstalls() {
   const profileModules = join(HOME, 'profiles', PROFILE, 'node_modules')
-  if (!existsSync(profileModules)) return
-  removeTree(join(profileModules, '@watchskill'))
+  if (!existsSync(profileModules)) return false
+
+  // A tree linked by a different pnpm major cannot be reused by this one.
+  // pnpm refuses with ERR_PNPM_UNEXPECTED_STORE -- the store is versioned, and
+  // v11 links are not v10 links -- so the only repair is to drop the tree and
+  // let it be rebuilt. Selectively removing the Watch packages, which is what
+  // this did, leaves exactly the linkage pnpm objects to.
+  const modulesState = join(profileModules, '.modules.yaml')
+  if (existsSync(modulesState)) {
+    const state = readFileSync(modulesState, 'utf8')
+    const linkedStore = /store[\\/]+v(\d+)/.exec(state)?.[1]
+    const wanted = /^pnpm@(\d+)\./.exec(
+      JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8')).packageManager ?? '')?.[1]
+    if (linkedStore !== undefined && wanted !== undefined && linkedStore !== wanted) {
+      process.stdout.write(
+        `profile node_modules was linked from store v${linkedStore}; `
+        + `this pnpm uses v${wanted}. Rebuilding it.\n`,
+      )
+      removeTree(profileModules)
+      return true
+    }
+  }
+
+  removeTree(join(profileModules, '@deepwatch'))
   const store = join(profileModules, '.pnpm')
-  if (!existsSync(store)) return
+  if (!existsSync(store)) return false
   for (const entry of readdirSync(store)) {
     if (entry.startsWith('file+')) removeTree(join(store, entry))
   }
+  return false
+}
+
+/**
+ * Use the tarballs a release run already produced, rather than packing again.
+ *
+ * `--from-artifacts` is what makes a QA pass a statement about the *release*
+ * rather than about the working tree: the profile is built from the exact
+ * files the pack recorded in `.release-artifacts/packed-artifacts.json`,
+ * digests and all, so a screenshot taken afterwards is a picture of the
+ * artifact and not of whatever happened to be on disk that afternoon.
+ */
+function fromArtifacts() {
+  const source = join(ROOT, '.release-artifacts')
+  if (!existsSync(source)) {
+    fail('there are no packed artifacts to build from', 'run npm run pack first')
+  }
+  // The same verification the first-publish bootstrap uses: every one of the
+  // twenty archives, not only the bundle closure, must match its recorded
+  // digest, identity, access, file list and dependency graph before a profile
+  // is allowed to consume this candidate.
+  verifyArtifacts(source)
+  const wanted = new Set(bundlePackages().map(
+    relative => JSON.parse(readFileSync(join(ROOT, relative, 'package.json'), 'utf8')).name))
+
+  mkdirSync(PACKED, { recursive: true })
+  const tarballs = []
+  for (const entry of readdirSync(source)) {
+    if (!entry.endsWith('.tgz')) continue
+    const destination = join(PACKED, entry)
+    copyFileSync(join(source, entry), destination)
+    if (wanted.has(packageNameOf(destination))) tarballs.push(destination)
+  }
+  if (tarballs.length !== wanted.size) {
+    fail('the packed artifacts do not cover the bundle',
+      `${tarballs.length} of ${wanted.size} packages found in .release-artifacts`)
+  }
+  return tarballs
 }
 
 function packAll() {
   mkdirSync(PACKED, { recursive: true })
   const tarballs = []
   for (const relative of bundlePackages()) {
-    const result = run('pnpm', ['pack', '--pack-destination', PACKED], {
-      shell: process.platform === 'win32',
+    const pnpm = resolvePnpm()
+    if (pnpm === null) fail('pnpm is unavailable')
+    const result = run(pnpm.command, [...pnpm.prefix, 'pack', '--pack-destination', PACKED], {
       cwd: join(ROOT, relative),
     })
     if (result.status !== 0) fail(`packing ${relative} failed`, result.stderr)
@@ -186,16 +298,31 @@ function packAll() {
   return tarballs
 }
 
+/**
+ * Point the profile at the tarballs this run packed.
+ *
+ * Overrides that point into the packed directory are *replaced*, not merged.
+ * Merging kept every key any previous run had written, and a key naming a
+ * package that no longer exists is not inert — pnpm refuses the whole install
+ * with `ERR_PNPM_INVALID_SELECTOR` and names only the stale key. After a scope
+ * rename every old key is stale at once, which is how this was found.
+ *
+ * Anything else in `pnpm.overrides` is somebody's own and is left alone.
+ */
 function linkTarballs(tarballs) {
   const manifestPath = join(HOME, 'profiles', PROFILE, 'package.json')
   const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'))
-  const overrides = {}
+  const packedPrefix = `file:${PACKED.replace(/\\/g, '/')}`
+
+  const kept = Object.fromEntries(
+    Object.entries(manifest.pnpm?.overrides ?? {})
+      .filter(([, target]) => !String(target).startsWith(packedPrefix)))
+
+  const overrides = { ...kept }
   for (const tarball of tarballs) {
-    const name = basename(tarball).replace(/-\d+\.\d+\.\d+.*\.tgz$/, '')
-    overrides[`@${name.replace(/^watchskill-/, 'watchskill/')}`] =
-      `file:${tarball.replace(/\\/g, '/')}`
+    overrides[packageNameOf(tarball)] = `file:${tarball.replace(/\\/g, '/')}`
   }
-  manifest.pnpm = { ...manifest.pnpm, overrides: { ...manifest.pnpm?.overrides, ...overrides } }
+  manifest.pnpm = { ...manifest.pnpm, overrides }
   writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, 'utf8')
 }
 
@@ -232,20 +359,33 @@ function writeOverlay(corePath, memoryDir, evidenceRoot) {
     queryTimeoutMs: 120000
     verifyTimeoutMs: 60000
     readTimeoutMs: 30000
-    liveStartTimeoutMs: 30000
+    liveStartTimeoutMs: 75000
     actTimeoutMs: 60000
     observeTimeoutMs: 30000
     libraryRoots:
       - ${evidenceRoot}
 
+# The timeouts are deliberately absent, and this is the third place that has
+# had to learn it. A patch replaces the row's whole \`config\`, so restating a
+# boundary here makes this the copy that wins — and this overlay is written for
+# the one profile a person actually clicks around in. It carried 20s, which is
+# below the 30s floor a first cold start on a clean Windows machine has already
+# exceeded: the manual acceptance profile was the last place still able to
+# report a healthy engine as a dead one. Omitted, the service schema governs,
+# and its defaults are the values the bundle ships.
+#
+# \`dataDir\` for the same reason \`deepwatch setup\` composes one: without it the
+# engine uses its own machine-wide \`~/.watch-skill\`, so this fixture profile
+# would read and write whatever a real install had already put there — and the
+# seeded demo records would land in it. It is a default rather than an override,
+# so an exported \`WATCHSKILL_DATA_DIR\` still wins.
 - id: watch-core-bridge
   config:
     transport: auto
     command: ${JSON.stringify(corePath)}
     args: [bridge]
     cwd: ''
-    startupTimeoutMs: 20000
-    requestTimeoutMs: 60000
+    dataDir: ${JSON.stringify(posixPath(join(HOME, 'watch-core-data')))}
     autoConnect: true
 
 - id: watch-memory
@@ -265,20 +405,40 @@ function main() {
   const cli = findCli()
   if (cli === null) fail('the DSH CLI is not installed')
 
-  const core = CORE_CANDIDATES.find(candidate => existsSync(candidate))
+  const core = coreCandidates().find(candidate => existsSync(candidate))
   if (core === undefined) {
-    process.stderr.write(
-      'watch: Watch Core was not found; the profile will fall back to the mock backend\n',
-    )
+    fail('Watch Core was not found',
+      'set WATCH_CORE_BIN to the executable installed from the candidate wheel; no mock fallback is permitted')
   }
 
   if (process.argv.includes('--rebuild')) removeTree(HOME)
   mkdirSync(HOME, { recursive: true })
-  const env = { ...process.env, DSH_HOME: HOME }
+  const upstreamNotice = acknowledgeUpstreamNotice(HOME)
+  const env = {
+    ...withPinnedPnpm(ROOT),
+    DSH_HOME: HOME,
+    // `dsh plugin` forwards to pnpm, and pnpm asks before removing a
+    // node_modules whose store layout it does not recognise -- then aborts with
+    // ERR_PNPM_ABORTED_REMOVE_MODULES_DIR_NO_TTY when there is nobody to ask.
+    // The stale layout it has to purge is what a previously unpinned pnpm left
+    // behind; see pinProfilePackageManager above.
+    //
+    // This answers that one question and nothing else. Setting CI=true would
+    // also have answered it, and would have turned on frozen-lockfile with it:
+    // the profile manifest is rewritten by this script on every run, so a
+    // frozen lockfile is guaranteed to be out of date and the install fails
+    // with ERR_PNPM_OUTDATED_LOCKFILE. A generated profile is not a
+    // reproducible build, and must not be treated as one.
+    npm_config_confirm_modules_purge: 'false',
+    COREPACK_ENABLE_DOWNLOAD_PROMPT: '0',
+  }
 
   process.stdout.write(`dsh ${cli.version}\n`)
-  process.stdout.write('packing workspace packages\n')
-  const tarballs = packAll()
+  const released = process.argv.includes('--from-artifacts')
+  process.stdout.write(released
+    ? 'using the tarballs in .release-artifacts\n'
+    : 'packing workspace packages\n')
+  const tarballs = released ? fromArtifacts() : packAll()
 
   process.stdout.write(`initializing profile "${PROFILE}"\n`)
   // The overrides have to exist before pnpm resolves anything.
@@ -297,6 +457,10 @@ function main() {
   const init = run(process.execPath, [cli.entry, 'plugin', '--profile', PROFILE, 'install'], { env, cwd: ROOT })
   if (init.status !== 0) fail('`dsh plugin install` failed', init.stderr || init.stdout)
 
+  // Recorded once the manifest exists, so a person running pnpm in the profile
+  // by hand gets the same version the shim gave DSH.
+  pinProfilePackageManager()
+
   linkTarballs(tarballs)
 
   process.stdout.write('installing the Watch bundle\n')
@@ -313,7 +477,7 @@ function main() {
   const seedDir = posixPath(join(HOME, 'watch-fixtures'))
   mkdirSync(seedDir, { recursive: true })
 
-  const overlay = core === undefined ? null : writeOverlay(core, memoryDir, seedDir)
+  const overlay = writeOverlay(core, memoryDir, seedDir)
 
   // Seed the deterministic demo fixtures where the profile can reach them.
   if (existsSync(FIXTURES)) {
@@ -324,7 +488,7 @@ function main() {
 
   const dump = run(
     process.execPath,
-    [cli.entry, '--profile', PROFILE, ...(overlay === null ? [] : ['--patch', overlay]), '--dump-config'],
+    [cli.entry, '--profile', PROFILE, '--patch', overlay, '--dump-config'],
     { env, cwd: ROOT },
   )
   if (dump.status !== 0) fail('the composed profile did not resolve', dump.stderr || dump.stdout)
@@ -354,6 +518,7 @@ function main() {
     fixtures: seedDir,
     watchRows: rows,
     upstreamRows: upstream,
+    upstreamNotice,
     builtAt: new Date().toISOString(),
   }
   writeFileSync(join(HOME, 'manual-profile.json'), `${JSON.stringify(summary, null, 2)}\n`, 'utf8')
@@ -363,15 +528,16 @@ function main() {
     + `  DSH_HOME:     ${HOME}\n`
     + `  profile:      ${PROFILE}\n`
     + `  DSH:          ${cli.version}\n`
-    + `  Watch Core:   ${core ?? 'not found — mock backend'}\n`
-    + `  overlay:      ${overlay ?? 'none'}\n`
+    + `  Watch Core:   ${core}\n`
+    + `  overlay:      ${overlay}\n`
     + `  memory:       local_personal at ${memoryDir}\n`
     + `  fixtures:     ${seedDir}\n`
     + `  Watch rows:   ${rows.join(', ')}\n`
     + `  upstream:     ${upstream.join(', ')} intact\n`
+    + `  DSH notice:   ${upstreamNotice}\n`
     + '\nServe with:\n'
     + `  DSH_HOME=${HOME} node ${cli.entry} --profile ${PROFILE}`
-    + `${overlay === null ? '' : ` --patch ${overlay}`} --no-open --host 127.0.0.1 --port <port>\n`,
+    + ` --patch ${overlay} --no-open --host 127.0.0.1 --port <port>\n`,
   )
 }
 

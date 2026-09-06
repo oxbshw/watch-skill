@@ -1,9 +1,25 @@
 {
-  "name": "@watchskill/dsh-sdk",
-  "version": "0.1.0-preview.0",
-  "description": "The third-party Watch capability developer path \u2014 declare, probe, observe, request",
+  "name": "@deepwatch/dsh-sdk",
+  "version": "0.1.0",
+  "description": "The third-party Watch capability developer path — declare, probe, observe, request",
   "type": "module",
   "license": "MIT",
+  "author": "Sayed Allam",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/oxbshw/watch-skill.git",
+    "directory": "workspace/packages/watch/sdk"
+  },
+  "homepage": "https://github.com/oxbshw/watch-skill/tree/main/workspace#readme",
+  "bugs": {
+    "url": "https://github.com/oxbshw/watch-skill/issues"
+  },
+  "keywords": [
+    "deepwatch",
+    "deepseek-harness",
+    "watch-skill",
+    "sdk"
+  ],
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
   "exports": {
@@ -21,10 +37,17 @@
     "lib/**/*.js",
     "lib/**/*.d.ts"
   ],
+  "sideEffects": false,
+  "engines": {
+    "node": "^22.19.0 || >=24.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "dependencies": {
-    "@watchskill/dsh-contracts": "workspace:^",
-    "@watchskill/dsh-technology": "workspace:^",
-    "@watchskill/dsh-trajectory": "workspace:^"
+    "@deepwatch/dsh-contracts": "workspace:^",
+    "@deepwatch/dsh-technology": "workspace:^",
+    "@deepwatch/dsh-trajectory": "workspace:^"
   },
   "peerDependencies": {
     "react": "^18.2.0"
@@ -37,6 +60,6 @@
   "devDependencies": {
     "@types/react": "~18.3.1",
     "react": "^18.2.0",
-    "@watchskill/dsh-client-brand": "workspace:*"
+    "@deepwatch/dsh-client-brand": "workspace:*"
   }
 }

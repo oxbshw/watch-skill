@@ -15,7 +15,7 @@
  * Regenerate with `python scripts/gen_bridge_schemas.py` in `watch-skill`, then
  * copy the `families` block from `schemas/bridge/manifest.json`.
  *
- * @module @watchskill/dsh-contracts/digests
+ * @module @deepwatch/dsh-contracts/digests
  */
 
 /** One contract family: a group of fields consumers break on together. */
@@ -28,19 +28,25 @@ export type SchemaFamily =
   | 'error'
 
 /**
- * Digests from `watch-skill@1.3.0rc2`, `schemas/bridge/manifest.json`.
+ * Digests generated from Watch Core's Bridge wire models.
+ *
+ * Source: `schemas/bridge/manifest.json`, written by
+ * `python scripts/gen_bridge_schemas.py` from
+ * `watch_skill.surfaces.bridge.wire`. Core computes the same values at import
+ * and reports them in the handshake, so these two are one artifact seen from
+ * two sides rather than two lists that have to be kept in step by hand.
  *
  * A digest changes when a family's schema changes in a way that matters:
  * hashing is over the canonical, key-sorted document, so a reordered field
  * does not read as a breaking change and a renamed one does.
  */
 export const EXPECTED_SCHEMA_DIGESTS: Readonly<Record<SchemaFamily, string>> = {
-  answer: 'sha256:b1d08711b75396f21b1823a5e69c8b37',
-  error: 'sha256:b6e7b03def9e68dcd25d74347f1c1f77',
-  evidence: 'sha256:9d75abea243404fe19909146a340ecfa',
-  handshake: 'sha256:41e44cf6f9e29e4d4dbe7e4680dfc226',
-  library: 'sha256:c409cf6a0e2c71ade790be43525c7b98',
-  verification: 'sha256:3fb92fb22ccc8aa6258bd3b620bd76b1',
+  answer: 'sha256:2abc33bc76abe07486446bae94c70211',
+  error: 'sha256:f83b04be5dffc2dfab6963f071c7455a',
+  evidence: 'sha256:3facf1e0c00ffb61e9724d0a17b5d589',
+  handshake: 'sha256:215466e1a4d3ea526e71c5a162bf861b',
+  library: 'sha256:cb1a1721b33ccca2e25ea000fe41c7f1',
+  verification: 'sha256:0f381733ba98849b8335ad0fa1534534',
 }
 
 /**

@@ -19,3 +19,23 @@ upstream/deepseek-harness/
 
 # Local visual-QA evidence. Captured from a running app, not a build input.
 qa/
+
+# Local pack output. Artifacts, not sources; the inventory is the record.
+.release-artifacts/
+
+# Packed npm tarballs. These were tracked once, as `dist-artifacts/`, and the
+# copies that ended up in the history carried the package scope this
+# project has since retired, and the absolute paths of the machine that
+# built them. An artifact is
+# a build output: it belongs in the ignored release directory above, and its
+# record is the release manifest, not the repository.
+*.tgz
+dist-artifacts/
+
+# The sealed provenance manifest for a local pack. Written beside the artifact
+# directory rather than inside it, so sealing a set cannot change the set being
+# sealed -- and ignored here for the same reason `.release-artifacts/` is: it
+# is a per-run fact about bytes on this machine, not a source. Leaving it
+# tracked also made the tree dirty the moment a set was sealed, which the
+# provenance gate then correctly refused to seal a second time.
+.release-artifacts-provenance.json

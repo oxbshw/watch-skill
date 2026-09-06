@@ -92,7 +92,8 @@ def capture_url(
         raise LoopError(
             "playwright is not installed",
             code="loop.missing_dependency",
-            fix='install the loop extra: `uv sync --extra loop`',
+            fix='install the loop extra: `pip install "watch-skill[loop]"` '
+            '(from a checkout: `uv sync --extra loop`)',
         ) from exc
 
     out_dir.mkdir(parents=True, exist_ok=True)

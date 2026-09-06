@@ -1,9 +1,34 @@
 {
-  "name": "@watchskill/dsh-client-memory",
-  "version": "0.1.0-preview.0",
+  "name": "@deepwatch/dsh-client-memory",
+  "version": "0.1.0",
   "description": "Browser half: the Memory product surfaces — taste, timeline, wiki, decisions, lessons, failures, sources",
   "type": "module",
   "license": "MIT",
+  "author": "Sayed Allam",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/oxbshw/watch-skill.git",
+    "directory": "workspace/packages/watch/client-memory"
+  },
+  "homepage": "https://github.com/oxbshw/watch-skill/tree/main/workspace#readme",
+  "bugs": {
+    "url": "https://github.com/oxbshw/watch-skill/issues"
+  },
+  "keywords": [
+    "deepwatch",
+    "deepseek-harness",
+    "watch-skill",
+    "memory",
+    "ui"
+  ],
+  "dsh": {
+    "client": {
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-slots"
+      ],
+      "platform": "web"
+    }
+  },
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
   "exports": {
@@ -25,21 +50,24 @@
     },
     "./package.json": "./package.json"
   },
-  "dsh": {
-    "client": {
-      "inject": [
-        "@deepseek-ai/dsh-client-ui-slots"
-      ],
-      "platform": "web"
-    }
-  },
   "files": [
     "lib/**/*.js",
     "lib/**/*.js.map",
     "lib/**/*.d.ts"
   ],
+  "sideEffects": false,
+  "engines": {
+    "node": "^22.19.0 || >=24.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "bundle": "tsdown"
+  },
+  "dependencies": {
+    "@deepwatch/dsh-client-brand": "workspace:^",
+    "@deepwatch/dsh-memory": "workspace:^"
   },
   "peerDependencies": {
     "@deepseek-ai/cordis": "catalog:",
@@ -50,9 +78,5 @@
     "@deepseek-ai/dsh-client-ui-slots": "catalog:",
     "@types/react": "~18.3.1",
     "react": "^18.2.0"
-  },
-  "dependencies": {
-    "@watchskill/dsh-client-brand": "workspace:^",
-    "@watchskill/dsh-memory": "workspace:^"
   }
 }

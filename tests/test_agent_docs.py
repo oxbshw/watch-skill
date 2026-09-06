@@ -1,7 +1,7 @@
 """The agent matrix keeps its promises: every fenced config block in
 docs/agents/*.md parses, every page is in the matrix, every matrix link
 resolves. This is the same check contributors run via
-templates/agent-adapter/validate.py.
+scripts/validate_agent_docs.py.
 """
 from __future__ import annotations
 
@@ -15,7 +15,7 @@ AGENTS_DIR = ROOT / "docs" / "agents"
 
 def _load_validator():
     spec = importlib.util.spec_from_file_location(
-        "agent_validate", ROOT / "templates" / "agent-adapter" / "validate.py"
+        "agent_validate", ROOT / "scripts" / "validate_agent_docs.py"
     )
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
@@ -52,7 +52,7 @@ def test_matrix_links_resolve() -> None:
 
 def test_template_skeleton_validates_too() -> None:
     validate = _load_validator()
-    skeleton = ROOT / "templates" / "agent-adapter" / "docs-skeleton.md"
+    skeleton = ROOT / "templates" / "agent-integration" / "agent-docs.template.md"
     assert not validate.check_file(skeleton)
 
 
@@ -79,16 +79,33 @@ def test_a_page_with_an_avatar_actually_shows_it() -> None:
     assert not missing, f"avatar exists but the page does not show it: {missing}"
 
 
-def test_readme_gallery_covers_every_agent_that_has_art() -> None:
-    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+def test_gallery_covers_every_agent_that_has_art() -> None:
+    """Art that exists is shown in the index, and the index is the agent page.
+
+    This used to read the root README, which carried a grid of every avatar.
+    The stable redesign compresses that front page to two entry paths and one
+    product screenshot, so the grid moved to the page whose job it actually is
+    -- `docs/agents/README.md`, the matrix somebody lands on when they want to
+    know whether their agent is supported. The rule did not change: art nobody
+    links to is art nobody sees.
+    """
+    gallery = (AGENTS_DIR / "README.md").read_text(encoding="utf-8")
     missing = [
         page.stem
         for page in AGENTS_DIR.glob("*.md")
         if page.name not in {"README.md", "frameworks.md"}
         and _has_avatar(page)
-        and f"docs/assets/agents/{page.stem}.webp" not in readme
+        and f"../assets/agents/{page.stem}.webp" not in gallery
     ]
-    assert not missing, f"README gallery missing agents: {missing}"
+    assert not missing, f"agent gallery missing: {missing}"
+
+
+def test_the_front_page_points_at_the_gallery_rather_than_repeating_it() -> None:
+    """One grid, in one place, and the README says where it is."""
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    assert "docs/agents/README.md" in readme, "the README must link the agent index"
+    grid = readme.count("docs/assets/agents/")
+    assert grid == 0, f"the README grew {grid} avatar(s) back; the gallery lives in docs/agents/"
 
 
 def test_pages_without_art_are_still_reachable() -> None:

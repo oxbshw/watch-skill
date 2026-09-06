@@ -11,17 +11,17 @@
  * the verdicts' own tones — because the verdicts have tones — and the
  * comparison itself is drawn neutrally, however dramatic the difference.
  *
- * @module @watchskill/dsh-client-evidence/CompareView
+ * @module @deepwatch/dsh-client-evidence/CompareView
  */
 
 import type { ReactNode } from 'react'
-import { toneFor, tokenFor } from '@watchskill/dsh-client-brand'
+import { toneFor, tokenFor } from '@deepwatch/dsh-client-brand'
 import {
   describeComparison,
   firstMeaningfulDivergence,
   type Comparison,
   type Divergence,
-} from '@watchskill/dsh-trajectory'
+} from '@deepwatch/dsh-trajectory'
 
 /** A non-colour signal for each kind of difference. */
 const KIND_GLYPH: Readonly<Record<Divergence['kind'], string>> = {

@@ -14,7 +14,7 @@
  * This file runs in the isolated world. It is written to be read in one
  * sitting, because a preload nobody re-reads is where a convenience gets added.
  *
- * @module @watchskill/watch-desktop/preload
+ * @module @deepwatch/desktop/preload
  */
 
 import { PRELOAD_CHANNELS, type PreloadChannel } from './security.js'

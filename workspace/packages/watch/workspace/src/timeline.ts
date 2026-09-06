@@ -26,15 +26,15 @@
  * Memory surface, and putting it in a perception lane would blur the one
  * distinction ADR-006 exists to keep.
  *
- * @module @watchskill/dsh-workspace/timeline
+ * @module @deepwatch/dsh-workspace/timeline
  */
 
-import type { EvidenceRecord, TemporalRange, Verdict } from '@watchskill/dsh-contracts'
+import type { EvidenceRecord, TemporalRange, Verdict } from '@deepwatch/dsh-contracts'
 import type {
   SessionEventLike,
   WatchProjection,
   WatchTrajectoryRecord,
-} from '@watchskill/dsh-trajectory'
+} from '@deepwatch/dsh-trajectory'
 
 /** The lanes the timeline lays out, top to bottom. */
 export type TimelineLane =

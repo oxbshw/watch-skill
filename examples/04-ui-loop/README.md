@@ -57,7 +57,7 @@ status: passed  (iteration 1, score 96, verdict pass)
 summary: Checkout total renders a real price; no visual defects found.
 vs previous iteration: 1 fixed, 0 unchanged, 0 new, 0/2 aligned frames changed
 - FIXED: Total shows 'TOTAL: $NaN' — price computation is broken.
-before/after proof: C:\Users\hp\.watch-skill\loops\f2b6acda6cd1\artifacts\before_after.gif + .mp4
+before/after proof: %USERPROFILE%\.watch-skill\loops\f2b6acda6cd1\artifacts\before_after.gif + .mp4
 
 DEMO PASSED
 ```

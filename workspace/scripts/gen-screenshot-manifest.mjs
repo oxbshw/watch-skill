@@ -40,7 +40,7 @@ const REVIEW = {
   '01-onboarding': {
     route: 'first run, before any session',
     expected: 'the Watch first-run notice: orca mark, the four verbs, an honest readiness count, and two ways out',
-    observed: 'the Watch notice, with "4 of 12 capabilities are ready" and the consent separation stated below the buttons',
+    observed: 'derived from the structured facts recorded with the captured frame',
     verdict: 'pass',
   },
   '03-workspace': {
@@ -97,6 +97,12 @@ const REVIEW = {
     observed: 'General, Models, Plugins and Agent presets sit above the seven Watch sections',
     verdict: 'pass',
   },
+  '06-settings-models': {
+    route: 'Settings → Models',
+    expected: 'the configured deterministic provider in the upstream Models surface',
+    observed: 'derived from an exact provider match against the E2E scenario report',
+    verdict: 'pass',
+  },
   '07-settings-roles': {
     route: 'Settings → Role Bindings',
     expected: 'nine roles, each showing what it is bound to, with unbound stated plainly',
@@ -130,7 +136,7 @@ const REVIEW = {
   '07-settings-diagnostics': {
     route: 'Settings → Diagnostics',
     expected: 'what this installation consists of, saying so where a value cannot be read',
-    observed: '12 capabilities with Ready / Local / Not configured / Not tested — matching the onboarding count of 4',
+    observed: 'derived from the status counts and Core connection marker recorded with the frame',
     verdict: 'pass',
   },
   '07-settings-about': {
@@ -168,12 +174,62 @@ const PRECONDITION = {
 }
 
 /** The scenario every shot was taken against. */
-const SCENARIO = {
-  profile: 'manual QA profile, isolated DSH_HOME',
-  fixtures: 'scripts/seed-manual-fixtures.mjs, 9 records, all marked demo',
-  provider: 'scripts/qa-provider-stub.mjs on loopback, deterministic, no external call',
-  session: 'created through session.create, one turn sent through session.prompt',
+const DEFAULT_SCENARIO = {
+  scenario: 'manual-screenshot-capture',
+  result: 'not_linked',
+  provider: null,
+  providerLabel: null,
+  model: null,
+  modelLabel: null,
+  core: null,
+  coreTransport: null,
 }
+
+function observation(key, shot, scenario) {
+  if (shot.captured === false || shot.file === null) return shot.note
+  const facts = shot.facts ?? {}
+  if (key === '01-onboarding') {
+    return `Watch notice visible=${String(facts.watchOnboarding === true)}; readiness=${JSON.stringify(facts.readiness ?? {})}`
+  }
+  if (key === '06-settings-models') {
+    return `scenario provider ${String(scenario.provider)} matched=${String(facts.providerMatch === true || facts.providerIdMatch === true)}`
+  }
+  if (key === '07-settings-roles') {
+    return `bound scenario model ${String(scenario.model)} matched=${String(facts.modelMatch === true)}; active section=${String(facts.settingsSection)}`
+  }
+  if (key === '07-settings-diagnostics') {
+    return `Core connected=${String(facts.coreConnected === true)} via ${String(scenario.coreTransport)}; readiness=${JSON.stringify(facts.readiness ?? {})}`
+  }
+  if (key === '05-mode-chat') return `selected=Chat; deterministic stub reply visible=${String(facts.stubReplyVisible === true)}`
+  if (key === '05-mode-watch') return `selected=Watch; completed-not-verified boundary visible=${String(facts.completedNotVerified === true)}`
+  if (key === '05-mode-library') return `selected=Library; index controls visible=${String(facts.libraryIndexVisible === true)}`
+  if (key === '05-mode-memory') return `selected=Memory; correctable ledger language visible=${String(facts.memoryLedgerVisible === true)}`
+  if (key === '05-mode-compare') return `selected=Compare; computed-vs-reasoned boundary visible=${String(facts.compareBoundaryVisible === true)}`
+  if (key.startsWith('05-mode-')) return `selected mode=${String(facts.selectedMode)}`
+  return `${shot.note}; active section=${String(facts.settingsSection ?? 'n/a')}`
+}
+
+function verdict(key, captured, facts, scenario, reviewed) {
+  if (!captured) return 'blocked'
+  if (reviewed === 'unreviewed') return 'blocked'
+  if (scenario.result === 'passed') {
+    if (key === '06-settings-models'
+      && !(facts?.providerMatch === true || facts?.providerIdMatch === true)) return 'fail'
+    if (key === '07-settings-roles' && facts?.modelMatch !== true) return 'fail'
+    if (key === '07-settings-diagnostics'
+      && scenario.core === 'connected' && facts?.coreConnected !== true) return 'fail'
+    if (key === '05-mode-chat' && facts?.stubReplyVisible !== true) return 'fail'
+  }
+  return reviewed
+}
+
+/**
+ * The viewport prefixes a shot name may carry.
+ *
+ * Named once, because `scripts/qa-screenshots.mjs` decides them and a second
+ * list here silently files a whole width under the wrong heading.
+ */
+const VIEWPORT_NAMES = ['wide', 'narrow', 'compact']
 
 /** PNG dimensions, straight out of the IHDR chunk. */
 function pngSize(file) {
@@ -191,12 +247,16 @@ function build(captureDir) {
     process.exit(2)
   }
   const index = JSON.parse(readFileSync(join(captureDir, 'index.json'), 'utf8'))
+  const scenarioPath = join(captureDir, 'scenario.json')
+  const scenario = existsSync(scenarioPath)
+    ? JSON.parse(readFileSync(scenarioPath, 'utf8'))
+    : DEFAULT_SCENARIO
   const shots = Object.values(index)
   const rows = []
 
   for (const shot of shots) {
-    const viewport = shot.name.startsWith('wide-') ? 'wide' : 'narrow'
-    const key = shot.name.replace(/^(wide|narrow)-/, '')
+    const viewport = VIEWPORT_NAMES.find(name => shot.name.startsWith(name + '-')) ?? 'unknown'
+    const key = shot.name.replace(new RegExp('^(' + VIEWPORT_NAMES.join('|') + ')-'), '')
     const review = REVIEW[key] ?? {
       route: 'unreviewed', expected: '—', observed: '—', verdict: 'unreviewed',
     }
@@ -213,12 +273,15 @@ function build(captureDir) {
       // guess rather than an observation.
       theme: 'dark',
       state: captured ? 'captured' : 'not captured',
-      fixture: SCENARIO.fixtures,
-      scenario: shot.name.includes('05-mode-') ? 'non-blank session, one turn' : 'first run',
+      fixture: scenario.provider === null
+        ? 'capture not linked to an E2E scenario'
+        : 'deterministic loopback provider from the linked E2E scenario',
+      scenario: scenario.scenario,
       precondition: PRECONDITION[key] ?? 'the settings dialog is open at the named section',
       expected: review.expected,
-      observed: captured ? review.observed : shot.note,
-      verdict: review.verdict,
+      observed: observation(key, shot, scenario),
+      verdict: verdict(key, captured, shot.facts, scenario, review.verdict),
+      facts: captured ? shot.facts ?? null : null,
       ...captured
         ? {
             bytes: statSync(shot.file).size,
@@ -243,7 +306,7 @@ function build(captureDir) {
     generatedBy: 'scripts/gen-screenshot-manifest.mjs',
     note: 'expected is written before the capture; observed is what a reviewer saw on opening the file.',
     captureDir: relative(ROOT, captureDir).split(sep).join('/'),
-    scenario: SCENARIO,
+    scenario,
     totals: {
       shots: rows.length,
       captured: rows.filter(r => r.state === 'captured').length,
@@ -297,16 +360,12 @@ which nothing in the capture changes.
 | --- | --- | --- | --- | --- | --- | --- |
 ${manifest.shots.map(row => `| ${line(row)} |`).join('\n')}
 
-## Why the mode shots are blocked
+## Evidence contract
 
-DSH hides the session header while a session is blank — \`blank &&
-composerPhase === 'blank'\` in \`ConversationSession.tsx\`. The mode tabs live in
-that header, so they cannot be reached until a session has had a turn, and a
-turn needs a provider and a key.
-
-The capture creates a real session through DSH's own \`session.create\` API, so
-it gets as far as it can without one. It does not photograph the workspace and
-call it a mode.
+A missing precondition produces no PNG and is always \`blocked\`. Provider,
+model and Core claims are compared with the sanitized E2E scenario report; a
+contradiction is \`fail\`. The structured facts contain booleans and normalized
+status counts only — never credentials, host paths, or raw conversation text.
 `
 }
 

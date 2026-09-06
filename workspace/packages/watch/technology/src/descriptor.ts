@@ -24,7 +24,7 @@
  * mean a real request has succeeded here, and the lifecycle keeps the
  * difference visible instead of collapsing it into "installed".
  *
- * @module @watchskill/dsh-technology/descriptor
+ * @module @deepwatch/dsh-technology/descriptor
  */
 
 /** What kind of thing a descriptor describes. */

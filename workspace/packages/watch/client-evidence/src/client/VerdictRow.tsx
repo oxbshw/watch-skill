@@ -7,14 +7,14 @@
  * Watch makes.
  *
  * The rules it obeys are not defined here — they live in
- * `@watchskill/dsh-contracts/presentation`, where they can be tested without a
+ * `@deepwatch/dsh-contracts/presentation`, where they can be tested without a
  * DOM and where there is exactly one place to change them. This file is the
  * rendering, and nothing about the rendering is allowed to widen them.
  */
 
 import type { ReactNode } from 'react'
-import type { PresentableVerdict } from '@watchskill/dsh-contracts'
-import { verdictTone } from '@watchskill/dsh-contracts'
+import type { PresentableVerdict } from '@deepwatch/dsh-contracts'
+import { verdictTone } from '@deepwatch/dsh-contracts'
 import css from './VerdictRow.module.css'
 
 /** Symbol for one check outcome, chosen to survive a monochrome display. */

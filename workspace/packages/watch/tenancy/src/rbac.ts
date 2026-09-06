@@ -18,7 +18,7 @@
  * is denied at a rank above the role check, so no role can be added that would
  * reach it.
  *
- * @module @watchskill/dsh-tenancy/rbac
+ * @module @deepwatch/dsh-tenancy/rbac
  */
 
 import {

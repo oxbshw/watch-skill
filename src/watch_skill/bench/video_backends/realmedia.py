@@ -201,7 +201,13 @@ def decode_window(
         "-copyts", "-ss", f"{lead:.6f}",
         "-i", str(video),
         "-vf", f"select='between(t,{start:.6f},{end:.6f})',showinfo",
-        "-vsync", "0", "-q:v", "2",
+        # `-fps_mode passthrough`, not `-vsync 0`. They mean the same thing --
+        # write every frame the filter selects, invent none, drop none -- but
+        # `-vsync` was deprecated in ffmpeg 5.1 and *removed* in 9, where it
+        # fails as "Unrecognized option" before decoding starts. That turns a
+        # working extractor into a hard failure on a current ffmpeg, which is
+        # how the committed fixtures stopped being regenerable.
+        "-fps_mode:v", "passthrough", "-q:v", "2",
         str(pattern),
     ])
     decoded = sorted(out_dir.glob(f"{tag}_*.jpg"))

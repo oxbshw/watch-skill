@@ -2,7 +2,7 @@
 #
 # This file is the whole distribution mechanism. A package declaring
 # `dsh.bundle.patch` in its manifest becomes a profile layer when it is
-# installed with `dsh plugin --profile <name> add @watchskill/dsh-bundle`, and
+# installed with `dsh plugin --profile <name> add @deepwatch/dsh-bundle`, and
 # the rows below are appended to whatever the profile already composes.
 #
 # It is a patch overlay, not a tree: it is applied after the dsh-base and
@@ -17,15 +17,20 @@
     # The Bridge to Watch Core. Everything Watch can perceive, prove or
     # remember reaches the Harness through this one service.
     #
-    # `auto` connects the real engine when `watch-skill` is installed, and
-    # falls back to the mock backend only when the command is genuinely not
-    # there. Nothing is hidden by that fallback: the mock reports every
-    # capability as `not_tested` and carries the install step, and a Watch Core
-    # that *is* present and fails is reported as a fault rather than replaced
-    # by a mock that answers nothing.
+    # `auto` connects the real engine when `watch-skill` is installed. It does
+    # not fall back to the mock, and never has an outcome other than a real
+    # child process: a missing engine is reported as `core_missing` and one
+    # that fails to start as `handshake_failed`, each carrying the step that
+    # fixes it, and the Workspace stays fully usable with Watch features
+    # disabled. The fallback did exist, and is what let a machine with no
+    # engine report itself connected while refusing every real request — which
+    # the surfaces drew as an empty result nobody could tell from "nothing
+    # indexed yet".
     #
-    # A deployment that requires the engine should pin `stdio`, which never
-    # falls back and so fails loudly when it is missing. A patch replaces the
+    # `stdio` is the same transport named explicitly. `mock` is the in-process
+    # test backend and has to be asked for by name; everything it touches is
+    # flagged `isTestOnlyMock`, so no screen can present it as data. A patch
+    # replaces the
     # targeted row's whole `config`, so an overlay must restate every key it
     # wants to keep:
     #
@@ -35,19 +40,112 @@
     #       command: watch-skill
     #       args: [bridge]
     #       cwd: ''
-    #       startupTimeoutMs: 10000
+    #       startupTimeoutMs: 45000
     #       requestTimeoutMs: 30000
     #       autoConnect: true
     - id: watch-core-bridge
-      name: '@watchskill/dsh-core-bridge'
+      name: '@deepwatch/dsh-core-bridge'
       config:
         transport: auto
         command: watch-skill
         args: [bridge]
         cwd: ''
-        startupTimeoutMs: 10000
+        # 45s, not 10s. This is the backstop for "the engine cannot answer at
+        # all", and 10 seconds could not tell that apart from "the engine is
+        # starting for the first time". A fresh `deepwatch setup` creates the
+        # Core virtualenv moments earlier; the first `watch-skill bridge` then
+        # pays for a cold Python import of thousands of files a Windows
+        # security scanner has never seen, and exceeded 10s on a clean machine.
+        #
+        # The product called that failure: Diagnostics reported Watch Core
+        # failed with `core_timeout`, the reconnect breaker opened, and the
+        # session never recovered — on an installation that was completely
+        # healthy and connected in under three seconds on its second start.
+        #
+        # A generous backstop costs nothing when the engine is well, because
+        # the handshake resolves as soon as it lands. It is paid only when the
+        # engine is genuinely dead, which is already a degraded case.
+        startupTimeoutMs: 45000
         requestTimeoutMs: 30000
         autoConnect: true
+
+    # The Host's half of the routing preflight, and the store the binding
+    # screens write through.
+    #
+    # A composer that refuses to submit is an affordance -- it lives in a
+    # browser tab and the RPC it declines to call stays callable. This is the
+    # other half: it reads the same stored decisions and refuses a model
+    # request whose route nobody in this profile chose, so a stale tab or a
+    # caller that skipped the screens is stopped before the provider is
+    # reached rather than after.
+    #
+    # It injects `llm` and nothing else. Injecting `settings` would park it on
+    # a deployment that composes no settings file, and a routing check that
+    # quietly stops running is worse than one that is not there.
+    #
+    # The `/routing` subpath, not the package root. The root re-exports the OCR
+    # worker and carries no `apply`; the Loader refuses a row whose module
+    # exports none with "invalid plugin", and takes the whole plugin tree down
+    # with it. `scripts/verify-bundle.mjs` now imports every row's module and
+    # checks for `apply`, because that failure looks exactly like a composition
+    # problem and is three minutes of provisioning away from being seen.
+    # The one place that knows who asked for a provider request, and which
+    # routes have actually been proved.
+    #
+    # A row of its own, ahead of everything that injects it, because there has
+    # to be exactly one. The routing guard used to construct it, and a Cordis
+    # service is reflected per scope — so the guard and the read plane read two
+    # different objects, and the single request allowed to prove a route was
+    # refused while the guard insisted nothing had asked for it. One owner,
+    # injected by both halves, is the fix.
+    - id: watch-provenance
+      name: '@deepwatch/dsh-technology/provenance'
+
+    # Watch, listening at the boundary every tool call already goes through.
+    #
+    # An owner evaluation ran 76 tool calls through this Host and Watch recorded
+    # none of them -- not a write that failed, but nothing listening: every
+    # Watch capability was a tool the model could choose to call, and the model
+    # never chose to. A product whose subject is evidence produced none, and the
+    # only thing resembling a verdict was a file the model wrote and then reread.
+    #
+    # `@deepseek-ai/dsh-tools` publishes the dispatch lifecycle, so this needs no
+    # fork and no per-tool patch. A row of its own, ahead of what injects it,
+    # because a Cordis service is reflected per scope and a ledger two halves
+    # disagree about is worse than no ledger.
+    - id: watch-observation
+      name: '@deepwatch/dsh-technology/observation'
+
+    # What one turn may spend, measured against the run that made this
+    # necessary: 47 model rounds, 76 tool calls, three subagents, nine minutes
+    # and 2.97M tokens of processed context at a 97% cache hit rate. The cache
+    # is why nobody stopped it -- the price signal that normally ends a runaway
+    # had been optimised away.
+    #
+    # Every hard limit sits well clear of that run. A budget that fires during
+    # ordinary work teaches people to raise it, and then it is not a budget.
+    - id: watch-budget
+      name: '@deepwatch/dsh-technology/budget'
+      config:
+        enforce: true
+
+    # The route a delegated child inherits, and the preflight that stops a
+    # child being created when there is not one.
+    #
+    # Upstream inherits `parent.options.provider`, which is right for a
+    # deployment that puts its route there. This one resolves a route per
+    # request from the binding a person made, so the parent has nothing in
+    # `options` to pass down and three subagents died on their first step with
+    # "has no provider/model". `agent/request` is the waterfall upstream's own
+    # error names for exactly this, and filling it there fixes parent and child
+    # with one rule.
+    - id: watch-delegation
+      name: '@deepwatch/dsh-technology/delegation'
+
+    - id: watch-routing
+      name: '@deepwatch/dsh-technology/routing'
+      config:
+        enforce: true
 
     # The model-facing surface: Watch's senses and its proof step as ordinary
     # Harness tools, plus the system-prompt section that tells the agent a
@@ -57,10 +155,32 @@
     # Bridge exists. Removing the Bridge row leaves the agent with no Watch
     # tools at all rather than with tools that fail when called.
     - id: watch-tools
-      name: '@watchskill/dsh-tools'
+      name: '@deepwatch/dsh-tools'
       config:
         queryTimeoutMs: 120000
         verifyTimeoutMs: 60000
+        # A read is quick. The first read of a session used to hang: the
+        # embedding stack was imported lazily on a Bridge worker thread, where
+        # loading numpy's C extension deadlocks, and `watch_search_sources`
+        # never answered at all the first time it was asked. Core now warms
+        # that stack at startup on the thread that owns the server, and a
+        # first search in a fresh engine answers in under a second.
+        #
+        # `coldReadTimeoutMs` is the backstop for a box where that warm-up was
+        # skipped and the first read pays for the import itself. Deliberately
+        # not larger: waiting three minutes on a request that is never coming
+        # back is worse than reporting it.
+        readTimeoutMs: 30000
+        coldReadTimeoutMs: 60000
+        # Where execution receipts are journalled, beside the memory store and
+        # for the same reason: a record the Host makes about your workspace
+        # belongs in your profile, not in a process that is about to exit.
+        #
+        # Without it receipts are live-only. A room holding thirteen of them
+        # was restarted and the Library afterwards returned one — the receipt
+        # made after the restart — and Refresh could not bring the rest back,
+        # because Refresh re-reads what is on disk and they never were.
+        receiptsDirectory: .watch/receipts
 
     # The browser half. These are `dsh.client` rows, so the modules package
     # scans them into the boot graph and serves their bundles under /plugins.
@@ -76,7 +196,24 @@
     # row fills, and claims the document title and favicon at runtime — the
     # HTML shell is a built DSH artifact and is not forked.
     - id: watch-brand
-      name: '@watchskill/dsh-client-brand'
+      name: '@deepwatch/dsh-client-brand'
+
+    # The browser end of the read plane: Watch's generated Typert Remote,
+    # mounted into `ctx.remote`.
+    #
+    # Its own row rather than a line inside the Library, and the reason is a
+    # dependency cycle rather than taste. `@deepwatch/dsh-tools` is the Host
+    # that answers these reads, and it reads the Library's index — so tools
+    # depends on the Library. When the Library's browser half also mounted the
+    # generated contribution, the Library depended on tools in return, and no
+    # build order can satisfy a package that cannot compile until a file
+    # generated from its own dependent exists.
+    #
+    # This row must come before `watch-library`: the Library's browser half
+    # injects `remote.watchQuery`, so without the mount it parks rather than
+    # drawing a tab whose search answers from nothing.
+    - id: watch-client-remotes
+      name: '@deepwatch/dsh-client-remotes'
 
     # Evidence: keyed tool views, plus the Compare mode.
     #
@@ -86,31 +223,31 @@
     # sync. Remove this row and the Watch tools still work — their results
     # simply render in DSH's generic tool card.
     - id: watch-client-evidence
-      name: '@watchskill/dsh-client-evidence'
+      name: '@deepwatch/dsh-client-evidence'
 
     # The shell: the Watch mode, the sidebar section, the status strip in the
     # session header, the sensory timeline and the composer panel.
     - id: watch-workspace
-      name: '@watchskill/dsh-workspace'
+      name: '@deepwatch/dsh-workspace'
 
     # The Live mode.
     - id: watch-live
-      name: '@watchskill/dsh-live'
+      name: '@deepwatch/dsh-live'
 
     # The Library mode.
     - id: watch-library
-      name: '@watchskill/dsh-library'
+      name: '@deepwatch/dsh-library'
 
     # The Memory mode, and the "why was this remembered?" chip.
     - id: watch-client-memory
-      name: '@watchskill/dsh-client-memory'
+      name: '@deepwatch/dsh-client-memory'
 
     # The Technology & Capability Center: role bindings, engines, sources,
     # memory, verification, diagnostics and about, added to DSH's own settings
     # panel. `settings.section` is a list, so upstream's General, Models and
     # Plugins sections are untouched and keep the top of the list.
     - id: watch-client-settings
-      name: '@watchskill/dsh-client-settings'
+      name: '@deepwatch/dsh-client-settings'
 
     # Durable, correctable memory. `off` by default and deliberately so:
     # durable memory about a person is not something a deployment should
@@ -132,13 +269,80 @@
     # it will move behind the OS keychain, and until then `local_personal`
     # means a plain file with the profile's own permissions.
     - id: watch-memory
-      name: '@watchskill/dsh-memory'
+      name: '@deepwatch/dsh-memory'
       config:
         mode: 'off'
         directory: .watch/memory
         inferredThreshold: 0.8
         tokenBudget: 600
         writeProjections: true
+
+# The inherited default model selection, emptied.
+#
+# The base layer composes `agent-default-model` with `deepseek-official` /
+# `deepseek-v4-flash`, which is the right default for the Harness and the wrong
+# one for this distribution. A person who had installed DeepWatch, saved an
+# OpenRouter credential and never chosen a model still had that pair sitting in
+# their composer as though they had picked it -- and their first prompt was
+# routed to DeepSeek, which failed on a credential they had never been asked
+# for and left a failed turn behind.
+#
+# Emptying it is a *configuration* change, not a removal. The row stays
+# mounted, because `@deepseek-ai/dsh-host-apiproxy` hard-injects
+# `agentDefaultModel` and disabling it would park the whole API gateway. What
+# changes is that the default names no route, and upstream's own admission
+# boundary refuses a turn whose provider no adapter serves -- so an
+# unconfigured Chat is refused before a durable turn, a trajectory or a
+# provider request exists, by the Harness's own enforcement rather than by
+# anything this distribution has to intercept.
+#
+# DeepSeek is not removed and is not disfavoured. `llm-deepseek` stays
+# composed, `deepseek-official` stays in the picker, and choosing it is one
+# click. What it stops being is *chosen for you*.
+#
+# `name:` is deliberately absent. A patch that carries one is compared for
+# equality against the target row and SKIPPED with a warning when it differs
+# (vendor/include: "patch: name mismatch for %C ... skipping"), so an upstream
+# rename would silently restore the DeepSeek default. Targeting the id alone
+# cannot be skipped, and `tests/default-model.test.mjs` pins this row to the
+# pinned baseline so a bump that changes its shape fails loudly instead.
+- id: agent-default-model
+  config:
+    provider: ''
+    model: ''
+
+# The dedicated DeepSeek adapter, switched off.
+#
+# Not because DeepSeek is unwelcome -- it stays in the catalogue and stays one
+# click away -- but because it was the only provider in this distribution that
+# did not have to be chosen. `llm-deepseek` registers `deepseek-official` at
+# plugin load, unconditionally and with no credential, and three things follow
+# from that which nothing else in the product would tolerate:
+#
+#   - a route exists that nobody configured, so the Harness's own pre-turn
+#     admission check passes for it and a stale or careless client can spend a
+#     turn on a provider the person never set up. That is exactly how the first
+#     prompt in Sayed's profile reached DeepSeek;
+#   - `ui-settings-models` renders an "Add an API key to get started ---
+#     Configure the official DeepSeek provider" dialog whenever that row exists
+#     and holds no credential, so a fresh profile met a second first-run modal
+#     asking for a key to a provider it had not chosen. Its own readiness
+#     reports `adapter-absent` and skips the dialog when the row is gone, which
+#     is the supported way to answer it;
+#   - and it made DeepSeek a special case: every other provider is configured
+#     through Models & Providers, and one was configured by existing.
+#
+# `@earendil-works/pi-ai` carries `deepseek` in the same catalogue as the other
+# thirty-six routes, and `llm-pi-ai` declares its whole installed catalogue as
+# configurable from the moment it mounts -- dormant or not. So DeepSeek remains
+# selectable, with the same endpoint and the same `DEEPSEEK_API_KEY`, reached
+# the same way as Anthropic or OpenRouter. What it stops being is the one
+# provider that configures itself.
+#
+# `disabled: true` on a targeted id is upstream's own mechanism, so nothing
+# here is patched or forked, and removing this bundle restores the row.
+- id: llm-deepseek
+  disabled: true
 
 # The official brand row, switched off.
 #

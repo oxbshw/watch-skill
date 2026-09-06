@@ -379,7 +379,8 @@ def register_builtin_models() -> ModelRegistry:
             raise ModelUnavailable(
                 "embeddings are unavailable",
                 code="models.load_failed",
-                fix="install the index extra: `uv sync --extra index`",
+                fix='install the index extra: `pip install "watch-skill[index]"` '
+                     '(from a checkout: `uv sync --extra index`)',
             )
         return model
 

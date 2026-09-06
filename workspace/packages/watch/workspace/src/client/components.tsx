@@ -18,12 +18,12 @@
  * below. A colour written out here is a colour that gets written out slightly
  * differently in the next panel, and then a theme change misses one of them.
  *
- * @module @watchskill/dsh-workspace/components
+ * @module @deepwatch/dsh-workspace/components
  */
 
 import type { ReactNode } from 'react'
-import { toneFor, tokenFor } from '@watchskill/dsh-client-brand'
-import { needsDirectionIsolation } from '@watchskill/dsh-contracts'
+import { toneFor, tokenFor } from '@deepwatch/dsh-client-brand'
+import { needsDirectionIsolation } from '@deepwatch/dsh-contracts'
 import {
   MODE_DESCRIPTORS,
   WORKSPACE_MODES,
@@ -261,7 +261,17 @@ export function Sidebar({ rows, activeRow, onSelect }: SidebarProps): ReactNode 
 
 /** Props for {@link SessionHeaderBar}. */
 export interface SessionHeaderProps {
-  readonly state: SessionHeaderState
+  /**
+   * The header state to render.
+   *
+   * Optional for the same reason {@link ComposerPanelProps.config} is: this is
+   * registered into `conversation.session.header.utilities`, and that slot
+   * hands its entries the framework's session kit -- not a
+   * `SessionHeaderState`. Nothing supplied one, so every render read
+   * `state.sessionId` off `undefined` and threw, and the strip has never drawn
+   * in the running product.
+   */
+  readonly state?: SessionHeaderState | undefined
 }
 
 /**
@@ -273,6 +283,8 @@ export interface SessionHeaderProps {
  * must not be able to look like one fact.
  */
 export function SessionHeaderBar({ state }: SessionHeaderProps): ReactNode {
+  // Nothing rather than a header claiming facts it was not given.
+  if (state === undefined) return null
   return (
     <header
       data-watch-session-header=""
@@ -387,9 +399,17 @@ const LANE_LABEL: Readonly<Record<TimelineLane, string>> = {
 
 /** Props for {@link SensoryTimelineStrip}. */
 export interface SensoryTimelineProps {
-  readonly timeline: Timeline
-  readonly onDensity: (density: TimelineDensity) => void
-  readonly onSelect: (entry: TimelineEntry) => void
+  /**
+   * The timeline to draw.
+   *
+   * Optional for the same reason as the two above: the
+   * `conversation.composer.dock` slot passes the input zone rather than a
+   * `Timeline`, so every render read `timeline.density` off `undefined` and
+   * threw.
+   */
+  readonly timeline?: Timeline | undefined
+  readonly onDensity?: ((density: TimelineDensity) => void) | undefined
+  readonly onSelect?: ((entry: TimelineEntry) => void) | undefined
 }
 
 /**
@@ -403,6 +423,10 @@ export interface SensoryTimelineProps {
 export function SensoryTimelineStrip(
   { timeline, onDensity, onSelect }: SensoryTimelineProps,
 ): ReactNode {
+  // A timeline with nothing to show is not an empty timeline; it is a strip
+  // that was never handed one, and drawing lane controls for it would be a
+  // control that does nothing.
+  if (timeline === undefined) return null
   const densities: readonly TimelineDensity[] = ['collapsed', 'compact', 'analysis']
   return (
     <section data-watch-timeline="" aria-label="Sensory timeline">
@@ -413,7 +437,7 @@ export function SensoryTimelineStrip(
             type="button"
             aria-pressed={timeline.density === density}
             data-watch-density={density}
-            onClick={() => { onDensity(density) }}
+            onClick={() => { onDensity?.(density) }}
             style={{ background: 'none', border: 'none', font: 'inherit', color: 'inherit', cursor: 'pointer' }}
           >
             {density}
@@ -437,7 +461,7 @@ export function SensoryTimelineStrip(
                   type="button"
                   data-watch-entry={entry.entryId}
                   data-watch-kind={entry.kind}
-                  onClick={() => { onSelect(entry) }}
+                  onClick={() => { onSelect?.(entry) }}
                   style={{
                     background: entry.kind === 'gap' ? 'var(--watch-wash-caution)' : 'none',
                     border: entry.kind === 'gap'
@@ -467,7 +491,22 @@ export function SensoryTimelineStrip(
 
 /** Props for {@link ComposerPanel}. */
 export interface ComposerPanelProps {
-  readonly config: ComposerConfig
+  /**
+   * The turn configuration to summarise.
+   *
+   * Optional, and the reason is a defect this shipped with. The panel is
+   * registered into `conversation.input.dock`, and that slot hands its entries
+   * the input zone -- a session snapshot and the input state -- not a
+   * `ComposerConfig`. Nothing supplied one, so every render read
+   * `config.verify` off `undefined` and threw; the dock's error boundary
+   * caught it, re-rendered, and threw again, until React gave up with
+   * "Maximum update depth exceeded" and took the *other* entries in that slot
+   * down with it. The panel had never drawn anything in the running product.
+   *
+   * Typed as optional so the compiler makes the absent case unavoidable rather
+   * than leaving it to a runtime that had been swallowing it.
+   */
+  readonly config?: ComposerConfig | undefined
   /** Refusals from the last agent proposal, when there were any. */
   readonly refusals?: readonly ComposerRefusal[]
 }
@@ -481,6 +520,10 @@ export interface ComposerPanelProps {
  * deliberately.
  */
 export function ComposerPanel({ config, refusals }: ComposerPanelProps): ReactNode {
+  // Nothing rather than something wrong. This panel summarises a turn
+  // configuration; with none to summarise it has nothing honest to say, and a
+  // placeholder claiming a configuration exists would be worse than silence.
+  if (config === undefined) return null
   const problems = validate(config)
   return (
     <section data-watch-composer="" aria-label="Turn configuration">

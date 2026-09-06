@@ -1,0 +1,125 @@
+{
+  "$comment": [
+    "What a person is allowed to read on their way into this product.",
+    "",
+    "Every rule here failed on a shipped file at some point: an onboarding",
+    "screen that said four of twelve capabilities were ready on every machine",
+    "in the world, a setup guide naming a package nobody had published, a",
+    "screenshot manifest describing a connected engine because the string was",
+    "a constant, an install command with a maintainer's drive letter in it.",
+    "",
+    "The scan is deliberately narrow. A repository-wide sweep for these words",
+    "is almost all noise -- `placeholder` is a DOM attribute, `not implemented`",
+    "is usually an honest capability disclosure, `temporary` is a directory --",
+    "and a gate that cries wolf gets an allowlist bolted on until it means",
+    "nothing. So the surfaces are listed by name, and so is every exemption.",
+    "",
+    "Both halves read this file: `workspace/scripts/verify-release-surface.mjs`",
+    "for the text, JSON, package descriptions and npm tarballs, and",
+    "`tests/test_release_surface.py` for the CLI help and the wheel and sdist.",
+    "One table, so a rule cannot be relaxed on one side only."
+  ],
+  "rules": [
+    {
+      "id": "unresolved-template-token",
+      "pattern": "\\{\\{[A-Za-z][A-Za-z0-9_]*\\}\\}",
+      "why": "a template was copied and not filled in"
+    },
+    {
+      "id": "unfinished-marker",
+      "pattern": "(?:^|[^A-Za-z])(?:TODO|FIXME|TBD|XXX)(?::|\\b)",
+      "why": "unfinished work, on a page a user reads"
+    },
+    {
+      "id": "unfinished-claim",
+      "pattern": "coming soon|under construction|work in progress|to be written|to be decided",
+      "why": "a promise instead of a product"
+    },
+    {
+      "id": "stale-npm-scope",
+      "pattern": "@watchskill/",
+      "why": "the scope this project used to publish under; @deepwatch is the current one"
+    },
+    {
+      "id": "phantom-repository",
+      "pattern": "watch-workspace",
+      "why": "names a repository that does not exist; both halves live in oxbshw/watch-skill"
+    },
+    {
+      "id": "personal-path",
+      "pattern": "[A-Za-z]:[\\\\/]{1,2}(?:Users|Em|Employment|watch-workspace)[\\\\/]",
+      "why": "a path from one machine, in something everybody reads"
+    },
+    {
+      "id": "maintainer-drive",
+      "pattern": "(?:^|[^A-Za-z0-9])G:[\\\\/]",
+      "why": "a drive letter that exists on exactly one computer"
+    },
+    {
+      "id": "unfilled-path-metavariable",
+      "pattern": "path[\\\\/]to[\\\\/]|C:\\\\\\\\?path\\\\\\\\?",
+      "why": "use an angle-bracket metavariable such as <watch-skill-checkout> instead"
+    },
+    {
+      "id": "obsolete-package-count",
+      "pattern": "\\b(?:12|13|14|15|16|17|18|19|21|22)\\s+(?:npm\\s+)?packages\\b",
+      "why": "the distribution is twenty packages; a stale count reads as a different product"
+    },
+    {
+      "id": "hardcoded-readiness",
+      "pattern": "\\d+\\s+of\\s+\\d+\\s+capabilit",
+      "why": "readiness is derived from the running system, never written down"
+    },
+    {
+      "id": "temporary-machine-state",
+      "pattern": "Both apps are running now|are running now|is running right now|currently open on|on my machine right now",
+      "why": "describes one maintainer's session as if it were the product"
+    }
+  ],
+  "surfaces": {
+    "$comment": "Globs relative to the repository root. A file is scanned if it matches an include and no exclude.",
+    "include": [
+      "README.md",
+      "CONTRIBUTING.md",
+      "SECURITY.md",
+      "llms.txt",
+      "docs/**/*.md",
+      "templates/**/*.md",
+      "workspace/README.md",
+      "workspace/docs/**/*.md",
+      "workspace/docs/**/*.json",
+      "workspace/inventory/*.json",
+      "workspace/packages/watch/*/README.md"
+    ],
+    "exclude": [
+      "docs/history/**",
+      "workspace/docs/history/**",
+      "workspace/docs/adr/**",
+      "workspace/inventory/dsh-closure.json",
+      "workspace/inventory/sbom.json",
+      "workspace/docs/screenshot-manifest.json"
+    ]
+  },
+  "exemptions": [
+    {
+      "file": "templates/agent-integration/agent-docs.template.md",
+      "rule": "unresolved-template-token",
+      "why": "this is the template; the holes are its content, and scripts/validate_agent_docs.py refuses them anywhere else"
+    },
+    {
+      "file": "CHANGELOG.md",
+      "rule": "unfilled-path-metavariable",
+      "why": "the entry describes a machine-specific line a past release removed; quoting it is the record, and rewriting it would make the history unreadable"
+    },
+    {
+      "file": "docs/testing.md",
+      "rule": "unfilled-path-metavariable",
+      "why": "a contributor-facing env var example, not an install instruction a new user pastes"
+    },
+    {
+      "file": "workspace/docs/releasing.md",
+      "rule": "unfinished-claim",
+      "why": "documents that the first npm publication has not happened, which is a fact about the release rather than an unfinished page"
+    }
+  ]
+}

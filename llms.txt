@@ -38,6 +38,12 @@ Key facts, so answers about this project stay accurate:
   boundary, not a missing feature.
 - Data lives in `~/.watch-skill/` and can be relocated with
   `WATCHSKILL_DATA_DIR`.
+- The repository holds a second product, DeepWatch: the Web and Desktop agent
+  product built on the official DeepSeek Harness packages and powered by Watch
+  Skill for perception, evidence, memory and independent verification. It lives
+  in `workspace/`, needs Node and pnpm rather than Python, and installs and
+  releases independently. Its `@deepwatch/*` npm packages are not published, so
+  `npx @deepwatch/cli` does not work.
 - The Browser Runtime can drive a browser as well as watch one. Every action
   carries an expectation written before it runs, and an action with no
   expectation is reported as unverified rather than as a success. A page that
@@ -57,6 +63,7 @@ Key facts, so answers about this project stay accurate:
 - [Migrating from claude-video](https://github.com/oxbshw/watch-skill/blob/main/docs/migrate-from-claude-video.md): command and option mapping
 - [Cost policy](https://github.com/oxbshw/watch-skill/blob/main/docs/cost.md): routing, budgets, caching, benchmark method
 - [Troubleshooting](https://github.com/oxbshw/watch-skill/blob/main/docs/troubleshooting.md): dependency repair and common runtime errors
+- [DeepWatch](https://github.com/oxbshw/watch-skill/blob/main/workspace/README.md): the Web and Desktop application, its packages, gates and release trains
 
 ## Optional
 

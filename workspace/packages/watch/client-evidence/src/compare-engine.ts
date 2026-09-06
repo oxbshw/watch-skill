@@ -17,7 +17,7 @@
  * surface that blends them invites the reader to treat a changed answer as a
  * changed truth.
  *
- * @module @watchskill/dsh-client-evidence/compare-engine
+ * @module @deepwatch/dsh-client-evidence/compare-engine
  */
 
 /** What kind of thing is being compared. Mixing kinds is refused. */

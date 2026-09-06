@@ -10,7 +10,7 @@ import { test, describe, before, after } from 'node:test'
 import assert from 'node:assert/strict'
 
 import { Context } from '@deepseek-ai/cordis'
-import WatchCoreService from '@watchskill/dsh-core-bridge'
+import WatchCoreService from '@deepwatch/dsh-core-bridge'
 
 /** Mount the Bridge on a fresh context and wait for the fiber to settle. */
 async function mountBridge(config = {}) {

@@ -5,7 +5,7 @@
  * entry exists because the DSH loader mounts a package's node half first and
  * reads its `dsh.client` declaration from there.
  *
- * @module @watchskill/dsh-client-brand
+ * @module @deepwatch/dsh-client-brand
  */
 
 export * from './identity.js'

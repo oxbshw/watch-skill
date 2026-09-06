@@ -10,7 +10,7 @@
  * Everything below is a pure function over data that already crossed the wire.
  * No DOM, no React, no Node.
  *
- * @module @watchskill/dsh-contracts/presentation
+ * @module @deepwatch/dsh-contracts/presentation
  */
 
 import type { Freshness, Verdict } from './index.js'

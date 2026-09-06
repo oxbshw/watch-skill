@@ -10,7 +10,7 @@
  * ADR-007 (`taste.md` is a projection, not a prompt) and ADR-008 (learning is
  * proposed, never self-promoted).
  *
- * @module @watchskill/dsh-memory/records
+ * @module @deepwatch/dsh-memory/records
  */
 
 // ── identity ────────────────────────────────────────────────────────────────

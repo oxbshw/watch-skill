@@ -25,7 +25,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { createElement } from 'react'
 
 import { Context } from '@deepseek-ai/cordis'
-import WatchMemoryService from '@watchskill/dsh-memory'
+import WatchMemoryService from '@deepwatch/dsh-memory'
 import {
   compareProjections,
   emptySelection,
@@ -37,7 +37,7 @@ import {
   resolveRecord,
   selectRecord,
   toDeepLink,
-} from '@watchskill/dsh-trajectory'
+} from '@deepwatch/dsh-trajectory'
 import {
   buildTimeline,
   defaultComposer,
@@ -47,17 +47,17 @@ import {
   resolveModes,
   switchMode,
   initialState,
-} from '@watchskill/dsh-workspace'
+} from '@deepwatch/dsh-workspace'
 import {
   applyDelta,
   finish,
   replayDigest,
   startSession,
   toReplay,
-} from '@watchskill/dsh-live'
-import { freshnessOf, isAddressable, locate, withRevision } from '@watchskill/dsh-library'
-import { buildWiki, diffUserEdit, pageAt, slugFor, toCandidates, validateUserEdit } from '@watchskill/dsh-wiki'
-import { recordsForView, toCard, whyChip } from '@watchskill/dsh-client-memory'
+} from '@deepwatch/dsh-live'
+import { freshnessOf, isAddressable, locate, withRevision } from '@deepwatch/dsh-library'
+import { buildWiki, diffUserEdit, pageAt, slugFor, toCandidates, validateUserEdit } from '@deepwatch/dsh-wiki'
+import { recordsForView, toCard, whyChip } from '@deepwatch/dsh-client-memory'
 import {
   OCR_ENGINES,
   RAPID_OCR,
@@ -66,15 +66,15 @@ import {
   coverageOf,
   routeOcr,
   scoreObservation,
-} from '@watchskill/dsh-technology'
-import { checkApproval, grantFor } from '@watchskill/dsh-contracts'
+} from '@deepwatch/dsh-technology'
+import { checkApproval, grantFor } from '@deepwatch/dsh-contracts'
 import {
   AuditLog,
   Coordinator,
   accessDenied,
   authorize,
   sharedOwner,
-} from '@watchskill/dsh-tenancy'
+} from '@deepwatch/dsh-tenancy'
 import {
   SupervisedChild,
   migrationPreflight,
@@ -84,8 +84,8 @@ import {
   prepareAppData,
   stampSchemaVersion,
   mayWrite,
-} from '@watchskill/watch-desktop'
-import { CompareView } from '@watchskill/dsh-client-evidence/compare'
+} from '@deepwatch/desktop'
+import { CompareView } from '@deepwatch/dsh-client-evidence/compare'
 
 import {
   AFTER_EVENTS,
@@ -530,8 +530,12 @@ describe('journey 10: Watch for DSH installs into a stock profile', () => {
       // capability disabled while believing it was added.
       assert.match(patch, /- insert:/)
       assert.equal(/- remove:/.test(patch), false, `${relative} removes an upstream row`)
-      for (const name of patch.matchAll(/name:\s*'(@watchskill\/[^']+)'/g)) {
-        assert.ok(name[1] in manifest.dependencies, `${relative} mounts ${name[1]} without depending on it`)
+      for (const name of patch.matchAll(/name:\s*'(@deepwatch\/[^']+)'/g)) {
+        // A row may name a subpath -- `@deepwatch/dsh-technology/routing` --
+        // because the package root is not always the plugin. The dependency is
+        // on the package, so that is the half compared.
+        const owner = name[1].split('/').slice(0, 2).join('/')
+        assert.ok(owner in manifest.dependencies, `${relative} mounts ${name[1]} without depending on ${owner}`)
       }
     }
   })

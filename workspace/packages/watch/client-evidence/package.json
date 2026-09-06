@@ -1,9 +1,35 @@
 {
-  "name": "@watchskill/dsh-client-evidence",
-  "version": "0.1.0-preview.0",
+  "name": "@deepwatch/dsh-client-evidence",
+  "version": "0.1.0",
   "description": "Browser half: verdict and evidence presentation for Watch tool results",
   "type": "module",
   "license": "MIT",
+  "author": "Sayed Allam",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/oxbshw/watch-skill.git",
+    "directory": "workspace/packages/watch/client-evidence"
+  },
+  "homepage": "https://github.com/oxbshw/watch-skill/tree/main/workspace#readme",
+  "bugs": {
+    "url": "https://github.com/oxbshw/watch-skill/issues"
+  },
+  "keywords": [
+    "deepwatch",
+    "deepseek-harness",
+    "watch-skill",
+    "evidence",
+    "ui"
+  ],
+  "dsh": {
+    "client": {
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-tool",
+        "@deepseek-ai/dsh-client-runtime"
+      ],
+      "platform": "web"
+    }
+  },
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
   "exports": {
@@ -29,22 +55,26 @@
     },
     "./package.json": "./package.json"
   },
-  "dsh": {
-    "client": {
-      "inject": [
-        "@deepseek-ai/dsh-client-ui-tool",
-        "@deepseek-ai/dsh-client-runtime"
-      ],
-      "platform": "web"
-    }
-  },
   "files": [
     "lib/**/*.js",
     "lib/**/*.js.map",
     "lib/**/*.d.ts"
   ],
+  "sideEffects": false,
+  "engines": {
+    "node": "^22.19.0 || >=24.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "bundle": "tsdown"
+  },
+  "dependencies": {
+    "@deepwatch/dsh-client-brand": "workspace:^",
+    "@deepwatch/dsh-contracts": "workspace:^",
+    "@deepwatch/dsh-trajectory": "workspace:^",
+    "@deepwatch/dsh-workspace": "workspace:^"
   },
   "peerDependencies": {
     "@deepseek-ai/cordis": "catalog:",
@@ -56,11 +86,5 @@
     "@deepseek-ai/dsh-client-ui-slots": "catalog:",
     "@types/react": "~18.3.1",
     "react": "^18.2.0"
-  },
-  "dependencies": {
-    "@watchskill/dsh-client-brand": "workspace:^",
-    "@watchskill/dsh-contracts": "workspace:^",
-    "@watchskill/dsh-trajectory": "workspace:^",
-    "@watchskill/dsh-workspace": "workspace:^"
   }
 }

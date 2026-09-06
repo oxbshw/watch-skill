@@ -171,12 +171,12 @@ def preflight() -> Preflight:
         )
     if not report.torch_installed:
         report.blockers.append(
-            "torch is not installed (`uv sync --extra vlm`); it is ~2.5 GiB "
+            "torch is not installed (`pip install torch`); it is ~2.5 GiB "
             "and deliberately not a base dependency"
         )
     if not report.transformers_installed:
         report.blockers.append(
-            "transformers is not installed (`uv sync --extra vlm`)"
+            "transformers is not installed (`pip install transformers`)"
         )
     return report
 

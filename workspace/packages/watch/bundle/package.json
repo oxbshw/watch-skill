@@ -1,9 +1,26 @@
 {
-  "name": "@watchskill/dsh-bundle",
-  "version": "0.1.0-preview.0",
-  "description": "Watch for DSH \u2014 the installable Watch capability bundle for a DeepSeek Harness profile",
+  "name": "@deepwatch/dsh-bundle",
+  "version": "0.1.0",
+  "description": "DeepWatch's capabilities, installable into an existing DeepSeek Harness profile",
   "type": "module",
   "license": "MIT",
+  "author": "Sayed Allam",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/oxbshw/watch-skill.git",
+    "directory": "workspace/packages/watch/bundle"
+  },
+  "homepage": "https://github.com/oxbshw/watch-skill/tree/main/workspace#readme",
+  "bugs": {
+    "url": "https://github.com/oxbshw/watch-skill/issues"
+  },
+  "keywords": [
+    "deepwatch",
+    "deepseek-harness",
+    "watch-skill",
+    "bundle",
+    "plugin"
+  ],
   "dsh": {
     "bundle": {
       "patch": "./cordis.patch.yml",
@@ -21,18 +38,26 @@
     "variants/*.yml",
     "README.md"
   ],
+  "sideEffects": false,
+  "engines": {
+    "node": "^22.19.0 || >=24.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "dependencies": {
-    "@watchskill/dsh-client-brand": "workspace:^",
-    "@watchskill/dsh-client-evidence": "workspace:^",
-    "@watchskill/dsh-client-memory": "workspace:^",
-    "@watchskill/dsh-client-settings": "workspace:^",
-    "@watchskill/dsh-core-bridge": "workspace:^",
-    "@watchskill/dsh-library": "workspace:^",
-    "@watchskill/dsh-live": "workspace:^",
-    "@watchskill/dsh-memory": "workspace:^",
-    "@watchskill/dsh-technology": "workspace:^",
-    "@watchskill/dsh-tools": "workspace:^",
-    "@watchskill/dsh-trajectory": "workspace:^",
-    "@watchskill/dsh-workspace": "workspace:^"
+    "@deepwatch/dsh-client-brand": "workspace:^",
+    "@deepwatch/dsh-client-evidence": "workspace:^",
+    "@deepwatch/dsh-client-memory": "workspace:^",
+    "@deepwatch/dsh-client-remotes": "workspace:^",
+    "@deepwatch/dsh-client-settings": "workspace:^",
+    "@deepwatch/dsh-core-bridge": "workspace:^",
+    "@deepwatch/dsh-library": "workspace:^",
+    "@deepwatch/dsh-live": "workspace:^",
+    "@deepwatch/dsh-memory": "workspace:^",
+    "@deepwatch/dsh-technology": "workspace:^",
+    "@deepwatch/dsh-tools": "workspace:^",
+    "@deepwatch/dsh-trajectory": "workspace:^",
+    "@deepwatch/dsh-workspace": "workspace:^"
   }
 }

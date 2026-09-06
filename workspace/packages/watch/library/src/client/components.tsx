@@ -12,12 +12,12 @@
  * result that showed neither would be a list of claims about a library whose
  * state the reader cannot check.
  *
- * @module @watchskill/dsh-library/components
+ * @module @deepwatch/dsh-library/components
  */
 
 import type { ReactNode } from 'react'
-import { toneFor, tokenFor } from '@watchskill/dsh-client-brand'
-import type { Freshness } from '@watchskill/dsh-contracts'
+import { toneFor, tokenFor } from '@deepwatch/dsh-client-brand'
+import type { Freshness } from '@deepwatch/dsh-contracts'
 import {
   currentRevision,
   type Source,

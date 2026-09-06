@@ -6,7 +6,7 @@
  * returns one without checking it — which is why the tenant check is a required
  * argument of `authorize()` rather than something a caller remembers.
  *
- * @module @watchskill/dsh-tenancy
+ * @module @deepwatch/dsh-tenancy
  */
 
 export * from './identity.js'

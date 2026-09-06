@@ -34,10 +34,10 @@
  * decision they make, and the weight licence gate in `ocr.ts` has to clear
  * before it is even offerable.
  *
- * @module @watchskill/dsh-technology/ocr-worker
+ * @module @deepwatch/dsh-technology/ocr-worker
  */
 
-import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process'
+import { spawn } from 'node:child_process'
 import type { TechnologyDescriptor } from './descriptor.js'
 
 /**
@@ -154,6 +154,39 @@ export interface WorkerOptions {
   readonly cancelGraceMs: number
   /** Clock, injectable so tests are not timing-dependent. */
   readonly now?: () => string
+  /**
+   * How the child is started, injectable so the stream boundary is testable.
+   *
+   * The defect this exists for is not reproducible by running a real worker:
+   * whether writing to a dead child's stdin raises EPIPE depends on the
+   * platform and on how quickly the pipe tears down, so a test that starts a
+   * process and kills it passes on Windows with the guard removed. Injecting
+   * the boundary makes "the pipe is gone" a state a test can simply be in.
+   */
+  readonly spawnProcess?: (spawn: WorkerSpawn) => WorkerProcess
+}
+
+/**
+ * The part of a child process this supervisor uses.
+ *
+ * Narrower than `ChildProcessWithoutNullStreams` on purpose: it is the
+ * contract a test has to satisfy, and every member here is one this module
+ * actually calls.
+ */
+export interface WorkerProcess {
+  readonly stdin: {
+    write(chunk: string): unknown
+    on(event: 'error', listener: (error: Error) => void): unknown
+    readonly destroyed: boolean
+    readonly writableEnded: boolean
+  }
+  readonly stdout: { setEncoding(encoding: string): unknown, on(event: 'data', listener: (chunk: string) => void): unknown }
+  readonly stderr: { setEncoding(encoding: string): unknown, on(event: 'data', listener: (chunk: string) => void): unknown }
+  on(event: 'exit', listener: (code: number | null, signal: string | null) => void): unknown
+  on(event: 'error', listener: (error: Error) => void): unknown
+  once(event: 'exit', listener: () => void): unknown
+  kill(signal?: NodeJS.Signals): unknown
+  readonly pid?: number | undefined
 }
 
 /** Why a worker call failed. */
@@ -200,7 +233,7 @@ function isOomExit(code: number | null, signal: string | null): boolean {
  * request killed it" answerable.
  */
 export class OcrWorker {
-  private child: ChildProcessWithoutNullStreams | null = null
+  private child: WorkerProcess | null = null
   private hello: WorkerHello | null = null
   private buffer = ''
   private health: EngineHealth
@@ -242,14 +275,15 @@ export class OcrWorker {
         : { ok: true, value: this.hello }
     }
 
-    const child = spawn(this.options.spawn.command, [...this.options.spawn.args], {
-      // Isolation is the point of this module: a separate process, its own
-      // environment, and no shell to interpret anything.
-      shell: false,
-      stdio: ['pipe', 'pipe', 'pipe'],
-      ...this.options.spawn.cwd === undefined ? {} : { cwd: this.options.spawn.cwd },
-      env: { ...process.env, ...this.options.spawn.env },
-    })
+    const child: WorkerProcess = this.options.spawnProcess?.(this.options.spawn)
+      ?? spawn(this.options.spawn.command, [...this.options.spawn.args], {
+        // Isolation is the point of this module: a separate process, its own
+        // environment, and no shell to interpret anything.
+        shell: false,
+        stdio: ['pipe', 'pipe', 'pipe'],
+        ...this.options.spawn.cwd === undefined ? {} : { cwd: this.options.spawn.cwd },
+        env: { ...process.env, ...this.options.spawn.env },
+      })
     this.child = child
 
     child.stdout.setEncoding('utf8')
@@ -264,6 +298,18 @@ export class OcrWorker {
     child.on('error', error => {
       this.setHealth('unavailable', `The worker could not be started: ${error.message}`,
         'Check the command in the engine descriptor.')
+    })
+    // A pipe to a process that has already gone is not a fault to propagate.
+    //
+    // With no listener, an EPIPE on stdin is an unhandled `error` event on a
+    // stream, and an unhandled stream error takes the process down. It arrives
+    // on exactly the path where the worker is *supposed* to be gone --
+    // `stop()` writing a shutdown to a child that already exited -- so the
+    // supervisor would die while tidying up after a worker that did what it
+    // was told. `send` guards the synchronous half of the same thing.
+    child.stdin.on('error', () => {
+      // Recorded nowhere on purpose: `onExit` already sets the health, and a
+      // second message about the same event would read as a second fault.
     })
 
     const hello = await this.awaitHello()
@@ -377,8 +423,18 @@ export class OcrWorker {
     if (this.child === null) return
     this.send({ id: 's0', method: 'shutdown', params: {} })
     await new Promise<void>(resolve => {
+      // Deliberately not `unref`'d, unlike every other timer in this module.
+      //
+      // This one is the escalation: it is what turns "asked the worker to
+      // stop" into "killed the worker that would not". An unref'd timer does
+      // not hold the event loop open, so on a quiet process it can simply never
+      // fire — and `stop()` then waits forever on a worker that was never going
+      // to exit. A Linux runner reported exactly that, as "Promise resolution
+      // is still pending but the event loop has already resolved".
+      //
+      // Holding the loop open costs nothing here: the caller is awaiting this
+      // promise, so the process was already staying alive for it.
       const timer = setTimeout(() => { this.terminate(); resolve() }, this.options.cancelGraceMs)
-      timer.unref?.()
       this.child?.once('exit', () => { clearTimeout(timer); resolve() })
     })
     this.child = null
@@ -422,8 +478,24 @@ export class OcrWorker {
     return { ok: false, error: { code, message, fix, retryable } }
   }
 
+  /**
+   * Write one request, unless there is nothing left to write to.
+   *
+   * `stop()` sends a shutdown to a worker that may already have exited —
+   * including the worker this module deliberately kills for ignoring a cancel
+   * — and writing to a closed pipe throws EPIPE. Stopping something that has
+   * already stopped is not an error, so this refuses to write rather than
+   * letting the caller's cleanup path fail.
+   */
   private send(request: WorkerRequest): void {
-    this.child?.stdin.write(`${JSON.stringify(request)}\n`)
+    const stdin = this.child?.stdin
+    if (stdin === undefined || stdin.destroyed || stdin.writableEnded) return
+    try {
+      stdin.write(`${JSON.stringify(request)}\n`)
+    } catch {
+      // The worker exited between the check above and the write. There is
+      // nothing to deliver to and nothing a caller could do about it.
+    }
   }
 
   private onData(chunk: string): void {

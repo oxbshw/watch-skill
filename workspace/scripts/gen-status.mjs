@@ -27,6 +27,7 @@
 import { readFileSync, writeFileSync, existsSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { byField } from './lib/order.mjs'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const SOURCE = join(ROOT, 'docs', 'implementation-status.json')
@@ -125,7 +126,7 @@ function main() {
     const items = ledger.items.filter(item => item.phase === phase)
     lines.push(`## ${phase}`, '')
     lines.push('| Subsystem | Status | Owner | Tests |', '|---|---|---|---|')
-    for (const item of items.sort((a, b) => a.id.localeCompare(b.id))) {
+    for (const item of items.sort(byField('id'))) {
       const tests = (item.tests ?? []).length === 0
         ? '—'
         : `${String((item.tests ?? []).length)}`

@@ -18,7 +18,7 @@ and native capability only; it never forks the UI.
 |---|---|---|
 | Electron main | lifecycle, windows, updates, child supervision, native dialogs | domain UI, untrusted plugin execution |
 | Preload | typed minimal IPC | a raw filesystem or process bridge |
-| Renderer | the Watch Workspace UI | Node integration, direct filesystem |
+| Renderer | the DeepWatch UI | Node integration, direct filesystem |
 | DSH Host | Cordis, sessions, tools, plugins | Electron APIs |
 | Watch Core | perception, evidence, verification | unnegotiated native commands |
 

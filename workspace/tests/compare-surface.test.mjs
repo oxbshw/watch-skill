@@ -30,9 +30,9 @@ import {
   fromDeepLink,
   hasVerdictDivergence,
   project,
-} from '@watchskill/dsh-trajectory'
+} from '@deepwatch/dsh-trajectory'
 
-import { CompareView } from '@watchskill/dsh-client-evidence/compare'
+import { CompareView } from '@deepwatch/dsh-client-evidence/compare'
 
 import { AFTER_EVENTS, BEFORE_EVENTS, CHANNEL_HINTS } from './fixtures/before-after.mjs'
 

@@ -5,7 +5,7 @@
  * Do not edit by hand: the master is the brand source of truth and this is a
  * mechanical derivation of it at 64px, which covers a 32px slot at 2x.
  *
- * @module @watchskill/dsh-client-brand/mark
+ * @module @deepwatch/dsh-client-brand/mark
  */
 
 /** The orca, as a transparent PNG data URI. */

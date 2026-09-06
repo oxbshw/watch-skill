@@ -167,14 +167,13 @@ def test_broken_app_observed_corrected_and_independently_verified(
         #    captured yet, and clipping early would silently produce a shorter
         #    clip that still looks fine.
         anchor = evidence[0]["media_ts"]
-        reached = _wait_for(
-            lambda: (buf.newest_frame_media_ts(session.session_id) or 0.0)
-            > anchor + 3.5 or None, timeout=60.0)
-        assert reached, "the buffer never reached the far side of the window"
+        # The builder waits, and refuses with a reason. Waiting here for the
+        # newest frame to pass the far edge proved nothing about the near
+        # edge, and on a fast machine it succeeded instantly over a window
+        # that had never been captured.
         before_clip = buf.clip_around(session.session_id, anchor,
                                       before=3.0, after=3.0)
-        assert before_clip is not None and before_clip.is_file(), (
-            "no before clip was produced from the rolling buffer")
+        assert before_clip.is_file(), "the clip was recorded but not written"
 
         # 3. the loop. The postcondition already exists and cannot be edited.
         run = start_run(
@@ -221,12 +220,9 @@ def test_broken_app_observed_corrected_and_independently_verified(
         after_events = live_session.observe(session.session_id, limit=400)["events"]
         after_anchor = max(event["media_ts"] for event in after_events)
         assert after_anchor > anchor, "the after window is not after the before one"
-        assert _wait_for(
-            lambda: (buf.newest_frame_media_ts(session.session_id) or 0.0)
-            > after_anchor + 3.5 or None, timeout=60.0)
         after_clip = buf.clip_around(session.session_id, after_anchor,
                                      before=3.0, after=3.0)
-        assert after_clip is not None and after_clip.is_file()
+        assert after_clip.is_file()
         assert after_clip != before_clip
     finally:
         live_session.stop_live(session.session_id)

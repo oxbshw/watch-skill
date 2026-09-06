@@ -17,6 +17,7 @@ eighty columns -- checking a presentation layer for something that is data.
 """
 from __future__ import annotations
 
+import os
 import re
 from pathlib import Path
 
@@ -53,10 +54,20 @@ def _options(command) -> set[str]:
 
 
 def _documents() -> list[Path]:
-    return sorted(
-        p for p in ROOT.rglob("*.md")
-        if not SKIP_DIRS & set(p.relative_to(ROOT).parts)
-    )
+    """Every Markdown file in the repository, skipping the directories above.
+
+    The skip list has to prune the walk rather than filter its result. `rglob`
+    descends into a directory before any filter can reject it, and since the
+    Workspace moved in, `workspace/node_modules` is a pnpm store whose nested
+    symlink chains run past the Windows path limit: the walk raised
+    FileNotFoundError long before the comprehension could skip anything. CI
+    never saw it because Core CI installs no npm dependencies.
+    """
+    found: list[Path] = []
+    for parent, directories, files in os.walk(ROOT):
+        directories[:] = [d for d in directories if d not in SKIP_DIRS]
+        found.extend(Path(parent, name) for name in files if name.endswith(".md"))
+    return sorted(found)
 
 
 def _invocations(text: str) -> list[str]:

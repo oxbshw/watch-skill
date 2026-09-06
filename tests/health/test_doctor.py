@@ -34,6 +34,65 @@ def test_check_ffmpeg_ok_when_present(monkeypatch: pytest.MonkeyPatch, tmp_path:
     assert result.status == "ok"
 
 
+def test_ffmpeg_version_reads_the_release_line() -> None:
+    """Every spelling a real build uses, including the one with no number."""
+    cases = {
+        "ffmpeg version 9.0.1-full_build-www.gyan.dev Copyright (c)": (9, 0),
+        "ffmpeg version n7.1 Copyright (c) 2000-2024": (7, 1),
+        "ffmpeg version 4.4.2-0ubuntu0.22.04.1 Copyright (c)": (4, 4),
+        "ffmpeg version 5.1 Copyright (c) 2000-2022": (5, 1),
+        # A build from git carries a revision where the version goes, and is
+        # by definition ahead of every release. Unparseable is not "too old".
+        "ffmpeg version N-109621-g0c0f9b1a2e Copyright (c)": None,
+        "not ffmpeg at all": None,
+    }
+    for banner, expected in cases.items():
+        parsed = _parse_ffmpeg_banner(banner)
+        assert parsed == expected, banner
+
+
+def _parse_ffmpeg_banner(banner: str) -> tuple[int, int] | None:
+    """Run `ffmpeg_version` against a canned banner, without an ffmpeg."""
+    import subprocess as _subprocess
+
+    original = doctor._run
+    doctor._run = lambda *args, **kwargs: _completed(stdout=banner)  # type: ignore[assignment]
+    try:
+        return doctor.ffmpeg_version("ffmpeg")
+    finally:
+        doctor._run = original  # type: ignore[assignment]
+        del _subprocess
+
+
+def test_check_ffmpeg_warns_below_the_fps_mode_floor(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """4.4 runs the product and cannot regenerate fixtures. Say exactly that."""
+    fake = tmp_path / "ffmpeg.exe"
+    fake.write_bytes(b"")
+    monkeypatch.setattr(doctor.binaries, "find_binary", lambda name: fake)
+    monkeypatch.setattr(doctor, "ffmpeg_version", lambda _: (4, 4))
+
+    result = doctor.check_ffmpeg(fix=False)
+    assert result.status == "warn"
+    assert "4.4" in result.message
+    assert "5.1" in result.message
+    assert "-fps_mode" in result.message
+    # A warning that reads as "your ffmpeg is broken" costs somebody an
+    # afternoon replacing a working dependency.
+    assert "unaffected" in result.message
+
+
+def test_check_ffmpeg_ok_at_the_floor(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    fake = tmp_path / "ffmpeg.exe"
+    fake.write_bytes(b"")
+    monkeypatch.setattr(doctor.binaries, "find_binary", lambda name: fake)
+    monkeypatch.setattr(doctor, "ffmpeg_version", lambda _: doctor.MIN_FFMPEG_VERSION)
+    assert doctor.check_ffmpeg(fix=False).status == "ok"
+
+
 def test_playwright_recording_check_is_optional_without_package(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

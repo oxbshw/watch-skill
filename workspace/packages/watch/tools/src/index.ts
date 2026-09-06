@@ -15,30 +15,81 @@
  *    fallback to guessing from the conversation. The model is told, in its
  *    system prompt, that this is the contract.
  *
- * @module @watchskill/dsh-tools
+ * @module @deepwatch/dsh-tools
  */
 
-import { randomUUID } from 'node:crypto'
+import { createHash, randomUUID } from 'node:crypto'
 import type { Context } from '@deepseek-ai/cordis'
 import s from '@deepseek-ai/schemastery'
 import { defineTool } from '@deepseek-ai/dsh-tools'
 import { applyLibrarySearch } from './library-search.js'
+import { applyReadPlane } from './read-plane.js'
+import { LibraryGenerations } from './library-generations.js'
+import { ReceiptJournal } from './receipt-journal.js'
 import type { GenericCallView, JsonValue } from '@deepseek-ai/dsh-tools'
 import type {} from '@deepseek-ai/dsh-system-prompt'
-import type {} from '@watchskill/dsh-core-bridge'
-import type { EvidenceRecord, VerificationOutcome, WatchResult } from '@watchskill/dsh-contracts'
+import type {} from '@deepwatch/dsh-core-bridge'
+import type { EvidenceRecord, VerificationOutcome, WatchResult } from '@deepwatch/dsh-contracts'
 import { SENSORY_GUIDANCE, applySensoryTools } from './sensory.js'
 import { applyMemory } from './memory.js'
 import { BROWSER_GUIDANCE, applyBrowserTools } from './browser.js'
 
 export { SENSORY_GUIDANCE, applySensoryTools } from './sensory.js'
 export { applyMemory } from './memory.js'
+export { LibraryGenerations } from './library-generations.js'
+export { ReceiptJournal } from './receipt-journal.js'
+export type { JournalLoad } from './receipt-journal.js'
+export type { IndexGeneration, RefreshOutcome } from './library-generations.js'
 export { BROWSER_GUIDANCE, applyBrowserTools } from './browser.js'
 export type { BrowserConfig } from './browser.js'
 export type { SensoryConfig } from './sensory.js'
 
 export const name = 'watch-tools'
-export const inject = ['tools', 'watchCore', 'systemPrompt']
+/**
+ * How many receipts stay joinable to a late verdict.
+ *
+ * Matched to the ledger's own limit in `@deepwatch/dsh-technology`: an
+ * attestation is about a call from seconds ago, so an entry the ledger has
+ * already evicted has nothing left to join to. Three maps are bounded by it —
+ * what was indexed, what verdict was applied, and what verdict is waiting for
+ * a receipt — because each is keyed by something a session can produce without
+ * limit.
+ */
+const RECEIPT_LIMIT = 500
+
+/**
+ * The addressable id for one execution receipt.
+ *
+ * A receipt's natural identity is its idempotency key, and that key is a path
+ * shape -- `<session>/<turn>/<call>#<n>`. `@deepwatch/dsh-contracts/query`
+ * refuses it: an id that carries a slash or a colon could name a location, and
+ * `libraryGet` validates against that grammar. So a receipt was searchable and
+ * could not be opened -- the Library listed rows whose sibling method answered
+ * `rejected`, which is the exact defect the file-derived records were fixed for
+ * and the receipt-derived ones inherited.
+ *
+ * Derived rather than random: the same execution is the same record after a
+ * restart, which is what lets a restored journal line up with a live one.
+ */
+export function receiptRecordId(idempotencyKey: string): string {
+  return `rcpt_${createHash('sha256')
+    .update(`watch-receipt/v1/${idempotencyKey}`, 'utf8')
+    .digest('hex').slice(0, 16)}`
+}
+
+/**
+ * The revision id for one answer about a receipt.
+ *
+ * Distinct per answer, so two verifications of the same call are two versions
+ * a reader can compare rather than one row that changed behind them.
+ */
+function verdictRevisionId(recordId: string, verdict: string, verificationId: string | null): string {
+  return `${recordId}.${createHash('sha256')
+    .update(`${verdict}|${verificationId ?? ''}`, 'utf8')
+    .digest('hex').slice(0, 12)}`
+}
+
+export const inject = ['tools', 'watchCore', 'systemPrompt', 'llm', 'watchProvenance']
 
 /** Deployment policy for the Watch tool surface. */
 export interface Config {
@@ -48,6 +99,14 @@ export interface Config {
   readonly verifyTimeoutMs: number
   /** Deadline for a search or a moment lookup. */
   readonly readTimeoutMs: number
+  /**
+   * Deadline for the first read after the engine connects.
+   *
+   * A backstop for the case where Core's own startup warm-up was skipped and
+   * the first read pays for the model import. See
+   * `SensoryConfig.coldReadTimeoutMs`.
+   */
+  readonly coldReadTimeoutMs: number
   /** Deadline for starting a live session, which may launch a browser. */
   readonly liveStartTimeoutMs: number
   /** Deadline for one browser action, including its re-observation. */
@@ -62,6 +121,23 @@ export interface Config {
    * search, not one that guesses at a convenient directory.
    */
   readonly libraryRoots?: readonly string[]
+  /**
+   * Which workspace this host answers for.
+   *
+   * Read-plane cursors are bound to it, so a cursor issued here cannot be
+   * replayed against another workspace's snapshot.
+   */
+  readonly workspaceScope?: string
+  /**
+   * Where execution receipts are journalled, so they survive a restart.
+   *
+   * Relative paths resolve against the profile's working directory, as the
+   * memory store's `directory` does. Unset means no journal: receipts are
+   * still indexed live, and are still lost when the Host stops — which is what
+   * every deployment did before this existed, and is the honest behaviour for
+   * one that has not asked for a durable record.
+   */
+  readonly receiptsDirectory?: string
 }
 
 /** Schemastery validation for the tool-surface policy. */
@@ -69,7 +145,8 @@ export const Config: s<Config> = s.object({
   queryTimeoutMs: s.number().step(1).min(1_000).default(120_000),
   verifyTimeoutMs: s.number().step(1).min(1_000).default(60_000),
   readTimeoutMs: s.number().step(1).min(1_000).default(30_000),
-  liveStartTimeoutMs: s.number().step(1).min(1_000).default(60_000),
+  coldReadTimeoutMs: s.number().step(1).min(1_000).default(60_000),
+  liveStartTimeoutMs: s.number().step(1).min(1_000).default(75_000),
   actTimeoutMs: s.number().step(1).min(1_000).default(60_000),
   observeTimeoutMs: s.number().step(1).min(1_000).default(30_000),
 })
@@ -318,7 +395,341 @@ export function apply(ctx: Context, config: Config): void {
   // Library search runs on the host because that is the only place that can
   // read the evidence store: a client plugin gets no config, and ctx.remote
   // is an event bus rather than a query client.
-  applyLibrarySearch(ctx, { roots: config.libraryRoots ?? [] })
+  const roots = config.libraryRoots ?? []
+  // One owner for the index, and it is the thing that can replace it. The
+  // tool and the read plane both read through it, so a refresh either side
+  // asks for is the same refresh and there is never a second index to drift.
+  const generations = new LibraryGenerations({ roots })
+  const library = applyLibrarySearch(ctx, { roots, generations })
+
+  /**
+   * The durable half of the Library.
+   *
+   * Indexed sources are Core's and are on disk already. Receipts were not, so
+   * a restart lost them and `Refresh` could not bring them back. The journal
+   * is this plugin's own: a receipt is the Host's observation of its own tool
+   * calls, and sending it across the Bridge to be stored would put Core's name
+   * on a record it did not make.
+   */
+  const journal = config.receiptsDirectory === undefined
+    ? null
+    : new ReceiptJournal(config.receiptsDirectory)
+
+  /**
+   * File a record in the Library and, if there is one, in the journal.
+   *
+   * A failed append does not fail the call it describes -- the work already
+   * happened, and saying otherwise would be a lie about it. But it is said
+   * out loud, once per degradation, because a product that offers durable
+   * evidence has to report when it is not storing any.
+   */
+  let announcedDegradation: string | null = null
+  const file = (record: Parameters<typeof generations.addLive>[0]): void => {
+    generations.addLive(record)
+    if (journal === null) return
+    if (!journal.append(record)) {
+      const reason = journal.degradedReason() ?? 'unknown'
+      if (announcedDegradation !== reason) {
+        announcedDegradation = reason
+        process.stderr.write(
+          `watch-tools: receipts are NOT being saved to ${journal.path} — ${reason}. `
+          + 'Work still runs and is still indexed for this session, but the record '
+          + 'will not survive a restart. Check the directory exists and is writable.\n')
+      }
+      return
+    }
+    announcedDegradation = null
+  }
+
+  // Restore what a previous run recorded, before anything new is filed.
+  //
+  // Through the same `addLive` the live path uses, so a restored receipt is
+  // indistinguishable from one minted a moment ago -- which is the property
+  // that makes a restart invisible to a reader. Not re-journalled: it is
+  // already in the file it came from, and appending it again would grow the
+  // journal by its own contents on every boot.
+  if (journal !== null) {
+    const restored = journal.load()
+    for (const record of restored.records) generations.addLive(record)
+    if (restored.status === 'unreadable') {
+      // An unreadable store is not an empty one. Returning silently here is
+      // how a permissions problem looked exactly like a first run.
+      process.stderr.write(
+        `watch-tools: the receipt journal at ${journal.path} exists and could not be `
+        + `read — ${restored.reason ?? 'unknown'}. Previous receipts are not available `
+        + 'in this session.\n')
+    }
+    if (restored.repairedBytes > 0) {
+      process.stderr.write(
+        `watch-tools: removed ${String(restored.repairedBytes)} byte(s) of incomplete `
+        + `tail from ${journal.path} — a write was interrupted. Earlier records were `
+        + 'kept.\n')
+    }
+    if (restored.damaged > 0) {
+      // Said out loud rather than swallowed. A torn last line is the ordinary
+      // consequence of a process dying mid-append and costs one record; a
+      // larger count is a corrupted file and somebody should know.
+      process.stderr.write(
+        `watch-tools: ${String(restored.damaged)} of ${String(restored.lines)} `
+        + `journal line(s) could not be read and were skipped (${journal.path})\n`)
+    }
+  }
+
+  // The same index, reachable by the surfaces as well as by the agent. A
+  // `conversation.view` entry is handed `{ inspect, onInspectDone }` and
+  // nothing else, so without this the Library mode has no way to obtain the
+  // records it renders and defaults to an empty array.
+  applyReadPlane(ctx, {
+    index: library.index,
+    scope: config.workspaceScope ?? 'default',
+    generations,
+  })
+
+  /**
+   * Index an execution receipt the moment the Host records one.
+   *
+   * The gap this closes: the evaluation produced 76 tool actions and a Library
+   * with nothing in it. Not because indexing failed — because nothing indexed a
+   * receipt until somebody pressed Refresh, and Refresh reads evidence roots on
+   * disk that did not contain an in-memory receipt from four seconds ago. A
+   * feature reachable only by winning that race is not reachable.
+   *
+   * A receipt is filed as a `document`, which is the least-wrong kind the
+   * source vocabulary already has for something textual, and tagged so it stays
+   * filterable without widening a closed union that the client's filters and
+   * the wire contract both depend on.
+   *
+   * `verdict` is deliberately null. A receipt is what happened; whether it was
+   * right is Core's answer and arrives, if it arrives, as an attestation.
+   */
+  /**
+   * What each receipt was indexed as, so a later verdict can be joined to it.
+   *
+   * Bounded by the same reasoning as the ledger it mirrors: an attestation
+   * arrives seconds after its receipt or not at all, so an entry older than the
+   * ledger's own limit has nothing left to join to.
+   */
+  const indexed = new Map<string, {
+    title: string
+    text: string
+    runId: string | null
+    observedAt: string | null
+    tags: readonly string[]
+  }>()
+
+  /**
+   * The answer already on a record, so a repeat is not a rewrite.
+   *
+   * Keyed by execution identity and holding *verification* identity as well as
+   * the verdict, because the verdict string alone is not an identity. Two
+   * different verifications of the same call can both say `VERIFIED` and be
+   * different answers about different questions, and comparing only the word
+   * would silently keep the first one's evidence link.
+   */
+  const applied = new Map<string, { verdict: string, verificationId: string | null }>()
+
+  /**
+   * The last answer Core gave for a call, whether or not it is on the row yet.
+   *
+   * Not "pending": it is kept after a successful join, because the row can be
+   * rewritten later. A receipt is re-announced when a record reconciles, when
+   * an event is replayed, and after a reconnect — and each of those files the
+   * receipt again, without a verdict. Something has to remember the answer, or
+   * a duplicate silently downgrades a verified row and no later attestation
+   * can put it back.
+   *
+   * It also covers the opposite order. `settle()` announces a receipt before
+   * `attest()` is started, so ordinarily the receipt is first; that is a
+   * sequence, not a guarantee. The two listeners are on a fork that receives
+   * events on its own schedule, and after a reload an attestation can name a
+   * call this instance never saw.
+   *
+   * Bounded by the ledger's own horizon: an attestation belongs to a call from
+   * seconds ago, and an entry the ledger has evicted has nothing to join to.
+   */
+  const known = new Map<string, { verdict: string, verificationId: string | null }>()
+
+  /** Keep the newest `limit` entries of an insertion-ordered map. */
+  const bound = (map: Map<string, unknown>, limit: number): void => {
+    while (map.size > limit) {
+      const oldest = map.keys().next()
+      if (oldest.done === true) return
+      map.delete(oldest.value)
+    }
+  }
+
+  /**
+   * Put Core's verdict on the record it names, once.
+   *
+   * Re-indexing under the same `recordId` replaces the row and moves the
+   * `revisionId`, so a reader can tell the answered record from the one filed
+   * before Core replied. Doing it twice with the same verdict would file the
+   * same revision again, so it is done once: repeat delivery of an attestation
+   * is normal and must not look like a second answer.
+   *
+   * @returns true when a revision was filed.
+   */
+  const joinVerdict = (
+    recordId: string, verdict: string, verificationId: string | null,
+  ): boolean => {
+    const base = indexed.get(recordId)
+    if (base === undefined) return false
+    const already = applied.get(recordId)
+    if (already !== undefined
+      && already.verdict === verdict
+      && already.verificationId === verificationId) return false
+    applied.set(recordId, { verdict, verificationId })
+    bound(applied, RECEIPT_LIMIT)
+    file({
+      recordId: receiptRecordId(recordId),
+      revisionId: verdictRevisionId(receiptRecordId(recordId), verdict, verificationId),
+      title: base.title,
+      // The verdict joins the searchable text so the Library's own filter and
+      // a person typing "VERIFIED" find the same rows.
+      text: `${base.text} ${verdict}`,
+      kind: 'document',
+      source: null,
+      runId: base.runId,
+      observedAt: base.observedAt,
+      verdict,
+      tags: [...base.tags, `verdict:${verdict}`],
+      evidenceIds: verificationId === null ? [] : [verificationId],
+    })
+    return true
+  }
+
+  ;(ctx as unknown as { on(name: string, listener: (payload: unknown) => void): void })
+    .on('watch/execution-recorded', (payload) => {
+      const record = payload as {
+        idempotencyKey?: unknown
+        toolName?: unknown
+        sessionId?: unknown
+        startedAt?: unknown
+        inputSummary?: unknown
+        outputSummary?: unknown
+        sideEffect?: unknown
+        scope?: unknown
+        paths?: unknown
+        state?: unknown
+      }
+      const recordId = typeof record.idempotencyKey === 'string' ? record.idempotencyKey : null
+      if (recordId === null) return
+      const tool = typeof record.toolName === 'string' ? record.toolName : 'tool'
+      const paths = Array.isArray(record.paths) ? record.paths.filter(
+        (entry): entry is string => typeof entry === 'string') : []
+      file({
+        recordId: receiptRecordId(recordId),
+        revisionId: receiptRecordId(recordId),
+        title: paths.length === 0 ? tool : `${tool} — ${paths.join(', ')}`,
+        kind: 'document',
+        // Searchable text, already redacted and bounded by the ledger that
+        // produced it. Nothing is re-derived here from anything unredacted.
+        text: [
+          tool,
+          typeof record.inputSummary === 'string' ? record.inputSummary : '',
+          typeof record.outputSummary === 'string' ? record.outputSummary : '',
+          ...paths,
+        ].join(' '),
+        source: null,
+        runId: typeof record.sessionId === 'string' ? record.sessionId : null,
+        observedAt: typeof record.startedAt === 'string' ? record.startedAt : null,
+        verdict: null,
+        tags: [
+          'execution-receipt',
+          `tool:${tool}`,
+          ...typeof record.sideEffect === 'string' ? [`effect:${record.sideEffect}`] : [],
+          ...typeof record.scope === 'string' ? [`scope:${record.scope}`] : [],
+          ...typeof record.state === 'string' ? [`state:${record.state}`] : [],
+        ],
+        evidenceIds: [],
+      })
+      indexed.set(recordId, {
+        title: paths.length === 0 ? tool : `${tool} — ${paths.join(', ')}`,
+        text: [
+          tool,
+          typeof record.inputSummary === 'string' ? record.inputSummary : '',
+          typeof record.outputSummary === 'string' ? record.outputSummary : '',
+          ...paths,
+        ].join(' '),
+        runId: typeof record.sessionId === 'string' ? record.sessionId : null,
+        observedAt: typeof record.startedAt === 'string' ? record.startedAt : null,
+        tags: [
+          'execution-receipt',
+          `tool:${tool}`,
+          ...typeof record.sideEffect === 'string' ? [`effect:${record.sideEffect}`] : [],
+          ...typeof record.scope === 'string' ? [`scope:${record.scope}`] : [],
+          ...typeof record.state === 'string' ? [`state:${record.state}`] : [],
+        ],
+      })
+      bound(indexed, RECEIPT_LIMIT)
+
+      // The row was just written from the receipt, so it carries no verdict
+      // whatever it carried a moment ago. If an answer is known for this call,
+      // put it back.
+      //
+      // This covers three sequences with one rule. A verdict that arrived
+      // before its receipt has been waiting. A receipt that arrives *again* --
+      // a reconciled record, a replayed event, a reconnect -- is re-filed,
+      // which is right, because an execution state can legitimately change and
+      // the newer observation is the truthful one. And a verdict that arrives
+      // after either of those still lands.
+      //
+      // The defect this closes: receipt, then `pass`, then the same receipt
+      // again left the row at `verdict: null`, and repeating the attestation
+      // could not repair it because `applied` said it had already been
+      // applied. The answer was gone from the Library and from the journal,
+      // and nothing said so.
+      const answer = known.get(recordId)
+      if (answer !== undefined) {
+        // Forget what was applied: the row no longer has it, so this is a new
+        // write rather than a repeat of one.
+        applied.delete(recordId)
+        joinVerdict(recordId, answer.verdict, answer.verificationId)
+      }
+    })
+
+  /**
+   * Put Core's verdict on the receipt it belongs to.
+   *
+   * The comment above says a receipt's verdict "arrives, if it arrives, as an
+   * attestation". It did arrive — `watch/attestation-recorded` carries Core's
+   * verdict, keyed by the same idempotency key the receipt was indexed under —
+   * and nothing was listening, so every record in the Library carried
+   * `verdict: null` for the whole life of the feature. The Library's own
+   * VERIFIED/FAILED filter could match nothing, and Compare, which ranks
+   * verdict-bearing records first, had none to rank.
+   *
+   * Re-indexing under the same `recordId` replaces the row; the `revisionId`
+   * moves so a reader can tell the answered record from the one that was filed
+   * before Core replied. A verdict is only ever written when Core returned one:
+   * a null stays null, because the absence of a verdict is the thing the
+   * product exists to keep distinguishable from a pass.
+   */
+  ;(ctx as unknown as { on(name: string, listener: (payload: unknown) => void): void })
+    .on('watch/attestation-recorded', (payload) => {
+      const attestation = payload as {
+        idempotencyKey?: unknown
+        coreVerdict?: unknown
+        verificationId?: unknown
+      }
+      const recordId = typeof attestation.idempotencyKey === 'string'
+        ? attestation.idempotencyKey
+        : null
+      const verdict = typeof attestation.coreVerdict === 'string' ? attestation.coreVerdict : null
+      // No verdict is not a verdict. `requested_but_not_run` and `unavailable`
+      // are real states, and writing one of them as a pass would be the Host
+      // deciding an answer only Core may give (ADR-002).
+      if (recordId === null || verdict === null) return
+      const verificationId = typeof attestation.verificationId === 'string'
+        ? attestation.verificationId
+        : null
+      // Remembered whatever happens, so a receipt that arrives again later can
+      // be repaired from it. Discarding this the moment the join succeeded is
+      // what made the downgrade unrecoverable.
+      known.set(recordId, { verdict, verificationId })
+      bound(known, RECEIPT_LIMIT)
+      joinVerdict(recordId, verdict, verificationId)
+    })
 
   ctx.tools.register(defineTool({
     name: 'watch_verify',
@@ -345,6 +756,24 @@ export function apply(ctx: Context, config: Config): void {
         items: { type: 'string' },
         description: 'Optional prior evidence to check the expectation against.',
       },
+      checks: {
+        type: 'array',
+        // A lossless JSON node per item rather than a spelled-out object: the
+        // `params` of a check vary by its type, Core owns those shapes and
+        // validates them, and a second schema here would be a second place for
+        // the two sides to disagree about what a check is.
+        items: { type: 'json' },
+        description:
+          'The executable checks that decide the verdict. An expectation without checks is a '
+          + 'sentence, and a sentence returns UNVERIFIED — which is the honest answer and not a '
+          + 'pass. Each check is `{ id, type, params }`. Types: file_exists `{path}`, '
+          + 'file_digest `{path, sha256}`, json_value `{path, pointer, equals}` with an RFC 6901 '
+          + 'pointer, command_exit `{command: [argv], cwd?, exit_code?}`, numeric_invariant, '
+          + 'directory_manifest, json_schema, sqlite_query, http_request. Paths are relative to '
+          + 'the workspace. Watch Core runs these itself, in its own isolated verifier — you are '
+          + 'naming the question, not answering it, and a check you write cannot see anything you '
+          + 'tell it.',
+      },
     },
     output: {
       ...JSON_OUTPUT,
@@ -367,6 +796,25 @@ export function apply(ctx: Context, config: Config): void {
           expectation: args.expectation,
           sourceId: args.source_id ?? null,
           evidenceIds: args.evidence_ids ?? [],
+          // The directory the checks are measured against, from the session
+          // the call came from.
+          //
+          // Core refuses rather than defaulting, deliberately: given no
+          // directory the verifier used to measure against whatever directory
+          // its own process was started in, and a file the agent had written
+          // correctly came back INCONCLUSIVE. Honest, and useless. The Host
+          // never sent one, so every agent verification with a relative path
+          // got that answer -- the whole feature, silently.
+          //
+          // Sent as null when the session cannot be resolved, so Core's own
+          // `verify.workspace_unresolved` reaches the model with its fix,
+          // rather than this guessing a directory on its behalf.
+          workingDir: workspaceOf(exec),
+          // Forwarded verbatim. Core validates the shapes, freezes the
+          // contract and refuses anything it cannot evaluate; a second
+          // validation here would be a second place for the two sides to
+          // disagree about what was asked.
+          checks: args.checks ?? [],
           // Minted here so the verdict, the receipt and the Trajectory record
           // all hang off one id the user can follow.
           verificationId: `ver_${randomUUID()}`,
@@ -393,6 +841,23 @@ function abortOf(exec: { readonly signal?: AbortSignal }): { signal?: AbortSigna
 }
 
 /**
+ * The directory the session was opened in, or null.
+ *
+ * Read structurally and from two places, the same way the ledger reads it: a
+ * live session carries `cwd`, and one restored from storage carries it under
+ * `header`. Null rather than a guess -- see the note at `workingDir`.
+ */
+function workspaceOf(exec: { readonly agent?: unknown }): string | null {
+  const session = (exec.agent as {
+    session?: { cwd?: unknown, header?: { cwd?: unknown } }
+  } | undefined)?.session
+  const direct = session?.cwd
+  if (typeof direct === 'string' && direct !== '') return direct
+  const stored = session?.header?.cwd
+  return typeof stored === 'string' && stored !== '' ? stored : null
+}
+
+/**
  * The plugin, as the Cordis loader resolves it.
  *
  * An object rather than the bare `apply` function, and that distinction is the
@@ -409,3 +874,12 @@ function abortOf(exec: { readonly signal?: AbortSignal }): { signal?: AbortSigna
 export default { name: 'watch-tools', inject, apply }
 
 export * from './library-search.js'
+
+/**
+ * The read plane's public face.
+ *
+ * Exported because Typert analyses a package's public export graph: a Remote
+ * that is only reachable through an internal module is not discovered, and no
+ * host or client artifact is emitted for it.
+ */
+export * from './read-plane.js'

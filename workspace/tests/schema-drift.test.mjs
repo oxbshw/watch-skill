@@ -16,13 +16,13 @@ import { test, describe } from 'node:test'
 import assert from 'node:assert/strict'
 
 import { Context } from '@deepseek-ai/cordis'
-import WatchCoreService from '@watchskill/dsh-core-bridge'
+import WatchCoreService from '@deepwatch/dsh-core-bridge'
 import {
   EXPECTED_SCHEMA_DIGESTS,
   FAMILY_CAPABILITIES,
   detectSchemaDrift,
   isContractUnverified,
-} from '@watchskill/dsh-contracts'
+} from '@deepwatch/dsh-contracts'
 
 describe('drift detection', () => {
   test('a matching contract produces no drift', () => {
@@ -96,13 +96,13 @@ describe('the Bridge acting on drift', () => {
       send: () => Promise.resolve({
         ok: true,
         value: {
-          coreVersion: '1.3.0rc2',
+          coreVersion: '1.4.0',
           coreBuild: null,
           protocolVersion: 1,
           capabilities: [{
             capabilityId: 'watch.verification.run',
             provider: 'watch-core',
-            providerVersion: '1.3.0rc2',
+            providerVersion: '1.4.0',
             status: 'implemented',
             requirements: [],
             detected: {},

@@ -1,8 +1,8 @@
 /*
  * Evidence Inspector styling.
  *
- * Functionality first — Phase 3 owns the visual design. What is deliberate
- * here is the same rule as the verdict card: the success tone is reachable
+ * The Inspector uses the same raised surfaces and blue trust accent as every
+ * other DeepWatch-owned view. The success tone is still reachable
  * only from `[data-tone=success]`, which only a VERIFIED verdict produces, and
  * every state is legible without colour.
  */
@@ -11,7 +11,11 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
-  padding: 14px;
+  padding: 18px;
+  border: 1px solid color-mix(in srgb, var(--watch-accent) 9%, var(--dsw-alias-border-l2));
+  border-radius: 14px;
+  background: linear-gradient(145deg, color-mix(in srgb, var(--watch-accent) 3%, var(--dsw-alias-bg-layer-2)), var(--dsw-alias-bg-base));
+  box-shadow: 0 10px 28px color-mix(in srgb, black 8%, transparent);
   color: var(--dsw-alias-label-primary);
   font-size: 13px;
   line-height: 1.5;
@@ -33,7 +37,7 @@
   align-items: baseline;
   justify-content: space-between;
   gap: 10px;
-  padding-bottom: 8px;
+  padding-bottom: 11px;
   border-bottom: 1px solid var(--dsw-alias-border-l1);
 }
 
@@ -53,8 +57,8 @@
   flex: none;
   padding: 2px 8px;
   border: 1px solid var(--dsw-alias-border-l2);
-  border-radius: 4px;
-  background: var(--dsw-alias-bg-layer-2);
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--watch-accent) 5%, var(--dsw-alias-bg-layer-2));
   color: var(--dsw-alias-label-secondary);
   font-size: 12px;
   cursor: pointer;
@@ -101,8 +105,9 @@
 .quote {
   margin: 0;
   padding: 8px 10px;
-  border-inline-start: 2px solid var(--dsw-alias-border-l2);
-  background: var(--dsw-alias-bg-layer-2);
+  border-inline-start: 2px solid var(--watch-accent);
+  border-radius: 0 9px 9px 0;
+  background: color-mix(in srgb, var(--watch-accent) 5%, var(--dsw-alias-bg-layer-2));
   color: var(--dsw-alias-label-secondary);
   unicode-bidi: isolate;
   white-space: pre-wrap;

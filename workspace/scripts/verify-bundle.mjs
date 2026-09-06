@@ -18,7 +18,7 @@
 
 import { readFileSync, existsSync, readdirSync } from 'node:fs'
 import { join, dirname } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const BUNDLE = join(ROOT, 'packages', 'watch', 'bundle')
@@ -40,7 +40,7 @@ function readPatchRows(file) {
     const id = /^\s*-?\s*id:\s*(.+?)\s*$/.exec(line)
     if (id) {
       if (current) rows.push(current)
-      current = { id: id[1].replace(/^["']|["']$/g, ''), module: null, disabled: false }
+      current = { id: id[1].replace(/^["']|["']$/g, ''), module: null, disabled: false, reconfigures: false }
       continue
     }
     if (!current) continue
@@ -50,9 +50,63 @@ function readPatchRows(file) {
     // targets a baseline id on purpose, so the two checks below skip it —
     // and a third one, that it hits something real, applies instead.
     if (/^\s*disabled:\s*true\s*$/.test(line)) current.disabled = true
+    // A row that only reconfigures an existing one. Like a disable row it
+    // names no module and targets a baseline id on purpose; unlike one, it
+    // leaves the row mounted and replaces its config wholesale.
+    if (/^\s*config:\s*$/.test(line)) current.reconfigures = true
   }
   if (current) rows.push(current)
   return rows
+}
+
+/**
+ * Baseline rows this distribution deliberately reconfigures, and why.
+ *
+ * A patch row that targets a baseline id replaces that row's whole config.
+ * Almost always that is an accident — the id was meant to be new and collided
+ * — and the check below is what catches it. Occasionally it is the point: the
+ * Loader offers no other way to change a composed default, and changing one
+ * through the mechanism upstream provides is the opposite of a fork.
+ *
+ * So the rule is not "never collide" but "collide only on purpose, in
+ * writing". An id here is a decision somebody made and can be asked about; an
+ * id not here is a bug. A stale entry is a problem too — see the check for a
+ * declaration that matches no baseline row — because a reconfiguration that
+ * lands on nothing silently restores the upstream default it was written to
+ * remove.
+ */
+const INTENTIONAL_RECONFIGURATIONS = new Map([
+  ['agent-default-model', 'empties the inherited DeepSeek default so a fresh profile names no route'],
+])
+
+/**
+ * Whether a row is a reconfiguration this distribution has declared.
+ *
+ * All three conditions matter. The id must be declared, so the change is one
+ * somebody wrote down. The row must actually carry a `config:`, so a bare id
+ * cannot borrow the declaration and disable or re-point something else. And it
+ * must name no module, because naming one is how a row stops being a
+ * reconfiguration and starts being a replacement — which is a fork by another
+ * spelling, and not what this allowance is for.
+ */
+function declaredReconfiguration(row) {
+  return INTENTIONAL_RECONFIGURATIONS.has(row.id) && row.reconfigures && row.module === null
+}
+
+/**
+ * The workspace package a row's module belongs to, and the export it names.
+ *
+ * A row may name a subpath — `@deepwatch/dsh-technology/routing` — because the
+ * package root is not always the plugin. Splitting the two is what lets the
+ * checks below ask the right question of each half: does the *package* exist
+ * and is it depended on, and does the *module* actually export an `apply`.
+ */
+function moduleTarget(name) {
+  if (!name.startsWith('@')) return { pkg: name, subpath: '.' }
+  const parts = name.split('/')
+  const pkg = parts.slice(0, 2).join('/')
+  const rest = parts.slice(2).join('/')
+  return { pkg, subpath: rest === '' ? '.' : `./${rest}` }
 }
 
 /** Every workspace package name, for resolving what the bundle references. */
@@ -97,6 +151,7 @@ function checkPatch(label, patchFile, manifest, baseline, packages) {
       continue
     }
     if (baseline.has(row.id)) {
+      if (declaredReconfiguration(row)) continue
       problems.push(
         `${label}: row id "${row.id}" collides with a DSH baseline row — an overlay would replace `
         + "that row's config instead of inserting a new one, silently changing upstream behavior",
@@ -112,18 +167,19 @@ function checkPatch(label, patchFile, manifest, baseline, packages) {
 
   const dependencies = new Set(Object.keys(manifest.dependencies ?? {}))
   for (const row of rows) {
-    if (row.disabled) continue
+    if (row.disabled || declaredReconfiguration(row)) continue
     if (row.module === null) {
       problems.push(`${label}: row "${row.id}" names no module, so the Loader has nothing to import`)
       continue
     }
-    if (row.module.startsWith("@watchskill/") && !packages.has(row.module)) {
+    const { pkg } = moduleTarget(row.module)
+    if (pkg.startsWith('@deepwatch/') && !packages.has(pkg)) {
       problems.push(`${label}: row "${row.id}" names ${row.module}, which is not a package in this workspace`)
     }
-    if (row.module.startsWith("@watchskill/") && !dependencies.has(row.module)) {
+    if (pkg.startsWith('@deepwatch/') && !dependencies.has(pkg)) {
       problems.push(
-        `${label}: row "${row.id}" mounts ${row.module}, but the bundle does not depend on it — `
-        + "the profile install would resolve the layer and then fail to import the module",
+        `${label}: row "${row.id}" mounts ${row.module}, but the bundle does not depend on ${pkg} — `
+        + 'the profile install would resolve the layer and then fail to import the module',
       )
     }
   }
@@ -132,7 +188,49 @@ function checkPatch(label, patchFile, manifest, baseline, packages) {
 }
 
 
-function main() {
+/**
+ * Whether the module a row names actually exports an `apply`.
+ *
+ * The Loader refuses a row whose module exports none with "invalid plugin" and
+ * takes the whole plugin tree down with it — so a profile composes, dumps its
+ * config cleanly, and then serves nothing. That failure reads as a composition
+ * problem and is three minutes of provisioning away from being seen, which is
+ * exactly the shape of thing this gate exists to catch statically.
+ *
+ * It is a real import of the built module rather than a scan for the word,
+ * because the mistake that produced this check was a package whose *root*
+ * re-exported everything except the plugin, while a subpath had it.
+ *
+ * @param specifier - the module a row names.
+ * @returns null when it exports `apply`, or a sentence saying what it exports.
+ */
+async function missingApply(specifier) {
+  const { pkg, subpath } = moduleTarget(specifier)
+  if (!pkg.startsWith('@deepwatch/')) return null
+  const dir = readdirSync(join(ROOT, 'packages', 'watch')).find((entry) => {
+    const manifest = join(ROOT, 'packages', 'watch', entry, 'package.json')
+    return existsSync(manifest) && JSON.parse(readFileSync(manifest, 'utf8')).name === pkg
+  })
+  if (dir === undefined) return null
+  const manifest = JSON.parse(readFileSync(join(ROOT, 'packages', 'watch', dir, 'package.json'), 'utf8'))
+  const target = manifest.exports?.[subpath]
+  const file = typeof target === 'string' ? target : target?.default
+  if (typeof file !== 'string') return `${specifier} is not an export this package declares`
+  const built = join(ROOT, 'packages', 'watch', dir, file)
+  if (!existsSync(built)) return `${specifier} resolves to ${file}, which has not been built`
+  const loaded = await import(pathToFileURL(built).href)
+  // Both shapes the Loader accepts: a functional plugin exporting `apply`, and
+  // a Service class exported as default. Checking only the first reported two
+  // rows that have always worked, which is how a gate gets switched off.
+  if (typeof loaded.apply === 'function') return null
+  if (typeof loaded.default === 'function') return null
+  const exported = Object.keys(loaded).join(', ')
+  return `${specifier} exports neither an \`apply\` nor a default plugin `
+    + `(it exports ${exported === '' ? 'nothing' : exported}), so the Loader refuses it `
+    + 'as an invalid plugin and the whole plugin tree fails with it'
+}
+
+async function main() {
   const problems = []
 
   const manifest = JSON.parse(readFileSync(join(BUNDLE, 'package.json'), 'utf8'))
@@ -172,9 +270,30 @@ function main() {
       continue
     }
     if (baseline.has(row.id)) {
+      if (declaredReconfiguration(row)) continue
       problems.push(
         `row id "${row.id}" collides with a DSH baseline row — an overlay would replace that row's `
         + 'config instead of inserting a new one, silently changing upstream behavior',
+      )
+    }
+  }
+
+  // The other direction. A declaration that lands on nothing is worse than an
+  // undeclared collision: the row it was written to change is gone, so the
+  // upstream default it removed is quietly back, and the gate that was
+  // supposed to notice is the thing saying nothing.
+  for (const [id, why] of INTENTIONAL_RECONFIGURATIONS) {
+    if (!baseline.has(id)) {
+      problems.push(
+        `"${id}" is declared as an intentional reconfiguration (${why}), but no DSH baseline row `
+        + 'carries that id, so the patch changes nothing and the upstream default stands',
+      )
+      continue
+    }
+    if (!rows.some(row => row.id === id && row.reconfigures)) {
+      problems.push(
+        `"${id}" is declared as an intentional reconfiguration (${why}), and the bundle patch `
+        + 'does not reconfigure it',
       )
     }
   }
@@ -187,12 +306,13 @@ function main() {
 
   const packages = workspacePackages()
   for (const row of rows) {
-    if (row.disabled) continue
+    if (row.disabled || declaredReconfiguration(row)) continue
     if (row.module === null) {
       problems.push(`row "${row.id}" names no module, so the Loader has nothing to import`)
       continue
     }
-    if (row.module.startsWith('@watchskill/') && !packages.has(row.module)) {
+    const { pkg } = moduleTarget(row.module)
+    if (pkg.startsWith('@deepwatch/') && !packages.has(pkg)) {
       problems.push(`row "${row.id}" names ${row.module}, which is not a package in this workspace`)
     }
   }
@@ -200,10 +320,21 @@ function main() {
   // A row the bundle mounts must also be a dependency, or the profile install
   // resolves the layer and then fails to import the module it names.
   const dependencies = new Set(Object.keys(manifest.dependencies ?? {}))
+  // Every row's module is imported and asked for its `apply`. This is the
+  // check that would have caught `@deepwatch/dsh-technology` being named where
+  // `@deepwatch/dsh-technology/routing` was meant.
   for (const row of rows) {
-    if (row.module?.startsWith('@watchskill/') && !dependencies.has(row.module)) {
+    if (row.disabled || row.module === null) continue
+    const missing = await missingApply(row.module)
+    if (missing !== null) problems.push(`row "${row.id}": ${missing}`)
+  }
+
+  for (const row of rows) {
+    if (row.module === null) continue
+    const { pkg } = moduleTarget(row.module)
+    if (pkg.startsWith('@deepwatch/') && !dependencies.has(pkg)) {
       problems.push(
-        `row "${row.id}" mounts ${row.module}, but the bundle does not depend on it — `
+        `row "${row.id}" mounts ${row.module}, but the bundle does not depend on ${pkg} — `
         + 'the profile install would resolve the layer and then fail to import the module',
       )
     }
@@ -236,12 +367,22 @@ function main() {
     process.exit(1)
   }
 
+  // Reported by kind rather than as one count: "13 additive rows" beside a
+  // list containing two rows that add nothing is the sort of summary a reader
+  // stops trusting, and this output is the evidence that the distribution
+  // touches upstream exactly where it says it does.
+  const kindOf = (row) => row.disabled
+    ? 'disables'
+    : declaredReconfiguration(row) ? 'reconfigures' : 'adds'
+  const added = rows.filter(row => kindOf(row) === 'adds')
+  const touched = rows.filter(row => kindOf(row) !== 'adds')
+
   process.stdout.write(
-    `bundle: ${rows.length} additive row(s), no collision with ${baseline.size} DSH baseline rows\n`
-    + rows.map(row => `  ${row.id.padEnd(20)} ${row.module}\n`).join('')
+    `bundle: ${added.length} additive row(s), ${touched.length} declared change(s) to ${baseline.size} DSH baseline rows\n`
+    + rows.map(row => `  ${kindOf(row).padEnd(12)} ${row.id.padEnd(21)} ${row.module ?? ''}\n`).join('')
     + `bundle variants:\n`
     + variantSummaries.map(line => `${line}\n`).join(''),
   )
 }
 
-main()
+await main()

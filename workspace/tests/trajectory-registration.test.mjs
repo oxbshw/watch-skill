@@ -24,7 +24,7 @@ import {
   projectionHash,
   selectRecord,
   watchTrajectoryDefinition,
-} from '@watchskill/dsh-trajectory'
+} from '@deepwatch/dsh-trajectory'
 
 const SESSION = 'sess_reg'
 const WORKSPACE = 'ws_reg'

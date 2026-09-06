@@ -11,26 +11,27 @@
  * will not start leaves the Workspace fully usable with Watch features
  * disabled and a stated fix. It never blocks boot.
  *
- * @module @watchskill/dsh-core-bridge
+ * @module @deepwatch/dsh-core-bridge
  */
 
 import { randomUUID } from 'node:crypto'
 import { type Context, Service } from '@deepseek-ai/cordis'
 import s from '@deepseek-ai/schemastery'
 import type {
+  BridgeBlocker,
   BridgePhase,
   CapabilityTruth,
   HandshakeResult,
   WatchCoreHealth,
   WatchError,
   WatchResult,
-} from '@watchskill/dsh-contracts'
+} from '@deepwatch/dsh-contracts'
 import {
   WATCH_PROTOCOL_VERSION,
   detectSchemaDrift,
   isContractUnverified,
   watchError,
-} from '@watchskill/dsh-contracts'
+} from '@deepwatch/dsh-contracts'
 import type { Transport } from './transport.js'
 import { MockTransport } from './transport/mock.js'
 import { StdioTransport } from './transport/stdio.js'
@@ -44,15 +45,23 @@ export interface Config {
   /**
    * How to reach Watch Core.
    *
-   * `auto` (the default) tries the local engine and falls back to the mock
-   * backend only when the command is genuinely not installed. That is the
-   * difference that makes an automatic default acceptable: a machine without
-   * Watch Core gets a working Workspace and an invitation to install it, while
-   * a Watch Core that *is* present and fails is reported as a fault rather
-   * than hidden behind a mock that answers nothing.
+   * `auto` discovers a real transport. It does *not* fall back to the mock,
+   * and the difference is the whole reason this comment is long.
    *
-   * `stdio` and `mock` pin the choice for a deployment that has already made
-   * it.
+   * It used to: a machine with no `watch-skill` on it got the in-process mock
+   * and a "ready" Bridge, on the reasoning that a working Workspace beats a
+   * broken one. What that actually produced was a product which reported
+   * itself connected, listed capabilities, and answered every real request
+   * with a refusal the surfaces rendered as an empty result. A user cannot
+   * tell that apart from "there is nothing indexed yet", and the one state the
+   * whole product exists to make legible — do I have a real engine behind
+   * this? — became the one state it hid.
+   *
+   * So a missing engine is now `core_missing`, a broken one is
+   * `handshake_failed`, and both leave the Workspace fully usable with Watch
+   * features disabled and a named fix. `mock` remains selectable, explicitly,
+   * by tests and deterministic development fixtures — and everything it
+   * touches is flagged `isTestOnlyMock` so no screen can present it as data.
    */
   readonly transport: 'auto' | 'stdio' | 'mock'
   /** Executable that starts Watch Core in Bridge mode. */
@@ -63,6 +72,11 @@ export interface Config {
   readonly startupTimeoutMs: number
   /** Deadline applied to a request that does not carry its own. */
   readonly requestTimeoutMs: number
+  /**
+   * Profile-scoped data directory for the engine. Empty leaves the engine's
+   * own default, and an ambient `WATCHSKILL_DATA_DIR` always wins over this.
+   */
+  readonly dataDir: string
   /** Connect during plugin activation rather than on first use. */
   readonly autoConnect: boolean
   /**
@@ -105,12 +119,41 @@ export interface SideEffectEnvelope {
   readonly approvalId?: string
 }
 
+/**
+ * The blocker one transport error implies.
+ *
+ * A single function on purpose. The mapping was previously spread across the
+ * call sites that published health, which is how "the engine is missing" and
+ * "the engine is broken" came to render identically: each site knew its own
+ * case and none of them owned the taxonomy.
+ *
+ * Anything unrecognised maps to `handshake_failed` rather than to
+ * `connected`. An unknown failure is still a failure, and the default has to
+ * be the one that keeps a screen honest.
+ */
+export function blockerFor(error: WatchError): BridgeBlocker {
+  switch (error.error) {
+    case 'bridge.core_not_installed': return 'core_missing'
+    case 'bridge.bridge_surface_missing': return 'bridge_surface_missing'
+    case 'bridge.protocol_mismatch': return 'protocol_mismatch'
+    case 'bridge.schema_drift': return 'contract_mismatch'
+    case 'bridge.core_exited': return 'core_crashed'
+    case 'bridge.deadline_exceeded': return 'core_timeout'
+    case 'bridge.unavailable': return 'circuit_open'
+    default: return 'handshake_failed'
+  }
+}
+
 /** Health of a Bridge that has not been connected. */
 const DISCONNECTED: WatchCoreHealth = Object.freeze({
   phase: 'disconnected',
   transport: null,
   handshake: null,
   error: null,
+  blocker: 'core_missing',
+  isTestOnlyMock: false,
+  lastHandshakeAt: null,
+  restartCount: 0,
   changedAt: new Date(0).toISOString(),
 })
 
@@ -122,8 +165,30 @@ export class WatchCoreService extends Service {
     command: s.string().default('watch-skill'),
     args: s.array(s.string()).default(['bridge']),
     cwd: s.string().default(''),
-    startupTimeoutMs: s.number().step(1).min(100).default(10_000),
+    // 45s, matching the composed patches. A profile that omits the value
+    // must not silently get the ten seconds that reported a healthy first
+    // start as a dead engine; the default is the one a bare config inherits.
+    startupTimeoutMs: s.number().step(1).min(100).default(45_000),
     requestTimeoutMs: s.number().step(1).min(100).default(30_000),
+    /**
+     * Where this profile's engine keeps its data, when nobody has said
+     * otherwise.
+     *
+     * Empty by default, meaning "wherever Watch Core would put it" — the
+     * engine's own `~/.watch-skill`. That is right for somebody with one
+     * install and wrong the moment there are two: a second profile composed by
+     * `deepwatch setup` silently shared the first one's Library, Memory,
+     * receipts and indexes, and a clean room built to prove something about a
+     * fresh install was reading a directory an earlier one had filled.
+     *
+     * Set, it reaches the engine as `WATCHSKILL_DATA_DIR` — but only when the
+     * environment does not already carry one. Somebody who exported that
+     * variable has chosen a directory, and a profile is not entitled to
+     * overrule them. Nothing is migrated and nothing is copied: a new
+     * directory starts empty, which is the only honest thing a new profile can
+     * say about its own contents.
+     */
+    dataDir: s.string().default(''),
     autoConnect: s.boolean().default(true),
     failuresBeforeOpen: s.number().step(1).min(1).default(3),
     initialCooldownMs: s.number().step(1).min(1).default(1_000),
@@ -160,6 +225,18 @@ export class WatchCoreService extends Service {
   private cooldownMs = 0
   /** True while the one probe a cooldown expiry allows is in flight. */
   private probing = false
+  /**
+   * Whether the current backend is the mock, decided when it was built.
+   *
+   * Read rather than re-derived so that `transport === 'mock'` is not the only
+   * thing standing between a fixture backend and a screen that presents its
+   * answers as observations.
+   */
+  private mockSelected = false
+  /** ISO-8601 of the last handshake that actually completed. */
+  private lastHandshakeAt: string | null = null
+  /** Core processes started this session. A climbing number is a crash loop. */
+  private restartCount = 0
   /** Injected so tests do not sleep. */
   private readonly now: () => number
 
@@ -330,34 +407,40 @@ export class WatchCoreService extends Service {
     this.transport = null
     if (previous !== null) await previous.dispose()
 
-    let transport = this.createTransport()
+    // `const` because there is now exactly one backend per attempt. It was
+    // `let` so the fallback could swap a failed stdio transport for the mock
+    // partway through, and the compiler insisting on this is the tidiest
+    // confirmation that the swap is gone.
+    const transport = this.createTransport()
     this.transport = transport
     this.publish({ phase: 'connecting', transport: transport.kind, handshake: null, error: null })
 
+    // Kept so a later, vaguer failure cannot bury this one.
+    //
+    // The transport knows things the handshake never can: that the engine
+    // exited with an argument parser's usage error, that it is too old to have
+    // a `bridge` command at all. The handshake only ever learns that it got no
+    // answer. Both fire, and which one lands last is a matter of process
+    // scheduling -- so on two platforms the specific diagnosis survived and on
+    // macOS the generic one overwrote it, leaving `handshake_failed` where the
+    // fix is "upgrade Watch Core" and the reported blocker says "check why the
+    // handshake timed out".
+    const diagnoses: WatchError[] = []
+
     transport.onFailure((error) => {
-      this.publish({ phase: 'failed', error })
+      diagnoses.push(error)
+      this.publish({ phase: 'failed', error, blocker: blockerFor(error) })
       this.onTransportFailure(error)
     })
 
-    let connected = await transport.connect()
-    let notInstalled: WatchError | null = null
-
-    if (!connected.ok
-      && this.config.transport === 'auto'
-      && connected.error.error === 'bridge.core_not_installed') {
-      // The engine is genuinely absent, not broken. Fall back so the Workspace
-      // is fully usable, and carry the reason forward so the UI can say what
-      // to install rather than showing capabilities that quietly do nothing.
-      notInstalled = connected.error
-      await transport.dispose()
-      transport = new MockTransport()
-      this.transport = transport
-      this.publish({ phase: 'connecting', transport: transport.kind, error: null })
-      connected = await transport.connect()
-    }
+    const connected = await transport.connect()
 
     if (!connected.ok) {
-      this.publish({ phase: 'failed', error: connected.error })
+      // No fallback lives here any more. A connect failure is reported as
+      // itself, with a blocker the UI can branch on, and the Workspace stays
+      // fully usable with Watch disabled. See the `transport` doc on Config
+      // for why the mock used to be reached from here and why it is not.
+      this.publish({ phase: 'failed', error: connected.error, blocker: blockerFor(connected.error) })
       return connected
     }
 
@@ -369,9 +452,15 @@ export class WatchCoreService extends Service {
       signal: new AbortController().signal,
     })
     if (!handshake.ok) {
-      this.publish({ phase: 'failed', error: handshake.error })
+      // The transport's own account wins when it has one, whichever order the
+      // two arrived in. `handshake.error` is still what the caller gets back:
+      // the request did fail, and the caller asked about the request. What is
+      // published is the diagnosis somebody has to act on.
+      const diagnosed = diagnoses[0] ?? handshake.error
+      this.publish({ phase: 'failed', error: diagnosed, blocker: blockerFor(diagnosed) })
       return handshake
     }
+    this.lastHandshakeAt = new Date().toISOString()
 
     const negotiated = handshake.value.protocolVersion
     if (negotiated > WATCH_PROTOCOL_VERSION || negotiated < 1) {
@@ -387,7 +476,9 @@ export class WatchCoreService extends Service {
         retryable: false,
         correlationId: null,
       }
-      this.publish({ phase: 'degraded', handshake: handshake.value, error })
+      this.publish({
+        phase: 'degraded', handshake: handshake.value, error, blocker: 'protocol_mismatch',
+      })
       return { ok: false, error }
     }
 
@@ -402,16 +493,10 @@ export class WatchCoreService extends Service {
     // that version predates.
     this.driftAffected = new Set()
 
-    if (notInstalled !== null) {
-      // Ready on the mock backend: the Workspace works, every capability
-      // honestly reports `not_tested`, and the error carries the install step.
-      this.publish({ phase: 'ready', handshake: handshake.value, error: notInstalled })
-      return handshake
-    }
-
     if (isContractUnverified(handshake.value.schemaDigests)) {
       this.publish({
         phase: 'ready',
+        blocker: this.mockSelected ? 'test_only_mock' : 'connected',
         handshake: handshake.value,
         error: {
           error: 'bridge.contract_unverified',
@@ -451,11 +536,18 @@ export class WatchCoreService extends Service {
       this.driftAffected = new Set(affected)
       // Degraded, not failed: the families that still agree keep working, and
       // the Workspace itself is entirely unaffected.
-      this.publish({ phase: 'degraded', handshake: handshake.value, error })
+      this.publish({
+        phase: 'degraded', handshake: handshake.value, error, blocker: 'contract_mismatch',
+      })
       return handshake
     }
 
-    this.publish({ phase: 'ready', handshake: handshake.value, error: null })
+    this.publish({
+      phase: 'ready',
+      handshake: handshake.value,
+      error: null,
+      blocker: this.mockSelected ? 'test_only_mock' : 'connected',
+    })
     return handshake
   }
 
@@ -564,27 +656,60 @@ export class WatchCoreService extends Service {
     return this.connect()
   }
 
-  /** Build the configured backend. */
+  /**
+   * Build the configured backend.
+   *
+   * There are exactly two outcomes, and no third: an explicitly selected
+   * mock, or a real child process. `auto` reaches the second one — it selects
+   * *which* real transport to try, never whether to use a real one.
+   */
   private createTransport(): Transport {
-    if (this.config.transport === 'mock') return new MockTransport()
-    // 'auto' optimistically attempts the real engine; runConnect falls back
-    // to the mock only when the command turns out not to be installed.
+    this.restartCount += 1
+    if (this.config.transport === 'mock') {
+      // Reached only by a test or a deterministic fixture that named it. The
+      // flag rides on every health object from here on.
+      this.mockSelected = true
+      return new MockTransport()
+    }
+    this.mockSelected = false
     return new StdioTransport({
       command: this.config.command,
       args: this.config.args,
       cwd: this.config.cwd === '' ? undefined : this.config.cwd,
       env: undefined,
+      // A default, never an override. `envDefaults` is applied underneath the
+      // ambient environment, so a person who exported `WATCHSKILL_DATA_DIR`
+      // keeps the directory they chose and a profile that composed one only
+      // fills the gap where nobody has.
+      envDefaults: this.config.dataDir === ''
+        ? undefined
+        : { WATCHSKILL_DATA_DIR: this.config.dataDir },
       startupTimeoutMs: this.config.startupTimeoutMs,
     })
   }
 
-  /** Apply a health change and notify subscribers exactly once. */
-  private publish(patch: Partial<Omit<WatchCoreHealth, 'changedAt'>> & { phase: BridgePhase }): void {
+  /**
+   * Apply a health change and notify subscribers exactly once.
+   *
+   * `blocker` and `isTestOnlyMock` are computed here rather than passed by
+   * every call site, because a call site that forgets one is a screen that
+   * renders a stale reason — and the one that matters most, `test_only_mock`,
+   * would be the easiest to forget.
+   */
+  private publish(
+    patch: Partial<Omit<WatchCoreHealth, 'changedAt' | 'isTestOnlyMock' | 'restartCount' | 'lastHandshakeAt'>>
+      & { phase: BridgePhase },
+  ): void {
+    const transport = patch.transport ?? this.state.transport
     this.state = Object.freeze({
       phase: patch.phase,
-      transport: patch.transport ?? this.state.transport,
+      transport,
       handshake: patch.handshake === undefined ? this.state.handshake : patch.handshake,
       error: patch.error === undefined ? this.state.error : patch.error,
+      blocker: patch.blocker ?? this.state.blocker,
+      isTestOnlyMock: transport === 'mock',
+      lastHandshakeAt: this.lastHandshakeAt,
+      restartCount: this.restartCount,
       changedAt: new Date().toISOString(),
     })
     for (const listener of this.healthListeners) listener(this.state)

@@ -18,7 +18,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
   compareRecords, describeIncompatibility, diffOutput, isComparable,
-} from '@watchskill/dsh-client-evidence'
+} from '@deepwatch/dsh-client-evidence'
 
 const claim = (over = {}) => ({
   claimId: 'c1',

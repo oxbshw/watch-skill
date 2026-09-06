@@ -1,7 +1,7 @@
 /**
  * The Library: sources and evidence, kept apart from memory.
  *
- * @module @watchskill/dsh-library
+ * @module @deepwatch/dsh-library
  */
 
 export * from './sources.js'

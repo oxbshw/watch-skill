@@ -21,7 +21,7 @@ import {
   modePolicy,
   outranks,
   supersededBy,
-} from '@watchskill/dsh-memory'
+} from '@deepwatch/dsh-memory'
 
 const NOW = '2026-08-27T10:00:00.000Z'
 

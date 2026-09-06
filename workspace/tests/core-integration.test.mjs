@@ -19,8 +19,8 @@ import { existsSync } from 'node:fs'
 import { execFileSync } from 'node:child_process'
 
 import { Context } from '@deepseek-ai/cordis'
-import WatchCoreService from '@watchskill/dsh-core-bridge'
-import { detectSchemaDrift } from '@watchskill/dsh-contracts'
+import WatchCoreService from '@deepwatch/dsh-core-bridge'
+import { detectSchemaDrift } from '@deepwatch/dsh-contracts'
 
 /**
  * Resolve how to start Watch Core, or report that it is not installed.

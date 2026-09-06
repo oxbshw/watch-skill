@@ -19,7 +19,7 @@
  * notifications is the same as none — except that it also buries the one that
  * mattered.
  *
- * @module @watchskill/dsh-live/triggers
+ * @module @deepwatch/dsh-live/triggers
  */
 
 import type { LiveEvent, LiveEventKind, LiveSessionState } from './session.js'

@@ -10,12 +10,12 @@
  * Operations are buttons on the card. A confirm that takes four clicks is a
  * confirm nobody performs, and an uncorrected memory is worse than none.
  *
- * @module @watchskill/dsh-client-memory/components
+ * @module @deepwatch/dsh-client-memory/components
  */
 
 import type { ReactNode } from 'react'
-import { toneFor, tokenFor } from '@watchskill/dsh-client-brand'
-import type { MemoryEvent } from '@watchskill/dsh-memory'
+import { toneFor, tokenFor } from '@deepwatch/dsh-client-brand'
+import type { MemoryEvent } from '@deepwatch/dsh-memory'
 import {
   MEMORY_VIEWS,
   MODE_DESCRIPTION,
@@ -53,10 +53,12 @@ export function WhyRememberedChip({ card }: WhyRememberedChipProps): ReactNode {
       data-watch-why={card.memoryId}
       title={`${String(card.why.length)} recorded injection(s)`}
       style={{
-        border: '1px solid var(--watch-tone-neutral)',
+        border: '1px solid color-mix(in srgb, var(--watch-accent) 22%, var(--dsw-alias-border-l2))',
         borderRadius: '10px',
-        padding: '0 6px',
+        padding: '2px 7px',
         fontSize: '11px',
+        background: 'var(--watch-accent-wash)',
+        color: 'var(--dsw-alias-label-secondary)',
       }}
     >
       {line}
@@ -78,7 +80,12 @@ export function MemoryCardRow({ card, onOperation }: MemoryCardRowProps): ReactN
       data-watch-status={card.status}
       data-watch-origin={card.origin}
       data-watch-scope={card.scope}
-      style={{ borderInlineStart: `3px solid ${statusColor(card.status)}`, padding: '6px 10px' }}
+      style={{
+        border: '1px solid color-mix(in srgb, var(--watch-accent) 9%, var(--dsw-alias-border-l2))',
+        borderInlineStart: `3px solid ${statusColor(card.status)}`,
+        borderRadius: '12px', padding: '14px 16px', marginBottom: '10px',
+        background: 'linear-gradient(145deg, color-mix(in srgb, var(--watch-accent) 3%, var(--dsw-alias-bg-layer-2)), var(--dsw-alias-bg-base))',
+      }}
     >
       <p
         data-watch-memory-content=""
@@ -93,7 +100,10 @@ export function MemoryCardRow({ card, onOperation }: MemoryCardRowProps): ReactN
       </p>
       <dl
         data-watch-memory-fields=""
-        style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '0 8px', fontSize: '11px', margin: '4px 0 0' }}
+        style={{
+          display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '3px 12px',
+          fontSize: '11px', margin: '10px 0 0', color: 'var(--dsw-alias-label-tertiary)',
+        }}
       >
         <dt>id</dt><dd data-watch-field="memory_id">{card.memoryId}</dd>
         <dt>kind</dt><dd data-watch-field="kind">{card.kind}</dd>
@@ -109,14 +119,18 @@ export function MemoryCardRow({ card, onOperation }: MemoryCardRowProps): ReactN
         <dd data-watch-field="last_confirmed">{card.lastConfirmedAt ?? 'never'}</dd>
       </dl>
       <WhyRememberedChip card={card} />
-      <div data-watch-memory-operations="" style={{ display: 'flex', gap: '4px', marginTop: '4px' }}>
+      <div data-watch-memory-operations="" style={{ display: 'flex', flexWrap: 'wrap', gap: '7px', marginTop: '11px' }}>
         {card.operations.map(operation => (
           <button
             key={operation}
             type="button"
             data-watch-operation={operation}
             onClick={() => { onOperation(operation, card.memoryId) }}
-            style={{ font: 'inherit', cursor: 'pointer' }}
+            style={{
+              font: 'inherit', fontSize: '12px', cursor: 'pointer', padding: '6px 10px',
+              borderRadius: '9px', border: '1px solid var(--dsw-alias-border-l2)',
+              background: 'transparent', color: 'var(--dsw-alias-label-secondary)',
+            }}
           >
             {OPERATION_LABEL[operation]}
           </button>
@@ -142,7 +156,9 @@ export function MemoryTimeline({ events }: MemoryTimelineProps): ReactNode {
   return (
     <ol data-watch-memory-timeline="" style={{ listStyle: 'none', margin: 0, padding: 0 }}>
       {eventsForTimeline(events).map(event => (
-        <li key={event.eventId} data-watch-event={event.kind} data-watch-actor={event.actor}>
+        <li key={event.eventId} data-watch-event={event.kind} data-watch-actor={event.actor}
+          style={{ padding: '9px 0', borderTop: '1px solid var(--dsw-alias-border-l2)', fontSize: '12px' }}
+        >
           <time dateTime={event.at}>{event.at}</time>
           <span>{` ${event.kind} by ${event.actor} — `}</span>
           <code dir="ltr">{event.memoryId}</code>
@@ -175,9 +191,16 @@ export interface MemoryWorkbenchProps {
  */
 export function MemoryWorkbench(props: MemoryWorkbenchProps): ReactNode {
   return (
-    <section data-watch-memory-surface="" data-watch-memory-mode={props.mode} aria-label="Memory">
-      <p data-watch-mode-description="">{MODE_DESCRIPTION[props.mode]}</p>
-      <div role="tablist" aria-label="Memory view" style={{ display: 'flex', gap: '2px' }}>
+    <section data-watch-memory-surface="" data-watch-memory-mode={props.mode} aria-label="Memory"
+      style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}
+    >
+      <p data-watch-mode-description="" style={{
+        margin: 0, padding: '13px 15px', borderRadius: '11px',
+        background: 'var(--watch-accent-wash)', color: 'var(--dsw-alias-label-secondary)',
+        fontSize: '12.5px', lineHeight: 1.55,
+      }}
+      >{MODE_DESCRIPTION[props.mode]}</p>
+      <div role="tablist" aria-label="Memory view" style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
         {MEMORY_VIEWS.map(view => (
           <button
             key={view}
@@ -187,21 +210,23 @@ export function MemoryWorkbench(props: MemoryWorkbenchProps): ReactNode {
             data-watch-memory-view={view}
             onClick={() => { props.onView(view) }}
             style={{
-              background: 'none',
-              border: 'none',
+              background: props.view === view ? 'var(--watch-accent-wash)' : 'transparent',
+              border: '1px solid color-mix(in srgb, var(--watch-accent) 16%, var(--dsw-alias-border-l2))',
               font: 'inherit',
               color: 'inherit',
               cursor: 'pointer',
-              borderBottom: props.view === view
-                ? '2px solid var(--watch-accent)'
-                : '2px solid transparent',
+              borderRadius: '9px', padding: '6px 10px',
             }}
           >
             {VIEW_LABEL[view]}
           </button>
         ))}
       </div>
-      <div role="tabpanel" data-watch-memory-panel={props.view}>
+      <div role="tabpanel" data-watch-memory-panel={props.view} style={{
+        minHeight: '74px', padding: '14px 16px', borderRadius: '14px',
+        border: '1px solid color-mix(in srgb, var(--watch-accent) 9%, var(--dsw-alias-border-l2))',
+        background: 'var(--dsw-alias-bg-base)',
+      }}>
         {props.view === 'timeline' && <MemoryTimeline events={props.events} />}
         {props.view === 'wiki' && (
           <pre data-watch-memory-wiki="" style={{ whiteSpace: 'pre-wrap' }}>

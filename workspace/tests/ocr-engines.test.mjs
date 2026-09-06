@@ -55,7 +55,7 @@ import {
   untestedHealth,
   wordAccuracy,
   wordErrorRate,
-} from '@watchskill/dsh-technology'
+} from '@deepwatch/dsh-technology'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const STUB = join(HERE, 'fixtures', 'ocr-worker-stub.mjs')
@@ -260,6 +260,30 @@ describe('failure is reported as what it was, and never retried', () => {
     } finally {
       await engine.stop()
     }
+  })
+
+  test('stopping a worker that has already exited is not an error', async () => {
+    // `stop()` writes a shutdown. When the worker is already gone — crashed,
+    // OOM-killed, or killed by this module for ignoring a cancel — that write
+    // lands on a closed pipe, and EPIPE on a stream with no error listener
+    // takes the supervisor down: it would die while tidying up after a worker
+    // that did exactly what it was told. A Linux runner threw exactly that,
+    // `Error: write EPIPE` out of `OcrWorker.stop`, and failed an otherwise
+    // green pipeline.
+    //
+    // This asserts the property against a real process. It cannot fail on a
+    // platform where a write to a dead child's stdin does not raise, which is
+    // why it is not the regression: `ocr-worker-stdin.test.mjs` injects the
+    // stream boundary and reproduces every state deterministically, on every
+    // platform. Both are worth having — that one proves the guard, this one
+    // proves the guard is reached by the real lifecycle.
+    const engine = worker('crash')
+    await engine.start()
+    const result = await engine.recognize({})
+    assert.equal(result.ok, false, 'the crash must surface as a failed request')
+
+    await assert.doesNotReject(() => engine.stop(), 'stopping something already stopped')
+    await assert.doesNotReject(() => engine.stop(), 'and stop is idempotent')
   })
 
   test('cancelling before dispatch never starts the work', async () => {

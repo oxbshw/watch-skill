@@ -23,7 +23,7 @@ import {
   promote,
   propose,
   rollback,
-} from '@watchskill/dsh-memory'
+} from '@deepwatch/dsh-memory'
 
 /** A well-formed proposal, so each test can vary exactly one thing. */
 function proposal(overrides = {}) {

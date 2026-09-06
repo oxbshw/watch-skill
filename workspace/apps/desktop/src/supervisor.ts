@@ -22,7 +22,7 @@
  * kill — of the handle. A child killed before it could flush is a child that
  * corrupts the thing it was writing.
  *
- * @module @watchskill/watch-desktop/supervisor
+ * @module @deepwatch/desktop/supervisor
  */
 
 import { spawn, type ChildProcess } from 'node:child_process'

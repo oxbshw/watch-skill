@@ -10,18 +10,33 @@
  * goes through `watch_verify`. And a missing capability is a refusal carrying
  * Watch Core's own fix, so the model relays a next step instead of guessing.
  *
- * @module @watchskill/dsh-tools/sensory
+ * @module @deepwatch/dsh-tools/sensory
  */
 
 import type { Context } from '@deepseek-ai/cordis'
 import { defineTool } from '@deepseek-ai/dsh-tools'
 import type { GenericCallView, JsonValue } from '@deepseek-ai/dsh-tools'
-import type {} from '@watchskill/dsh-core-bridge'
+import type {} from '@deepwatch/dsh-core-bridge'
 
 /** Deployment policy for the sensory tools. */
 export interface SensoryConfig {
   /** Deadline for a search or a moment lookup. */
   readonly readTimeoutMs: number
+  /**
+   * Deadline for the first read after the engine connects.
+   *
+   * A semantic search loads an embedding model into the Core process. Core
+   * now does that at startup, on the thread that owns the server, because
+   * doing it lazily on a worker deadlocked and the first search never
+   * returned at all — see `watch_skill.index.embeddings.warm_native_imports`.
+   *
+   * This budget is what remains after that fix: warming is best-effort, and
+   * on a box where it was skipped the first read still pays for the import.
+   * It is not a cure for a hang, and it is deliberately not large enough to
+   * look like one — a read that has not answered in a minute is a fault to
+   * report, not patience to extend.
+   */
+  readonly coldReadTimeoutMs: number
   /** Deadline for starting a live session, which may launch a browser. */
   readonly liveStartTimeoutMs: number
 }
@@ -106,17 +121,33 @@ function abortOf(exec: { readonly signal?: AbortSignal }): { signal?: AbortSigna
 
 /** Register the search, moment and live tools. */
 export function applySensoryTools(ctx: Context, config: SensoryConfig): void {
+  /**
+   * Which connection this process has already warmed.
+   *
+   * Keyed on the Bridge's restart count rather than a boolean: a Core that
+   * exits and is restarted is a new process with a cold model, and a flag set
+   * before the restart would spend the ordinary deadline on the load again.
+   */
+  let warmedFor: number | null = null
+
   /** Issue one Bridge read and normalize its two outcomes. */
   const read = async (
     method: string,
     params: Record<string, unknown>,
     exec: { readonly signal?: AbortSignal },
-    deadlineMs = config.readTimeoutMs,
+    deadlineMs?: number,
   ): Promise<JsonValue> => {
+    const restarts = ctx.watchCore.health().restartCount
+    const budget = deadlineMs
+      ?? (warmedFor === restarts ? config.readTimeoutMs : config.coldReadTimeoutMs)
     const result = await ctx.watchCore.request(method, params, {
-      deadlineMs,
+      deadlineMs: budget,
       ...abortOf(exec),
     })
+    // Only a read that came back proves the process is warm. A refusal for any
+    // other reason leaves the question open, and the cost of being wrong here
+    // is one more generous deadline rather than a wrong answer.
+    if (result.ok) warmedFor = restarts
     return asJson(result.ok ? result.value : refusal(result.error))
   }
 

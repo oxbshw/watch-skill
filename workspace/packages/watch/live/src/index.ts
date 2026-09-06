@@ -1,7 +1,7 @@
 /**
  * Live mode: the client half of watching something while it happens.
  *
- * @module @watchskill/dsh-live
+ * @module @deepwatch/dsh-live
  */
 
 export * from './session.js'

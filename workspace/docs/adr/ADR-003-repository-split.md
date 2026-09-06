@@ -1,7 +1,12 @@
 # ADR-003: Two repositories, one product
 
-- Status: Accepted
+- Status: Superseded by [ADR-010](ADR-010-single-repository.md)
 - Date: 2026-08-27
+- Superseded: 2026-08-29
+
+> The two repositories became one. What this ADR decided, and why, is
+> left as written; ADR-010 records what replaced it and what the split
+> cost that this document did not anticipate.
 
 ## Context
 
@@ -14,10 +19,20 @@ Node packages.
 
 ## Decision
 
-| Repository | Contents | Release train |
+| Half | Contents | Release train |
 |---|---|---|
-| `watch-skill` | Python Core, MCP, REST, CLI, contracts, Agent Skills, evals | PyPI / Core semver |
-| `watch-workspace` | DSH downstream distribution, Watch DSH plugins, Memory service, Web, Desktop | npm / Desktop releases |
+| Watch Skill | Python Core, MCP, REST, CLI, contracts, Agent Skills, evals | PyPI / Core semver |
+| DeepWatch | DSH downstream distribution, Watch DSH plugins, Memory service, Web, Desktop | npm / Desktop releases |
+
+**Status: the release trains are split; the repositories are not.** Both
+halves live in `oxbshw/watch-skill` today — the Python Core at the root and
+DeepWatch under `workspace/` — and each ships on its own train from its own
+tag prefix. What this ADR decides is the *boundary*, which is enforced whether
+or not the directories ever move: no import crosses it, the contract is a
+versioned schema rather than a shared type, and each half builds and tests
+without the other. Splitting the directories later is then a move, not a
+redesign. Nothing in this document should be read as naming a repository that
+exists.
 
 `watch-skill` is the semantic source of truth for Watch contracts. It emits
 versioned JSON Schema; `watch-workspace` generates TypeScript from that schema

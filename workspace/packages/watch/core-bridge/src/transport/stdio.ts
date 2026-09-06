@@ -11,13 +11,13 @@
  * JSON: Watch Core streams OCR text and transcripts, which contain newlines,
  * and a length-prefixed frame cannot be split by content.
  *
- * @module @watchskill/dsh-core-bridge/transport/stdio
+ * @module @deepwatch/dsh-core-bridge/transport/stdio
  */
 
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process'
 import { Buffer } from 'node:buffer'
-import type { JsonRpcResponse, WatchError, WatchResult } from '@watchskill/dsh-contracts'
-import { JSON_RPC, watchError } from '@watchskill/dsh-contracts'
+import type { JsonRpcResponse, WatchError, WatchFailure, WatchResult } from '@deepwatch/dsh-contracts'
+import { JSON_RPC, watchError } from '@deepwatch/dsh-contracts'
 import type { Transport, TransportEvent, TransportRequest } from '../transport.js'
 
 /** Everything the transport needs to launch and talk to a Core process. */
@@ -26,6 +26,15 @@ export interface StdioTransportOptions {
   readonly args: readonly string[]
   readonly cwd: string | undefined
   readonly env: Readonly<Record<string, string>> | undefined
+  /**
+   * Values applied *underneath* the ambient environment.
+   *
+   * The difference from `env` is the whole point: `env` overrides what the Host
+   * was started with, and these only fill in what it never carried. A composed
+   * profile uses this to give its engine its own data directory without taking
+   * away a directory somebody chose for themselves.
+   */
+  readonly envDefaults?: Readonly<Record<string, string>> | undefined
   /** How long the child has to become writable before the connect fails. */
   readonly startupTimeoutMs: number
 }
@@ -42,6 +51,38 @@ interface Pending {
 const HEADER_TERMINATOR = '\r\n\r\n'
 
 /**
+ * How long this side waits *after* the deadline it sent Core.
+ *
+ * Core owns the deadline and answers with what it had already dispatched.
+ * This side only needs to notice a child that cannot answer at all, so it
+ * gives the engine room to report its own timeout first. Small enough that a
+ * wedged process is still caught promptly.
+ */
+const DEADLINE_BACKSTOP_MS = 2_000
+
+/**
+ * The methods that can leave something behind when they time out.
+ *
+ * A deadline is not evidence that the work did not happen — but only where
+ * the work could have *done* something. Telling a reader that "a dispatched
+ * side effect may still have run" after a health handshake describes an
+ * action nobody requested, and it appears on the one screen whose whole job
+ * is to be believed: a first-run cold start on Windows showed Watch Core,
+ * Memory, Verification and Browser all in Error, each advising the reader to
+ * inspect the receipt of an operation that had never been dispatched.
+ *
+ * Listed rather than inferred from the name. A future `watch.memory.forget`
+ * is side-effecting and would not be caught by a rule about prefixes, and the
+ * cost of guessing wrong here is telling somebody their evidence might have
+ * changed when it did not.
+ */
+const MAY_DISPATCH: ReadonlySet<string> = new Set([
+  'watch.browser.operate',
+  'watch.live.session',
+  'watch.verification.run',
+])
+
+/**
  * The largest frame this transport will wait for.
  *
  * Without a bound, a Content-Length of a gigabyte parks the stream forever:
@@ -55,9 +96,39 @@ const HEADER_TERMINATOR = '\r\n\r\n'
  */
 const MAX_FRAME_BYTES = 64 * 1024 * 1024
 
+/**
+ * How long a broken pipe waits for the child's own account of why it broke.
+ *
+ * This is a bound, not a mechanism. The wait ends on the child's `close`
+ * event, which is where the exit code and the engine's last words are
+ * readable; the timer only covers the case that event never comes, because a
+ * child may close its stdin and keep running. Half a second is far longer than
+ * the delivery of an event for a process that has already gone, and far
+ * shorter than the deadline a caller would otherwise sit through.
+ */
+const EXIT_VERDICT_GRACE_MS = 500
+
 /** Turn an unexpected value into a reportable error without losing its text. */
 function describe(cause: unknown): string {
   return cause instanceof Error ? cause.message : String(cause)
+}
+
+/**
+ * Whether a write failed because the pipe on the far end is gone.
+ *
+ * A write to a child that has already quit fails before that child's `close`
+ * event is delivered, and the two know different things: the write knows only
+ * that the pipe broke, while `close` carries the exit code and the stderr that
+ * tells an engine too old to have a `bridge` command apart from one that
+ * crashed. Reporting whichever arrived first is how an older Watch Core came
+ * to be described as a transient write failure — retryable, and never going to
+ * succeed — on the one platform whose scheduling put the write first.
+ */
+function isBrokenPipe(cause: unknown): boolean {
+  const code = (cause as { code?: unknown } | null)?.code
+  return code === 'EPIPE'
+    || code === 'ERR_STREAM_DESTROYED'
+    || code === 'ERR_STREAM_WRITE_AFTER_END'
 }
 
 /**
@@ -100,7 +171,14 @@ export class StdioTransport implements Transport {
     try {
       child = spawn(this.options.command, [...this.options.args], {
         cwd: this.options.cwd,
-        env: this.options.env === undefined ? process.env : { ...process.env, ...this.options.env },
+        // Defaults first, the ambient environment over them, then any explicit
+        // override last. The order is the policy: a profile may supply what
+        // nobody set, and may not take away what somebody did.
+        env: {
+          ...this.options.envDefaults,
+          ...process.env,
+          ...this.options.env,
+        },
         stdio: ['pipe', 'pipe', 'pipe'],
         windowsHide: true,
       })
@@ -139,9 +217,24 @@ export class StdioTransport implements Transport {
 
       child.once('spawn', () => { finish({ ok: true, value: undefined }) })
       child.once('error', (cause) => { finish(this.spawnFailure(describe(cause), isNotInstalled(cause))) })
-      child.once('exit', (code, signal) => { this.handleExit(code, signal); finish(this.spawnFailure(
-        `Watch Core exited during startup (${signal ?? `code ${String(code)}`}).`,
-      )) })
+      // 'close' rather than 'exit', and the difference is load-bearing.
+      // 'exit' fires as soon as the process is gone, while its stdio may still
+      // have buffered bytes in flight — so an engine that printed
+      // "No such command 'bridge'" and quit was diagnosed against an empty
+      // stderr and reported as a crash. 'close' waits for the streams, which
+      // is the only point at which the engine's own last words are readable.
+      child.once('close', (code, signal) => {
+        this.handleExit(code, signal)
+        // An immediate exit with a CLI usage error is not a crash, it is an
+        // older Watch Core that has no `bridge` command. Those need opposite
+        // answers — "check the log" versus "upgrade the engine" — and the
+        // only place they can be told apart is here, while the exit code and
+        // the argument parser's own words are still in hand.
+        finish(this.surfaceMissing()
+          ?? this.spawnFailure(
+            `Watch Core exited during startup (${signal ?? `code ${String(code)}`}).`,
+          ))
+      })
     })
   }
 
@@ -181,17 +274,38 @@ export class StdioTransport implements Transport {
         settle: null,
       }
 
+      // The backstop, not the deadline.
+      //
+      // The deadline itself travels in the frame and Core enforces it, which
+      // is what makes it a *boundary* deadline: the engine knows when to stop
+      // and can say what it had already dispatched. This timer exists for the
+      // case Core cannot answer at all — a wedged or dead child — so it waits
+      // a grace period longer than the deadline it is backing up. Without the
+      // frame field Core fell back to its own 30-second default and silently
+      // overrode every longer deadline a caller asked for; a first browser
+      // observation on a cold machine takes more than that, and the caller's
+      // 90 seconds counted for nothing.
       const timer = setTimeout(() => {
         // A deadline is not evidence that the work did not happen. For a
-        // side-effecting method the caller must inspect the receipt; the error
-        // says so rather than inviting a blind retry.
+        // side-effecting method the caller must inspect the receipt; for a
+        // read there is no receipt and nothing to inspect, and saying
+        // otherwise invents an action.
+        const dispatches = MAY_DISPATCH.has(request.method)
         this.settle(id, watchError(
           'bridge.deadline_exceeded',
           `"${request.method}" did not return within ${String(request.deadlineMs)}ms.`,
-          'Inspect the operation receipt before retrying; a dispatched side effect may still have run.',
-          { details: { method: request.method }, retryable: false, correlationId: request.correlationId },
+          dispatches
+            ? 'Inspect the operation receipt before retrying; a dispatched side '
+              + 'effect may still have run.'
+            : 'Nothing was dispatched, so this is safe to retry. If it keeps '
+              + 'timing out, check that Watch Core is running and not blocked.',
+          {
+            details: { method: request.method },
+            retryable: !dispatches,
+            correlationId: request.correlationId,
+          },
         ))
-      }, request.deadlineMs)
+      }, request.deadlineMs + DEADLINE_BACKSTOP_MS)
 
       const onAbort = (): void => {
         // Ask Core to stop, then report *requested*, never "did not happen".
@@ -216,6 +330,9 @@ export class StdioTransport implements Transport {
         id,
         method: request.method,
         params: request.params,
+        // The caller's deadline, so Core enforces the same one this side is
+        // waiting on rather than its own default.
+        deadlineMs: request.deadlineMs,
         // Correlation travels in the envelope so Core stamps it onto its own
         // logs, receipts and Trajectory records without the caller restating it.
         correlationId: request.correlationId,
@@ -227,14 +344,39 @@ export class StdioTransport implements Transport {
       // unhandled 'error' and took the process down with `write EPIPE`
       // instead of failing the request. `settle` removes the pending entry,
       // so being called from both writes reports once.
-      const onWriteError = (cause: Error | null | undefined): void => {
-        if (cause == null) return
+      const writeFailed = (cause: Error | null | undefined): void => {
         this.settle(id, watchError(
           'bridge.write_failed',
           `Could not send "${request.method}" to Watch Core: ${describe(cause)}`,
           'Reconnect Watch Core and retry.',
           { retryable: true, correlationId: request.correlationId },
         ))
+      }
+      const onWriteError = (cause: Error | null | undefined): void => {
+        if (cause == null) return
+        // A broken pipe is a symptom. The diagnosis is one event away.
+        //
+        // `handleExit` settles everything pending with the classified reason —
+        // an old engine, a crash — and it runs on `close`, which waits for the
+        // child's stderr to drain. Announcing `write_failed` first buried that:
+        // an engine with no `bridge` command was reported as a retryable write
+        // error, and the health a screen read straight after `connect` said
+        // `handshake_failed` where the fix is "upgrade Watch Core".
+        //
+        // So the write yields to the exit it is a symptom of. The timer is only
+        // for a child that closed its stdin and stayed alive, which owes no
+        // exit verdict at all.
+        if (!isBrokenPipe(cause) || this.child === null || this.disposed) {
+          writeFailed(cause)
+          return
+        }
+        const dying = this.child
+        const onVerdict = (): void => { clearTimeout(giveUp); writeFailed(cause) }
+        const giveUp = setTimeout(() => {
+          dying.removeListener('close', onVerdict)
+          writeFailed(cause)
+        }, EXIT_VERDICT_GRACE_MS)
+        dying.once('close', onVerdict)
       }
       child.stdin.write(
         `Content-Length: ${String(body.byteLength)}${HEADER_TERMINATOR}`,
@@ -411,21 +553,72 @@ export class StdioTransport implements Transport {
     for (const listener of this.failureListeners) listener(error)
   }
 
-  /** Handle child exit: fail every in-flight request, then report the loss. */
+  /**
+   * Handle child exit: fail every in-flight request, then report the loss.
+   *
+   * The surface-missing check comes first because this is where the *failure
+   * listeners* learn what happened, and they publish health. Diagnosing it
+   * only in `connect`'s resolution left the listeners publishing
+   * `core_crashed` for an engine that had merely rejected an unknown
+   * subcommand — a correct-sounding blocker that sends someone to read crash
+   * logs for a version mismatch.
+   */
   private handleExit(code: number | null, signal: NodeJS.Signals | null): void {
     this.child = null
     const detail = signal ?? `exit code ${String(code)}`
     const trailer = this.lastStderr.trim()
-    const error = watchError(
-      'bridge.core_exited',
-      `Watch Core stopped (${detail}).${trailer === '' ? '' : ` Last output: ${trailer}`}`,
-      'Check the Watch Core installation with `watch-skill doctor`, then reconnect.',
-      { details: { code, signal }, retryable: true },
-    ).error
+    const missing = this.surfaceMissing()
+    const error = missing !== null
+      ? missing.error
+      : watchError(
+        'bridge.core_exited',
+        `Watch Core stopped (${detail}).${trailer === '' ? '' : ` Last output: ${trailer}`}`,
+        'Check the Watch Core installation with `watch-skill doctor`, then reconnect.',
+        { details: { code, signal }, retryable: true },
+      ).error
     for (const id of [...this.pending.keys()]) this.settle(id, { ok: false, error })
     this.fail(error)
   }
 
+
+  /**
+   * Whether the engine started and then rejected `bridge` as a command.
+   *
+   * Recognised from what an argument parser says when it is handed a
+   * subcommand it does not have. Matching on the engine's own words is
+   * unlovely and is the only signal available: the process is gone, and a
+   * usage error and a startup crash are both a non-zero exit.
+   *
+   * A false negative is the safe direction — it degrades to
+   * `bridge.start_failed`, which is a worse message and not a wrong one.
+   */
+  private surfaceMissing(): WatchFailure | null {
+    const text = this.lastStderr.toLowerCase()
+    const usage = /no such command|unrecognized arguments|invalid choice|unknown command/.test(text)
+    // The subcommands actually requested, not the literal `bridge`.
+    //
+    // Hardcoding the word meant this only fired when the engine happened to
+    // echo it, so a Core configured with different args reported
+    // `core_crashed` for a missing surface — the one diagnosis this check
+    // exists to prevent. Keying on `args[0]` was no better: when the command
+    // is an interpreter the first argument is a script path, not a
+    // subcommand.
+    //
+    // A subcommand is a bare word: no separator, no extension. Anything with
+    // either is a path, and a usage error that quotes a path is not this.
+    const subcommands = this.options.args
+      .filter(argument => !/[\\./]/.test(argument))
+      .map(argument => argument.toLowerCase())
+    if (!usage || !subcommands.some(name => text.includes(name))) return null
+    return watchError(
+      'bridge.bridge_surface_missing',
+      `"${this.options.command}" is installed but has no "bridge" command, so this `
+      + 'Workspace cannot reach it.',
+      'Update Watch Core to a version that ships the Bridge surface '
+      + '(`pip install --upgrade watch-skill`), then reconnect.',
+      { details: { command: this.options.command }, retryable: false },
+    )
+  }
   /**
    * Build the connect-time failure result, keeping the spawn detail intact.
    *

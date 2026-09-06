@@ -19,6 +19,7 @@
 import { readFileSync, writeFileSync, existsSync, readdirSync, statSync } from 'node:fs'
 import { join, relative, dirname, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { byField } from './lib/order.mjs'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const UPSTREAM = join(ROOT, 'upstream', 'deepseek-harness')
@@ -83,7 +84,7 @@ function collectPackages(files) {
       bundlePatch: manifest.dsh?.bundle?.patch ?? null,
     })
   }
-  packages.sort((a, b) => a.name.localeCompare(b.name))
+  packages.sort(byField('name'))
   return packages
 }
 
@@ -153,7 +154,7 @@ function collectSlots(files) {
       }
     }
   }
-  return [...slots.values()].sort((a, b) => a.slot.localeCompare(b.slot))
+  return [...slots.values()].sort(byField('slot'))
 }
 
 /**
@@ -188,7 +189,7 @@ function collectRemotes(files) {
       })
     }
   }
-  return services.sort((a, b) => String(a.service).localeCompare(String(b.service)))
+  return services.sort(byField('service'))
 }
 
 /** Collect locale namespaces so Watch copy never collides with upstream keys. */
@@ -212,7 +213,7 @@ function collectLocaleNamespaces(files) {
   }
   return [...namespaces.entries()]
     .map(([namespace, source]) => ({ namespace, source }))
-    .sort((a, b) => a.namespace.localeCompare(b.namespace))
+    .sort(byField('namespace'))
 }
 
 /** Serialize with a stable trailing newline so --check is a clean diff. */

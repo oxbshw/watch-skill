@@ -1,0 +1,114 @@
+{
+  "$comment": [
+    "Licences reviewed deliberately, one entry per package, with the reason it",
+    "is acceptable. This is not an allowlist widening: ALLOWED_LICENSES in",
+    "scripts/gen-sbom.mjs is unchanged, and every entry here still has to say",
+    "what the package is, how it reaches this repository, and whether DeepWatch",
+    "redistributes it. A package with no entry still fails the gate.",
+    "",
+    "Everything below arrives through @deepseek-ai/dsh, which @deepwatch/cli",
+    "declares as an exact OPTIONAL PEER dependency. pnpm installs optional peers",
+    "into this workspace so the CLI can be exercised locally, which is why they",
+    "appear in the lockfile at all. No DeepWatch package lists any of them, no",
+    "DeepWatch tarball contains any of them, and nothing here is redistributed:",
+    "a user's own package manager fetches them from the public registry under",
+    "their publishers' terms, exactly as it would for a direct",
+    "`npm i @deepseek-ai/dsh`.",
+    "",
+    "The one obligation worth naming: sharp's per-platform packages ship",
+    "prebuilt libvips binaries. The Apache-2.0 half is sharp's own glue code;",
+    "the LGPL-3.0-or-later half is libvips. Confirmed by reading the files, not",
+    "the SPDX string — @img/sharp-win32-x64 contains libvips-42.dll and",
+    "libvips-cpp-8.18.6.dll beside sharp's .node addon, and its LICENSE file",
+    "carries only the Apache text.",
+    "",
+    "An installer that BUNDLED those binaries rather than fetching them would",
+    "take on the LGPL relinking obligation. DeepWatch does not bundle them",
+    "today, and docs/THIRD_PARTY_NOTICES.md records that as an open decision",
+    "for a future Desktop installer."
+  ],
+  "reviewedAt": "2026-08-30",
+  "packages": [
+    {
+      "match": "^@img/sharp-(?!libvips|linuxmusl|wasm32|webcontainers)",
+      "licenses": [
+        "Apache-2.0 AND LGPL-3.0-or-later",
+        "Apache-2.0",
+        "UNKNOWN"
+      ],
+      "sbomLicense": "Apache-2.0 AND LGPL-3.0-or-later",
+      "component": "sharp platform binary for glibc and Windows, bundling prebuilt libvips",
+      "arrivesVia": "optional peer @deepseek-ai/dsh -> dsh-base -> dsh-attachment-local -> sharp",
+      "classification": "optional-dependency-of-peer",
+      "redistributedByDeepWatch": false,
+      "reason": "Apache-2.0 is sharp's own glue and LGPL-3.0-or-later is the libvips binary it links. The two halves are stated together on Windows and separately on Linux and macOS, which declare only the Apache half — so the combined expression is what the SBOM records, because the payload is the same everywhere. Verified by reading the package rather than the SPDX string: @img/sharp-win32-x64 contains libvips-42.dll and libvips-cpp-8.18.6.dll beside sharp's .node addon, and its own LICENSE file carries only the Apache text. Not present in any DeepWatch package or tarball."
+    },
+    {
+      "match": "^@img/sharp-(linuxmusl|wasm32|webcontainers)",
+      "licenses": [
+        "UNKNOWN",
+        "Apache-2.0",
+        "Apache-2.0 AND LGPL-3.0-or-later"
+      ],
+      "sbomLicense": "Apache-2.0 AND LGPL-3.0-or-later",
+      "component": "sharp musl and wasm builds",
+      "arrivesVia": "optional peer @deepseek-ai/dsh -> dsh-base -> dsh-attachment-local -> sharp",
+      "classification": "optional-dependency-of-peer",
+      "redistributedByDeepWatch": false,
+      "reason": "The same libvips payload as the glibc builds, published without a licence field on the platforms that have been read. Recorded as the glibc expression because the contents are the same. Never selected on a supported DeepWatch platform, and not redistributed."
+    },
+    {
+      "match": "^@img/sharp-libvips-",
+      "licenses": [
+        "UNKNOWN",
+        "LGPL-3.0-or-later"
+      ],
+      "sbomLicense": "LGPL-3.0-or-later",
+      "component": "prebuilt libvips alone",
+      "arrivesVia": "optional peer @deepseek-ai/dsh -> ... -> sharp",
+      "classification": "optional-dependency-of-peer",
+      "redistributedByDeepWatch": false,
+      "reason": "libvips itself. The Windows builds omit the field and the Linux and macOS builds declare LGPL-3.0-or-later, which is the licence of the payload in every one of them — so that is what the SBOM records rather than the absence Windows reports. Not redistributed: a user's own package manager fetches it."
+    },
+    {
+      "match": "^@deepseek-ai/node-addon-landlock-run-linux-",
+      "licenses": [
+        "UNKNOWN",
+        "BSD-3-Clause"
+      ],
+      "sbomLicense": "BSD-3-Clause",
+      "component": "DeepSeek's Linux landlock sandbox addon",
+      "arrivesVia": "optional peer @deepseek-ai/dsh",
+      "classification": "optional-platform-dependency-of-peer",
+      "redistributedByDeepWatch": false,
+      "reason": "Declares BSD-3-Clause where it is installed, which is Linux only; nothing can read the field on a machine that does not install it. Permissive, and not redistributed."
+    },
+    {
+      "match": "^@emnapi/",
+      "licenses": [
+        "UNKNOWN",
+        "MIT"
+      ],
+      "sbomLicense": "MIT",
+      "component": "emscripten node-api runtime, the wasm fallback for sharp",
+      "arrivesVia": "optional peer @deepseek-ai/dsh -> ... -> sharp wasm variant",
+      "classification": "optional-dependency-of-peer",
+      "redistributedByDeepWatch": false,
+      "reason": "Reached only by sharp's wasm32 variant, which is never selected on a supported DeepWatch platform. Published MIT by the emnapi project. Not redistributed."
+    },
+    {
+      "match": "^@koromix/koffi-",
+      "licenses": [
+        "UNKNOWN",
+        "MIT"
+      ],
+      "sbomLicense": "MIT",
+      "component": "koffi FFI platform binary",
+      "arrivesVia": "optional peer @deepseek-ai/dsh -> koffi",
+      "classification": "optional-platform-dependency-of-peer",
+      "redistributedByDeepWatch": false,
+      "reason": "koffi itself is MIT and on the allowed list; its OpenBSD platform packages carry the same licence and are never installed on a supported DeepWatch platform. Not redistributed."
+    }
+  ],
+  "note": "Two fields, and the difference matters. `licenses` is every value a package in this family is known to declare — they differ by platform, and a value outside this list is a licence change nobody reviewed, so the gate fails on whichever machine installs it. `sbomLicense` is the single value the SBOM records everywhere, because pnpm installs only the current platform's optional packages and a document that quoted whatever happened to be on disk would read differently on every machine."
+}

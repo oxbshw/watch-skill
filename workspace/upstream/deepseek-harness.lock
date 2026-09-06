@@ -27,3 +27,19 @@ cli_package: "@deepseek-ai/dsh"
 patches:
   applied: []
   budget: 0
+
+# The internal-testing notice this baseline ships, and the durable field its
+# Continue button writes. A DeepWatch-managed profile answers that field at
+# setup so a person gets one onboarding surface instead of two — see
+# `acknowledgeUpstreamNotice` in the CLI.
+#
+# Recorded here, in the tracked statement of what this distribution is built
+# against, because the acknowledgement is compared for exact equality: a
+# baseline bump that changes the notice would silently bring the modal back on
+# every new profile. `tests/onboarding.test.mjs` holds the CLI's constants to
+# these values everywhere, and holds these values to the checkout's own source
+# wherever the audit checkout is present.
+onboarding_notice:
+  settings_namespace: ui-onboarding
+  ack_field: welcomeNoticeVersion
+  version: "2026-08-13.1"

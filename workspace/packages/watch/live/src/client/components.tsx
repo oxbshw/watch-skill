@@ -7,11 +7,11 @@
  * The moment one of them is hidden, the surface starts implying a continuity
  * it has not checked.
  *
- * @module @watchskill/dsh-live/components
+ * @module @deepwatch/dsh-live/components
  */
 
 import type { ReactNode } from 'react'
-import { toneFor, tokenFor } from '@watchskill/dsh-client-brand'
+import { toneFor, tokenFor } from '@deepwatch/dsh-client-brand'
 import {
   describeContinuity,
   type LiveEvent,

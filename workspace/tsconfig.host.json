@@ -1,0 +1,108 @@
+{
+  "compilerOptions": {
+    "noEmit": true,
+    "lib": [
+      "ES2024",
+      "DOM"
+    ],
+    "paths": {
+      "@deepwatch/dsh-contracts": [
+        "./packages/watch/contracts/src/index.ts"
+      ],
+      "@deepwatch/dsh-contracts/identity": [
+        "./packages/watch/contracts/src/identity.ts"
+      ],
+      "@deepwatch/dsh-contracts/query": [
+        "./packages/watch/contracts/src/query.ts"
+      ],
+      "@deepwatch/dsh-contracts/query/validate": [
+        "./packages/watch/contracts/src/query/validate.ts"
+      ],
+      "@deepwatch/dsh-contracts/query/wire": [
+        "./packages/watch/contracts/src/query/wire.ts"
+      ],
+      "@deepwatch/dsh-core-bridge": [
+        "./packages/watch/core-bridge/src/index.ts"
+      ],
+      "@deepwatch/dsh-library": [
+        "./packages/watch/library/src/index.ts"
+      ],
+      "@deepwatch/dsh-library/client": [
+        "./packages/watch/library/src/client/index.tsx"
+      ],
+      "@deepwatch/dsh-library/components": [
+        "./packages/watch/library/src/client/components.tsx"
+      ],
+      "@deepwatch/dsh-library/index-store": [
+        "./packages/watch/library/src/index-store.ts"
+      ],
+      "@deepwatch/dsh-library/library-mode": [
+        "./packages/watch/library/src/client/library-mode.tsx"
+      ],
+      "@deepwatch/dsh-library/read-plane": [
+        "./packages/watch/library/src/client/read-plane.ts"
+      ],
+      "@deepwatch/dsh-library/search-view": [
+        "./packages/watch/library/src/client/search-view.tsx"
+      ],
+      "@deepwatch/dsh-memory": [
+        "./packages/watch/memory/src/index.ts"
+      ],
+      "@deepwatch/dsh-memory/records": [
+        "./packages/watch/memory/src/records.ts"
+      ],
+      "@deepwatch/dsh-memory/tools": [
+        "./packages/watch/memory/src/tools.ts"
+      ],
+      "@deepwatch/dsh-technology": [
+        "./packages/watch/technology/src/index.ts"
+      ],
+      "@deepwatch/dsh-technology/attestation": [
+        "./packages/watch/technology/src/attestation.ts"
+      ],
+      "@deepwatch/dsh-technology/budget": [
+        "./packages/watch/technology/src/budget.ts"
+      ],
+      "@deepwatch/dsh-technology/delegation": [
+        "./packages/watch/technology/src/delegation.ts"
+      ],
+      "@deepwatch/dsh-technology/descriptors": [
+        "./packages/watch/technology/src/descriptors.ts"
+      ],
+      "@deepwatch/dsh-technology/observation": [
+        "./packages/watch/technology/src/observation.ts"
+      ],
+      "@deepwatch/dsh-technology/provenance": [
+        "./packages/watch/technology/src/provenance.ts"
+      ],
+      "@deepwatch/dsh-technology/routing": [
+        "./packages/watch/technology/src/routing.ts"
+      ],
+      "@deepwatch/dsh-tools": [
+        "./packages/watch/tools/src/index.ts"
+      ]
+    }
+  },
+  "extends": "./tsconfig.base.json",
+  "files": [],
+  "references": [
+    {
+      "path": "./packages/watch/contracts"
+    },
+    {
+      "path": "./packages/watch/technology"
+    },
+    {
+      "path": "./packages/watch/core-bridge"
+    },
+    {
+      "path": "./packages/watch/memory"
+    },
+    {
+      "path": "./packages/watch/library/tsconfig.host.json"
+    },
+    {
+      "path": "./packages/watch/tools"
+    }
+  ]
+}

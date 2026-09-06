@@ -15,7 +15,7 @@ import {
   isSuccessVerdict,
   negotiateProtocol,
   watchError,
-} from '@watchskill/dsh-contracts'
+} from '@deepwatch/dsh-contracts'
 
 describe('verdict rendering', () => {
   test('only VERIFIED may be rendered as success', () => {

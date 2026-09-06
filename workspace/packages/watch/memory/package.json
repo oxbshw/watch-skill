@@ -1,9 +1,25 @@
 {
-  "name": "@watchskill/dsh-memory",
-  "version": "0.1.0-preview.0",
+  "name": "@deepwatch/dsh-memory",
+  "version": "0.1.0",
   "description": "Host plugin: durable, correctable, scoped memory over an append-only event ledger",
   "type": "module",
   "license": "MIT",
+  "author": "Sayed Allam",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/oxbshw/watch-skill.git",
+    "directory": "workspace/packages/watch/memory"
+  },
+  "homepage": "https://github.com/oxbshw/watch-skill/tree/main/workspace#readme",
+  "bugs": {
+    "url": "https://github.com/oxbshw/watch-skill/issues"
+  },
+  "keywords": [
+    "deepwatch",
+    "deepseek-harness",
+    "watch-skill",
+    "memory"
+  ],
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
   "exports": {
@@ -25,6 +41,13 @@
     "lib/**/*.js",
     "lib/**/*.d.ts"
   ],
+  "sideEffects": false,
+  "engines": {
+    "node": "^22.19.0 || >=24.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "peerDependencies": {
     "@deepseek-ai/cordis": "catalog:",
     "@deepseek-ai/schemastery": "^3.18.1"

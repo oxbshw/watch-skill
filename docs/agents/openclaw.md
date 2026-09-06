@@ -27,7 +27,7 @@ config, under `skills.load`:
 {
   "skills": {
     "load": {
-      "extraDirs": ["C:\\path\\to\\watch-skill\\adapters\\claude-skill\\skills"]
+      "extraDirs": ["<watch-skill-checkout>/skills"]
     }
   }
 }

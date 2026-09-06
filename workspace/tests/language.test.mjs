@@ -23,7 +23,7 @@ import {
   needsDirectionIsolation,
   normalizeForRetrieval,
   withTranslation,
-} from '@watchskill/dsh-contracts'
+} from '@deepwatch/dsh-contracts'
 
 describe('script detection', () => {
   test('recognizes each writing system the matrix names', () => {

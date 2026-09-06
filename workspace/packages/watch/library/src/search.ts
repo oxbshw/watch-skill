@@ -17,10 +17,10 @@
  * facet that offers "Arabic (0)" on a library with no Arabic in it is a filter
  * that teaches people the filter is broken.
  *
- * @module @watchskill/dsh-library/search
+ * @module @deepwatch/dsh-library/search
  */
 
-import type { TemporalRange } from '@watchskill/dsh-contracts'
+import type { TemporalRange } from '@deepwatch/dsh-contracts'
 import type { Source, SourceKind, IndexState } from './sources.js'
 
 /** How a result was retrieved. */

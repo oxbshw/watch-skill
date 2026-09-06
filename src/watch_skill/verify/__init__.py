@@ -80,15 +80,22 @@ def draft_contract(
     contract_id: str | None = None,
     created_by: str = "agent",
     required_assurance: Assurance = Assurance.ISOLATED_LOCAL,
+    allowed_origins: list[str] | None = None,
     source_prompt: str = "",
 ) -> VerificationContract:
-    """Build an unfrozen draft. Freeze it before the run it will judge."""
+    """Build an unfrozen draft. Freeze it before the run it will judge.
+
+    ``allowed_origins`` is the allowlist the network checks are bounded by. It
+    belongs to the contract because the digest has to cover it: a permission
+    handed in at run time is a permission the frozen agreement never made.
+    """
     return VerificationContract(
         contract_id=contract_id or f"vc_{uuid.uuid4().hex[:12]}",
         title=title,
         created_by=created_by,
         checks=[Check.model_validate(item) for item in checks],
         required_assurance=required_assurance,
+        allowed_origins=list(allowed_origins or []),
         source_prompt=source_prompt,
     )
 

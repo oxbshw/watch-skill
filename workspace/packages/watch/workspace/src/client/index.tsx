@@ -11,11 +11,12 @@
  * name in this file against `inventory/dsh-slots.json`, extracted from the
  * pinned packages' own `renderSlot` call sites.
  *
- * @module @watchskill/dsh-workspace/client
+ * @module @deepwatch/dsh-workspace/client
  */
 
 import type { Context } from '@deepseek-ai/cordis'
 import { WatchModeView } from './mode-views.js'
+import { WatchEmptyState } from './empty-state.js'
 import {
   ComposerPanel,
   InspectorTabs,
@@ -28,6 +29,7 @@ import {
 } from './components.js'
 
 export * from './components.js'
+export * from './empty-state.js'
 export * from './surface.js'
 // `./mode-views.js` is the rendered surfaces; `../modes.js` is the mode model
 // they are surfaces for. Two files called `modes` was a name collision waiting
@@ -107,6 +109,11 @@ export function apply(ctx: Context): void {
   // composer itself; taking it would replace the input, not extend it. The
   // input dock is a list, which is what "add a control beside the composer"
   // actually means.
+  // Order 1, above everything else in the dock: the product's own sentence for
+  // a blank session, which renders in the hero phase and nowhere else. It sits
+  // under upstream's headline rather than instead of it -- see `empty-state`
+  // for why that text is not replaceable from a plugin in this baseline.
+  occupy('conversation.input.dock', 'watch-empty-state', WatchEmptyState, 1)
   occupy('conversation.input.dock', 'watch-composer', ComposerPanel, 10)
   // Deliberately NOT registered into `shell.overlay`.
   //

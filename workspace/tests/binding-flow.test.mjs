@@ -1,0 +1,689 @@
+/**
+ * The setup a person could not finish.
+ *
+ * Sayed saved an OpenRouter credential. The row went green, the screen said
+ * "Saved openrouter.", and that was the end of the path — no model to choose,
+ * nothing to assign it to, and a composer still reading `DeepSeek-V4-Flash
+ * High`. He sent a message. It was routed to DeepSeek, failed on a
+ * `DEEPSEEK_API_KEY` he had never been asked for, and left a failed turn and a
+ * page of internal detail in his session.
+ *
+ * Every assertion here is one step of that, held to the opposite outcome. The
+ * load-bearing one is `a saved credential is not a configured product`: it is
+ * the exact belief the green dot created, and the one the whole readiness
+ * model exists to stop this product expressing.
+ *
+ * The screen is rendered rather than read as source. A test that greps a
+ * component for the word "Ready" passes for a component that renders it inside
+ * a branch nobody reaches; `renderToStaticMarkup` is what makes these
+ * assertions about what a person sees.
+ */
+
+import { test, describe } from 'node:test'
+import assert from 'node:assert/strict'
+import { createElement } from 'react'
+import { renderToStaticMarkup } from 'react-dom/server'
+import { readFileSync } from 'node:fs'
+import { dirname, join } from 'node:path'
+import { fileURLToPath, pathToFileURL } from 'node:url'
+
+const HERE = dirname(fileURLToPath(import.meta.url))
+const ROOT = join(HERE, '..')
+const SETTINGS = join(ROOT, 'packages', 'watch', 'client-settings')
+
+const {
+  BindingStore, DEFAULT_MODEL_NAMESPACE, chatReadiness, credentialRefOf, credentialStatusOf,
+  providerTestKey, roleRowOf,
+} = await import(pathToFileURL(join(SETTINGS, 'lib', 'client', 'binding-state.js')).href)
+const { RoleBindings } = await import(
+  pathToFileURL(join(SETTINGS, 'lib', 'client', 'role-bindings.js')).href)
+const { ReadinessList } = await import(
+  pathToFileURL(join(SETTINGS, 'lib', 'client', 'readiness.js')).href)
+const { EMPTY_BINDINGS, withBinding } = await import(
+  pathToFileURL(join(ROOT, 'packages', 'watch', 'contracts', 'lib', 'bindings.js')).href)
+const { isExecutable } = await import(
+  pathToFileURL(join(ROOT, 'packages', 'watch', 'contracts', 'lib', 'readiness.js')).href)
+
+const ok = value => ({ result: { ok: true, value } })
+const failed = message => ({ result: { ok: false, error: { code: 'internal', message } } })
+
+/**
+ * A Host that answers exactly what a case is about.
+ *
+ * Every knob here is one of the four facts readiness is derived from, so a
+ * case can vary one and hold the rest — which is the only way to show that a
+ * credential alone changes nothing.
+ */
+function host({
+  credentialConfigured = false,
+  credentialReadable = true,
+  models = [{ id: 'openai/gpt-4o-mini', name: 'GPT-4o mini' }],
+  bindings = null,
+  active = true,
+  writable = true,
+  catalogFailure = null,
+  onReplace = null,
+  defaultSelection = null,
+} = {}) {
+  const namespaces = [
+    {
+      ns: 'llm-pi-ai',
+      value: { profiles: { openrouter: { apiKeyEnv: 'OPENROUTER_API_KEY' } } },
+      revision: 1,
+    },
+  ]
+  if (bindings !== null) {
+    namespaces.push({ ns: 'watch-bindings', value: bindings, revision: 7 })
+  }
+  if (defaultSelection !== null) {
+    namespaces.push({ ns: 'agent-default-model', value: defaultSelection, revision: 2 })
+  }
+  const calls = { replace: [], credentials: [] }
+  return {
+    calls,
+    api: {
+      settings: {
+        describe: async () => ok({ writable, namespaces }),
+        replace: async (payload) => {
+          calls.replace.push(payload)
+          if (onReplace !== null) return onReplace(payload)
+          return ok({ ns: payload.ns, value: payload.section, revision: 8 })
+        },
+      },
+      llm: {
+        providers: async () => ok({
+          providers: [{
+            provider: 'openrouter',
+            displayName: 'OpenRouter',
+            settingsNs: 'llm-pi-ai',
+            settingsPath: ['profiles', 'openrouter'],
+            active,
+          }],
+        }),
+        models: async () => ok({
+          groups: catalogFailure === null
+            ? [{ id: 'openrouter', name: 'OpenRouter', models }]
+            : [],
+          failures: catalogFailure === null ? [] : [{ id: 'openrouter', message: catalogFailure }],
+        }),
+      },
+      credentials: {
+        describe: async (payload) => {
+          calls.credentials.push(payload)
+          if (!credentialReadable) return failed('the credential store could not be opened')
+          return ok({
+            credentials: Object.fromEntries(payload.refs.map(ref => [ref, {
+              configured: credentialConfigured, writable: true,
+            }])),
+          })
+        },
+      },
+    },
+  }
+}
+
+/** A loaded store, which is what every case here starts from. */
+async function loaded(options, providerTester) {
+  const stub = host(options)
+  const store = new BindingStore(stub.api, providerTester)
+  await store.load()
+  return { store, stub }
+}
+
+/** The markup a person would be looking at. */
+function screen(store) {
+  return renderToStaticMarkup(createElement(RoleBindings, { store }))
+}
+
+/** A stored document with Chat bound to OpenRouter. */
+const BOUND = {
+  version: 1,
+  roles: {
+    agent_model: {
+      provider: 'openrouter',
+      model: 'openai/gpt-4o-mini',
+      credentialRef: 'OPENROUTER_API_KEY',
+      boundAt: '2026-08-31T05:03:08.000Z',
+    },
+  },
+}
+
+describe('a saved credential is not a configured product', () => {
+  test('the credential is stored, and Chat still cannot run', async () => {
+    // The regression, stated once. Everything downstream of the green dot
+    // followed from this one confusion.
+    const { store } = await loaded({ credentialConfigured: true })
+    const snapshot = store.getSnapshot()
+    const provider = snapshot.providers[0]
+    assert.equal(provider.credential, 'configured_unverified')
+    assert.equal(isExecutable(chatReadiness(snapshot)), false)
+    assert.equal(chatReadiness(snapshot).primaryBlocker, 'no_binding')
+  })
+
+  test('the screen says stored, not ready', async () => {
+    const { store } = await loaded({ credentialConfigured: true })
+    const markup = screen(store)
+    assert.ok(markup.includes('Credential saved · not yet assigned'),
+      'the honest post-save state is not on screen')
+    assert.equal(markup.includes('>Ready<'), false, 'the screen claims Chat is ready')
+  })
+
+  test('the screen offers the next step by name', async () => {
+    const { store } = await loaded({ credentialConfigured: true })
+    const markup = screen(store)
+    assert.ok(markup.includes('Choose models and roles'),
+      'there is no way forward from a saved credential')
+    assert.ok(markup.includes('Chat is not ready yet'))
+  })
+
+  test('saving a credential contacts nobody', async () => {
+    // Reachability stays unknown because opening a settings page must not
+    // spend a request. A product that probed on render would bill somebody for
+    // looking.
+    const { store } = await loaded({ credentialConfigured: true })
+    const chat = chatReadiness(store.getSnapshot())
+    assert.equal(chat.blockers.includes('credential_rejected'), false)
+    assert.equal(screen(store).includes('Credential saved · not yet assigned'), true)
+    assert.equal(screen(store).includes('Run provider test'), false)
+  })
+})
+
+describe('nothing is selected on somebody’s behalf', () => {
+  test('a fresh profile has no role bound, whatever is configured', async () => {
+    const { store } = await loaded({ credentialConfigured: true })
+    for (const row of store.getSnapshot().roles) {
+      assert.equal(row.provider, null, `${row.role} was bound without being chosen`)
+      assert.equal(row.model, null)
+    }
+  })
+
+  test('one configured provider does not become the choice', async () => {
+    // The tempting shortcut, and the one that produces a product which spends
+    // money on a model nobody picked.
+    const { store } = await loaded({ credentialConfigured: true })
+    assert.equal(store.getSnapshot().providers.length, 1)
+    assert.equal(chatReadiness(store.getSnapshot()).status, 'unbound')
+  })
+
+  test('binding one role leaves the others unbound', async () => {
+    const { store } = await loaded({ credentialConfigured: true, bindings: BOUND })
+    const rows = store.getSnapshot().roles
+    const chat = rows.find(row => row.role === 'agent_model')
+    assert.equal(chat.model, 'openai/gpt-4o-mini')
+    for (const row of rows.filter(entry => entry.role !== 'agent_model')) {
+      assert.equal(row.model, null, `${row.role} inherited a binding`)
+    }
+  })
+})
+
+describe('binding and a successful provider test make Chat runnable', () => {
+  test('a bound, credentialled, served route is still not tested', async () => {
+    const { store } = await loaded({ credentialConfigured: true, bindings: BOUND })
+    assert.equal(isExecutable(chatReadiness(store.getSnapshot())), false)
+    assert.equal(chatReadiness(store.getSnapshot()).status, 'bound_unverified')
+    assert.ok(screen(store).includes('Run provider test'))
+  })
+
+  test('a successful stub provider request makes the exact binding executable', async () => {
+    const calls = []
+    const tester = async (provider, model) => {
+      calls.push({ provider, model })
+      return {
+        provider, model, ok: true, credential: 'verified', reachability: 'reachable',
+        message: 'Provider request succeeded. This exact binding is ready.',
+      }
+    }
+    const { store } = await loaded(
+      { credentialConfigured: true, bindings: BOUND }, tester)
+    await store.testRole('agent_model')
+    assert.deepEqual(calls, [{ provider: 'openrouter', model: 'openai/gpt-4o-mini' }])
+    assert.equal(isExecutable(chatReadiness(store.getSnapshot())), true)
+    assert.ok(screen(store).includes('Chat can run.'))
+  })
+
+  test('a rejected provider test stays blocked and names the credential', async () => {
+    const tester = async (provider, model) => ({
+      provider, model, ok: false, credential: 'rejected', reachability: 'unauthorized',
+      message: 'The provider rejected the saved credential.',
+    })
+    const { store } = await loaded(
+      { credentialConfigured: true, bindings: BOUND }, tester)
+    await store.testRole('agent_model')
+    assert.equal(chatReadiness(store.getSnapshot()).primaryBlocker, 'credential_rejected')
+    assert.equal(isExecutable(chatReadiness(store.getSnapshot())), false)
+  })
+
+  test('a provider test can be cancelled and remains explicitly untested', async () => {
+    const tester = (_provider, _model, signal) => new Promise((_resolve, reject) => {
+      signal.addEventListener('abort', () => { reject(new Error('cancelled')) }, { once: true })
+    })
+    const { store } = await loaded(
+      { credentialConfigured: true, bindings: BOUND }, tester)
+    const pending = store.testRole('agent_model')
+    await Promise.resolve()
+    assert.ok(screen(store).includes('Cancel provider test'))
+    store.cancelProviderTest()
+    await pending
+    assert.equal(chatReadiness(store.getSnapshot()).primaryBlocker, 'provider_untested')
+    assert.match(store.getSnapshot().testMessage, /cancelled.*not tested/i)
+    assert.ok(screen(store).includes('Run provider test'))
+  })
+
+  test('the same binding without a credential is blocked, not ready', async () => {
+    const { store } = await loaded({ credentialConfigured: false, bindings: BOUND })
+    const chat = chatReadiness(store.getSnapshot())
+    assert.equal(isExecutable(chat), false)
+    assert.equal(chat.primaryBlocker, 'credential_absent')
+  })
+
+  test('the same binding on a route no adapter serves is blocked', async () => {
+    const { store } = await loaded({ credentialConfigured: true, bindings: BOUND, active: false })
+    const chat = chatReadiness(store.getSnapshot())
+    assert.equal(isExecutable(chat), false)
+    assert.equal(chat.primaryBlocker, 'provider_unknown')
+  })
+
+  test('a model the provider stopped offering is unavailable, not ready', async () => {
+    const { store } = await loaded({
+      credentialConfigured: true,
+      bindings: BOUND,
+      models: [{ id: 'openai/gpt-4o', name: 'GPT-4o' }],
+    })
+    const chat = chatReadiness(store.getSnapshot())
+    assert.equal(isExecutable(chat), false)
+    assert.equal(chat.primaryBlocker, 'model_unavailable')
+  })
+
+  test('an unreadable credential store is a fault to report, not an empty slot', async () => {
+    // Telling somebody to add a credential they already added is how a person
+    // ends up entering a key three times.
+    const { store } = await loaded({
+      credentialConfigured: true, credentialReadable: false, bindings: BOUND,
+    })
+    assert.equal(store.getSnapshot().providers[0].credential, 'inaccessible')
+    assert.equal(chatReadiness(store.getSnapshot()).primaryBlocker, 'credential_inaccessible')
+  })
+})
+
+describe('the decision is persisted, and persisted as a reference', () => {
+  test('binding writes the whole document to the Watch namespace', async () => {
+    const { store, stub } = await loaded({ credentialConfigured: true })
+    await store.bind('agent_model', 'openrouter', 'openai/gpt-4o-mini')
+    // Two writes, and both are the point: the decision, and the Harness
+    // selection that decision has to move. This one is about the decision.
+    const written = stub.calls.replace.find(call => call.ns === 'watch-bindings')
+    assert.ok(written, 'the binding was not recorded')
+    assert.equal(written.section.roles.agent_model.provider, 'openrouter')
+    assert.equal(written.section.roles.agent_model.model, 'openai/gpt-4o-mini')
+  })
+
+  test('what is written is a reference the Host resolves, never a value', async () => {
+    const { store, stub } = await loaded({ credentialConfigured: true })
+    await store.bind('agent_model', 'openrouter', 'openai/gpt-4o-mini')
+    const record = stub.calls.replace
+      .find(call => call.ns === 'watch-bindings').section.roles.agent_model
+    assert.equal(record.credentialRef, 'OPENROUTER_API_KEY')
+    assert.deepEqual(Object.keys(record).sort(),
+      ['boundAt', 'boundBy', 'credentialRef', 'model', 'provider'])
+  })
+
+  test('the record says what kind of actor wrote it, and never which one', async () => {
+    // A binding decides where a person's credential is sent, so a record that
+    // cannot say whether a person decided cannot be audited. What it must not
+    // become is a personal identifier: this document is exported, rides the
+    // settings RPC and appears in Diagnostics.
+    const { store, stub } = await loaded({ credentialConfigured: true })
+    await store.bind('agent_model', 'openrouter', 'openai/gpt-4o-mini')
+    const record = stub.calls.replace
+      .find(call => call.ns === 'watch-bindings').section.roles.agent_model
+    assert.equal(record.boundBy, 'person',
+      'a binding made in Role Bindings was not attributed to a person')
+    assert.ok(['person', 'setup', 'unknown'].includes(record.boundBy),
+      'the actor is an identity rather than a kind')
+  })
+
+  test('the write carries the revision it was read at', async () => {
+    // A stale editor is refused rather than silently overwriting somebody
+    // else's change.
+    const { store, stub } = await loaded({ credentialConfigured: true, bindings: BOUND })
+    await store.bind('visual_perception', 'openrouter', 'openai/gpt-4o-mini')
+    assert.equal(
+      stub.calls.replace.find(call => call.ns === 'watch-bindings').expectedRevision, 7)
+  })
+
+  test('unbinding removes the role rather than emptying its fields', async () => {
+    const { store, stub } = await loaded({ credentialConfigured: true, bindings: BOUND })
+    await store.unbind('agent_model')
+    assert.deepEqual(
+      stub.calls.replace.find(call => call.ns === 'watch-bindings').section.roles, {})
+  })
+
+  test('a refused write leaves the previous binding standing', async () => {
+    const { store } = await loaded({
+      credentialConfigured: true,
+      bindings: BOUND,
+      onReplace: () => failed('the settings document changed under you'),
+    })
+    await store.bind('agent_model', 'openrouter', 'openai/gpt-4o-mini')
+    const snapshot = store.getSnapshot()
+    assert.equal(snapshot.error, 'the settings document changed under you')
+    assert.equal(snapshot.roles.find(row => row.role === 'agent_model').model, 'openai/gpt-4o-mini')
+  })
+})
+
+describe('status is words, and colour is decoration on top of them', () => {
+  test('every role state names itself in text', async () => {
+    const { store } = await loaded({ credentialConfigured: true })
+    const markup = screen(store)
+    // "Not configured" is the accessible label for `unbound`. A chip with no
+    // text beside it is a status a screen reader does not have.
+    assert.ok(markup.includes('Not configured'))
+    assert.ok(markup.includes('Nothing assigned'))
+  })
+
+  test('a blocked role says what to do, not that it is blocked', async () => {
+    const { store } = await loaded({ credentialConfigured: false, bindings: BOUND })
+    const markup = screen(store)
+    assert.ok(markup.includes('Add a credential for this provider.'),
+      'the blocked state does not name the next step')
+  })
+
+  test('the controls are labelled and reachable', async () => {
+    const { store } = await loaded({ credentialConfigured: true })
+    const markup = screen(store)
+    assert.ok(markup.includes('<button'), 'there is no control on the screen at all')
+    assert.ok(/aria-live="polite"/.test(markup), 'a save changes nothing a reader is told about')
+  })
+
+  test('nothing on the screen is only a coloured dot', async () => {
+    const { store } = await loaded({ credentialConfigured: true, bindings: BOUND })
+    const markup = screen(store)
+    // Every chip in this panel renders its own text. An empty one would be a
+    // status carried by border colour alone.
+    assert.equal(/<span[^>]*border[^>]*><\/span>/.test(markup), false)
+  })
+})
+
+describe('the screen never shows what a person did not configure', () => {
+  test('no DeepSeek route appears when none is configured', async () => {
+    const { store } = await loaded({ credentialConfigured: true })
+    const markup = screen(store)
+    assert.equal(markup.includes('deepseek-official'), false)
+    assert.equal(markup.includes('DeepSeek-V4-Flash'), false)
+  })
+
+  test('no credential reference is rendered as a value', async () => {
+    const { store } = await loaded({ credentialConfigured: true, bindings: BOUND })
+    const markup = screen(store)
+    for (const shape of [/\bsk-[A-Za-z0-9]{8,}/, /\bBearer\s+\S{8,}/]) {
+      assert.equal(shape.test(markup), false, `the screen renders ${String(shape)}`)
+    }
+  })
+
+  test('no absolute host path reaches the screen', async () => {
+    const { store } = await loaded({ credentialConfigured: true, bindings: BOUND })
+    const markup = screen(store)
+    assert.doesNotMatch(markup, /[A-Za-z]:\\\\/)
+    assert.doesNotMatch(markup, /\/(?:home|Users|var|tmp)\//)
+  })
+})
+
+describe('the pieces the store is assembled from', () => {
+  test('a credential reference is read out of the provider’s own section', () => {
+    const view = { ns: 'llm-pi-ai', value: { profiles: { openrouter: { apiKeyEnv: 'X_KEY' } } }, revision: 1 }
+    assert.equal(credentialRefOf(view, ['profiles', 'openrouter']), 'X_KEY')
+    assert.equal(credentialRefOf(view, ['profiles', 'absent']), null)
+    assert.equal(credentialRefOf(undefined, []), null)
+  })
+
+  test('a stored credential is configured_unverified and nothing more', () => {
+    assert.equal(credentialStatusOf('X_KEY', { X_KEY: { configured: true, writable: true } }, true),
+      'configured_unverified')
+    assert.equal(credentialStatusOf('X_KEY', {}, true), 'absent')
+    assert.equal(credentialStatusOf(null, {}, true), 'absent')
+    assert.equal(credentialStatusOf('X_KEY', {}, false), 'inaccessible')
+  })
+
+  test('readiness is derived through the one gate, never assembled', () => {
+    // A row built by hand still has to come back through `roleReadiness`, so a
+    // surface cannot construct "ready" from parts it liked the look of.
+    const providers = [{
+      provider: 'openrouter',
+      displayName: 'OpenRouter',
+      active: true,
+      credentialRef: 'OPENROUTER_API_KEY',
+      credential: 'configured_unverified',
+      models: [{ id: 'm', name: 'M' }],
+      catalogError: null,
+    }]
+    const unbound = roleRowOf('agent_model', EMPTY_BINDINGS, providers)
+    assert.equal(unbound.readiness.status, 'unbound')
+
+    const bound = roleRowOf('agent_model', withBinding(EMPTY_BINDINGS, 'agent_model', {
+      provider: 'openrouter', model: 'm', credentialRef: 'OPENROUTER_API_KEY', boundAt: '',
+    }), providers)
+    assert.equal(bound.readiness.status, 'bound_unverified')
+
+    const binding = withBinding(EMPTY_BINDINGS, 'agent_model', {
+      provider: 'openrouter', model: 'm', credentialRef: 'OPENROUTER_API_KEY', boundAt: '',
+    })
+    const pass = {
+      provider: 'openrouter', model: 'm', ok: true,
+      credential: 'verified', reachability: 'reachable', message: 'ok',
+    }
+    const tested = roleRowOf('agent_model', binding, providers, new Map([
+      [providerTestKey('openrouter', 'm', 'OPENROUTER_API_KEY'), pass],
+    ]))
+    assert.equal(tested.readiness.status, 'executable')
+
+    // The same route, served through a different credential, is a route
+    // nobody has tested. Inheriting the verdict here would be the green dot
+    // again, one indirection further out.
+    const rotated = roleRowOf('agent_model', binding, [
+      { ...providers[0], credentialRef: 'OPENROUTER_API_KEY_2' },
+    ], new Map([[providerTestKey('openrouter', 'm', 'OPENROUTER_API_KEY'), pass]]))
+    assert.equal(rotated.readiness.status, 'bound_unverified')
+  })
+})
+
+describe('binding Chat points the runtime at it, not only the record', () => {
+  test('the Harness default selection is written with the binding', async () => {
+    // The defect this pins cost a real session. Everything DeepWatch showed
+    // agreed the binding existed -- and it did, in DeepWatch's document. But
+    // a prompt is routed by the Harness's model selection, which this
+    // distribution empties so nothing is chosen for anybody, and binding Chat
+    // was not filling it in. Two records of one decision, and the one the
+    // runtime reads was the one nobody wrote.
+    const { store, stub } = await loaded({ credentialConfigured: true })
+    await store.bind('agent_model', 'openrouter', 'openai/gpt-4o-mini')
+
+    const wrote = stub.calls.replace.map(call => call.ns)
+    assert.ok(wrote.includes('watch-bindings'), 'the binding was not recorded')
+    assert.ok(wrote.includes(DEFAULT_MODEL_NAMESPACE), 'the runtime was never pointed at it')
+
+    const selection = stub.calls.replace.filter(call => call.ns === DEFAULT_MODEL_NAMESPACE).pop()
+    assert.deepEqual(selection.section, { provider: 'openrouter', model: 'openai/gpt-4o-mini' })
+  })
+
+  test('the record is written first, so a default never outruns it', async () => {
+    const { store, stub } = await loaded({ credentialConfigured: true })
+    await store.bind('agent_model', 'openrouter', 'openai/gpt-4o-mini')
+    const order = stub.calls.replace.map(call => call.ns)
+    assert.ok(
+      order.indexOf('watch-bindings') < order.lastIndexOf(DEFAULT_MODEL_NAMESPACE),
+      'the runtime was pointed at a binding that had not been saved')
+  })
+
+  test('unbinding Chat empties the selection rather than leaving it', async () => {
+    // A default left pointing at an unbound route is the original defect in
+    // reverse: a route nobody has authorised, selected for them.
+    const { store, stub } = await loaded({ credentialConfigured: true, bindings: BOUND })
+    await store.unbind('agent_model')
+    const selection = stub.calls.replace.filter(call => call.ns === DEFAULT_MODEL_NAMESPACE).pop()
+    assert.deepEqual(selection.section, { provider: '', model: '' })
+  })
+
+  test('binding another role leaves the conversation selection alone', async () => {
+    // The other roles are DeepWatch's own concepts with no upstream selection
+    // to keep in step; writing one would point the conversation at a model
+    // chosen for something else.
+    const { store, stub } = await loaded({ credentialConfigured: true, bindings: BOUND })
+    await store.bind('visual_perception', 'openrouter', 'openai/gpt-4o')
+    const selection = stub.calls.replace.filter(call => call.ns === DEFAULT_MODEL_NAMESPACE).pop()
+    assert.deepEqual(selection.section, { provider: 'openrouter', model: 'openai/gpt-4o-mini' },
+      'a vision binding changed what Chat routes with')
+  })
+
+  test('a profile bound by an earlier build is repaired by being looked at', async () => {
+    // The binding is the authority and the selection is a projection of it, so
+    // a profile whose record says one thing and whose runtime says nothing is
+    // fixed on load rather than waiting for somebody to press the button
+    // again. This is the exact state the reported failure was in.
+    const { store, stub } = await loaded({ credentialConfigured: true, bindings: BOUND })
+    const selection = stub.calls.replace.find(call => call.ns === DEFAULT_MODEL_NAMESPACE)
+    assert.ok(selection, 'a stale profile was left disagreeing with itself')
+    assert.deepEqual(selection.section, { provider: 'openrouter', model: 'openai/gpt-4o-mini' })
+  })
+
+  test('a profile that already agrees is not rewritten', async () => {
+    // Reconciling on every read would bump the revision each time, and every
+    // other open editor would start failing its `expectedRevision`.
+    const { stub } = await loaded({
+      credentialConfigured: true,
+      bindings: BOUND,
+      defaultSelection: { provider: 'openrouter', model: 'openai/gpt-4o-mini' },
+    })
+    assert.equal(
+      stub.calls.replace.filter(call => call.ns === DEFAULT_MODEL_NAMESPACE).length, 0)
+  })
+
+  test('the namespace is the one the pinned baseline composes', () => {
+    const base = readFileSync(
+      join(ROOT, 'upstream', 'deepseek-harness', 'packages', 'bundle', 'base', 'cordis.patch.yml'),
+      'utf8')
+    assert.match(base, new RegExp(`- id: ${DEFAULT_MODEL_NAMESPACE}$`, 'm'))
+  })
+})
+
+/**
+ * The Chat row of the readiness list, alone.
+ *
+ * Scoped because the list is twelve rows and several of them legitimately say
+ * "Ready" (Watch Core does) or "Not configured" (every unbound role does). An
+ * assertion over the whole markup would pass or fail for the wrong row.
+ */
+function chatRow(markup) {
+  const start = markup.indexOf('>Chat<')
+  const end = markup.indexOf('>Visual perception<')
+  assert.ok(start >= 0, 'the readiness list has no Chat row')
+  return markup.slice(start, end < 0 ? undefined : end)
+}
+
+describe('every surface that reports readiness reports the same readiness', () => {
+  test('Diagnostics says Ready for a role Role Bindings calls Ready', async () => {
+    // These disagreed in the running product: Role Bindings showed Chat bound
+    // and ready while Diagnostics still read "Agent Model -- Not configured",
+    // because one screen asked the store and the other read a table written
+    // before the store existed. Two answers to one question is the defect this
+    // whole subsystem was built to remove, and it had grown a new instance.
+    const { store } = await loaded(
+      { credentialConfigured: true, bindings: BOUND }, async (provider, model) => ({
+        provider, model, ok: true, credential: 'verified', reachability: 'reachable',
+        message: 'Provider request succeeded. This exact binding is ready.',
+      }))
+    await store.testRole('agent_model')
+    const roles = store.getSnapshot().roles
+    const diagnostics = renderToStaticMarkup(createElement(ReadinessList, { roles }))
+    assert.match(chatRow(diagnostics), />Ready</,
+      'Diagnostics does not report the binding')
+    assert.doesNotMatch(chatRow(diagnostics), />Not configured</,
+      'Diagnostics still calls a bound role unconfigured')
+  })
+
+  test('an unbound role reads as unconfigured on both', async () => {
+    const { store } = await loaded({ credentialConfigured: true })
+    const roles = store.getSnapshot().roles
+    const diagnostics = renderToStaticMarkup(createElement(ReadinessList, { roles }))
+    assert.match(chatRow(diagnostics), />Not configured</)
+    assert.doesNotMatch(chatRow(diagnostics), />Ready</)
+  })
+
+  test('a blocked role names its next step rather than its static description', async () => {
+    const { store } = await loaded({ credentialConfigured: false, bindings: BOUND })
+    const roles = store.getSnapshot().roles
+    const diagnostics = renderToStaticMarkup(createElement(ReadinessList, { roles }))
+    assert.ok(diagnostics.includes('Add a credential for this provider.'))
+  })
+
+  test('without a store the written text stands', async () => {
+    // A surface with no store is not a surface with a broken store; it shows
+    // what the table says, which is what it did before any of this existed.
+    const diagnostics = renderToStaticMarkup(createElement(ReadinessList, {}))
+    assert.ok(diagnostics.includes('Watch Core'))
+    assert.ok(diagnostics.includes('Not configured'))
+  })
+})
+
+describe('the Host is what the screen believes about a tested route', () => {
+  /** A store loaded with a readiness reader, which is what a real one has. */
+  async function loadedWithHost(options, verdict, providerTester) {
+    const stub = host(options)
+    const asked = []
+    const store = new BindingStore(stub.api, providerTester, async (provider, model) => {
+      asked.push(`${provider} ${model}`)
+      return verdict
+    })
+    await store.load()
+    return { store, stub, asked }
+  }
+
+  const PROVED = { proved: true, reason: 'proved' }
+  const MOVED = { proved: false, reason: 'configuration_changed' }
+
+  test('a reloaded tab that ran no test shows the proof the Host still holds', async () => {
+    // The tab has no memory of a provider test — a reload, or a second window.
+    // The Host does, and it is the one that would serve the request.
+    const { store, asked } = await loadedWithHost(
+      { credentialConfigured: true, bindings: BOUND }, PROVED)
+    assert.deepEqual(asked, ['openrouter openai/gpt-4o-mini'])
+    assert.equal(isExecutable(chatReadiness(store.getSnapshot())), true,
+      `the screen ignored a proof the Host was still holding: ${
+        JSON.stringify(chatReadiness(store.getSnapshot()))}`)
+  })
+
+  test('a route the Host no longer proves stops reading as tested', async () => {
+    // The dangerous direction: this tab ran the test itself, and the Host has
+    // since stopped being willing to serve the route.
+    const tester = async (provider, model) => ({
+      provider, model, ok: true, credential: 'verified', reachability: 'reachable',
+      message: 'Provider request succeeded. This exact binding is ready.',
+    })
+    const stub = host({ credentialConfigured: true, bindings: BOUND })
+    let verdict = PROVED
+    const store = new BindingStore(stub.api, tester, async () => verdict)
+    await store.load()
+    await store.testRole('agent_model')
+    assert.equal(isExecutable(chatReadiness(store.getSnapshot())), true)
+
+    verdict = MOVED
+    await store.load()
+    assert.equal(chatReadiness(store.getSnapshot()).status, 'bound_unverified',
+      'the screen kept a tested badge over a route the Host would refuse')
+  })
+
+  test('a Host that cannot answer leaves the screen as it was', async () => {
+    // A read that failed says nothing about the route. Inventing either answer
+    // is the defect; the tab keeps what it has and the badge stays honest.
+    const stub = host({ credentialConfigured: true, bindings: BOUND })
+    const store = new BindingStore(stub.api, undefined, async () => {
+      throw new Error('remote unavailable')
+    })
+    await store.load()
+    assert.equal(chatReadiness(store.getSnapshot()).status, 'bound_unverified')
+  })
+
+  test('nothing is asked about a role nobody bound', async () => {
+    const { asked } = await loadedWithHost({ credentialConfigured: true }, PROVED)
+    assert.deepEqual(asked, [])
+  })
+})

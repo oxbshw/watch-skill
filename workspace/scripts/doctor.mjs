@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Is this machine able to build and run Watch Workspace?
+ * Is this machine able to build and run DeepWatch?
  *
  * The rule this follows, and the reason it is short: it checks what the
  * repository actually needs, and reports everything else as optional with the
@@ -23,6 +23,7 @@ import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { nodeSatisfies, nodeBelowTestedFloorOnly } from './lib/node-range.mjs'
+import { classifyPnpm, pinnedPnpmVersion } from './lib/package-manager.mjs'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const JSON_OUT = process.argv.includes('--json')
@@ -64,15 +65,13 @@ if (declaredNode === '') {
 }
 
 const pnpm = probe('pnpm', ['--version'])
-const wantPnpm = (manifest.packageManager ?? '').replace('pnpm@', '')
+const wantPnpm = pinnedPnpmVersion(manifest.packageManager)
 if (pnpm === null) {
   add('fail', 'pnpm', 'not on PATH',
     `Install pnpm ${wantPnpm || '10'}: corepack enable, or npm i -g pnpm`)
-} else if (wantPnpm !== '' && pnpm.split('.')[0] !== wantPnpm.split('.')[0]) {
-  add('warn', 'pnpm', `${pnpm}, and packageManager pins ${wantPnpm}`,
-    'corepack enable will use the pinned version')
 } else {
-  add('ok', 'pnpm', pnpm)
+  const verdict = classifyPnpm(manifest.packageManager, pnpm)
+  add(verdict.level, 'pnpm', verdict.detail, verdict.fix === '' ? null : verdict.fix)
 }
 
 const git = probe('git', ['--version'])
@@ -101,7 +100,7 @@ if (existsSync(join(ROOT, 'node_modules'))) {
 
 const optional = [
   ['watch-skill', ['--version'], 'Watch Core',
-    'pip install watch-skill. Without it the Bridge runs on its mock backend and every capability reports not_tested.'],
+    'Install the candidate Watch Skill wheel. Without it the real Bridge is unavailable; auto never falls back to mock.'],
   ['python', ['--version'], 'OCR and ASR engines',
     'Only needed if you enable a local perception engine.'],
   ['ffmpeg', ['-version'], 'video and audio sources',

@@ -15,14 +15,15 @@
  * - a consequential action requires an approval reference, and the Bridge
  *   refuses without one before the page is touched.
  *
- * @module @watchskill/dsh-tools/browser
+ * @module @deepwatch/dsh-tools/browser
  */
 
 import { createHash, randomUUID } from 'node:crypto'
 import type { Context } from '@deepseek-ai/cordis'
 import { defineTool } from '@deepseek-ai/dsh-tools'
 import type { GenericCallView, JsonValue } from '@deepseek-ai/dsh-tools'
-import type {} from '@watchskill/dsh-core-bridge'
+import type {} from '@deepseek-ai/dsh-user-approval'
+import type {} from '@deepwatch/dsh-core-bridge'
 
 /** Deployment policy for the browser tools. */
 export interface BrowserConfig {
@@ -148,8 +149,9 @@ export function applyBrowserTools(ctx: Context, config: BrowserConfig): void {
     description:
       'Perform one action on a live browser page and return its receipt. State what should be '
       + 'true afterwards in `expect` — an action with no expectation returns `unverified`, which '
-      + 'is not a success. Anything that could change server state needs an approval_id and is '
-      + 'refused without one. The receipt records what was observed before, how the target was '
+      + 'is not a success. Anything that could change server state is routed through the Host’s '
+      + 'approval service and refused unless the person allows this exact call once. The receipt '
+      + 'records what was observed before, how the target was '
       + 'resolved and from which candidates, what was dispatched, what was observed after, and '
       + 'the verdict. Report that verdict as it is.',
     parameters: {
@@ -191,12 +193,6 @@ export function applyBrowserTools(ctx: Context, config: BrowserConfig): void {
       expect_no_console_errors: {
         type: 'boolean',
         description: 'Require that the action produced no console errors.',
-      },
-      approval_id: {
-        type: 'string',
-        description:
-          'The approval the person granted for this action. Required for anything that could '
-          + 'change server state, which includes most clicks.',
       },
     },
     output: {
@@ -242,18 +238,59 @@ export function applyBrowserTools(ctx: Context, config: BrowserConfig): void {
       // by accident across two different actions, and the whole guarantee
       // rests on one key meaning exactly one attempt.
       const operationId = `op_${randomUUID()}`
+      const inputDigest = digestOf({ session: args.session_id, action })
+      const consequential = new Set(['click', 'double_click', 'press'])
+        .has(args.kind)
+      let approvalId: string | undefined
+      if (consequential) {
+        const approval = ctx.get('approval')
+        if (approval === undefined || exec.agent === undefined) {
+          return asJson({
+            ok: false,
+            error: 'approval.unavailable',
+            message: 'This browser action requires approval, but no auditable approval channel is available.',
+            fix: 'Run it in an interactive session with the Host approval service enabled.',
+            retryable: false,
+            idempotencyKey: operationId,
+          })
+        }
+        const outcome = await approval.request({
+          agent: exec.agent,
+          toolName: 'watch_browser_act',
+          callId: exec.callId,
+          reason: `Allow one browser ${args.kind} for “${args.intent}”.`,
+          ...exec.signal === undefined ? {} : { signal: exec.signal },
+        })
+        if (outcome !== 'allowed-once') {
+          return asJson({
+            ok: false,
+            error: outcome === 'rejected' ? 'approval.rejected' : `approval.${outcome}`,
+            message: outcome === 'rejected'
+              ? 'The person rejected this browser action.'
+              : 'This browser action did not receive approval.',
+            fix: 'Do not dispatch the action. Ask again only if the person changes the request.',
+            retryable: false,
+            idempotencyKey: operationId,
+          })
+        }
+        // The service audit is the authority.  This opaque reference is minted
+        // only after that one-shot grant and is never accepted from model
+        // arguments; the Bridge uses its presence as proof that the Host gate
+        // ran before page touch.
+        approvalId = `apr_${randomUUID()}`
+      }
       const result = await ctx.watchCore.command(
         'watch.browser.act',
         {
           sessionId: args.session_id,
           action,
-          ...args.approval_id === undefined ? {} : { approvalId: args.approval_id },
+          ...approvalId === undefined ? {} : { approvalId },
         },
         {
           operationId,
           idempotencyKey: operationId,
-          inputDigest: digestOf({ session: args.session_id, action }),
-          ...args.approval_id === undefined ? {} : { approvalId: args.approval_id },
+          inputDigest,
+          ...approvalId === undefined ? {} : { approvalId },
         },
         { deadlineMs: config.actTimeoutMs, ...abortOf(exec) },
       )

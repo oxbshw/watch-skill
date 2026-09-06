@@ -25,7 +25,7 @@
  * Keeping all of this as data means the composition is assertable: a test can
  * say "the sidebar still contains DSH's jobs row" without rendering anything.
  *
- * @module @watchskill/dsh-workspace/shell
+ * @module @deepwatch/dsh-workspace/shell
  */
 
 import type {
@@ -34,7 +34,7 @@ import type {
   PolicySummary,
   Verdict,
   WatchCoreHealth,
-} from '@watchskill/dsh-contracts'
+} from '@deepwatch/dsh-contracts'
 import type { WorkspaceMode } from './modes.js'
 
 // ── sidebar ─────────────────────────────────────────────────────────────────

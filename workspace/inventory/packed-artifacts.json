@@ -1,0 +1,903 @@
+{
+  "generatedBy": "scripts/pack-release.mjs",
+  "note": "Source-derived expectations for a release pack. Per-run facts -- the digest, the size, the commit, the directory -- belong to the inventory written beside the tarballs, never here.",
+  "counts": {
+    "packages": 20,
+    "files": 414
+  },
+  "publishOrder": [
+    "@deepwatch/dsh-client-brand",
+    "@deepwatch/dsh-contracts",
+    "@deepwatch/dsh-trajectory",
+    "@deepwatch/dsh-workspace",
+    "@deepwatch/dsh-client-evidence",
+    "@deepwatch/dsh-memory",
+    "@deepwatch/dsh-client-memory",
+    "@deepwatch/dsh-technology",
+    "@deepwatch/dsh-library",
+    "@deepwatch/dsh-core-bridge",
+    "@deepwatch/dsh-tools",
+    "@deepwatch/dsh-client-remotes",
+    "@deepwatch/dsh-client-settings",
+    "@deepwatch/dsh-live",
+    "@deepwatch/dsh-bundle",
+    "@deepwatch/cli",
+    "@deepwatch/dsh-wiki",
+    "@deepwatch/dsh-adapters",
+    "@deepwatch/dsh-sdk",
+    "@deepwatch/dsh-tenancy"
+  ],
+  "packages": [
+    {
+      "name": "@deepwatch/cli",
+      "version": "0.1.0",
+      "access": "public",
+      "fileCount": 35,
+      "dependencies": {
+        "@deepwatch/dsh-bundle": "^0.1.0"
+      },
+      "peerDependencies": {
+        "@deepseek-ai/dsh": "0.1.1-rc.2"
+      },
+      "exports": [
+        ".",
+        "./package.json"
+      ],
+      "bin": [
+        "deepwatch"
+      ],
+      "files": [
+        "LICENSE",
+        "README.md",
+        "lib/args.d.ts",
+        "lib/args.js",
+        "lib/bin.d.ts",
+        "lib/bin.js",
+        "lib/doctor.d.ts",
+        "lib/doctor.js",
+        "lib/generated/managed-runtime.d.ts",
+        "lib/generated/managed-runtime.js",
+        "lib/index.d.ts",
+        "lib/index.js",
+        "lib/launch.d.ts",
+        "lib/launch.js",
+        "lib/lib/bundle.d.ts",
+        "lib/lib/bundle.js",
+        "lib/lib/compose.d.ts",
+        "lib/lib/compose.js",
+        "lib/lib/exec.d.ts",
+        "lib/lib/exec.js",
+        "lib/lib/harness.d.ts",
+        "lib/lib/harness.js",
+        "lib/lib/install.d.ts",
+        "lib/lib/install.js",
+        "lib/lib/paths.d.ts",
+        "lib/lib/paths.js",
+        "lib/lib/provision.d.ts",
+        "lib/lib/provision.js",
+        "lib/provenance.d.ts",
+        "lib/provenance.js",
+        "lib/setup.d.ts",
+        "lib/setup.js",
+        "lib/version.d.ts",
+        "lib/version.js",
+        "package.json"
+      ]
+    },
+    {
+      "name": "@deepwatch/dsh-adapters",
+      "version": "0.1.0",
+      "access": "public",
+      "fileCount": 9,
+      "dependencies": {
+        "@deepwatch/dsh-memory": "^0.1.0",
+        "@deepwatch/dsh-wiki": "^0.1.0"
+      },
+      "peerDependencies": {},
+      "exports": [
+        ".",
+        "./package.json"
+      ],
+      "bin": [],
+      "files": [
+        "LICENSE",
+        "README.md",
+        "lib/index.d.ts",
+        "lib/index.js",
+        "lib/llmwiki.d.ts",
+        "lib/llmwiki.js",
+        "lib/obsidian.d.ts",
+        "lib/obsidian.js",
+        "package.json"
+      ]
+    },
+    {
+      "name": "@deepwatch/dsh-bundle",
+      "version": "0.1.0",
+      "access": "public",
+      "fileCount": 8,
+      "dependencies": {
+        "@deepwatch/dsh-client-brand": "^0.1.0",
+        "@deepwatch/dsh-client-evidence": "^0.1.0",
+        "@deepwatch/dsh-client-memory": "^0.1.0",
+        "@deepwatch/dsh-client-remotes": "^0.1.0",
+        "@deepwatch/dsh-client-settings": "^0.1.0",
+        "@deepwatch/dsh-core-bridge": "^0.1.0",
+        "@deepwatch/dsh-library": "^0.1.0",
+        "@deepwatch/dsh-live": "^0.1.0",
+        "@deepwatch/dsh-memory": "^0.1.0",
+        "@deepwatch/dsh-technology": "^0.1.0",
+        "@deepwatch/dsh-tools": "^0.1.0",
+        "@deepwatch/dsh-trajectory": "^0.1.0",
+        "@deepwatch/dsh-workspace": "^0.1.0"
+      },
+      "peerDependencies": {},
+      "exports": [],
+      "bin": [],
+      "files": [
+        "LICENSE",
+        "README.md",
+        "cordis.patch.yml",
+        "package.json",
+        "variants/browser.patch.yml",
+        "variants/document.patch.yml",
+        "variants/media.patch.yml",
+        "variants/memory.patch.yml"
+      ]
+    },
+    {
+      "name": "@deepwatch/dsh-client-brand",
+      "version": "0.1.0",
+      "access": "public",
+      "fileCount": 26,
+      "dependencies": {},
+      "peerDependencies": {
+        "@deepseek-ai/cordis": "4.0.2",
+        "react": "^18.2.0"
+      },
+      "exports": [
+        ".",
+        "./client",
+        "./package.json"
+      ],
+      "bin": [],
+      "files": [
+        "LICENSE",
+        "README.md",
+        "assets/watch-orca-128.png",
+        "assets/watch-orca-16.png",
+        "assets/watch-orca-256.png",
+        "assets/watch-orca-32.png",
+        "assets/watch-orca-48.png",
+        "assets/watch-orca-512.png",
+        "assets/watch-orca-64.png",
+        "assets/watch-orca-master.png",
+        "assets/watch-orca.ico",
+        "lib/client.js",
+        "lib/client.js.map",
+        "lib/client/index.d.ts",
+        "lib/client/index.js",
+        "lib/client/index.js.map",
+        "lib/identity.d.ts",
+        "lib/identity.js",
+        "lib/identity.js.map",
+        "lib/index.d.ts",
+        "lib/index.js",
+        "lib/index.js.map",
+        "lib/mark.d.ts",
+        "lib/mark.js",
+        "lib/mark.js.map",
+        "package.json"
+      ]
+    },
+    {
+      "name": "@deepwatch/dsh-client-evidence",
+      "version": "0.1.0",
+      "access": "public",
+      "fileCount": 35,
+      "dependencies": {
+        "@deepwatch/dsh-client-brand": "^0.1.0",
+        "@deepwatch/dsh-contracts": "^0.1.0",
+        "@deepwatch/dsh-trajectory": "^0.1.0",
+        "@deepwatch/dsh-workspace": "^0.1.0"
+      },
+      "peerDependencies": {
+        "@deepseek-ai/cordis": "4.0.2",
+        "react": "^18.2.0"
+      },
+      "exports": [
+        ".",
+        "./client",
+        "./compare",
+        "./compare-engine",
+        "./compare-mode",
+        "./package.json"
+      ],
+      "bin": [],
+      "files": [
+        "LICENSE",
+        "README.md",
+        "lib/client.js",
+        "lib/client.js.map",
+        "lib/client/CompareView.d.ts",
+        "lib/client/CompareView.js",
+        "lib/client/CompareView.js.map",
+        "lib/client/EvidenceInspector.d.ts",
+        "lib/client/EvidenceInspector.js",
+        "lib/client/EvidenceInspector.js.map",
+        "lib/client/SourceAnswerRow.d.ts",
+        "lib/client/SourceAnswerRow.js",
+        "lib/client/SourceAnswerRow.js.map",
+        "lib/client/VerdictRow.d.ts",
+        "lib/client/VerdictRow.js",
+        "lib/client/VerdictRow.js.map",
+        "lib/client/compare-mode.d.ts",
+        "lib/client/compare-mode.js",
+        "lib/client/compare-mode.js.map",
+        "lib/client/compare-registration.d.ts",
+        "lib/client/compare-registration.js",
+        "lib/client/compare-registration.js.map",
+        "lib/client/index.d.ts",
+        "lib/client/index.js",
+        "lib/client/index.js.map",
+        "lib/compare-engine.d.ts",
+        "lib/compare-engine.js",
+        "lib/compare-engine.js.map",
+        "lib/compare-source.d.ts",
+        "lib/compare-source.js",
+        "lib/compare-source.js.map",
+        "lib/index.d.ts",
+        "lib/index.js",
+        "lib/index.js.map",
+        "package.json"
+      ]
+    },
+    {
+      "name": "@deepwatch/dsh-client-memory",
+      "version": "0.1.0",
+      "access": "public",
+      "fileCount": 20,
+      "dependencies": {
+        "@deepwatch/dsh-client-brand": "^0.1.0",
+        "@deepwatch/dsh-memory": "^0.1.0"
+      },
+      "peerDependencies": {
+        "@deepseek-ai/cordis": "4.0.2",
+        "react": "^18.2.0"
+      },
+      "exports": [
+        ".",
+        "./client",
+        "./components",
+        "./memory-mode",
+        "./package.json"
+      ],
+      "bin": [],
+      "files": [
+        "LICENSE",
+        "README.md",
+        "lib/client.js",
+        "lib/client.js.map",
+        "lib/client/components.d.ts",
+        "lib/client/components.js",
+        "lib/client/components.js.map",
+        "lib/client/index.d.ts",
+        "lib/client/index.js",
+        "lib/client/index.js.map",
+        "lib/client/memory-mode.d.ts",
+        "lib/client/memory-mode.js",
+        "lib/client/memory-mode.js.map",
+        "lib/index.d.ts",
+        "lib/index.js",
+        "lib/index.js.map",
+        "lib/views.d.ts",
+        "lib/views.js",
+        "lib/views.js.map",
+        "package.json"
+      ]
+    },
+    {
+      "name": "@deepwatch/dsh-client-remotes",
+      "version": "0.1.0",
+      "access": "public",
+      "fileCount": 11,
+      "dependencies": {
+        "@deepwatch/dsh-library": "^0.1.0",
+        "@deepwatch/dsh-tools": "^0.1.0"
+      },
+      "peerDependencies": {
+        "@deepseek-ai/cordis": "4.0.2"
+      },
+      "exports": [
+        ".",
+        "./client",
+        "./package.json"
+      ],
+      "bin": [],
+      "files": [
+        "LICENSE",
+        "README.md",
+        "lib/client.js",
+        "lib/client.js.map",
+        "lib/client/index.d.ts",
+        "lib/client/index.js",
+        "lib/client/index.js.map",
+        "lib/index.d.ts",
+        "lib/index.js",
+        "lib/index.js.map",
+        "package.json"
+      ]
+    },
+    {
+      "name": "@deepwatch/dsh-client-settings",
+      "version": "0.1.0",
+      "access": "public",
+      "fileCount": 35,
+      "dependencies": {
+        "@deepwatch/dsh-client-brand": "^0.1.0",
+        "@deepwatch/dsh-contracts": "^0.1.0",
+        "@deepwatch/dsh-technology": "^0.1.0"
+      },
+      "peerDependencies": {
+        "@deepseek-ai/cordis": "4.0.2",
+        "@deepseek-ai/dsh-client-ui-primitives": "0.1.1-rc.2",
+        "react": "^18.2.0"
+      },
+      "exports": [
+        ".",
+        "./client",
+        "./components",
+        "./package.json"
+      ],
+      "bin": [],
+      "files": [
+        "LICENSE",
+        "README.md",
+        "lib/client.js",
+        "lib/client.js.map",
+        "lib/client/binding-state.d.ts",
+        "lib/client/binding-state.js",
+        "lib/client/binding-state.js.map",
+        "lib/client/chat-gate.d.ts",
+        "lib/client/chat-gate.js",
+        "lib/client/chat-gate.js.map",
+        "lib/client/components.d.ts",
+        "lib/client/components.js",
+        "lib/client/components.js.map",
+        "lib/client/index.d.ts",
+        "lib/client/index.js",
+        "lib/client/index.js.map",
+        "lib/client/onboarding.d.ts",
+        "lib/client/onboarding.js",
+        "lib/client/onboarding.js.map",
+        "lib/client/readiness.d.ts",
+        "lib/client/readiness.js",
+        "lib/client/readiness.js.map",
+        "lib/client/role-bindings.d.ts",
+        "lib/client/role-bindings.js",
+        "lib/client/role-bindings.js.map",
+        "lib/index.d.ts",
+        "lib/index.js",
+        "lib/index.js.map",
+        "lib/ocr-measured.d.ts",
+        "lib/ocr-measured.js",
+        "lib/ocr-measured.js.map",
+        "lib/providers.d.ts",
+        "lib/providers.js",
+        "lib/providers.js.map",
+        "package.json"
+      ]
+    },
+    {
+      "name": "@deepwatch/dsh-contracts",
+      "version": "0.1.0",
+      "access": "public",
+      "fileCount": 33,
+      "dependencies": {},
+      "peerDependencies": {},
+      "exports": [
+        ".",
+        "./identity",
+        "./package.json",
+        "./query",
+        "./query/validate",
+        "./query/wire"
+      ],
+      "bin": [],
+      "files": [
+        "LICENSE",
+        "README.md",
+        "lib/approval.d.ts",
+        "lib/approval.js",
+        "lib/bindings.d.ts",
+        "lib/bindings.js",
+        "lib/digests.d.ts",
+        "lib/digests.js",
+        "lib/execution.d.ts",
+        "lib/execution.js",
+        "lib/failures.d.ts",
+        "lib/failures.js",
+        "lib/identity.d.ts",
+        "lib/identity.js",
+        "lib/index.d.ts",
+        "lib/index.js",
+        "lib/language.d.ts",
+        "lib/language.js",
+        "lib/paths.d.ts",
+        "lib/paths.js",
+        "lib/presentation.d.ts",
+        "lib/presentation.js",
+        "lib/query.d.ts",
+        "lib/query.js",
+        "lib/query/validate.d.ts",
+        "lib/query/validate.js",
+        "lib/query/wire.d.ts",
+        "lib/query/wire.js",
+        "lib/readiness.d.ts",
+        "lib/readiness.js",
+        "lib/workspace.d.ts",
+        "lib/workspace.js",
+        "package.json"
+      ]
+    },
+    {
+      "name": "@deepwatch/dsh-core-bridge",
+      "version": "0.1.0",
+      "access": "public",
+      "fileCount": 11,
+      "dependencies": {
+        "@deepwatch/dsh-contracts": "^0.1.0"
+      },
+      "peerDependencies": {
+        "@deepseek-ai/cordis": "4.0.2",
+        "@deepseek-ai/schemastery": "^3.18.1"
+      },
+      "exports": [
+        ".",
+        "./package.json"
+      ],
+      "bin": [],
+      "files": [
+        "LICENSE",
+        "README.md",
+        "lib/index.d.ts",
+        "lib/index.js",
+        "lib/transport.d.ts",
+        "lib/transport.js",
+        "lib/transport/mock.d.ts",
+        "lib/transport/mock.js",
+        "lib/transport/stdio.d.ts",
+        "lib/transport/stdio.js",
+        "package.json"
+      ]
+    },
+    {
+      "name": "@deepwatch/dsh-library",
+      "version": "0.1.0",
+      "access": "public",
+      "fileCount": 23,
+      "dependencies": {
+        "@deepwatch/dsh-client-brand": "^0.1.0",
+        "@deepwatch/dsh-contracts": "^0.1.0",
+        "@deepwatch/dsh-technology": "^0.1.0",
+        "@deepwatch/dsh-workspace": "^0.1.0"
+      },
+      "peerDependencies": {
+        "@deepseek-ai/cordis": "4.0.2",
+        "@deepseek-ai/dsh-typert-protocol": "0.1.1-rc.2",
+        "react": "^18.2.0"
+      },
+      "exports": [
+        ".",
+        "./client",
+        "./components",
+        "./index-store",
+        "./library-mode",
+        "./package.json",
+        "./read-plane",
+        "./search-view"
+      ],
+      "bin": [],
+      "files": [
+        "LICENSE",
+        "README.md",
+        "lib/client.js",
+        "lib/client.js.map",
+        "lib/client/components.d.ts",
+        "lib/client/components.js",
+        "lib/client/index.d.ts",
+        "lib/client/index.js",
+        "lib/client/library-mode.d.ts",
+        "lib/client/library-mode.js",
+        "lib/client/read-plane.d.ts",
+        "lib/client/read-plane.js",
+        "lib/client/search-view.d.ts",
+        "lib/client/search-view.js",
+        "lib/index-store.d.ts",
+        "lib/index-store.js",
+        "lib/index.d.ts",
+        "lib/index.js",
+        "lib/search.d.ts",
+        "lib/search.js",
+        "lib/sources.d.ts",
+        "lib/sources.js",
+        "package.json"
+      ]
+    },
+    {
+      "name": "@deepwatch/dsh-live",
+      "version": "0.1.0",
+      "access": "public",
+      "fileCount": 23,
+      "dependencies": {
+        "@deepwatch/dsh-client-brand": "^0.1.0",
+        "@deepwatch/dsh-contracts": "^0.1.0",
+        "@deepwatch/dsh-workspace": "^0.1.0"
+      },
+      "peerDependencies": {
+        "@deepseek-ai/cordis": "4.0.2",
+        "react": "^18.2.0"
+      },
+      "exports": [
+        ".",
+        "./capture",
+        "./client",
+        "./components",
+        "./live-mode",
+        "./package.json",
+        "./sources-catalogue",
+        "./synthetic-source"
+      ],
+      "bin": [],
+      "files": [
+        "LICENSE",
+        "README.md",
+        "lib/capture.d.ts",
+        "lib/capture.js",
+        "lib/client.js",
+        "lib/client.js.map",
+        "lib/client/components.d.ts",
+        "lib/client/components.js",
+        "lib/client/index.d.ts",
+        "lib/client/index.js",
+        "lib/client/live-mode.d.ts",
+        "lib/client/live-mode.js",
+        "lib/index.d.ts",
+        "lib/index.js",
+        "lib/session.d.ts",
+        "lib/session.js",
+        "lib/sources-catalogue.d.ts",
+        "lib/sources-catalogue.js",
+        "lib/synthetic-source.d.ts",
+        "lib/synthetic-source.js",
+        "lib/triggers.d.ts",
+        "lib/triggers.js",
+        "package.json"
+      ]
+    },
+    {
+      "name": "@deepwatch/dsh-memory",
+      "version": "0.1.0",
+      "access": "public",
+      "fileCount": 19,
+      "dependencies": {},
+      "peerDependencies": {
+        "@deepseek-ai/cordis": "4.0.2",
+        "@deepseek-ai/schemastery": "^3.18.1"
+      },
+      "exports": [
+        ".",
+        "./package.json",
+        "./records",
+        "./tools"
+      ],
+      "bin": [],
+      "files": [
+        "LICENSE",
+        "README.md",
+        "lib/compiler.d.ts",
+        "lib/compiler.js",
+        "lib/index.d.ts",
+        "lib/index.js",
+        "lib/learning.d.ts",
+        "lib/learning.js",
+        "lib/ledger.d.ts",
+        "lib/ledger.js",
+        "lib/projector.d.ts",
+        "lib/projector.js",
+        "lib/records.d.ts",
+        "lib/records.js",
+        "lib/replay.d.ts",
+        "lib/replay.js",
+        "lib/tools.d.ts",
+        "lib/tools.js",
+        "package.json"
+      ]
+    },
+    {
+      "name": "@deepwatch/dsh-sdk",
+      "version": "0.1.0",
+      "access": "public",
+      "fileCount": 11,
+      "dependencies": {
+        "@deepwatch/dsh-contracts": "^0.1.0",
+        "@deepwatch/dsh-technology": "^0.1.0",
+        "@deepwatch/dsh-trajectory": "^0.1.0"
+      },
+      "peerDependencies": {
+        "react": "^18.2.0"
+      },
+      "exports": [
+        ".",
+        "./client-example",
+        "./package.json"
+      ],
+      "bin": [],
+      "files": [
+        "LICENSE",
+        "README.md",
+        "lib/capability.d.ts",
+        "lib/capability.js",
+        "lib/client/example.d.ts",
+        "lib/client/example.js",
+        "lib/example.d.ts",
+        "lib/example.js",
+        "lib/index.d.ts",
+        "lib/index.js",
+        "package.json"
+      ]
+    },
+    {
+      "name": "@deepwatch/dsh-technology",
+      "version": "0.1.0",
+      "access": "public",
+      "fileCount": 27,
+      "dependencies": {
+        "@deepwatch/dsh-contracts": "^0.1.0"
+      },
+      "peerDependencies": {
+        "@deepseek-ai/cordis": "4.0.2",
+        "@deepseek-ai/dsh-llm": "0.1.1-rc.2",
+        "@deepseek-ai/dsh-settings": "0.1.1-rc.2",
+        "@deepseek-ai/schemastery": "^3.18.1"
+      },
+      "exports": [
+        ".",
+        "./attestation",
+        "./budget",
+        "./delegation",
+        "./descriptors",
+        "./observation",
+        "./package.json",
+        "./provenance",
+        "./routing"
+      ],
+      "bin": [],
+      "files": [
+        "LICENSE",
+        "README.md",
+        "lib/attestation.d.ts",
+        "lib/attestation.js",
+        "lib/budget.d.ts",
+        "lib/budget.js",
+        "lib/delegation.d.ts",
+        "lib/delegation.js",
+        "lib/descriptor.d.ts",
+        "lib/descriptor.js",
+        "lib/descriptors.d.ts",
+        "lib/descriptors.js",
+        "lib/index.d.ts",
+        "lib/index.js",
+        "lib/observation.d.ts",
+        "lib/observation.js",
+        "lib/ocr-qualification.d.ts",
+        "lib/ocr-qualification.js",
+        "lib/ocr-worker.d.ts",
+        "lib/ocr-worker.js",
+        "lib/ocr.d.ts",
+        "lib/ocr.js",
+        "lib/provenance.d.ts",
+        "lib/provenance.js",
+        "lib/routing.d.ts",
+        "lib/routing.js",
+        "package.json"
+      ]
+    },
+    {
+      "name": "@deepwatch/dsh-tenancy",
+      "version": "0.1.0",
+      "access": "public",
+      "fileCount": 15,
+      "dependencies": {
+        "@deepwatch/dsh-contracts": "^0.1.0"
+      },
+      "peerDependencies": {},
+      "exports": [
+        ".",
+        "./package.json"
+      ],
+      "bin": [],
+      "files": [
+        "LICENSE",
+        "README.md",
+        "lib/audit.d.ts",
+        "lib/audit.js",
+        "lib/collaboration.d.ts",
+        "lib/collaboration.js",
+        "lib/identity.d.ts",
+        "lib/identity.js",
+        "lib/index.d.ts",
+        "lib/index.js",
+        "lib/rbac.d.ts",
+        "lib/rbac.js",
+        "lib/workers.d.ts",
+        "lib/workers.js",
+        "package.json"
+      ]
+    },
+    {
+      "name": "@deepwatch/dsh-tools",
+      "version": "0.1.0",
+      "access": "public",
+      "fileCount": 24,
+      "dependencies": {
+        "@deepwatch/dsh-contracts": "^0.1.0",
+        "@deepwatch/dsh-core-bridge": "^0.1.0",
+        "@deepwatch/dsh-library": "^0.1.0",
+        "@deepwatch/dsh-memory": "^0.1.0"
+      },
+      "peerDependencies": {
+        "@deepseek-ai/cordis": "4.0.2",
+        "@deepseek-ai/dsh-llm": "0.1.1-rc.2",
+        "@deepseek-ai/dsh-system-prompt": "0.1.1-rc.2",
+        "@deepseek-ai/dsh-tools": "0.1.1-rc.2",
+        "@deepseek-ai/dsh-typert-protocol": "0.1.1-rc.2",
+        "@deepseek-ai/dsh-user-approval": "^0.1.1-rc.2",
+        "@deepseek-ai/schemastery": "^3.18.1",
+        "zod": "^4.5.2"
+      },
+      "exports": [
+        ".",
+        "./package.json",
+        "./remote",
+        "./typert"
+      ],
+      "bin": [],
+      "files": [
+        "LICENSE",
+        "README.md",
+        "lib/browser.d.ts",
+        "lib/browser.js",
+        "lib/index.d.ts",
+        "lib/index.js",
+        "lib/library-generations.d.ts",
+        "lib/library-generations.js",
+        "lib/library-search.d.ts",
+        "lib/library-search.js",
+        "lib/memory.d.ts",
+        "lib/memory.js",
+        "lib/read-plane.d.ts",
+        "lib/read-plane.js",
+        "lib/receipt-journal.d.ts",
+        "lib/receipt-journal.js",
+        "lib/sensory.d.ts",
+        "lib/sensory.js",
+        "lib/typert.host.d.ts",
+        "lib/typert.host.js",
+        "lib/typert.remote-client.d.ts",
+        "lib/typert.remote-client.d.ts.map",
+        "lib/typert.remote-client.js",
+        "package.json"
+      ]
+    },
+    {
+      "name": "@deepwatch/dsh-trajectory",
+      "version": "0.1.0",
+      "access": "public",
+      "fileCount": 17,
+      "dependencies": {
+        "@deepwatch/dsh-contracts": "^0.1.0"
+      },
+      "peerDependencies": {},
+      "exports": [
+        ".",
+        "./package.json"
+      ],
+      "bin": [],
+      "files": [
+        "LICENSE",
+        "README.md",
+        "lib/compare.d.ts",
+        "lib/compare.js",
+        "lib/definition.d.ts",
+        "lib/definition.js",
+        "lib/events.d.ts",
+        "lib/events.js",
+        "lib/index.d.ts",
+        "lib/index.js",
+        "lib/projection.d.ts",
+        "lib/projection.js",
+        "lib/selection-store.d.ts",
+        "lib/selection-store.js",
+        "lib/selection.d.ts",
+        "lib/selection.js",
+        "package.json"
+      ]
+    },
+    {
+      "name": "@deepwatch/dsh-wiki",
+      "version": "0.1.0",
+      "access": "public",
+      "fileCount": 7,
+      "dependencies": {
+        "@deepwatch/dsh-memory": "^0.1.0"
+      },
+      "peerDependencies": {},
+      "exports": [
+        ".",
+        "./package.json"
+      ],
+      "bin": [],
+      "files": [
+        "LICENSE",
+        "README.md",
+        "lib/index.d.ts",
+        "lib/index.js",
+        "lib/projection.d.ts",
+        "lib/projection.js",
+        "package.json"
+      ]
+    },
+    {
+      "name": "@deepwatch/dsh-workspace",
+      "version": "0.1.0",
+      "access": "public",
+      "fileCount": 25,
+      "dependencies": {
+        "@deepwatch/dsh-client-brand": "^0.1.0",
+        "@deepwatch/dsh-contracts": "^0.1.0",
+        "@deepwatch/dsh-trajectory": "^0.1.0"
+      },
+      "peerDependencies": {
+        "@deepseek-ai/cordis": "4.0.2",
+        "react": "^18.2.0"
+      },
+      "exports": [
+        ".",
+        "./client",
+        "./components",
+        "./mode-views",
+        "./package.json",
+        "./surface"
+      ],
+      "bin": [],
+      "files": [
+        "LICENSE",
+        "README.md",
+        "lib/client.js",
+        "lib/client.js.map",
+        "lib/client/components.d.ts",
+        "lib/client/components.js",
+        "lib/client/empty-state.d.ts",
+        "lib/client/empty-state.js",
+        "lib/client/index.d.ts",
+        "lib/client/index.js",
+        "lib/client/mode-views.d.ts",
+        "lib/client/mode-views.js",
+        "lib/client/surface.d.ts",
+        "lib/client/surface.js",
+        "lib/composer.d.ts",
+        "lib/composer.js",
+        "lib/index.d.ts",
+        "lib/index.js",
+        "lib/modes.d.ts",
+        "lib/modes.js",
+        "lib/shell.d.ts",
+        "lib/shell.js",
+        "lib/timeline.d.ts",
+        "lib/timeline.js",
+        "package.json"
+      ]
+    }
+  ]
+}

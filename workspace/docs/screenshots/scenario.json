@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "scenario": "provider-bind-first-prompt",
+  "result": "passed",
+  "provider": "openrouter-e2e",
+  "providerLabel": "OpenRouter QA (local stub)",
+  "model": "stub/echo-small",
+  "modelLabel": "Stub Echo Small",
+  "core": "connected",
+  "coreTransport": "stdio",
+  "coreVersion": "1.4.0",
+  "requestClassification": {
+    "catalogue": 1,
+    "providerTest": 7,
+    "chatTurn": 1,
+    "sessionTitle": 1,
+    "unexpected": 0
+  },
+  "failureScenarios": [
+    "invalid_credential",
+    "payment_required",
+    "rate_limited",
+    "timeout",
+    "cancelled"
+  ]
+}

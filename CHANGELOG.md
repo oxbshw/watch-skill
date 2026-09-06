@@ -1,6 +1,460 @@
 # Changelog
 
-## Unreleased
+## v1.4.0 — 2026-09-06
+
+The first stable release of both products in this repository. Watch Skill
+reaches **1.4.0**, and the twenty `@deepwatch/*` packages reach **0.1.0** — their
+first publication rather than an update.
+
+Most of what follows is about finishing the path that puts this in front of
+somebody. That turned out to contain defects a candidate could not expose,
+because several of them are only reachable by installing the sealed artifacts
+into a room and using the product the way a person would. Two acceptance
+passes now do exactly that — one with no provider anywhere near it, one driving
+a real agent through the real profile — and everything under **What the
+acceptance rooms found** was found by running them.
+
+### What the acceptance rooms found
+
+**The first search of a session never answered.** `watch_search_sources` is the
+tool an agent reaches for to find which source mentioned something, and in
+DeepWatch it hung the first time it was used. Not slowly: measured with a
+fifteen-minute client deadline against a fresh engine, the first
+`watch.library.search` did not return at all, while a second issued afterwards
+in the same process answered in 51 seconds and a third in 1.2. The cause was
+written down in this repository already — the embedding stack deadlocks when
+numpy's C extension is first imported from a worker thread — and the MCP server
+had warmed on its main thread since that was found there. The Bridge answers on
+a bounded pool of its own and never did. It does now, from one shared
+implementation, and the same measurement reads 677ms, 507ms, 506ms.
+
+**Core answered, and the receipt said nobody had asked.** The Host requests a
+verdict through the Bridge, whose `request` returns a discriminated envelope.
+The ledger declared its own structural interface saying the reply came back
+directly, and read `reply.verdict` off the envelope — `undefined` on every
+call. Every execution receipt in the Library read `verdict: null` for work Core
+had verified. The ledger now imports the real contract, so the compiler has an
+opinion the next time either side moves, and a Bridge that refuses reads as
+`unavailable` rather than becoming a verdict.
+
+**A verification the agent asked for was attested from nothing.**
+`watch_verify` touches no path, so the operation contract found nothing to
+check and settled `no_contract` — a completed verification whose receipt said
+nobody verified anything. Core's answer was in the tool's own result the whole
+time; it is now carried to the receipt, with Core's verification id, and
+without running a second contract to obtain the association.
+
+**Every agent verification was INCONCLUSIVE.** `watch_verify` never sent
+`workingDir`, and Core refuses to guess one — deliberately, because the version
+that guessed measured against whatever directory its own process started in.
+So a file the agent had just written correctly came back INCONCLUSIVE, for
+everyone, silently. The session's own directory is now sent.
+
+**A receipt could be listed and not opened.** Its record id was its idempotency
+key, which is a path shape, and the query contract refuses those by design —
+`libraryGet` answered `rejected` for every row the Library had just listed.
+Receipts are filed under a derived id the same contract accepts.
+
+**A replayed receipt erased an answer.** Re-filing a receipt — which happens on
+reconciliation, on replay and after a reconnect — rewrote the row without the
+verdict, and the idempotency map said the verdict had already been applied, so
+no later attestation could put it back. The answer is now remembered rather
+than discarded, and repeat delivery repairs the row instead of losing it.
+
+**An interrupted write cost the next record too.** A process dying mid-append
+leaves a partial last line. The reader skipped it and left it on disk, so the
+next append concatenated onto the fragment and produced one unparseable line —
+the new record vanished at the next load and nothing had failed. The tail is
+now repaired before writing resumes, and only ever the tail.
+
+**A store that was not storing said nothing.** An unreadable journal returned
+the same empty answer a first run does, and a failed append returned success.
+Both are now reported, once per reason, naming the file and what to do.
+
+**The receipts directory was world-readable.** The store only narrowed a
+directory it had created itself, and the ordinary case is the other one. A
+hosted runner found `0o755` where the test asked for `0o700`.
+
+**`doctor` deleted the instruction it was giving.** On a base install it tells
+you which optional tiers are missing and how to add them — and the terminal
+printed `pip install "watch-skill"`, because Rich reads `[...]` as a style tag
+and drops what it cannot resolve. The command left standing reinstalls what the
+reader already has. The `--json` output carried the whole string the whole
+time, which is why nothing looked broken.
+
+**Three fixes named extras that do not exist.** `uv sync --extra transcribe`
+and `uv sync --extra vlm` both shipped; neither group has ever been declared.
+`watch-skill[attest]` appeared in three messages and a docstring for a real
+signing path that had no installable group at all — that one is now declared.
+Every extra-naming message also offers the pip form, because `uv sync` only
+works from a checkout.
+
+**The documented first command did not work.** `pip install watch-skill`
+installs no perception, no retrieval and no MCP server, so `watch-skill watch`
+stopped at `perceive.missing_dependency` on the first video for anyone who
+followed the README exactly. The quick start installs `[standard]` now and says
+what the bare package is for.
+
+### What the front page claimed
+
+"Evidence it cannot fake" is a claim about an adversary and was never the one
+being made. "Every path is checked" is true of the paths a tool *declares* and
+not of a shell command's own semantics. "No self-healing" was wrong without a
+qualifier, because `watch-skill doctor` repairs dependencies and that is the
+point of it. Local dependencies, downloaded models and hosted providers were
+listed as alternatives when they differ in cost, in where the data goes and in
+what they can do at all. Each of those is now stated as what it is, and two
+known limitations that this release fixed no longer describe themselves as
+open.
+
+### A visible GPU is not a working one, and a transcript was lost to it
+
+`has_cuda_gpu()` asks `nvidia-smi` whether an NVIDIA card with enough memory is
+present. That is a real question and not the one that decides anything:
+CTranslate2 also needs a matching CUDA and cuDNN, and this repository's own
+development machine has the card without them. Loading the model raised
+`Library cublas64_12.dll is not found or cannot be loaded`, and local
+transcription ended there — "no whisper rung succeeded", about a clip the same
+machine's processor transcribes in 4.4 seconds. The advice to set
+`WATCHSKILL_WHISPER_DEVICE=cpu` was already correct and was buried in an error
+nobody reads, on a path that had already given up.
+
+A **guessed** CUDA is now retried once on the processor, and says so. A device
+somebody **chose** is not retried anywhere: honouring an explicit choice
+matters more than succeeding, because a benchmark that quietly ran somewhere
+else measured nothing. The retry cannot rescue the other CUDA failure this
+module documents — a mismatched runtime whose first kernel launch never returns
+— because that one hangs rather than raising; the environment variable remains
+the way out of it.
+
+### Two of the fourteen check types could not be reached from the command line
+
+`http_request` and `browser_dom` both go through the origin guard, which
+refuses an origin the run was not allowlisted for. Its failure text says *add
+the host to the contract's allowed_origins*. There was no such field: the
+contract model forbids extra keys, and `verify run` never passed an allowlist
+to `verify_run`, so from the CLI the list was always empty and both check types
+raised `PermissionError` every time. The guard's own docstring calls a loopback
+dev server "a legitimate and common case"; it was the case that could not be
+expressed.
+
+`allowed_origins` is now a field of the contract — not a flag — because the
+digest has to cover it. A contract cannot be widened after it was agreed to,
+a revision carries the reach its predecessor was granted, and the evidence
+bundle records what the run was permitted to reach. An unlisted origin is
+`inconclusive` and named in `limitations`, never `fail`: nothing was learned
+about the target, and "could not check" is not "checked and false".
+
+`docs/verification.md` also listed nine check types and called DOM-locator and
+browser-console assertions "not implemented", which had stopped being true. All
+fourteen are now in the table.
+
+### ffmpeg 9 removed `-vsync`, and the fixtures stopped regenerating
+
+The benchmark frame extractor passed `-vsync 0`. ffmpeg deprecated it in 5.1 in
+favour of the per-stream `-fps_mode` — *"vsync is deprecated and will be removed
+in the future"* — and removed it in 9, where it now fails as
+`Unrecognized option 'vsync'` before decoding starts. Both call sites pass
+`-fps_mode:v passthrough`, verified against ffmpeg 9.0.1: both fixtures
+regenerate, and every ground-truth field in the regenerated manifest is
+identical to the committed one (only the md5 and byte size move, because x264
+output is not byte-reproducible).
+
+That option implies a floor, so `watch-skill doctor` now names it: below
+ffmpeg 5.1 it **warns**, and says the video and audio pipelines are unaffected
+and only fixture regeneration needs the newer build. A warning that read as
+"your ffmpeg is broken" would cost somebody an afternoon replacing a working
+dependency.
+
+### A merge could have published a Docker image
+
+`docker.yml` pushed `ghcr.io/oxbshw/watch-skill` on every push to `main` that
+touched `src/**`, `pyproject.toml`, `uv.lock` or the Dockerfile — tagged `main`
+**and** `latest`, because the condition was `is_default_branch`. That is a
+reasonable rule for a project with no releases and the wrong one for a project
+with two release trains: merging anything would move the tag a person gets from
+`docker pull` to whatever had just landed, ahead of the release meant to set it.
+
+A branch push now builds the image and runs it, and publishes nothing.
+Publication happens on a release or a deliberate dispatch, and `latest` comes
+from a non-prerelease release. `tests/workflow-policy.test.mjs` holds the rule
+for every workflow, not just this one: no step that logs in to a registry,
+pushes an image, publishes a package or writes an attestation may be reachable
+from a branch push.
+
+### The release order put the announcement before the fact
+
+`release.yml` created the GitHub Release in the build job and published to PyPI
+from the next one, so a release existed — announced, linked, carrying assets —
+while the upload it announced had not happened and might still fail. That is
+also why the post-publish smoke had to poll: `release: published` was a claim
+about this workflow's progress rather than a fact about the registry.
+
+The order is now build → seal → PyPI → MCP registry → GitHub Release, each step
+a `needs:`. The build job writes `SHA256SUMS` and a `release-manifest.json`
+binding the commit and tag to a digest of every artifact; **every job after it
+verifies that seal before using a file, and nothing is rebuilt** — the wheel
+PyPI receives and the wheel attached to the Release are the same bytes. A final
+`report` job states which registries were reached whatever the outcome, and
+fails the run rather than showing green over a half-finished release.
+
+### A half-finished npm release is now resumable, on one condition
+
+`release-deepwatch.yml` refused outright if any version was already on the
+registry, so a release that died at the fourteenth of twenty packages could not
+be finished at that version by anyone. The obvious fix — skip what exists — is
+the dangerous one: "already published" and "already published *from this build*"
+are different questions, and only the second makes a resume safe.
+
+`scripts/publish-plan.mjs` asks the registry for the integrity of what it holds
+and compares it with the tarball this run would upload. `publish` when nothing
+is there, `skip` when the bytes are identical, and `refuse` when the version
+exists with different bytes — one refusal stops the release, because no amount
+of retrying makes that scope consistent again. The plan is taken again in the
+publish job, after the environment approval, since that is the only moment
+whose answer is current. The publish job also verifies the sealed provenance
+manifest before its first upload and packs nothing itself.
+
+A version-pinned `npx @deepwatch/cli@<version> --version` smoke now runs on
+Linux, macOS and Windows after the publish job succeeds.
+
+### QA could write into a real credential store, and did
+
+A test room can reach an existing credential without copying it:
+`dsh-credentials-local` takes the document's location as configuration. The
+reference worked. What nobody had thought about is that `qa-e2e-run.mjs`
+*resets* the credential store before configuring a provider, and then configures
+one — so a synthetic pass deleted and rewrote a document that belonged to a
+person, adding an `OPENROUTER_E2E_API_KEY` entry beside the key in use.
+
+`scripts/lib/qa-credential-store.mjs` now resolves which document a room is
+wired to *before* anything starts — a structured read of each profile's
+credential config, plus a blunt textual sweep for any credential-document-shaped
+location the scanner might have missed — and refuses to run against any store
+outside the room. The refusal names the document and the profile line that
+aimed it there. `tests/qa-credential-containment.test.mjs` builds a synthetic
+owner store, points a throwaway room at it, runs the real script, and asserts
+the file is byte-identical afterwards: same digest, same size, same modification
+time.
+
+### The front page told visitors to install a package that does not exist
+
+`npm install -g @deepwatch/cli` was the README's first instruction, with an npm
+version badge above it, for a scope that holds nothing. The repository already
+knew — `workspace/docs/getting-started.md` says so and `docs/releasing.md`
+states it as a rule — and nothing checked that the README agreed.
+
+Every registry install command naming `@deepwatch` now sits under a note saying
+which release publishes it, in the README and in all twenty package pages, with
+the path that works from a checkout named beside it. The note is generated from
+one declaration, `deepwatch.registryStatus` in the workspace manifest, so the
+first publication turns it off in one edit.
+`tests/pending-release-claims.test.mjs` holds the rule and is what will fail
+when that edit is due.
+
+The package pages also state the compatibility policy their version actually
+offers: **stable means tested, documented and supported — not 1.0.** `0.x` has
+no compatibility guarantee across minor versions, so a `0.MINOR` bump may
+change or remove surface and a patch will not.
+[`workspace/docs/install-and-upgrade.md`](workspace/docs/install-and-upgrade.md)
+is the new page for both products, including why `deepwatch setup` after an
+upgrade is not optional and why a downgrade is not supported.
+
+### The first npm publication cannot use trusted publishing
+
+`release-deepwatch.yml` publishes over OIDC with no token path at all. It cannot
+perform the *first* publication, because npm requires a package to already exist
+before a Trusted Publisher can be configured for it — npm's own documented
+prerequisite for `npm trust`, and
+[npm/cli#8544](https://github.com/npm/cli/issues/8544), the request to lift it,
+is still open. PyPI has no such limitation, which is why Watch Core's train
+needs no equivalent step.
+
+So the first publication of the twenty packages uses a short-lived credential
+held by the release owner, through `scripts/first-publish.mjs`, which refuses a
+dirty tree, a wrong digest, a changed file list or dependency graph, a
+`workspace:` fallback, and an order that does not match the manifest graph.
+
+**That one publication is the only DeepWatch release without provenance
+attestation.** Provenance is generated from a CI workload identity and a laptop
+does not have one. Every release after it goes through the workflow, with
+`--provenance` and a protected environment in front of it. Saying so here is
+better than letting somebody find it as a missing badge.
+
+[`docs/releasing.md`](workspace/docs/releasing.md) now carries the
+`npm trust github` loop that configures all twenty publishers from a terminal,
+and the `npm trust list` read-back that proves each one exists — the failure
+being guarded against is a publisher that was silently not created on the
+twentieth package.
+
+### Post-publish verified the wrong version and reported green
+
+`post-publish.yml` triggers on `release: published`. In `release.yml` the GitHub
+Release is created by one job and PyPI receives the distributions from the
+*next* one, so at the instant the workflow started, the newest version on PyPI
+was still the previous release. Resolving "whatever is newest" at that moment
+did not fail — it succeeded against the wrong version. A check that passes for
+the wrong reason is worse than one that breaks.
+
+It now takes the version from the release's own tag and waits, up to ten
+minutes, for PyPI to serve exactly that version before any runner starts.
+Dispatching it by hand with no version still smokes whatever is currently
+newest, because in that case nothing is in flight.
+
+### A stable version published under a prerelease dist-tag
+
+`scripts/first-publish.mjs` hardcoded `--tag preview`. That was correct while
+every version was `0.1.0-preview.N` and silently wrong the moment one was not:
+a stable `0.1.0` published under `preview` leaves `npm i @deepwatch/cli`
+resolving nothing at all, because `latest` would never have been created. The
+bootstrap and the workflow now derive the tag from the version's shape by the
+same rule, and both refuse a prerelease shape neither has a tag for, rather than
+guessing about a publication that cannot be taken back.
+
+`scripts/promote-versions.mjs` is the authority for a version change across the
+tree. It separates the surfaces a promotion must update from the historical
+records it must leave alone — a changelog that says `1.3.0` is not stale, it is
+a record — and `tests/stable-versions.test.mjs` asserts the result: every
+manifest at its stable version, no prerelease sibling dependency, both tag
+prefixes intact, and no bare `v*` trigger that would let one product's tag
+release the other.
+
+### One branch
+
+The repository now has a single branch. Every other branch was deleted only
+after its commits were accounted for as contained, already applied, or
+explicitly rejected with a reason and a condition for revisiting;
+[`docs/branch-consolidation.md`](docs/branch-consolidation.md) records each
+disposition and how to re-check it, because a deleted branch leaves no evidence
+of itself and "merged" and "abandoned" look identical afterwards.
+
+Dependabot stays enabled. A branch list that stays empty because nothing is
+allowed to check dependencies is not a tidy repository.
+
+### The README, and the evidence under it
+
+The root README was rebuilt around the two ways in — the DeepWatch workspace,
+and Watch Skill as an MCP server or Claude Skill — rather than presenting one
+product with the other in a footnote. It states three tool counts separately,
+because 39 standalone MCP tools, 22 DeepWatch `watch_*` tools and 47 advertised
+profile entries are three different numbers that were previously used
+interchangeably.
+
+Every screenshot in it was recaptured from this release's build, in a clean room
+composed only from the sealed artifacts. The version panel in those images reads
+`1.4.0` and `0.1.0` because that is what was running when the shutter fell.
+
+## v1.4.0rc1 — 2026-09-03 (release candidate)
+
+The 1.4 candidate closes the real DeepWatch authority path: supervised browser
+operations now return stable Core-owned evidence and receipts, Node talks to the
+packed Python Bridge in required integration tests, and runtime readiness is one
+truth shared by onboarding and Diagnostics. The companion DeepWatch workspace
+remains an unpublished preview; its 20 npm packages are prepared as verified
+tarballs and are not published by this release-candidate build.
+
+The first-run and product surfaces now use one responsive DeepWatch design
+language across Watch, Live, Memory, Library, Compare, settings and evidence.
+“Into the Know” appears only on DeepWatch-owned surfaces until the pinned
+Harness exposes a supported headline extension.
+
+### Release closure — what an owner evaluation found, and what it changed
+
+An owner evaluation of this candidate produced findings that split into two
+kinds, and telling them apart mattered more than fixing them.
+
+Two were errors in the evaluation itself, and are retracted here. The default
+`deepwatch` profile was reported as advertising no agent tools; it advertises
+47, and the measurement had read a preparation completion rather than the one
+carrying tools. A workspace write was reported as refused by filesystem policy;
+the harness had passed `path` to a tool whose advertised argument is
+`file_path`, so a caller's typo was read as a policy decision. Both now have
+gates that would have caught them.
+
+The rest were real.
+
+**One execution, one receipt.** A call the containment screen refused produced
+two records: the truthful one, and then a second when the denial travelled back
+through the dispatch layer as an ordinary error and settled as
+`scopeDecision: 'allowed'`. Both carried the same idempotency key, and the
+Library keeps receipts in a map keyed by exactly that — so the record an owner
+read said the boundary let through a call the boundary had stopped. The ledger
+is now keyed by execution identity and every producer writes through one
+reconciliation: a denial is permanent, a terminal state is final, progress only
+moves forward.
+
+**Compare had no records.** The engine was correct and unreachable; the mode
+was registered with no source of records at all. It now reads verifications
+from the Library, copying Core's verdict verbatim — `null` included, so an
+unruled record stays unruled rather than reading as agreement.
+
+**An installation can now say which release it is.** `deepwatch doctor` reports
+the composed packages, the Harness alongside the version this build was
+measured against, and a digest the release manifest records from the same
+inputs. Derived from the source and nothing else: no clock, no CI run id, no
+path, no user, and no `.git` needed at either end.
+
+**Shell containment is established rather than assumed.** Watch does not parse
+command strings — a boundary built on guessing can be written around — so the
+pinned Harness sandbox is the authority, and a gate now proves it across
+absolute paths, traversal, redirection, a working directory argument, a
+directory changed mid-command, a second interpreter and a junction resolving
+outside the workspace. The assertion is no side effect, with a control case
+proving the boundary still permits ordinary work.
+
+**Three smaller things.** Pinning live evidence was a promise with no end: a
+busy session pinned its whole buffer and retention quietly stopped applying, so
+pins now yield to a byte budget, oldest first, while the newest window is
+always kept. A binding records the kind of actor that wrote it — never an
+identity — because a document written by a person pressing Save and one written
+by a script were the same bytes. And the memory store, which is plaintext and
+still says so, is created owner-only where the operating system enforces modes.
+
+### Release closure, continued — three defects a real provider found
+
+The evaluation above ran against a loopback stub. Running the same journey
+against a real provider, from artifacts built for this candidate, found three
+more things. All are fixed here.
+
+**One workspace, not three.** An owner session was asked for
+`owner-test/totals.json`, and the agent created it with the right bytes and the
+right arithmetic. It could not then be verified. Three layers each answered
+"which directory is this relative path in?" from somewhere different: the
+agent's filesystem tools resolved against the Harness session workspace, which
+the Harness derives from the host process's cwd; Watch Core was spawned with an
+empty `cwd` and inherited whatever the Host had; and the verifier, handed no
+`workingDir`, fell back to the directory it happened to be started in. The file
+was real and the verdict was `INCONCLUSIVE` — honest, and worth nothing.
+
+The fix is not a wider verifier. `deepwatch web|desktop --workspace <dir>` names
+the one directory, resolved through its real path so a junction and its target
+are one root; the launcher starts the Host *in* it and exports
+`DEEPWATCH_WORKSPACE` beside it; and Core now reads that variable and has no
+default at all — where nothing was established it stops with
+`verify.workspace_unresolved` and a named fix rather than measuring against
+wherever it happens to be sitting.
+
+**The shell was outside the boundary it was meant to share.** Refused an
+out-of-workspace write twice, the agent reached for `pwsh` instead. That call
+was recorded `scope:not_applicable` — the classification for a call that touches
+no filesystem — because `pwsh` spells its working directory `workdir` and the
+path-argument list knew only `cwd`. Nothing escaped: the pinned Harness sandbox
+is the enforcement authority, and the file outside was untouched. But Watch's
+own record of what happened was wrong, and that record is the product. The
+command string itself stays unscanned, deliberately and now in writing: quoting,
+expansion and redirection decide where bytes land at runtime, so parsing it
+would produce confident wrong answers in both directions.
+
+**A version is not a fingerprint.** The sealed npm artifacts for this candidate
+had been packed three commits behind the accepted source, from a dirty tree, and
+every gate passed — because every gate compared `name@version`, and both byte
+sets wore the same version. Exactly one package differed: `@deepwatch/dsh-memory`
+did not carry the memory-permission hardening. Provenance is now content-bound:
+a sealed manifest ties the exact commit and tree to a SHA-256 over every tarball,
+the wheel and the sdist, and refuses to seal a dirty tree at all. The gate
+rejects a set whose bytes, source, inventory or installed content disagree, and
+`doctor` no longer claims an installation "matches the published composition" —
+nothing has been published, so nothing has ever matched one.
 
 ### `watch-skill notes` — a write-up whose every line is checkable
 
@@ -26,12 +480,73 @@ The scorer, ground truth and report are transport-independent, so a future
 direct-API adapter reuses all of it. Results and method:
 [`benchmarks/video_backends/`](benchmarks/video_backends/).
 
+### Release engineering
+
+The documented path to a first npm publication could not be walked. `npm run
+release:artifacts` wrote digests, a date and an output directory into the
+tracked inventory, and `npm run first-publish:dry-run` — the next command the
+release guide gives — refuses a dirty tree. Packing now writes per-run facts
+beside the tarballs and leaves the tracked inventory to what a pack of the
+source is expected to produce, and `verify:release-sequence` runs the guide's
+commands in order and checks the worktree between them.
+
+Packing is reproducible. `@deepwatch/dsh-bundle` declares thirteen siblings
+through pnpm's `workspace:` protocol, and pnpm wrote the ranges it resolved
+back in a different key order on each run, so one archive's digest moved for a
+reason unrelated to its contents. The pack stages a canonical manifest for the
+length of one `pnpm pack`; two packs of one commit now produce twenty identical
+archives.
+
+A release-surface gate reads the documents, package descriptions, CLI help, the
+documents inside all twenty tarballs, and the built wheel and sdist, refusing
+unresolved template tokens, stale scopes and package counts, personal paths and
+unfinished product claims. Both halves read one rule table, and every exemption
+is one file, one rule and a reason.
+
+### Changed
+
+- `adapters/agents-md/AGENTS.md` is now
+  `templates/agent-integration/AGENTS.example.md`. It is a template for a
+  user's own project, it was named exactly like the file coding agents treat as
+  policy for the repository they are in, and it shipped in the source
+  distribution. The repository's own `AGENTS.md` is not published.
+- The doc skeleton's holes are double-brace tokens in a syntax nothing else
+  in the tree uses, rather than words that read like prose, and
+  `scripts/validate_agent_docs.py` refuses any page outside the template that
+  still carries one.
+- Two agent pages pointed at `adapters/claude-skill/skills`, which no longer
+  exists; both now name `skills/`.
+- ADR-003 and `architecture.md` described a second repository that does not
+  exist. Both halves live in `oxbshw/watch-skill`, on separate release trains,
+  and what the ADR decides is the boundary between them.
+- Records of past runs moved to `workspace/docs/history/`, with the commit each
+  measured in its filename.
+- Role Bindings and the Chat gate say why their controls are disabled when the
+  Harness will not accept a settings write. Four controls were greyed out with
+  the reason nowhere on either surface.
+
 ### Fixed
 
 - `normalize_words` (and `benchmarks/asr_accuracy.py`) raised `KeyError` on
   Unicode digit-likes such as `①`, which `str.isdigit()` accepts but the
   ASCII spelling table does not hold. Found on OCR text lifted from a real
   slide.
+
+- A Watch Core too old to have the `bridge` command could be reported as a
+  failed handshake, with advice to retry it. The Bridge resolves its connection
+  as soon as the engine is spawned, so the handshake write can reach a pipe
+  whose engine has already quit — and that write knows only that the pipe
+  broke, while the engine's exit carries the usage error saying what is
+  actually wrong. Whichever arrived first was published, so one build diagnosed
+  this correctly on Linux and Windows and misleadingly on macOS. A broken pipe
+  now waits for the exit that explains it, and the reader gets the fix that
+  works: upgrade Watch Core.
+
+- The manual profile composed a twenty-second startup budget, below the
+  forty-five seconds the product ships and below the floor a first cold start on
+  a clean Windows machine has already exceeded. A profile built that way could
+  still report a healthy engine as a dead one. The overlay now names only the
+  binary, the transport and the argv, and inherits the shipped budget.
 
 ## v1.3.0rc2 — 2026-08-22 (pre-release)
 

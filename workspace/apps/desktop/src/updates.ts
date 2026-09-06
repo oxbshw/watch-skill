@@ -20,7 +20,7 @@
  * means unpacking something unverified, and a migration discovered after the
  * swap is a migration discovered too late to refuse.
  *
- * @module @watchskill/watch-desktop/updates
+ * @module @deepwatch/desktop/updates
  */
 
 import { createHash, createPublicKey, verify as verifySignatureBytes } from 'node:crypto'

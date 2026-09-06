@@ -120,11 +120,11 @@ async function main() {
   const results = []
   const add = entry => { results.push(entry) }
 
-  const trajectory = await import('@watchskill/dsh-trajectory')
-  const workspace = await import('@watchskill/dsh-workspace')
-  const live = await import('@watchskill/dsh-live')
-  const library = await import('@watchskill/dsh-library')
-  const memory = await import('@watchskill/dsh-memory')
+  const trajectory = await import('@deepwatch/dsh-trajectory')
+  const workspace = await import('@deepwatch/dsh-workspace')
+  const live = await import('@deepwatch/dsh-live')
+  const library = await import('@deepwatch/dsh-library')
+  const memory = await import('@deepwatch/dsh-memory')
   const { Context } = await import('@deepseek-ai/cordis')
 
   // ── Trajectory projection ─────────────────────────────────────────────────
@@ -330,7 +330,7 @@ async function main() {
   // ── Warm startup of the shell ─────────────────────────────────────────────
   const { renderToStaticMarkup } = await import('react-dom/server')
   const { createElement } = await import('react')
-  const components = await import('@watchskill/dsh-workspace/components')
+  const components = await import('@deepwatch/dsh-workspace/components')
   const shellProps = {
     sessionId: 'sess_1',
     mode: 'agent',

@@ -32,9 +32,9 @@ import {
   needsDirectionIsolation,
   normalizeForRetrieval,
   withTranslation,
-} from '@watchskill/dsh-contracts'
-import { characterErrorRate } from '@watchskill/dsh-technology'
-import { Isolated } from '@watchskill/dsh-workspace/components'
+} from '@deepwatch/dsh-contracts'
+import { characterErrorRate } from '@deepwatch/dsh-technology'
+import { Isolated } from '@deepwatch/dsh-workspace/components'
 
 import {
   ARABIC_TRANSLATION,
@@ -150,7 +150,7 @@ describe('scripts and direction are reported, not guessed', () => {
     // evidence side reports what it can see, while the qualification matrix
     // measures engines against a distinction a person supplies with the
     // fixture. Asserted here so the difference stays deliberate.
-    const technology = await import('@watchskill/dsh-technology')
+    const technology = await import('@deepwatch/dsh-technology')
     assert.ok(technology.SCRIPTS.includes('Han_Simplified'))
     assert.ok(technology.SCRIPTS.includes('Han_Traditional'))
     assert.deepEqual(detectScripts('部署成功'), ['Han'],

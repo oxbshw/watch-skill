@@ -1,31 +1,77 @@
 name: Release
 
+# Watch Core's train. A `core-v*` tag builds the distributions once, seals
+# them, publishes those exact bytes to PyPI, registers the MCP entry, and only
+# then completes the GitHub Release.
+#
+# The order is the point, and it used to be the other way around. The GitHub
+# Release was created in the build job and PyPI received the distributions from
+# the next one, so a release existed — announced, linked, and carrying assets —
+# while the upload it was announcing had not happened yet and might still fail.
+# Anything watching `release: published` was therefore watching a claim rather
+# than a fact: the post-publish smoke fired against a PyPI that still served
+# the previous version, and succeeded.
+#
+# So publication now precedes the announcement. `release: published` fires
+# after PyPI has accepted the upload, which makes it a signal about the
+# registry rather than about this workflow's progress.
+
 on:
   push:
-    tags: ["v*"]
+    tags: ["core-v*"]
 
+# Read-only by default, granted where it is needed. Only the job that creates
+# the Release may write to the repository, and only the two jobs that
+# authenticate to a registry may mint an identity.
 permissions:
-  contents: write
+  contents: read
+
+concurrency:
+  group: release-core-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
-  release:
+  build:
+    name: Build and seal the distributions
     runs-on: ubuntu-latest
     outputs:
-      prerelease: ${{ steps.tag.outputs.prerelease }}
+      version: ${{ steps.version.outputs.version }}
+      prerelease: ${{ steps.version.outputs.prerelease }}
     steps:
-      - uses: actions/checkout@v4
-      # PEP 440 pre-release markers. Without this an rc tag produced a release
-      # GitHub labels "Latest", so anyone landing on the repository was shown a
-      # release candidate as the current version.
-      - name: Classify the tag
-        id: tag
+      - uses: actions/checkout@v7
+
+      # Two products live in this repository and each has its own train:
+      # `core-v*` publishes Watch Core to PyPI here, and `deepwatch-v*`
+      # publishes the DeepWatch packages to npm in release-deepwatch.yml. They
+      # shared a `v*` trigger once, which meant a tag intended for one product
+      # built and published the other from whatever the tree contained.
+      #
+      # The namespace is a mechanism rather than a convention because of this
+      # step: the tag has to name the version pyproject declares.
+      - name: The tag must name the Core version
+        id: version
         run: |
-          case "${GITHUB_REF_NAME}" in
+          version="${GITHUB_REF_NAME#core-v}"
+          declared=$(grep -m1 "^version = " pyproject.toml | cut -d'"' -f2)
+          echo "tag=${version} pyproject=${declared}"
+          if [ "$version" != "$declared" ]; then
+            echo "::error::${GITHUB_REF_NAME} does not name Core version ${declared}."
+            echo "::error::A DeepWatch release must be tagged deepwatch-v<version>."
+            exit 1
+          fi
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+
+          # PEP 440 pre-release markers, read off the *version* and not the
+          # tag: `core-v0.1.0` contains a hyphen, and classifying on the tag
+          # made every stable release look like a prerelease. Without this an
+          # rc produced a release GitHub labels "Latest", so anyone landing on
+          # the repository was shown a release candidate as the current one.
+          case "$version" in
             *rc*|*alpha*|*beta*|*a[0-9]*|*b[0-9]*|*dev*|*-*)
               echo "prerelease=true" >> "$GITHUB_OUTPUT" ;;
             *) echo "prerelease=false" >> "$GITHUB_OUTPUT" ;;
           esac
-      - uses: astral-sh/setup-uv@v5
+      - uses: astral-sh/setup-uv@v7
         with:
           python-version: "3.11"
       - run: sudo apt-get update && sudo apt-get install -y ffmpeg
@@ -53,37 +99,102 @@ jobs:
           EOF
       - name: Extract changelog section
         run: |
-          awk '/^## /{n++} n==1' CHANGELOG.md > release-notes.md || cp CHANGELOG.md release-notes.md
-      - name: GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          body_path: release-notes.md
-          prerelease: ${{ steps.tag.outputs.prerelease == 'true' }}
-          files: |
-            dist/*.whl
-            dist/*.tar.gz
-            dist/watch-skill.skill
-      - name: Keep the built distributions for the publish job
-        uses: actions/upload-artifact@v4
-        with:
-          name: dist
-          path: |
-            dist/*.whl
-            dist/*.tar.gz
+          awk '/^## /{n++} n==1' CHANGELOG.md > dist/release-notes.md || cp CHANGELOG.md dist/release-notes.md
 
-  # Separate job: trusted publishing needs its own id-token, and a failed
-  # upload must not be able to take the GitHub Release down with it.
+      # Seal, so every job downstream can prove it is publishing what was
+      # built here rather than something it produced itself. Nothing rebuilds
+      # after this step: the wheel PyPI receives and the wheel attached to the
+      # Release are the same file, and both are checked against these digests
+      # before they are used.
+      - name: Seal the build
+        run: |
+          set -euo pipefail
+          cd dist
+          sha256sum ./*.whl ./*.tar.gz ./watch-skill.skill ./release-notes.md > SHA256SUMS
+          python3 - "$GITHUB_SHA" "${{ steps.version.outputs.version }}" "$GITHUB_REF_NAME" <<'EOF'
+          import hashlib, json, os, sys
+          commit, version, tag = sys.argv[1:4]
+          entries = []
+          for name in sorted(os.listdir('.')):
+              if name in ('SHA256SUMS', 'release-manifest.json'):
+                  continue
+              with open(name, 'rb') as handle:
+                  digest = hashlib.sha256(handle.read()).hexdigest()
+              entries.append({'file': name, 'sha256': digest, 'size': os.path.getsize(name)})
+          manifest = {
+              'manifestVersion': 1,
+              'product': 'watch-skill',
+              'version': version,
+              'tag': tag,
+              'commit': commit,
+              'artifacts': entries,
+          }
+          with open('release-manifest.json', 'w', encoding='utf-8') as handle:
+              json.dump(manifest, handle, indent=2, sort_keys=True)
+              handle.write('\n')
+          print(json.dumps(manifest, indent=2, sort_keys=True))
+          EOF
+          cat SHA256SUMS
+
+      - name: Keep the sealed build for every job that publishes it
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-build
+          path: dist/
+          if-no-files-found: error
+          retention-days: 7
+
+  # Separate job: trusted publishing needs its own id-token, and it must not be
+  # minted in a job that also runs project code.
   pypi:
-    needs: release
+    name: Publish to PyPI
+    needs: build
     runs-on: ubuntu-latest
     environment: pypi
     permissions:
       id-token: write
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
-          name: dist
-          path: dist
+          name: release-build
+          path: sealed
+
+      # The manifest is checked before the upload, not after. A publish job
+      # that trusts whatever arrived in an artifact is a publish job that will
+      # eventually upload something nobody built.
+      - name: The sealed artifacts are the ones that were built
+        run: |
+          set -euo pipefail
+          cd sealed
+          sha256sum -c SHA256SUMS
+          python3 - "${{ needs.build.outputs.version }}" "$GITHUB_REF_NAME" <<'EOF'
+          import hashlib, json, os, sys
+          version, tag = sys.argv[1:3]
+          manifest = json.load(open('release-manifest.json', encoding='utf-8'))
+          assert manifest['version'] == version, f"manifest {manifest['version']} != {version}"
+          assert manifest['tag'] == tag, f"manifest {manifest['tag']} != {tag}"
+          for entry in manifest['artifacts']:
+              with open(entry['file'], 'rb') as handle:
+                  digest = hashlib.sha256(handle.read()).hexdigest()
+              assert digest == entry['sha256'], f"{entry['file']} digest changed"
+              assert os.path.getsize(entry['file']) == entry['size'], f"{entry['file']} size changed"
+          names = {entry['file'] for entry in manifest['artifacts']}
+          assert any(n.endswith('.whl') for n in names), 'no wheel in the sealed set'
+          assert any(n.endswith('.tar.gz') for n in names), 'no sdist in the sealed set'
+          print(f"verified {len(manifest['artifacts'])} sealed artifact(s) for {version}")
+          EOF
+
+      # Only the distributions, and only by copy: twine uploads a directory,
+      # and the sealed set also holds the skill bundle, the notes and the
+      # manifest, none of which belong on PyPI. Copied rather than repacked --
+      # these are the bytes the digest above just matched.
+      - name: Stage the distributions PyPI accepts
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          cp sealed/*.whl sealed/*.tar.gz dist/
+          ls -l dist
+
       # No token: PyPI verifies this workflow's OIDC identity. The publisher
       # is configured once at
       # https://pypi.org/manage/project/watch-skill/settings/publishing/
@@ -97,23 +208,24 @@ jobs:
           attestations: true
           print-hash: true
 
-  # Registry metadata last, and only after PyPI accepted the upload. The entry
-  # resolves to a real package at a real version, so publishing it before the
-  # package exists advertises an install that cannot work. `needs: pypi` is the
-  # ordering that guarantees it.
+  # Registry metadata after PyPI accepted the upload. The entry resolves to a
+  # real package at a real version, so publishing it before the package exists
+  # advertises an install that cannot work. `needs: pypi` is the ordering that
+  # guarantees it.
   #
   # This has never run: the registry entry for io.github.oxbshw/watch-skill is
   # created by the first release that reaches it. `server.json` is validated on
   # every push by tests/test_mcp_registry.py, so what runs here has already
   # been checked against the schema and against pyproject's version.
   mcp-registry:
+    name: Publish the MCP registry entry
     needs: pypi
     runs-on: ubuntu-latest
     permissions:
       id-token: write   # OIDC identity the registry verifies against this repo
       contents: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Install mcp-publisher
         run: |
           curl -L "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_$(uname -s | tr '[:upper:]' '[:lower:]')_$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/').tar.gz" | tar xz mcp-publisher
@@ -121,3 +233,92 @@ jobs:
         run: ./mcp-publisher login github-oidc
       - name: Publish server.json
         run: ./mcp-publisher publish
+
+  # Last, because a GitHub Release is an announcement and an announcement of an
+  # upload that has not happened is false. It also carries the assets, so the
+  # manifest is checked again here: the Release must attach the same bytes PyPI
+  # received, and "the same" is a digest rather than a filename.
+  github-release:
+    name: Complete the GitHub Release
+    needs: [build, pypi]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: release-build
+          path: sealed
+      - name: The assets are the sealed ones
+        run: |
+          set -euo pipefail
+          cd sealed
+          sha256sum -c SHA256SUMS
+      - name: GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          body_path: sealed/release-notes.md
+          prerelease: ${{ needs.build.outputs.prerelease == 'true' }}
+          files: |
+            sealed/*.whl
+            sealed/*.tar.gz
+            sealed/watch-skill.skill
+            sealed/SHA256SUMS
+            sealed/release-manifest.json
+
+  # What actually happened, stated once, whatever the outcome. A release that
+  # publishes to PyPI and then fails at the registry is a real state somebody
+  # has to act on, and reading four job badges to reconstruct it is how a
+  # partial release gets mistaken for a failed one.
+  report:
+    name: Report what reached which registry
+    if: always()
+    needs: [build, pypi, mcp-registry, github-release]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Summarise
+        env:
+          BUILD: ${{ needs.build.result }}
+          PYPI: ${{ needs.pypi.result }}
+          REGISTRY: ${{ needs.mcp-registry.result }}
+          RELEASE: ${{ needs.github-release.result }}
+          VERSION: ${{ needs.build.outputs.version }}
+        run: |
+          set -uo pipefail
+          {
+            echo "### Watch Core ${VERSION:-unknown} (${GITHUB_REF_NAME})"
+            echo ""
+            echo "| Stage | Result | Reversible |"
+            echo "| --- | --- | --- |"
+            echo "| Build and seal | ${BUILD} | yes |"
+            echo "| PyPI | ${PYPI} | **no** |"
+            echo "| MCP registry | ${REGISTRY} | no |"
+            echo "| GitHub Release | ${RELEASE} | yes |"
+            echo ""
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "$PYPI" = "success" ] && { [ "$REGISTRY" != "success" ] || [ "$RELEASE" != "success" ]; }; then
+            {
+              echo "**This release is incomplete, and the irreversible half succeeded.**"
+              echo ""
+              echo "\`watch-skill ${VERSION}\` is on PyPI. A PyPI version can never be"
+              echo "replaced, so do not re-run this workflow to \"finish\" it: the build"
+              echo "job would re-upload and fail. Recover the remaining stages on their"
+              echo "own -- the MCP registry entry with \`mcp-publisher publish\`, the"
+              echo "GitHub Release from this run's sealed \`release-build\` artifact."
+              echo "See docs/releasing.md."
+            } >> "$GITHUB_STEP_SUMMARY"
+          elif [ "$PYPI" != "success" ]; then
+            {
+              echo "**Nothing was published.**"
+              echo ""
+              echo "PyPI did not accept the upload, and every stage after it is gated on"
+              echo "that, so no registry changed and the tag can be released again once"
+              echo "the cause is fixed."
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+          # The job's own result mirrors the release's, so a partial publish is
+          # a red check rather than a green one with a note in it.
+          [ "$BUILD" = "success" ] && [ "$PYPI" = "success" ] \
+            && [ "$REGISTRY" = "success" ] && [ "$RELEASE" = "success" ]

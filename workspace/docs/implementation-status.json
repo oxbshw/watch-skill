@@ -2,7 +2,7 @@
   "note": "The single source of truth for what is built. docs/implementation-status.md is generated from this file by scripts/gen-status.mjs, which also refuses a claim of 'tested' that names no test or 'implemented' that names no source.",
   "baseline": {
     "dsh": "0.1.1-rc.2 @ b150a551b8d465e31e418e1b2eaf5e79bbb7d28e",
-    "watchCore": "watch-skill 1.3.0rc2, Bridge protocol 1"
+    "watchCore": "watch-skill 1.4.0, Bridge protocol 1"
   },
   "items": [
     {
@@ -10,7 +10,7 @@
       "title": "Pinned DSH baseline, consumed as published packages",
       "phase": "Phase 0 — foundation",
       "classification": "DSH_EXISTING",
-      "owner": "watch-workspace",
+      "owner": "DeepWatch",
       "status": "tested",
       "source_paths": [
         "upstream/deepseek-harness.lock",
@@ -28,7 +28,7 @@
       "title": "Every DSH client product capability classified, enforced by a gate",
       "phase": "Phase 0 — foundation",
       "classification": "DSH_EXISTING",
-      "owner": "watch-workspace",
+      "owner": "DeepWatch",
       "status": "tested",
       "source_paths": [
         "inventory/parity.yml",
@@ -48,7 +48,7 @@
       "title": "JSON-RPC over stdio with deadlines, cancellation, correlation, idempotency",
       "phase": "Phase 1 — bundle and bridge",
       "classification": "WATCH_NEW",
-      "owner": "watch-workspace",
+      "owner": "DeepWatch",
       "status": "tested",
       "source_paths": [
         "packages/watch/core-bridge/src/index.ts",
@@ -83,7 +83,7 @@
       ],
       "acceptance_journey": "The installed engine publishes the contract this build was written against",
       "known_limitations": [
-        "TypeScript types are maintained by hand against the emitted JSON Schema; the generator that would derive them is not built. The digest check is what catches drift."
+        "Typert generates the Node host and remote client faces; Pydantic schema digests still provide the cross-language drift gate."
       ],
       "commit": "8d63f4d"
     },
@@ -92,7 +92,7 @@
       "title": "Watch for DSH bundle installs into a stock profile",
       "phase": "Phase 1 — bundle and bridge",
       "classification": "WATCH_NEW",
-      "owner": "watch-workspace",
+      "owner": "DeepWatch",
       "status": "tested",
       "source_paths": [
         "packages/watch/bundle/cordis.patch.yml",
@@ -120,7 +120,7 @@
       "title": "Watch capabilities as DSH agent tools",
       "phase": "Phase 2 — evidence slice",
       "classification": "WATCH_NEW",
-      "owner": "watch-workspace",
+      "owner": "DeepWatch",
       "status": "tested",
       "source_paths": [
         "packages/watch/tools/src/index.ts",
@@ -139,7 +139,7 @@
       "title": "Watch records in DSH's own event system, with replay determinism",
       "phase": "Phase 2 — evidence slice",
       "classification": "DSH_EXTENDED",
-      "owner": "watch-workspace",
+      "owner": "DeepWatch",
       "status": "tested",
       "source_paths": [
         "packages/watch/trajectory/src/events.ts",
@@ -161,7 +161,7 @@
       "title": "Unified Selection Model and deep links",
       "phase": "Phase 2 — evidence slice",
       "classification": "WATCH_NEW",
-      "owner": "watch-workspace",
+      "owner": "DeepWatch",
       "status": "tested",
       "source_paths": [
         "packages/watch/trajectory/src/selection.ts",
@@ -182,7 +182,7 @@
       "title": "Evidence Inspector showing resolved records",
       "phase": "Phase 2 — evidence slice",
       "classification": "WATCH_NEW",
-      "owner": "watch-workspace",
+      "owner": "DeepWatch",
       "status": "tested",
       "source_paths": [
         "packages/watch/client-evidence/src/client/EvidenceInspector.tsx"
@@ -203,7 +203,7 @@
       "title": "MemoryEvent ledger, correction precedence, real forgetting",
       "phase": "Phase 2+ — memory",
       "classification": "WATCH_NEW",
-      "owner": "watch-workspace",
+      "owner": "DeepWatch",
       "status": "tested",
       "source_paths": [
         "packages/watch/memory/src/records.ts",
@@ -226,7 +226,7 @@
       "title": "Context Compiler with inclusion trace and token budget",
       "phase": "Phase 2+ — memory",
       "classification": "WATCH_NEW",
-      "owner": "watch-workspace",
+      "owner": "DeepWatch",
       "status": "tested",
       "source_paths": [
         "packages/watch/memory/src/compiler.ts"
@@ -246,7 +246,7 @@
       "title": "Deterministic taste.md, index.md and log.md",
       "phase": "Phase 2+ — memory",
       "classification": "WATCH_NEW",
-      "owner": "watch-workspace",
+      "owner": "DeepWatch",
       "status": "tested",
       "source_paths": [
         "packages/watch/memory/src/projector.ts"
@@ -265,7 +265,7 @@
       "title": "Memory in the agent loop, bounded by ADR-008",
       "phase": "Phase 2+ — memory",
       "classification": "WATCH_NEW",
-      "owner": "watch-workspace",
+      "owner": "DeepWatch",
       "status": "tested",
       "source_paths": [
         "packages/watch/memory/src/tools.ts",
@@ -283,7 +283,7 @@
       "title": "Watch Core Bridge: handshake, capability truth, sensory and operator methods",
       "phase": "Phase 2 — evidence slice",
       "classification": "WATCH_EXISTING",
-      "owner": "watch-skill",
+      "owner": "Watch Skill",
       "status": "tested",
       "source_paths": [
         "upstream/deepseek-harness.lock"
@@ -302,7 +302,7 @@
       "title": "Browser operator with durable receipts and approval gating",
       "phase": "Phase 2+ — browser",
       "classification": "WATCH_EXISTING",
-      "owner": "watch-skill",
+      "owner": "Watch Skill",
       "status": "tested",
       "source_paths": [
         "packages/watch/tools/src/browser.ts"
@@ -321,7 +321,7 @@
       "title": "Watch brand and theme over DSH's token system",
       "phase": "Phase 3 — web product",
       "classification": "DSH_EXTENDED",
-      "owner": "watch-workspace",
+      "owner": "DeepWatch",
       "status": "tested",
       "source_paths": [
         "packages/watch/brand/src/identity.ts",
@@ -329,12 +329,13 @@
         "packages/watch/brand/src/client/theme.css"
       ],
       "tests": [
-        "tests/brand.test.mjs"
+        "tests/brand.test.mjs",
+        "scripts/qa-e2e.mjs"
       ],
-      "acceptance_journey": "Watch Workspace reads as a Watch product; green reserved for VERIFIED",
+      "acceptance_journey": "DeepWatch reads as a Watch product; green reserved for VERIFIED",
       "known_limitations": [
         "Occupies DSH brand slots and defines the token layer. The full workspace shell composition is a separate item.",
-        "No browser test harness, so the React slot occupancy is not covered by a gate; the tone rules are."
+        "The browser gate covers the composed slot occupancy and first-run identity."
       ],
       "commit": "bc23fc2"
     },
@@ -343,7 +344,7 @@
       "title": "Agent / Watch / Live / Memory / Library / Compare / Trajectory modes",
       "phase": "Phase 3 — web product",
       "classification": "WATCH_NEW",
-      "owner": "watch-workspace",
+      "owner": "DeepWatch",
       "status": "tested",
       "source_paths": [
         "packages/watch/workspace/src/modes.ts",
@@ -367,7 +368,7 @@
       "title": "Composer extensions: sources, scope, observe, remember, act, verify, budget, privacy",
       "phase": "Phase 3 — web product",
       "classification": "DSH_EXTENDED",
-      "owner": "watch-workspace",
+      "owner": "DeepWatch",
       "status": "tested",
       "source_paths": [
         "packages/watch/workspace/src/composer.ts"
@@ -386,7 +387,7 @@
       "title": "Memory surfaces: taste, timeline, wiki, decisions, lessons, failures",
       "phase": "Phase 3 — web product",
       "classification": "WATCH_NEW",
-      "owner": "watch-workspace",
+      "owner": "DeepWatch",
       "status": "tested",
       "source_paths": [
         "packages/watch/client-memory/src/views.ts",
@@ -408,17 +409,20 @@
       "title": "Role bindings over DSH Models and Providers",
       "phase": "Phase 3 — web product",
       "classification": "DSH_EXTENDED",
-      "owner": "watch-workspace",
+      "owner": "DeepWatch",
       "status": "tested",
       "source_paths": [
-        "packages/watch/technology/src/descriptor.ts"
+        "packages/watch/technology/src/descriptor.ts",
+        "packages/watch/client-settings/src/client/role-bindings.tsx"
       ],
       "tests": [
-        "tests/technology.test.mjs"
+        "tests/technology.test.mjs",
+        "tests/binding-flow.test.mjs",
+        "scripts/qa-e2e.mjs"
       ],
       "acceptance_journey": "One connection serves several roles; no duplicate credential store",
       "known_limitations": [
-        "Contracts, lifecycle and admission rules are implemented and tested. The DSH Settings UI that edits bindings is not built.",
+        "The provider form remains DSH-owned; DeepWatch contributes the tested unified Role Bindings editor.",
         "Credential references point at DSH; no Watch credential store exists, by design."
       ],
       "commit": "bc23fc2"
@@ -428,17 +432,19 @@
       "title": "Technology descriptors and capability lifecycle",
       "phase": "Phase 3 — web product",
       "classification": "WATCH_NEW",
-      "owner": "watch-workspace",
+      "owner": "DeepWatch",
       "status": "tested",
       "source_paths": [
-        "packages/watch/technology/src/descriptor.ts"
+        "packages/watch/technology/src/descriptor.ts",
+        "packages/watch/client-settings/src/client/components.tsx"
       ],
       "tests": [
-        "tests/technology.test.mjs"
+        "tests/technology.test.mjs",
+        "scripts/qa-e2e.mjs"
       ],
       "acceptance_journey": "Presence on disk does not equal ready",
       "known_limitations": [
-        "Descriptor, lifecycle and health contracts are implemented. The Settings surface that renders them is not built."
+        "GPU-specific engine quality remains external hardware validation; no unmeasured quality number is rendered."
       ],
       "commit": "bc23fc2"
     },
@@ -501,7 +507,7 @@
       "title": "Live mode with gaps, clocks and reconnect",
       "phase": "Phase 4 — sensory surfaces",
       "classification": "WATCH_EXISTING",
-      "owner": "watch-workspace",
+      "owner": "DeepWatch",
       "status": "tested",
       "source_paths": [
         "packages/watch/live/src/session.ts",
@@ -529,7 +535,7 @@
       "title": "Library of sources and evidence, separate from memory",
       "phase": "Phase 4 — sensory surfaces",
       "classification": "WATCH_EXISTING",
-      "owner": "watch-workspace",
+      "owner": "DeepWatch",
       "status": "tested",
       "source_paths": [
         "packages/watch/library/src/sources.ts",
@@ -553,7 +559,7 @@
       "title": "Compare runs, revisions and before/after states",
       "phase": "Phase 4 — sensory surfaces",
       "classification": "WATCH_NEW",
-      "owner": "watch-workspace",
+      "owner": "DeepWatch",
       "status": "tested",
       "source_paths": [
         "packages/watch/trajectory/src/compare.ts",
@@ -576,7 +582,7 @@
       "title": "Workspace wiki projections with provenance",
       "phase": "Phase 4 — sensory surfaces",
       "classification": "WATCH_NEW",
-      "owner": "watch-workspace",
+      "owner": "DeepWatch",
       "status": "tested",
       "source_paths": [
         "packages/watch/wiki/src/projection.ts"
@@ -596,7 +602,7 @@
       "title": "Optional Obsidian vault adapter",
       "phase": "Phase 4 — sensory surfaces",
       "classification": "WATCH_NEW",
-      "owner": "watch-workspace",
+      "owner": "DeepWatch",
       "status": "tested",
       "source_paths": [
         "packages/watch/adapters/src/obsidian.ts"
@@ -617,7 +623,7 @@
       "title": "LLMWiki-compatible import and export",
       "phase": "Phase 4 — sensory surfaces",
       "classification": "WATCH_NEW",
-      "owner": "watch-workspace",
+      "owner": "DeepWatch",
       "status": "tested",
       "source_paths": [
         "packages/watch/adapters/src/llmwiki.ts"
@@ -637,7 +643,7 @@
       "title": "Candidate lifecycle with eval, promotion, canary and rollback",
       "phase": "Phase 4 — sensory surfaces",
       "classification": "WATCH_NEW",
-      "owner": "watch-workspace",
+      "owner": "DeepWatch",
       "status": "tested",
       "source_paths": [
         "packages/watch/memory/src/learning.ts",
@@ -660,7 +666,7 @@
       "title": "Electron shell around the same Workspace packages",
       "phase": "Phase 5 — desktop",
       "classification": "WATCH_NEW",
-      "owner": "watch-workspace",
+      "owner": "DeepWatch",
       "status": "tested",
       "source_paths": [
         "apps/desktop/src/security.ts",
@@ -693,7 +699,7 @@
       "title": "Third-party Watch capability developer path",
       "phase": "Phase 6 — distribution",
       "classification": "WATCH_NEW",
-      "owner": "watch-workspace",
+      "owner": "DeepWatch",
       "status": "tested",
       "source_paths": [
         "packages/watch/sdk/src/capability.ts",
@@ -717,7 +723,7 @@
       "title": "SBOM, licences, notices and model provenance gates",
       "phase": "Phase 6 — distribution",
       "classification": "WATCH_NEW",
-      "owner": "watch-workspace",
+      "owner": "DeepWatch",
       "status": "tested",
       "source_paths": [
         "scripts/gen-sbom.mjs",
@@ -752,8 +758,7 @@
         "upstream/deepseek-harness.lock"
       ],
       "tests": [
-        "tests/offline-egress.test.mjs",
-        "docs/phase-2-closure.md"
+        "tests/offline-egress.test.mjs"
       ],
       "acceptance_journey": "A process-level sentinel installed by --require patches net/tls/dns beneath every outbound path; twelve route families run under offline_only and record zero non-loopback egress, and a self-test arm proves the sentinel catches a real connection",
       "known_limitations": [
@@ -770,7 +775,7 @@
       "title": "Tenant model, RBAC, remote workers and audit",
       "phase": "Phase 7 — team",
       "classification": "WATCH_NEW",
-      "owner": "watch-workspace",
+      "owner": "DeepWatch",
       "status": "tested",
       "source_paths": [
         "packages/watch/tenancy/src/identity.ts",

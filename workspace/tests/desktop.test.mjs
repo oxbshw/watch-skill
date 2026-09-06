@@ -75,7 +75,7 @@ import {
   stampSchemaVersion,
   updateAssurance,
   vaultAssurance,
-} from '@watchskill/watch-desktop'
+} from '@deepwatch/desktop'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const CHILD = join(HERE, 'fixtures', 'supervised-child.mjs')

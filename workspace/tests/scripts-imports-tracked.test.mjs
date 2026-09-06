@@ -31,9 +31,29 @@ const tracked = (args) =>
   execFileSync('git', args, { cwd: ROOT, encoding: 'utf8' })
     .split('\n').map(line => line.trim()).filter(line => line !== '')
 
-/** Relative specifiers only -- a bare specifier is a dependency, not a file here. */
-const RELATIVE_IMPORT = /(?:^|\n)\s*(?:import|export)[^'"\n]*?from\s*['"](\.[^'"]+)['"]/g
+/**
+ * Relative specifiers only -- a bare specifier is a dependency, not a file here.
+ *
+ * `[^'";]*?` rather than `[^'"\n]*?`: a multi-line `export { a, b } from '...'`
+ * is the same statement as a single-line one, and only reading the single-line
+ * form is how `scripts/lib/process.mjs` passed this test for the wrong reason.
+ */
+const RELATIVE_IMPORT = /(?:^|\n)\s*(?:import|export)[^'";]*?from\s*['"](\.[^'"]+)['"]/g
 const BARE_IMPORT = /(?:^|\n)\s*import\s*['"](\.[^'"]+)['"]/g
+
+/**
+ * Build output a script may legitimately import: the shipped CLI's own modules.
+ *
+ * Two scripts do this on purpose. `scripts/lib/process.mjs` and
+ * `scripts/lib/install.mjs` re-export the product's process and install
+ * boundaries so the release tooling cannot grow a second, differently-correct
+ * copy of either -- which is the drift that let a Windows defect ship. The
+ * files they name are build output, so a clean clone genuinely does not carry
+ * them, and that is acceptable only because each script checks for the built
+ * file first and fails with a message naming `npm run build`, rather than with
+ * a module-resolution error from three frames deeper.
+ */
+const BUILD_OUTPUT = /^packages[\\/]watch[\\/][^\\/]+[\\/]lib[\\/]/
 
 test('every relative import in a tracked script resolves to a tracked file', async () => {
   const scripts = tracked(['ls-files', 'scripts'])
@@ -50,13 +70,23 @@ test('every relative import in a tracked script resolves to a tracked file', asy
       for (const [, specifier] of source.matchAll(pattern)) {
         const target = resolve(dirname(absolute), specifier)
         const path = relative(ROOT, target)
-        if (!trackedSet.has(path)) {
-          broken.push(
-            `${script} imports "${specifier}" -> ${path}`
-            + (existsSync(target)
-              ? ' (present on disk, NOT tracked -- check .gitignore)'
-              : ' (missing entirely)'))
+        if (trackedSet.has(path)) continue
+        if (BUILD_OUTPUT.test(path)) {
+          // Allowed, but only where the script says what a clean clone must do
+          // first. Without that, this is exactly the failure the file above
+          // describes, wearing a different hat.
+          if (!source.includes('npm run build')) {
+            broken.push(
+              `${script} imports the build output ${path} without telling a clean `
+              + 'clone to run `npm run build` first')
+          }
+          continue
         }
+        broken.push(
+          `${script} imports "${specifier}" -> ${path}`
+          + (existsSync(target)
+            ? ' (present on disk, NOT tracked -- check .gitignore)'
+            : ' (missing entirely)'))
       }
     }
   }

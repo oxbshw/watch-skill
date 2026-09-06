@@ -12,7 +12,7 @@
  * thing survives. Here there is one write path and one fold, so a tombstoned
  * record cannot come back through a stale index.
  *
- * @module @watchskill/dsh-memory/ledger
+ * @module @deepwatch/dsh-memory/ledger
  */
 
 import { DatabaseSync } from 'node:sqlite'

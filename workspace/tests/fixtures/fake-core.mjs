@@ -12,17 +12,30 @@
  *
  * Behaviors are selected by method name so one fixture covers every case:
  *   fixture.echo       → returns its params
- *   fixture.silent     → never answers (exercises the deadline)
+ *   fixture.silent     → never answers (exercises the deadline on a read)
+ *   watch.browser.operate → never answers, and is side-effecting, so the
+ *                        deadline's other half can be exercised: a method
+ *                        that may have dispatched something gets different
+ *                        advice from one that provably did not
  *   fixture.slow       → answers after 500ms
  *   fixture.fail       → returns a Watch error contract in `data`
  *   fixture.rawFail    → returns a bare JSON-RPC error with no contract
  *   fixture.split      → answers in two writes split inside the header
  *   fixture.crash      → exits the process without answering
  *   fixture.event      → pushes a notification, then answers
+ *
+ * Startup is controlled by the environment rather than the method name,
+ * because the handshake happens before any method can be chosen:
+ *
+ *   WATCH_FIXTURE_HANDSHAKE_DELAY_MS  answer the handshake this much later,
+ *                                     which is a slow but healthy engine
+ *   WATCH_FIXTURE_HANDSHAKE_NEVER     never answer it, which is a hung one
+ *   WATCH_FIXTURE_EXIT_AT_START       exit with this code before answering,
+ *                                     which is an engine that died starting
  */
 
 import { Buffer } from 'node:buffer'
-import { EXPECTED_SCHEMA_DIGESTS } from '@watchskill/dsh-contracts'
+import { EXPECTED_SCHEMA_DIGESTS } from '@deepwatch/dsh-contracts'
 
 const HEADER_TERMINATOR = '\r\n\r\n'
 
@@ -51,7 +64,7 @@ function sendSplit(message) {
 /** The handshake a protocol fixture is entitled to answer. */
 function handshake() {
   return {
-    coreVersion: '1.3.0rc2-fixture',
+    coreVersion: '1.4.0-fixture',
     coreBuild: 'fixture',
     protocolVersion: 1,
     capabilities: [{
@@ -90,15 +103,25 @@ function handle(message) {
   const reply = result => send({ jsonrpc: '2.0', id: message.id, result })
 
   switch (message.method) {
-    case 'watch.handshake':
+    case 'watch.handshake': {
+      // A hung engine: the process is alive and the handshake never lands.
+      if (process.env.WATCH_FIXTURE_HANDSHAKE_NEVER === '1') return
+      const delay = Number(process.env.WATCH_FIXTURE_HANDSHAKE_DELAY_MS ?? '0')
+      if (Number.isFinite(delay) && delay > 0) {
+        setTimeout(() => { reply(handshake()) }, delay)
+        return
+      }
       reply(handshake())
       return
+    }
     case 'fixture.echo':
       // The envelope's correlationId is echoed back so the test can prove it
       // travels with the request rather than being invented by the client.
       reply({ params: message.params, correlationId: message.correlationId })
       return
     case 'fixture.silent':
+      return
+    case 'watch.browser.operate':
       return
     case 'fixture.slow':
       setTimeout(() => {
@@ -139,6 +162,10 @@ function handle(message) {
     default:
       send({ jsonrpc: '2.0', id: message.id, error: { code: -32601, message: `unknown ${message.method}` } })
   }
+}
+
+if (process.env.WATCH_FIXTURE_EXIT_AT_START !== undefined) {
+  process.exit(Number(process.env.WATCH_FIXTURE_EXIT_AT_START))
 }
 
 process.stdin.on('data', (chunk) => {

@@ -7,7 +7,7 @@
  * a row whose module exports no `apply` is refused with "invalid plugin", and
  * the whole plugin tree fails to load with it.
  *
- * @module @watchskill/dsh-client-settings
+ * @module @deepwatch/dsh-client-settings
  */
 
 export function apply(): void {}

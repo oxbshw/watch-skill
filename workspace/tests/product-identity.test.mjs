@@ -1,5 +1,5 @@
 /**
- * The product is Watch Workspace, and DeepSeek Harness is what it is built on.
+ * The product is DeepWatch, and DeepSeek Harness is what it is built on.
  *
  * Every assertion here exists because the opposite was true at some point in
  * this pass, and none of it was caught by a component test. The product looked
@@ -26,13 +26,25 @@ const read = relative => readFileSync(join(ROOT, relative), 'utf8')
 const BRAND = read('packages/watch/brand/src/identity.ts')
 const BRAND_CLIENT = read('packages/watch/brand/src/client/index.tsx')
 const BUNDLE = read('packages/watch/bundle/cordis.patch.yml')
+/**
+ * The bundle patch with its commentary removed.
+ *
+ * The rows are what compose a profile; the comments are what explain them to
+ * the next reader, and this file's assertions are about the former. Scanning
+ * the whole document made the two indistinguishable — a comment saying "the
+ * DeepSeek route stays selectable" read as though the patch selected it — so
+ * a paragraph could not be written about the very thing it was ensuring.
+ */
+const BUNDLE_ROWS = BUNDLE.split(/\r?\n/)
+  .filter(line => !line.trimStart().startsWith('#'))
+  .join('\n')
 const DESKTOP = read('apps/desktop/main.mjs')
 const SETTINGS = read('packages/watch/client-settings/src/client/index.tsx')
 const SLOTS = JSON.parse(read('inventory/dsh-slots.json'))
 
 test('the product identity', async t => {
-  await t.test('the product is named Watch Workspace', () => {
-    assert.match(BRAND, /export const PRODUCT_NAME = 'Watch Workspace'/)
+  await t.test('the product is named DeepWatch', () => {
+    assert.match(BRAND, /export const PRODUCT_NAME = 'DeepWatch'/)
   })
 
   await t.test('the desktop window uses the same name, character for character', () => {
@@ -42,7 +54,7 @@ test('the product identity', async t => {
     const brandName = /export const PRODUCT_NAME = '([^']+)'/.exec(BRAND)?.[1]
     const desktopName = /^const PRODUCT_NAME = '([^']+)'$/m.exec(DESKTOP)?.[1]
     assert.equal(desktopName, brandName)
-    assert.equal(desktopName, 'Watch Workspace')
+    assert.equal(desktopName, 'DeepWatch')
   })
 
   await t.test('the desktop window refuses a title the page proposes', () => {
@@ -54,7 +66,7 @@ test('the product identity', async t => {
 
   await t.test('the desktop package carries the Watch identity', () => {
     const manifest = JSON.parse(read('apps/desktop/package.json'))
-    assert.equal(manifest.productName, 'Watch Workspace')
+    assert.equal(manifest.productName, 'DeepWatch')
   })
 
   await t.test('the document title and favicon are claimed at runtime', () => {
@@ -62,7 +74,11 @@ test('the product identity', async t => {
     // artifact this distribution does not fork. The product takes its name
     // when the brand plugin loads, and re-asserts it on mutation because DSH's
     // session layer writes the title too.
-    assert.match(BRAND_CLIENT, /document\.title = .*PRODUCT_NAME/s)
+    // *What* the title should be is `productTitle`, which is pure and is
+    // asserted behaviourally in tests/brand.test.mjs. What this holds is that
+    // the client actually uses it, on load and on every mutation after.
+    assert.match(BRAND_CLIENT, /productTitle\(document\.title, restoreTitle\)/)
+    assert.match(BRAND_CLIENT, /document\.title = wanted/)
     assert.match(BRAND_CLIENT, /MutationObserver/)
     assert.match(BRAND_CLIENT, /rel~="icon"/)
   })
@@ -72,7 +88,7 @@ test('DeepSeek Harness attribution', async t => {
   await t.test('the attribution line is exact', () => {
     assert.match(
       BRAND,
-      /export const ATTRIBUTION = 'Built on DeepSeek Harness · Extended by Watch Skill'/,
+      /export const ATTRIBUTION = 'Built on DeepSeek Harness · Powered by Watch Skill'/,
     )
   })
 
@@ -109,13 +125,13 @@ test('DeepSeek Harness attribution', async t => {
 
 test('the bundle composes the whole product', async t => {
   const CLIENT_ROWS = [
-    ['watch-brand', '@watchskill/dsh-client-brand'],
-    ['watch-client-evidence', '@watchskill/dsh-client-evidence'],
-    ['watch-workspace', '@watchskill/dsh-workspace'],
-    ['watch-live', '@watchskill/dsh-live'],
-    ['watch-library', '@watchskill/dsh-library'],
-    ['watch-client-memory', '@watchskill/dsh-client-memory'],
-    ['watch-client-settings', '@watchskill/dsh-client-settings'],
+    ['watch-brand', '@deepwatch/dsh-client-brand'],
+    ['watch-client-evidence', '@deepwatch/dsh-client-evidence'],
+    ['watch-workspace', '@deepwatch/dsh-workspace'],
+    ['watch-live', '@deepwatch/dsh-live'],
+    ['watch-library', '@deepwatch/dsh-library'],
+    ['watch-client-memory', '@deepwatch/dsh-client-memory'],
+    ['watch-client-settings', '@deepwatch/dsh-client-settings'],
   ]
 
   for (const [id, module] of CLIENT_ROWS) {
@@ -143,7 +159,7 @@ test('the bundle composes the whole product', async t => {
     // `lib/identity.js` it imports, so the profile installed a package that
     // could not be loaded. The glob is what every other package uses.
     for (const [, module] of CLIENT_ROWS) {
-      const directory = module.replace('@watchskill/dsh-', '')
+      const directory = module.replace('@deepwatch/dsh-', '')
       const path = `packages/watch/${directory === 'client-brand' ? 'brand' : directory}/package.json`
       if (!existsSync(join(ROOT, path))) continue
       const manifest = JSON.parse(read(path))
@@ -161,15 +177,23 @@ test('the bundle composes the whole product', async t => {
     assert.match(BUNDLE, /- id: ui-brand-official\n\s+disabled: true/)
   })
 
-  await t.test('nothing upstream is removed beyond that one row', () => {
+  await t.test('every upstream row switched off is one the register accounts for', () => {
+    // Two, and each for a reason written beside it: the official brand mark,
+    // which would draw a second mark next to DeepWatch's, and the dedicated
+    // DeepSeek adapter, which registered a route at load with no credential
+    // and so made one provider configure itself. `tests/onboarding.test.mjs`
+    // holds each to having that reason in the file.
     const disabled = [...BUNDLE.matchAll(/^- id: (\S+)\n\s+disabled: true/gm)].map(m => m[1])
-    assert.deepEqual(disabled, ['ui-brand-official'])
+    assert.deepEqual(disabled.sort(), ['llm-deepseek', 'ui-brand-official'])
   })
 })
 
 test('the product modes are DSH views', async t => {
   const WORKSPACE = read('packages/watch/workspace/src/client/index.tsx')
-  const EVIDENCE = read('packages/watch/client-evidence/src/client/index.tsx')
+  // Compare's registration lives in its own module: it is the one mode that
+  // needs a Host round-trip, so it is mounted in a nested scope that declares
+  // that dependency without parking the tool views alongside it.
+  const EVIDENCE = read('packages/watch/client-evidence/src/client/compare-registration.tsx')
   const LIVE = read('packages/watch/live/src/client/index.tsx')
   const LIBRARY = read('packages/watch/library/src/client/index.tsx')
   const MEMORY = read('packages/watch/client-memory/src/client/index.tsx')
@@ -406,12 +430,21 @@ test('the first run does not require DeepSeek', async t => {
 
   await t.test('upstream’s onboarding step is not removed', () => {
     // DeepSeek stays a good provider choice. What changed is that it is no
-    // longer the price of entry.
-    assert.doesNotMatch(BUNDLE, /deepseek-official/)
+    // longer the price of entry. So the row is not switched off, and no row
+    // names a DeepSeek route as a value this distribution writes into a
+    // profile. `tests/default-model.test.mjs` holds the other half: the
+    // inherited default that *did* name one is emptied.
+    assert.doesNotMatch(BUNDLE_ROWS, /deepseek-official/)
+    assert.doesNotMatch(BUNDLE_ROWS, /id:\s*deepseek-official/)
   })
 
   await t.test('there is a way into the workspace without configuring anything', () => {
-    assert.match(ONBOARDING, />Continue</)
+    // The label changed from "Continue" to "Explore offline"; the property did
+    // not. "Continue" beside "Set up capabilities" gave a person two ghost
+    // links and no idea which was the way forward, and it also said nothing
+    // about what continuing would get them. What must remain true is that one
+    // action dismisses the notice and configures nothing.
+    assert.match(ONBOARDING, />Explore offline</)
     assert.match(ONBOARDING, /complete\?\.\(\)/)
   })
 
@@ -421,7 +454,7 @@ test('the first run does not require DeepSeek', async t => {
     // upstream's WelcomeNotice does. Rendering into it raw spilled 2400px out
     // of a clipped column and destroyed the sidebar.
     assert.match(ONBOARDING, /from '@deepseek-ai\/dsh-client-ui-primitives'/)
-    assert.match(ONBOARDING, /<Modal open/)
+    assert.match(ONBOARDING, /<Modal\s+[\s\S]{0,160}?\bopen\b/)
     // And not a hand-rolled one, which would duplicate the dimming, the focus
     // handling and the inert root that already exist.
     assert.doesNotMatch(ONBOARDING, /position: 'fixed'/)
@@ -438,22 +471,48 @@ test('the first run does not require DeepSeek', async t => {
 
   await t.test('the notice and the list cannot disagree', () => {
     // The count on the notice is derived from the table Diagnostics renders,
-    // rather than written out a second time.
-    assert.match(ONBOARDING, /READINESS\.filter\(item => item\.tone === 'active'\)/)
-    assert.match(ONBOARDING, /READINESS\.length/)
+    // rather than written out a second time. It is no longer stated as a
+    // fraction of the whole: "4 of 12 capabilities are ready" read as a
+    // warning about a broken installation rather than a description of a
+    // local-first product nobody had pointed at a model yet. The derivation is
+    // what this test is about, and it is unchanged.
+    assert.match(ONBOARDING, /deriveReadiness\(\{ roles, health, reading \}\)/,
+      'the notice must fold the same runtime snapshot Diagnostics folds')
+    assert.match(ONBOARDING, /readiness\.filter\(item => item\.status === 'ready'\)/)
+    assert.match(ONBOARDING, /readiness\.filter\(item => item\.status !== 'ready'\)/)
+    // The static table is a table of *definitions* now. A surface that read it
+    // directly would be reporting the shape of the product rather than the
+    // state of this installation, which is the whole defect restated.
+    assert.doesNotMatch(ONBOARDING, /\bREADINESS\b/,
+      'the notice read the static table instead of the derived snapshot')
+    assert.doesNotMatch(ONBOARDING, /\d+ of \d+ capabilities/)
   })
 
   await t.test('readiness is truthful, not a column of ticks', () => {
-    // Four capabilities are genuinely local and working; the rest are not
-    // configured or not tested, and say which.
-    const statuses = [...READINESS.matchAll(/status: '([^']+)'/g)].map(m => m[1])
-    assert.ok(statuses.length >= 12, 'the readiness list is too short to be the product')
-    assert.ok(statuses.includes('Not configured'))
-    assert.ok(statuses.includes('Not tested'))
-    assert.ok(
-      statuses.filter(status => status === 'Ready' || status === 'Local').length < statuses.length,
-      'every capability claims to be ready, which cannot be true here',
-    )
+    // The table used to carry a written-down status per row, which is how a
+    // column of ticks survives a machine that cannot run any of it. Rows are
+    // definitions now and every state is derived from a live reading, so what
+    // this file can still assert about the *source* is that no row is allowed
+    // to be born ready and the vocabulary admits the unflattering answers.
+    // `tests/readiness-surface.test.mjs` holds the behavioural half.
+    const table = /export const READINESS:[\s\S]*?\n\]/.exec(READINESS)?.[0] ?? ''
+    const names = [...table.matchAll(/name: '([^']+)'/g)].map(m => m[1])
+    assert.ok(names.length >= 12, 'the readiness list is too short to be the product')
+    assert.doesNotMatch(table, /\bstatus:/,
+      'a definition carried a runtime status, which is a tick nothing measured')
+    for (const [, fallback] of table.matchAll(/defaultStatus: '([^']+)'/g)) {
+      assert.ok(['unconfigured', 'not_tested'].includes(fallback),
+        `a row defaults to ${fallback}, which claims more than is known`)
+    }
+    // The complete vocabulary, including the four words a green dot hid.
+    for (const status of [
+      'loading', 'ready', 'degraded', 'unconfigured', 'unavailable', 'not_tested', 'error',
+    ]) {
+      assert.match(READINESS, new RegExp(`\\b${status}: '`),
+        `the shared vocabulary cannot say ${status}`)
+    }
+    assert.match(READINESS, /unconfigured: 'Not configured'/)
+    assert.match(READINESS, /not_tested: 'Not tested'/)
   })
 
   await t.test('a provider key is not media consent, and the screen says so', () => {
@@ -463,8 +522,21 @@ test('the first run does not require DeepSeek', async t => {
     assert.match(flat, /does not permit uploading frames/)
   })
 
-  await t.test('the agent model is one role among nine', () => {
-    assert.match(ONBOARDING, /one role among nine/)
+  await t.test('the agent model is one capability among many, not the price of entry', () => {
+    // The screen this replaced said "Add an API key to get started", which
+    // implied the workspace does nothing until a cloud provider is connected.
+    // The claim is structural rather than a sentence: the model is one row in
+    // the shared table and the rows that need no provider outnumber it. Read
+    // from the table, so it cannot go stale the way "one role among nine" did
+    // once the table grew past nine rows.
+    const table = /export const READINESS:[\s\S]*?\n\]/.exec(READINESS)?.[0] ?? ''
+    const names = [...table.matchAll(/name: '([^']+)'/g)].map(m => m[1])
+    assert.equal([...table.matchAll(/role: 'agent_model'/g)].length, 1,
+      'the agent model is not exactly one row of the shared table')
+    assert.ok(names.length - 1 >= 8,
+      'the table no longer describes a product that is more than its chat model')
+    const flat = ONBOARDING.replace(/\s+/g, ' ')
+    assert.match(flat, /local capabilities need no provider and no network/)
   })
 })
 
@@ -605,8 +677,11 @@ test('the provider catalogue is not narrowed', async t => {
     // Hardcoding "37 providers" in a component is how a UI ends up confidently
     // stating last quarter's catalogue.
     assert.match(SUMMARY, /Generated by `scripts\/gen-provider-inventory\.mjs`/)
-    const components = read('packages/watch/client-settings/src/client/components.tsx')
-    assert.match(components, /PROVIDER_COUNT/)
-    assert.doesNotMatch(components, /\b3[0-9] (?:routes|providers)\b/)
+    // The count is rendered by Role Bindings, which is where the catalogue
+    // moved once the screen began operating the provider list rather than
+    // describing it.
+    const screen = read('packages/watch/client-settings/src/client/role-bindings.tsx')
+    assert.match(screen, /PROVIDER_COUNT/)
+    assert.doesNotMatch(screen, /\b3[0-9] (?:routes|providers)\b/)
   })
 })

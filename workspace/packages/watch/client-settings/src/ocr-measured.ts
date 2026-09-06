@@ -5,7 +5,7 @@
  * ground-truth corpus. Do not edit: a number typed into a component is a
  * number nobody measured.
  *
- * @module @watchskill/dsh-client-settings/ocr-measured
+ * @module @deepwatch/dsh-client-settings/ocr-measured
  */
 
 /** One workload tier, with the numbers the run produced. */

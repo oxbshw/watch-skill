@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Derive the Watch Workspace brand assets from the supplied orca master.
+ * Derive the DeepWatch brand assets from the supplied orca master.
  *
  * The master arrived as a 1254×1254 PNG with **no alpha channel**. What looks
  * like transparency is a checkerboard painted into the pixels — two near-white
@@ -336,7 +336,7 @@ function main() {
     ' * Do not edit by hand: the master is the brand source of truth and this is a',
     ' * mechanical derivation of it at 64px, which covers a 32px slot at 2x.',
     ' *',
-    ' * @module @watchskill/dsh-client-brand/mark',
+    ' * @module @deepwatch/dsh-client-brand/mark',
     ' */',
     '',
     '/** The orca, as a transparent PNG data URI. */',

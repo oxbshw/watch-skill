@@ -1,9 +1,26 @@
 {
-  "name": "@watchskill/dsh-tools",
-  "version": "0.1.0-preview.0",
+  "name": "@deepwatch/dsh-tools",
+  "version": "0.1.0",
   "description": "Host plugin: Watch capabilities registered as DeepSeek Harness agent tools",
   "type": "module",
   "license": "MIT",
+  "author": "Sayed Allam",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/oxbshw/watch-skill.git",
+    "directory": "workspace/packages/watch/tools"
+  },
+  "homepage": "https://github.com/oxbshw/watch-skill/tree/main/workspace#readme",
+  "bugs": {
+    "url": "https://github.com/oxbshw/watch-skill/issues"
+  },
+  "keywords": [
+    "deepwatch",
+    "deepseek-harness",
+    "watch-skill",
+    "tools",
+    "agent"
+  ],
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
   "exports": {
@@ -11,28 +28,56 @@
       "types": "./lib/index.d.ts",
       "default": "./lib/index.js"
     },
+    "./typert": {
+      "types": "./lib/typert.host.d.ts",
+      "default": "./lib/typert.host.js"
+    },
+    "./remote": {
+      "types": "./lib/typert.remote-client.d.ts",
+      "default": "./lib/typert.remote-client.js"
+    },
     "./package.json": "./package.json"
   },
   "files": [
     "lib/**/*.js",
-    "lib/**/*.d.ts"
+    "lib/**/*.d.ts",
+    "lib/typert.host.js",
+    "lib/typert.host.d.ts",
+    "lib/typert.remote-client.js",
+    "lib/typert.remote-client.d.ts",
+    "lib/typert.remote-client.d.ts.map"
   ],
+  "sideEffects": false,
+  "engines": {
+    "node": "^22.19.0 || >=24.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "dependencies": {
-    "@watchskill/dsh-contracts": "workspace:^",
-    "@watchskill/dsh-core-bridge": "workspace:^",
-    "@watchskill/dsh-library": "workspace:^",
-    "@watchskill/dsh-memory": "workspace:^"
+    "@deepwatch/dsh-contracts": "workspace:^",
+    "@deepwatch/dsh-core-bridge": "workspace:^",
+    "@deepwatch/dsh-library": "workspace:^",
+    "@deepwatch/dsh-memory": "workspace:^"
   },
   "peerDependencies": {
     "@deepseek-ai/cordis": "catalog:",
     "@deepseek-ai/dsh-system-prompt": "catalog:",
+    "@deepseek-ai/dsh-llm": "catalog:",
     "@deepseek-ai/dsh-tools": "catalog:",
-    "@deepseek-ai/schemastery": "^3.18.1"
+    "@deepseek-ai/dsh-user-approval": "^0.1.1-rc.2",
+    "@deepseek-ai/dsh-typert-protocol": "catalog:",
+    "@deepseek-ai/schemastery": "^3.18.1",
+    "zod": "^4.5.2"
   },
   "devDependencies": {
     "@deepseek-ai/cordis": "catalog:",
     "@deepseek-ai/dsh-system-prompt": "catalog:",
+    "@deepseek-ai/dsh-llm": "catalog:",
     "@deepseek-ai/dsh-tools": "catalog:",
-    "@deepseek-ai/schemastery": "^3.18.1"
+    "@deepseek-ai/dsh-user-approval": "^0.1.1-rc.2",
+    "@deepseek-ai/dsh-typert-protocol": "catalog:",
+    "@deepseek-ai/schemastery": "^3.18.1",
+    "zod": "^4.5.2"
   }
 }

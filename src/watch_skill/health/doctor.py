@@ -30,6 +30,28 @@ YT_DLP_STALE_DAYS = 14
 MIN_FREE_BYTES = 2 * 1024**3
 _VERSION_DATE_RE = re.compile(r"(\d{4})\.(\d{2})\.(\d{2})")
 
+# The oldest ffmpeg every command in this repository can run on.
+#
+# Set by one option. The benchmark frame extractor passes `-fps_mode:v
+# passthrough`, which ffmpeg added in 5.1 (June 2022) as the per-stream
+# replacement for the global `-vsync`: "vsync is applied to all output video
+# streams but can be overridden for a stream by setting fps_mode. vsync is
+# deprecated and will be removed in the future." It was removed, in ffmpeg 9,
+# where `-vsync 0` now fails as "Unrecognized option 'vsync'" before decoding
+# starts -- which is how the committed fixtures stopped being regenerable.
+#
+# So there is a floor and there is no ceiling, and the floor is worth naming:
+# on a distribution still shipping 4.4 the extractor would fail with ffmpeg's
+# own message about an option nobody typed, and the person reading it has no
+# way to know which of the two spellings their build wants.
+MIN_FFMPEG_VERSION = (5, 1)
+
+# `ffmpeg version 9.0.1-full_build-www.gyan.dev`, `ffmpeg version n7.1`,
+# `ffmpeg version 4.4.2-0ubuntu0.22.04.1`. A git build reports
+# `ffmpeg version N-109621-g0c0f9b1a2e`, which carries no number at all -- and
+# is by definition newer than any release, so it is not a failure to parse.
+_FFMPEG_VERSION_RE = re.compile(r"^ffmpeg version n?(\d+)\.(\d+)")
+
 
 @dataclass
 class CheckResult:
@@ -114,10 +136,46 @@ def _try_choco_ffmpeg() -> bool:
     return result.returncode == 0 and shutil.which("ffmpeg") is not None
 
 
+def ffmpeg_version(ffmpeg: str | Path) -> tuple[int, int] | None:
+    """The (major, minor) this ffmpeg reports, or None when it does not report one.
+
+    None is not a failure. A build from git says `N-109621-g0c0f9b1a2e` where
+    the number goes, and such a build is ahead of every release -- refusing it
+    for being unparseable would reject exactly the ffmpeg most likely to have
+    the option being checked for.
+    """
+    try:
+        result = _run([str(ffmpeg), "-version"], timeout=20.0)
+    except (subprocess.TimeoutExpired, OSError):
+        return None
+    match = _FFMPEG_VERSION_RE.match(result.stdout.strip())
+    if match is None:
+        return None
+    return (int(match.group(1)), int(match.group(2)))
+
+
 def check_ffmpeg(fix: bool = True) -> CheckResult:
-    """ffmpeg + ffprobe present; bootstrap via winget -> choco -> portable zip."""
-    if binaries.find_binary("ffmpeg") and binaries.find_binary("ffprobe"):
-        return CheckResult("ffmpeg", "ok", f"ffmpeg at {binaries.find_binary('ffmpeg')}")
+    """ffmpeg + ffprobe present and new enough; bootstrap via winget -> choco -> zip."""
+    found = binaries.find_binary("ffmpeg")
+    if found and binaries.find_binary("ffprobe"):
+        version = ffmpeg_version(found)
+        if version is not None and version < MIN_FFMPEG_VERSION:
+            # A warning rather than a failure, because the number is honest
+            # about its scope: acquiring, probing, clipping and transcribing
+            # all work on 4.x. What does not is the benchmark frame extractor,
+            # and saying "ffmpeg is broken" about a working ffmpeg would send
+            # somebody to replace a dependency they did not need to touch.
+            wanted = ".".join(str(part) for part in MIN_FFMPEG_VERSION)
+            have = ".".join(str(part) for part in version)
+            return CheckResult(
+                "ffmpeg",
+                "warn",
+                f"ffmpeg {have} at {found}; the benchmark frame extractor needs "
+                f"{wanted}+ for -fps_mode (the video and audio pipelines are "
+                f"unaffected). Upgrade ffmpeg to regenerate fixtures.",
+            )
+        shown = ".".join(str(part) for part in version) if version is not None else "git build"
+        return CheckResult("ffmpeg", "ok", f"ffmpeg {shown} at {found}")
     if not fix:
         return CheckResult(
             "ffmpeg", "fail", "ffmpeg/ffprobe not found (run doctor with fixes enabled)"

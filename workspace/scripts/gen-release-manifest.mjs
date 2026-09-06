@@ -36,6 +36,8 @@ import { join, dirname, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { createHash } from 'node:crypto'
 
+import { byCodeUnit } from './lib/order.mjs'
+
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const OUTPUT = join(ROOT, 'docs', 'release-manifest.json')
 
@@ -100,6 +102,25 @@ function packageDigest(dir) {
   return { digest: `sha256:${hash.digest('hex')}`, files }
 }
 
+/**
+ * The digest of a composition: sorted `name@version`, newline-joined.
+ *
+ * The same spelling as `@deepwatch/cli`'s `compositionDigest`, and it has to
+ * stay that way -- two spellings of one digest are two digests, and the whole
+ * point is that a machine can recompute what the release recorded.
+ * `tests/provenance.test.mjs` holds the two against each other.
+ */
+function compositionDigest(packages) {
+  const lines = packages
+    .map(pkg => `${pkg.name}@${pkg.version}`)
+    // Code-point order, from the shared comparator: a digest ordered by the
+    // host's collation is not an identity -- it varies with ICU data -- and
+    // this value is committed.
+    .sort(byCodeUnit)
+    .join(String.fromCharCode(10))
+  return `sha256:${createHash('sha256').update(lines, 'utf8').digest('hex')}`
+}
+
 /** Every first-party package, with its integrity digest. */
 function firstPartyPackages() {
   const roots = [join(ROOT, 'packages', 'watch'), join(ROOT, 'apps')]
@@ -159,8 +180,15 @@ function spdxDocument(packages, root) {
     dataLicense: 'CC0-1.0',
     SPDXID: 'SPDXRef-DOCUMENT',
     name: `${root.name}-${root.version}`,
+    // Two things this must not do: name a repository that no longer exists,
+    // and change on every run. It pointed at oxbshw/watch-workspace, which was
+    // folded into this repository, and it appended Date.now() -- so two
+    // generations of an identical build produced two different documents and
+    // the field had to be excluded from the staleness comparison to keep the
+    // gate quiet. Name plus version identifies the document, and identical
+    // input now produces an identical namespace.
     documentNamespace:
-      `https://github.com/oxbshw/watch-workspace/spdx/${root.version}/${Date.now().toString(36)}`,
+      `https://github.com/oxbshw/watch-skill/spdx/${root.name}/${root.version}`,
     creationInfo: {
       // A tool, named. An SPDX document with no creator is one nobody can ask
       // about a field they do not understand.
@@ -256,6 +284,35 @@ function main() {
     integrity: {
       algorithm: 'sha256',
       scope: 'first-party package source, excluding node_modules and build output',
+      /**
+       * The identity of the composition itself, in one value.
+       *
+       * A digest over the sorted `name@version` list, which `deepwatch doctor`
+       * recomputes from what is actually installed on a machine. That is the
+       * chain the release needs and did not have: an installed runtime could
+       * not say which release it came from, because nothing carried this
+       * identity to the machine the product runs on.
+       *
+       * Derived from the source and nothing else -- no clock, no CI run id, no
+       * path, no user, no repository state -- so two machines that installed
+       * the same release compute the same value, and a `.git` directory is
+       * needed at neither end.
+       */
+      composition: {
+        /** Every first-party package this repository releases. */
+        all: compositionDigest(packages),
+        /**
+         * Only the packages that compose a runtime profile.
+         *
+         * The scope that can actually be compared with an installation: the
+         * CLI and the desktop shell are released but never installed into a
+         * profile, so a digest over all of them could never equal what a
+         * machine computes for itself, and a comparison that can never hold is
+         * worse than none.
+         */
+        runtime: compositionDigest(
+          packages.filter(pkg => pkg.name.startsWith('@deepwatch/dsh-'))),
+      },
       packages: packages.map(pkg => ({
         name: pkg.name,
         version: pkg.version,
@@ -272,14 +329,19 @@ function main() {
     process.exit(1)
   }
 
-  // The namespace and creation time change every run by design, so staleness
-  // is judged on everything that describes the build rather than on the whole
-  // document.
+  // Only the creation time is excluded, and only because it is a wall clock:
+  // it moves whenever the document is rewritten and would otherwise make every
+  // run look stale. The namespace used to be excluded for the same reason,
+  // which meant a namespace naming the wrong repository could never be
+  // corrected -- the generator compared everything except the field that was
+  // wrong and reported itself up to date. It is derived from name and version
+  // now, so it is checked like anything else that describes the build.
   const comparable = value => JSON.stringify({
     release: value.release,
     compatibility: value.compatibility,
     migration: value.migration,
     integrity: value.integrity,
+    namespace: value.spdx.documentNamespace,
     packages: value.spdx.packages,
   })
 

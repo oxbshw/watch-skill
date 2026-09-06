@@ -16,14 +16,21 @@ Nothing here decides whether a result is good. Thresholds live in
 measures.
 
 Usage:
-  python scripts/ocr-corpus.py --out <dir>        generate and run
-  python scripts/ocr-corpus.py --out <dir> --gen  generate only
+  python scripts/ocr-corpus.py                    generate and run
+  python scripts/ocr-corpus.py --gen              generate only
+  python scripts/ocr-corpus.py --out <dir>        write somewhere specific
+
+`--out` defaults to the same place `scripts/lib/manual-paths.mjs` puts the rest
+of the manual-QA material, so the Node benchmark reads what this wrote without
+either side being told where that is. It used to be required, and package.json
+passed `G:/watch-manual/ocr` -- a drive on one maintainer's machine.
 """
 
 from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 import time
 from pathlib import Path
@@ -153,13 +160,33 @@ def run(manifest: list[dict], out: Path) -> dict:
     }
 
 
+def default_out() -> Path:
+    """Where the manual-QA material lives, by the platform's own convention.
+
+    Mirrors `manualPath('WATCH_OCR_DIR', ['ocr'])` in scripts/lib/manual-paths.mjs.
+    """
+    explicit = os.environ.get("WATCH_OCR_DIR")
+    if explicit:
+        return Path(explicit)
+    root = os.environ.get("WATCH_MANUAL_ROOT")
+    if root:
+        return Path(root) / "ocr"
+    if sys.platform == "win32":
+        state = Path(os.environ.get("LOCALAPPDATA") or Path.home() / "AppData" / "Local")
+    elif sys.platform == "darwin":
+        state = Path.home() / "Library" / "Application Support"
+    else:
+        state = Path(os.environ.get("XDG_STATE_HOME") or Path.home() / ".local" / "state")
+    return state / "watch-manual" / "ocr"
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--out", required=True)
+    parser.add_argument("--out", default=None)
     parser.add_argument("--gen", action="store_true")
     args = parser.parse_args()
 
-    out = Path(args.out)
+    out = Path(args.out) if args.out else default_out()
     out.mkdir(parents=True, exist_ok=True)
     manifest = generate(out)
     print(f"corpus: {len(manifest)} sample(s), version {CORPUS_VERSION}", flush=True)
