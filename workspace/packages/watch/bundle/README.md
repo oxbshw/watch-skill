@@ -29,10 +29,9 @@ For the full experience, install the engine too:
 pip install watch-skill
 ```
 
-`watch-skill` is on PyPI and installs today; the newest published version is
-1.2.0, and the 1.4.0 this bundle is built against is published by the
-`core-v1.4.0` release. The Bridge finds the executable on `PATH` and connects
-on its own.
+`watch-skill` is on PyPI and the newest published version is 1.4.0 — the
+release this bundle is built against. The Bridge finds the executable on
+`PATH` and connects on its own.
 
 ## Stability
 

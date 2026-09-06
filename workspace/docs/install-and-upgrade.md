@@ -3,12 +3,13 @@
 Two products, two package managers, two upgrade stories. This page covers both
 and is honest about which parts have been exercised and which have not.
 
-> **Registry status.** `watch-skill` is on PyPI; the newest published version is
-> 1.2.0, and 1.4.0 is published by the `core-v1.4.0` release. Nothing exists
-> under the `@deepwatch` scope at all — the twenty packages are published for
-> the first time by `deepwatch-v0.1.0`. Until those tags run, the registry
-> commands below are the commands you *will* run, and the from-a-checkout path
-> is the one that works today.
+> **Registry status.** `watch-skill` is on PyPI and the newest published
+> version is 1.4.0 — `pip install 'watch-skill[standard]'` gives you the
+> release this page describes. Nothing exists under the `@deepwatch` scope
+> yet: the twenty packages are published for the first time by
+> `deepwatch-v0.1.0`, so until that tag runs the npm commands below are the
+> commands you *will* run, and the from-a-checkout path is the one that works
+> today.
 
 ---
 
