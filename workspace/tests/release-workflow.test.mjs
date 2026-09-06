@@ -299,6 +299,28 @@ describe('the npm release ends in something a person can link to', () => {
     assert.match(job(DEEPWATCH, 'github-release'), /body_path/)
   })
 
+  test('the notes do not claim the bundle tarball installs on its own', async () => {
+    // They did, and the claim was tested against a stock Harness profile:
+    // `dsh plugin add ./deepwatch-dsh-bundle-0.1.0.tgz` sends pnpm to
+    // registry.npmjs.org for the thirteen siblings the bundle names as
+    // ordinary dependencies, and fails there. An asset advertised as the
+    // offline route has to install offline.
+    const { notes } = await import('../scripts/gen-release-notes.mjs')
+    const inventory = {
+      packages: [
+        { name: '@deepwatch/dsh-bundle', version: '0.1.0', bytes: 10_000,
+          file: 'deepwatch-dsh-bundle-0.1.0.tgz', sha256: 'a'.repeat(64) },
+        { name: '@deepwatch/cli', version: '0.1.0', bytes: 70_000,
+          file: 'deepwatch-cli-0.1.0.tgz', sha256: 'b'.repeat(64) },
+      ],
+    }
+    const page = notes(inventory, { source: {}, harness: {}, toolchain: {} })
+    assert.match(page, /takes fourteen of them, not one/)
+    assert.match(page, /deepwatch-dsh-core-bridge-\*\.tgz/,
+      'the siblings a real offline install needs are named')
+    assert.doesNotMatch(page, /offline install can use the file directly/)
+  })
+
   test('a partial npm release is reported as the state it is', () => {
     const report = job(DEEPWATCH, 'report')
     assert.match(report, /if: always\(\)/)
