@@ -5,7 +5,8 @@
 
 ### Watch Skill · DeepWatch
 
-**Give an agent eyes, ears, and evidence it cannot fake.**
+**Give an agent eyes and ears — and a record of its work that something
+other than the agent wrote.**
 
 [![CI](https://github.com/oxbshw/watch-skill/actions/workflows/ci.yml/badge.svg)](https://github.com/oxbshw/watch-skill/actions/workflows/ci.yml)
 [![Workspace](https://github.com/oxbshw/watch-skill/actions/workflows/workspace-ci.yml/badge.svg)](https://github.com/oxbshw/watch-skill/actions/workflows/workspace-ci.yml)
@@ -28,8 +29,15 @@ it — through MCP, a CLI, or a REST API.
 **DeepWatch** is the workspace. It composes the official
 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) with Watch
 Skill so an agent's work happens *inside* something that watches it: every tool
-call gets a receipt, every path is checked against one workspace boundary, and
-"it worked" is a claim you can open.
+call gets a receipt, every path a tool **declares** is checked against one
+workspace boundary, and "it worked" is a claim you can open.
+
+The word *declares* is load-bearing. A `write` names the file it is writing and
+that name is checked before the call runs. A shell command is a string this
+does not parse, so what is enforced there is the sandbox the Harness itself
+runs the shell under, and what is recorded is that a shell call happened with
+no path of its own. Both are in the receipt; they are not the same guarantee,
+and reading them as one is the mistake this paragraph exists to prevent.
 
 One sentence each: **Watch Skill is what sees and proves. DeepWatch is where
 the work happens.** You can use either on its own.
@@ -56,10 +64,12 @@ Then the part that matters:
 not grade itself: a check either passed or it did not, the contract's digest is
 on screen, and the same contract run from a different directory fails.
 
-Every image here is a photograph of this release, captured from a clean room
-built only from its sealed artifacts, with a real provider bound and Watch Core
-running over stdio. Nothing is seeded or retouched —
-[what each one shows](workspace/docs/screenshots-release.md).
+Every image here is a photograph of a room built only from sealed artifacts,
+with a provider bound and Watch Core running over stdio. Nothing is seeded or
+retouched. Each caption on
+[the screenshot page](workspace/docs/screenshots-release.md) names the build it
+was taken from, because more than one candidate was photographed on the way
+here and saying "this release" of all of them would not have been true.
 
 ---
 
@@ -72,13 +82,20 @@ running over stdio. Nothing is seeded or retouched —
 > published by the `core-v1.4.0` release.
 
 ```bash
-pip install watch-skill        # or: uv tool install watch-skill
-watch-skill doctor             # checks, and installs what it can: ffmpeg, yt-dlp, OCR data
+pip install 'watch-skill[standard]'   # frames, retrieval and the MCP server
+watch-skill doctor                    # checks, and repairs what it can
 watch-skill watch <video-url-or-file>
 watch-skill ask <id> "what changed at 3:12?"
 ```
 
-Wire it into any MCP client:
+**Take the extra seriously.** A bare `pip install watch-skill` gives you the
+CLI, the verifier and the Bridge, and it cannot extract a frame: `watch` stops
+at `perceive.missing_dependency` on the first video. `[standard]` is frames,
+retrieval and MCP; add `[ocr]` to read on-screen text, `[whisper]` for local
+transcription when a source has no captions, `[loop]` for the browser, or take
+`[all]`. `watch-skill doctor` names the exact command for whatever is missing.
+
+Wire it into any MCP client (`[standard]` includes this):
 
 ```bash
 watch-skill serve              # stdio MCP server, 39 tools
@@ -120,7 +137,7 @@ classifiers declare. Windows, macOS and Linux.
 The cycle in the picture at the top, on a real page:
 
 ```bash
-pip install 'watch-skill[loop]' && playwright install chromium
+pip install 'watch-skill[standard,loop]' && playwright install chromium
 
 watch-skill loop start http://localhost:3000/checkout \
   "the total updates when quantity changes, and no NaN appears"
@@ -198,25 +215,48 @@ More: [architecture](docs/architecture.md) · [verification](docs/verification.m
 | --- | --- | --- |
 | Start the app, browse, read diagnostics | ✅ | nothing |
 | Verification contracts, containment, receipts | ✅ | nothing |
-| Video frames, scenes, OCR | ✅ | `ffmpeg` ≥ 5.1 — `watch-skill doctor` installs it |
-| Speech to text | ✅ | local whisper, downloaded on first use |
-| Chat with an agent | — | a provider you add and bind, or a local OpenAI-compatible server |
-| Visual scene description | — | a vision-capable model binding |
-| Browser capture / THE LOOP | — | `watch-skill[loop]` + `playwright install chromium` |
+| Video frames and scenes | with `[standard]` | `ffmpeg` ≥ 5.1 — `watch-skill doctor` installs it |
+| Reading on-screen text | with `[ocr]` | a first-use model download (~80 MB) |
+| Speech to text | with `[whisper]` | a first-use model download; captions are used first when a source has them |
+| Chat with an agent | — | a provider you add and bind |
+| Visual scene description | — | a model that can see images |
+| Browser capture / THE LOOP | with `[loop]` | `playwright install chromium` |
 | Memory | off | enable in Settings; the store is plaintext and says so |
 | Desktop app | not distributed | run the web workspace |
 
-**On providers.** DeepWatch starts, and stays useful, with no provider
-configured: verification, containment, the Library and local perception are all
-local. What needs a provider is the *agent* — chat, tool use, and the critique
-step of THE LOOP. You choose it: any hosted route, or an OpenAI-compatible
-local server (Ollama, vLLM, LM Studio, llama.cpp). Nothing reaches a provider
-until you add one, and holding a provider credential is not permission to
-upload a frame or a transcript — that is a separate consent.
+**On providers, and three things that are not the same.**
 
-There is no self-healing, no automatic task resumption, no autonomous learning
-and no encryption at rest in this release.
-[Known limitations](workspace/docs/known-limitations.md) is the honest list.
+DeepWatch starts, and stays useful, with no provider configured: verification,
+containment, the Library and local perception are all local. What needs a
+provider is the *agent* — chat, tool use, and the critique step of THE LOOP.
+
+The three ways a capability gets added here are genuinely different, and the
+product does not pretend otherwise.
+
+- **A local dependency** — `ffmpeg`, a JS runtime, `yt-dlp` — runs on your
+  machine, costs disk, and `watch-skill doctor` will fetch and repair it.
+- **A downloaded model** — OCR weights, whisper — also runs on your machine, is
+  a large one-time download, and is slower and less capable than a hosted model
+  of the same kind. Nothing about your files leaves the machine.
+- **A hosted provider** — the agent's model, and any vision model you bind — is
+  somebody else's service, with their latency, their price and their terms, and
+  it sees what you send it.
+
+An OpenAI-compatible server you run yourself (Ollama, vLLM, LM Studio,
+llama.cpp) is a hosted route pointed at your own hardware: it keeps the data
+local and keeps the caveat, because a small local model may not support tool
+calls or images at all, and DeepWatch will report that rather than work around
+it. Nothing reaches a provider until you add one, and holding a provider
+credential is not permission to upload a frame or a transcript — that is a
+separate consent.
+
+**What repairs itself, and what does not.** `watch-skill doctor` repairs
+dependencies: it downloads `yt-dlp` and keeps it current, bootstraps a JS
+runtime, installs OCR language data, and fetches `ffmpeg` where it can. That is
+deliberate and it is the only thing here that fixes itself. Nothing resumes a
+task on its own, nothing learns between runs, and nothing is encrypted at rest
+in this release. [Known limitations](workspace/docs/known-limitations.md) is
+the full list.
 
 ---
 

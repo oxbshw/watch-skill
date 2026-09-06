@@ -17,10 +17,18 @@ and is honest about which parts have been exercised and which have not.
 ### Install
 
 ```bash
-pip install watch-skill
+pip install 'watch-skill[standard]'
 # or, for an isolated tool install:
-uv tool install watch-skill
+uv tool install 'watch-skill[standard]'
 ```
+
+**Why the extra is in the command.** A bare `pip install watch-skill` installs
+the CLI, the verifier, the Bridge and the policy engine — everything that does
+not depend on a heavy third-party package. It cannot extract a frame, read
+on-screen text, build a search index or serve MCP, and `watch-skill watch`
+stops on the first video with `perceive.missing_dependency`. `[standard]` adds
+frames, retrieval and MCP, which is what "watch a video and ask about it"
+actually needs.
 
 Then check what this machine can actually do:
 
@@ -29,8 +37,9 @@ watch-skill doctor
 ```
 
 `doctor` is not a status page. It installs what it can — ffmpeg via winget,
-choco or a portable build; yt-dlp; the OCR data — and reports each remaining
-gap with the command that closes it. Run it before filing anything.
+choco or a portable build; yt-dlp, kept current; a JS runtime; the OCR data —
+and reports each remaining gap with the command that closes it, including the
+exact extras still missing. Run it before filing anything.
 
 ### Optional capabilities
 
@@ -39,9 +48,15 @@ off rather than showing a plausible default.
 
 | Capability | Install | Why it is not default |
 | --- | --- | --- |
+| Frames, scenes, retrieval, MCP | `pip install 'watch-skill[standard]'` | pulls OpenCV, Pillow and an embedding runtime |
+| Reading on-screen text | `pip install 'watch-skill[ocr]'` | ~80 MB of weights, downloaded on first use |
+| Local speech to text | `pip install 'watch-skill[whisper]'` | captions cover most sources; the model is a large download |
+| REST API | `pip install 'watch-skill[api]'` | a server nobody asked for should not be installed |
 | Browser / THE LOOP | `pip install 'watch-skill[loop]' && playwright install chromium` | a browser engine is a large download |
+| Signed attestations | `pip install 'watch-skill[attest]'` | a bundle is hash-bound without it; signing adds *who wrote it* |
 | Speaker labels | `pip install 'watch-skill[diarize]'` | needs a Hugging Face token |
 | Cloud vision / speech | `watch-skill setup-vision` | reaches a provider, so it is opt-in |
+| Everything above | `pip install 'watch-skill[all]'` | — |
 
 ### Requirements
 
@@ -148,8 +163,10 @@ that cannot agree fail closed and say so.
 
 ## What an upgrade does not do
 
-There is no self-healing, no automatic task resumption, no autonomous learning
-and no encryption at rest in this release. The memory store is plaintext and
+An upgrade does not resume a task, learn from the last one, or encrypt
+anything at rest. `watch-skill doctor` does repair dependencies — that is the
+one thing in either product that fixes itself, and it reports every repair it
+makes. The memory store is plaintext and
 the product says so where you enable it. Redaction converts named path fields;
 it does not rewrite evidence, transcripts or your own messages, and it cannot
 reach into a raw argument string an upstream surface renders for itself.

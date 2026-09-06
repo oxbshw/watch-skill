@@ -46,7 +46,7 @@ Compare shows two records **from the conversation you are in**, brought in by
 selecting Watch tool rows. A fresh session has nothing to compare and says so
 rather than reaching across sessions for a pair that was never asked for.
 
-## Execution receipts live as long as the Host does
+## Execution receipts survive a restart; a few other things do not
 
 The Library holds two kinds of thing and they have different lifetimes, which
 is worth knowing before you rely on either.
@@ -55,57 +55,64 @@ is worth knowing before you rely on either.
 evidence are Watch Core's, they are on disk in the data directory, and a
 `Refresh` re-reads them. Stopping and restarting DeepWatch does not lose them.
 
-**Execution receipts do not.** The receipt for each tool call — what ran, what
-it touched, whether it was allowed and how it ended — is indexed live by the
-Host as the call settles. It is not written to the data directory, so when the
-Host process stops, those rows are gone. Measured rather than inferred: a room
-holding thirteen receipts was restarted, and afterwards the Library returned
-one, the receipt created after the restart. `Refresh` does not bring them back;
-it reports `sourceCount: 0` and re-indexes only what is on disk.
+**Execution receipts now persist too, and did not before.** The receipt for
+each tool call — what ran, what it touched, whether it was allowed and how it
+ended — is indexed live as the call settles *and* appended to a journal under
+the profile (`.watch/receipts/receipts.jsonl`). A restart restores them through
+the same path a live receipt takes, so the rows look no different afterwards.
 
-What this means in practice:
+Measured, in the acceptance room for this release: a session filed nine
+receipts, three of them verifications carrying Core's verdicts; the Host was
+stopped, a write was interrupted mid-line to leave a torn tail, and the Host
+was started again. All nine came back openable, each still carrying the verdict
+it was given, and the torn fragment was reported and removed rather than
+silently joined onto the next record:
 
-- receipts are for looking at the work as it happens and just after, not for
-  an audit trail across restarts;
-- the durable record of a *verification* is the verification record itself, in
-  `verifications/` under the data directory, readable with
-  `watch-skill verify show` and `watch-skill verify list`, and that does
-  survive a restart;
-- if you need a receipt kept, export the session log before stopping the Host.
+```
+watch-tools: removed 60 byte(s) of incomplete tail from .watch\receipts\receipts.jsonl
+             — a write was interrupted. Earlier records were kept.
+```
 
-`Refresh` itself works and reports what it did: it advances the index
-generation, counts the sources and records it found, and ends in `ready`.
+What still does not survive:
 
-## A receipt does not carry the verdict Core returned for it
+- **the ledger's join window.** A verdict is attached to a receipt while both
+  are in memory. An attestation that arrives for a call from a previous run has
+  nothing live to join to, so a verification whose receipt was written before a
+  restart and whose verdict arrives after it stays unjoined.
+- **anything past the horizon.** The journal and the in-memory ledger each keep
+  the newest 500 receipts per profile. A long session evicts its own beginning.
+- **a store that cannot be written.** If the journal directory is unwritable
+  the work still runs and is still indexed for the session — and the Host says
+  so on stderr, once per reason, rather than appearing to save.
 
-**This is a defect, found by running the release against a real provider, and it
-is not fixed in 0.1.0.** It is written here rather than left to be discovered,
-because the gap is between two things the product otherwise keeps carefully
-apart, and a reader could reasonably assume the join works.
+The durable record of a *verification* remains the verification record itself,
+in `verifications/` under the data directory, readable with `watch-skill verify
+show` and `watch-skill verify list`. That is Core's own copy and it is
+independent of the Host entirely.
 
-What is true: Watch Core runs the contract and returns a real verdict, and the
-record it writes is complete. A clean room built from this release's sealed
-artifacts produced three verification records — two `pass` and one `fail` — each
-with its checks and their statuses, each independently re-readable with
-`watch-skill verify show`.
+## Two stores are called "library", and they are not the same one
 
-What is not: **no execution receipt in the Library carries that verdict.** Every
-row reads `verdict: null`, including the successful write whose own attestation
-Core answered `pass`. The consequence is visible in Compare: two verification
-records selected side by side are reported as *"only on one side"* and each row
-reads `unchecked`, because neither carries a verdict to compare. The comparison
-itself is computed correctly — it is comparing records that have no verdict on
-them.
+The Library **mode**, and the `watch_library_search` tool, read the Host's
+index: execution receipts from this profile plus any evidence records under the
+`libraryRoots` the profile configures. The shipped `deepwatch` profile
+configures none, so before an agent has run anything the Library is honestly
+`empty`.
 
-The verdict is not lost. It is on disk in the verification record, it is in
-`watch-skill verify show`, and the tool result the agent received carried it.
-What is missing is the join that puts it back onto the receipt, so the
-Library's VERIFIED/FAILED filter matches nothing and Compare has no verdict to
-rank or diff.
+What Watch Core indexed — your videos, their frames, their transcripts — lives
+in Core, and the way to it is `watch_search_sources`, which reaches
+`watch.library.search` over the Bridge. Indexing a video does not make it
+appear in the Library mode, and that is the design rather than a fault; but the
+shared word is a real trap and this is the sentence that disarms it.
 
-Until it is fixed: read a verdict from the verification record or from
-`watch-skill verify list`, not from a Library row's verdict column, and do not
-read Compare's verification table as a statement about Core's outcomes.
+## The first search of a session is slow
+
+A semantic search loads an embedding model into the Core process on first use.
+Measured against 1.4.0 on a fast laptop: the first `watch.library.search` in a
+freshly started Core took longer than 30 seconds, and the next one in the same
+process answered in 4.4. The first read after each connection is given a much
+larger deadline for exactly this reason, so it completes rather than failing —
+but it is slow, it is slow again after Core restarts, and there is no
+pre-warming in this release.
 
 ## Perception is optional, and unconfigured by default
 
@@ -152,7 +159,14 @@ language; that one line is upstream's until the extension request lands.
 
 ## Not in this release
 
-No self-healing, no automatic task resumption, and no autonomous learning. A
-cancelled call stays cancelled, a failed one stays failed, and nothing retries a
-task on its own. Where those appear in planning documents they are future
-direction, not shipped behaviour.
+No automatic task resumption, no autonomous learning, and no encryption at
+rest. A cancelled call stays cancelled, a failed one stays failed, and nothing
+retries a task on its own. Where those appear in planning documents they are
+future direction, not shipped behaviour.
+
+One thing here does repair itself, and saying "no self-healing" without that
+qualifier was wrong: `watch-skill doctor` fetches and fixes **dependencies** —
+it downloads `yt-dlp` and self-updates a stale copy, bootstraps a JS runtime,
+installs OCR language data, and installs `ffmpeg` where a package manager
+allows it. It reports every repair it made. Nothing else in either product
+takes an action nobody asked for.
