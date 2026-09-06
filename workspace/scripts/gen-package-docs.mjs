@@ -245,6 +245,14 @@ function page(manifest, dir) {
   if (note.example !== undefined) {
     lines.push('## Example', '')
     if (note.example.caption !== undefined) lines.push(note.example.caption, '')
+    // An example that installs from the registry is an install command like
+    // any other, and it is far enough down the page that the callout above the
+    // Install block no longer counts as nearby. Repeated rather than moved:
+    // the reader who scrolled to a worked example is exactly the one who will
+    // paste it without scrolling back up.
+    if (registryStatus() === 'unpublished' && note.example.code.includes('@deepwatch/')) {
+      lines.push(`> Pending the \`${firstPublicationTag()}\` release — see Install above.`, '')
+    }
     lines.push(`\`\`\`${note.example.lang ?? 'sh'}`, note.example.code, '```', '')
   }
 

@@ -42,6 +42,8 @@ single piece in a composition you control.
 
 The four verbs a capability gets:
 
+> Pending the `deepwatch-v0.1.0` release — see Install above.
+
 ```sh
 import { declare, probe, observe, request } from '@deepwatch/dsh-sdk'
 ```

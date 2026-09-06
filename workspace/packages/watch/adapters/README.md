@@ -35,6 +35,8 @@ single piece in a composition you control.
 
 Export the wiki as an Obsidian vault:
 
+> Pending the `deepwatch-v0.1.0` release — see Install above.
+
 ```sh
 import { buildWiki, toVault } from '@deepwatch/dsh-adapters'
 

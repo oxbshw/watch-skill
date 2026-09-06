@@ -36,6 +36,8 @@ npm install @deepwatch/cli
 
 Set up once, then serve a workspace:
 
+> Pending the `deepwatch-v0.1.0` release — see Install above.
+
 ```sh
 npm install -g @deepwatch/cli
 deepwatch doctor              # what is installed, what is missing
