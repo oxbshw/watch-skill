@@ -254,6 +254,89 @@ describe('what reaches the registry, and in what order', () => {
   })
 })
 
+describe('the sealed set survives the round trip through an artifact', () => {
+  // Two defects that would each have surfaced only on a tag, in the one run
+  // nobody wants to be debugging.
+
+  test('nothing hidden is handed to upload-artifact, which drops hidden files', () => {
+    // Everything this release produces is hidden -- `.release-artifacts/` and
+    // `.release-artifacts-provenance.json` -- and upload-artifact has excluded
+    // hidden files by default since v4.4. Uploaded by those paths the archive
+    // matches nothing, and `if-no-files-found: error` then fails the job at
+    // the upload rather than at the mistake.
+    const verify = job(DEEPWATCH, 'verify')
+    const upload = verify.slice(verify.indexOf('upload-artifact'))
+    const paths = /path:\s*([^\n]*)\n((?:\s{10,}[^\n]*\n)*)/.exec(upload)
+    const named = `${paths?.[1] ?? ''}\n${paths?.[2] ?? ''}`
+    assert.doesNotMatch(named, /(^|\/)\.[A-Za-z]/m,
+      'a path component beginning with a dot is dropped by the uploader')
+    assert.match(named, /release-upload/, 'the visible staging directory is what is uploaded')
+
+    // And the staging step must rename the manifest rather than copy it in
+    // with its leading dot, which would be hidden inside a visible directory.
+    assert.match(verify, /release-upload\/provenance\.json/)
+    assert.match(verify, /find release-upload -name '\.\*'/,
+      'the staging step proves nothing hidden reached the upload')
+  })
+
+  test('a job with no checkout does not inherit a working directory it lacks', () => {
+    // `defaults.run.working-directory: workspace` is workflow-wide. `smoke`,
+    // `github-release` and `report` never check out, so that directory does
+    // not exist and every `run` step in them would fail on `cd`.
+    for (const name of ['smoke', 'github-release', 'report']) {
+      const block = job(DEEPWATCH, name)
+      const checksOut = block.includes('actions/checkout')
+      const hasRun = /^\s+run:/m.test(block)
+      if (!hasRun) continue
+      assert.equal(checksOut, false, `${name} was expected to run without a checkout`)
+      assert.match(block, /defaults:\s*\n\s*run:\s*\n\s*working-directory: \./,
+        `${name} runs shell steps with no checkout, so it must not inherit `
+        + '`working-directory: workspace`')
+    }
+  })
+
+  test('the release job reads the layout the upload actually produced', () => {
+    // `download-artifact` unpacks the staged directory's *contents*, so the
+    // files land directly under `sealed/` rather than under the
+    // `workspace/.release-artifacts/` path the verify job knew them by.
+    const release = job(DEEPWATCH, 'github-release')
+    assert.doesNotMatch(release, /sealed\/workspace/,
+      'the artifact does not contain a `workspace/` directory')
+    assert.match(release, /body_path: sealed\/release-notes\.md/)
+    assert.match(release, /sealed\/provenance\.json/)
+    assert.match(release, /test "\$\(ls sealed\/\*\.tgz \| wc -l\)" -eq 20/,
+      'the job counts what it received before attaching it')
+  })
+
+  test('the publish job restores the shape the manifest describes', () => {
+    const publish = job(DEEPWATCH, 'publish')
+    assert.doesNotMatch(publish, /workspace-artifacts\/workspace/,
+      'the artifact is flat; there is no nested workspace directory')
+    assert.match(publish, /cp \.\.\/workspace-artifacts\/provenance\.json \.release-artifacts-provenance\.json/)
+    assert.match(publish, /test "\$\(ls \.release-artifacts\/\*\.tgz \| wc -l\)" -eq 20/)
+  })
+
+  test('the publishing npm is pinned, not whatever shipped this morning', () => {
+    // Installing the newest npm on release day let an unreviewed toolchain
+    // into the one job that cannot be re-run. Comments stripped, because this
+    // file documents removed mistakes by quoting them and a rule against the
+    // quote is a rule against writing down what went wrong.
+    const publish = job(DEEPWATCH, 'publish')
+      .split('\n').filter(line => !/^\s*#/.test(line)).join('\n')
+    assert.doesNotMatch(publish, /npm@latest/)
+    assert.match(publish, /npm install --global npm@\d+\.\d+\.\d+/)
+  })
+
+  test('the header does not claim a protection GitHub is not enforcing', () => {
+    // Naming an environment does not protect it: GitHub creates one on first
+    // use with no rules, and this repository had no `npm` environment at all.
+    assert.doesNotMatch(DEEPWATCH, /sits\s*\n?#?\s*behind a protected `npm` Environment/)
+    assert.match(DEEPWATCH, /Environment gate is a repository setting/)
+    // The job still declares it, because that is what makes the gate possible.
+    assert.match(job(DEEPWATCH, 'publish'), /environment:\s*\n\s*name: npm/)
+  })
+})
+
 describe('the npm release ends in something a person can link to', () => {
   test('DeepWatch completes a GitHub Release, and only after npm accepted', () => {
     // This train had no release job at all. Twenty packages reached the
