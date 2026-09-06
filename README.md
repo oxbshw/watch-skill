@@ -77,10 +77,6 @@ here and saying "this release" of all of them would not have been true.
 
 ### I have an agent already → Watch Skill
 
-> **On PyPI, one version behind.** `watch-skill` is published and installs
-> today; the newest release on PyPI is 1.2.0. The 1.4.0 this page describes is
-> published by the `core-v1.4.0` release.
-
 ```bash
 pip install 'watch-skill[standard]'   # frames, retrieval and the MCP server
 watch-skill doctor                    # checks, and repairs what it can

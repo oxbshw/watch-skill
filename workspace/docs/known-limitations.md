@@ -157,12 +157,23 @@ Memory is not enabled by default. The store is plaintext and says so; it is
 created owner-only where the operating system enforces file modes. There is no
 encryption in this release, and nothing here should be read as providing it.
 
-## Nothing is published
+## DeepWatch is not published; Watch Skill is
 
-The twenty `@deepwatch/*` packages are prepared as verified tarballs and are not
-on any registry. `npx @deepwatch/cli` does not work today and there are no npm
-download figures to quote. `doctor` reports the composition it was built to
-compose and does not claim a registry can confirm it.
+Watch Skill 1.4.0 is on PyPI, in the MCP registry, and on
+`ghcr.io/oxbshw/watch-skill`. The twenty `@deepwatch/*` packages are not on any
+registry: they are prepared as verified tarballs, `npx @deepwatch/cli` does not
+work, and there are no npm download figures to quote.
+
+The reason is specific rather than a delay. `release-deepwatch.yml` publishes
+over OIDC with no token path at all, and npm requires a package to exist before
+a Trusted Publisher can be configured for it — so the *first* publication of
+each of the twenty has to be made by the release owner with a short-lived
+credential, through `scripts/first-publish.mjs`. Every publication after that
+one goes through the workflow.
+
+Until then `deepwatch setup --artifacts <dir>` is the supported path and it is
+the one both acceptance passes use. `doctor` reports the composition it was
+built to compose and says outright that no registry can confirm it.
 
 The desktop application is `private` and is not published by this release. The
 Electron shell starts and its context isolation holds — `npm run smoke:desktop`
