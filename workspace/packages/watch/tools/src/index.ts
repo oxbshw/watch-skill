@@ -18,7 +18,7 @@
  * @module @deepwatch/dsh-tools
  */
 
-import { randomUUID } from 'node:crypto'
+import { createHash, randomUUID } from 'node:crypto'
 import type { Context } from '@deepseek-ai/cordis'
 import s from '@deepseek-ai/schemastery'
 import { defineTool } from '@deepseek-ai/dsh-tools'
@@ -56,6 +56,38 @@ export const name = 'watch-tools'
  * limit.
  */
 const RECEIPT_LIMIT = 500
+
+/**
+ * The addressable id for one execution receipt.
+ *
+ * A receipt's natural identity is its idempotency key, and that key is a path
+ * shape -- `<session>/<turn>/<call>#<n>`. `@deepwatch/dsh-contracts/query`
+ * refuses it: an id that carries a slash or a colon could name a location, and
+ * `libraryGet` validates against that grammar. So a receipt was searchable and
+ * could not be opened -- the Library listed rows whose sibling method answered
+ * `rejected`, which is the exact defect the file-derived records were fixed for
+ * and the receipt-derived ones inherited.
+ *
+ * Derived rather than random: the same execution is the same record after a
+ * restart, which is what lets a restored journal line up with a live one.
+ */
+export function receiptRecordId(idempotencyKey: string): string {
+  return `rcpt_${createHash('sha256')
+    .update(`watch-receipt/v1/${idempotencyKey}`, 'utf8')
+    .digest('hex').slice(0, 16)}`
+}
+
+/**
+ * The revision id for one answer about a receipt.
+ *
+ * Distinct per answer, so two verifications of the same call are two versions
+ * a reader can compare rather than one row that changed behind them.
+ */
+function verdictRevisionId(recordId: string, verdict: string, verificationId: string | null): string {
+  return `${recordId}.${createHash('sha256')
+    .update(`${verdict}|${verificationId ?? ''}`, 'utf8')
+    .digest('hex').slice(0, 12)}`
+}
 
 export const inject = ['tools', 'watchCore', 'systemPrompt', 'llm', 'watchProvenance']
 
@@ -549,8 +581,8 @@ export function apply(ctx: Context, config: Config): void {
     applied.set(recordId, { verdict, verificationId })
     bound(applied, RECEIPT_LIMIT)
     file({
-      recordId,
-      revisionId: `${recordId}#verdict`,
+      recordId: receiptRecordId(recordId),
+      revisionId: verdictRevisionId(receiptRecordId(recordId), verdict, verificationId),
       title: base.title,
       // The verdict joins the searchable text so the Library's own filter and
       // a person typing "VERIFIED" find the same rows.
@@ -586,8 +618,8 @@ export function apply(ctx: Context, config: Config): void {
       const paths = Array.isArray(record.paths) ? record.paths.filter(
         (entry): entry is string => typeof entry === 'string') : []
       file({
-        recordId,
-        revisionId: recordId,
+        recordId: receiptRecordId(recordId),
+        revisionId: receiptRecordId(recordId),
         title: paths.length === 0 ? tool : `${tool} — ${paths.join(', ')}`,
         kind: 'document',
         // Searchable text, already redacted and bounded by the ledger that
@@ -764,6 +796,20 @@ export function apply(ctx: Context, config: Config): void {
           expectation: args.expectation,
           sourceId: args.source_id ?? null,
           evidenceIds: args.evidence_ids ?? [],
+          // The directory the checks are measured against, from the session
+          // the call came from.
+          //
+          // Core refuses rather than defaulting, deliberately: given no
+          // directory the verifier used to measure against whatever directory
+          // its own process was started in, and a file the agent had written
+          // correctly came back INCONCLUSIVE. Honest, and useless. The Host
+          // never sent one, so every agent verification with a relative path
+          // got that answer -- the whole feature, silently.
+          //
+          // Sent as null when the session cannot be resolved, so Core's own
+          // `verify.workspace_unresolved` reaches the model with its fix,
+          // rather than this guessing a directory on its behalf.
+          workingDir: workspaceOf(exec),
           // Forwarded verbatim. Core validates the shapes, freezes the
           // contract and refuses anything it cannot evaluate; a second
           // validation here would be a second place for the two sides to
@@ -792,6 +838,23 @@ export function apply(ctx: Context, config: Config): void {
 /** Forward the tool runner's cancellation to the Bridge when one exists. */
 function abortOf(exec: { readonly signal?: AbortSignal }): { signal?: AbortSignal } {
   return exec.signal === undefined ? {} : { signal: exec.signal }
+}
+
+/**
+ * The directory the session was opened in, or null.
+ *
+ * Read structurally and from two places, the same way the ledger reads it: a
+ * live session carries `cwd`, and one restored from storage carries it under
+ * `header`. Null rather than a guess -- see the note at `workingDir`.
+ */
+function workspaceOf(exec: { readonly agent?: unknown }): string | null {
+  const session = (exec.agent as {
+    session?: { cwd?: unknown, header?: { cwd?: unknown } }
+  } | undefined)?.session
+  const direct = session?.cwd
+  if (typeof direct === 'string' && direct !== '') return direct
+  const stored = session?.header?.cwd
+  return typeof stored === 'string' && stored !== '' ? stored : null
 }
 
 /**

@@ -30,7 +30,8 @@ def crop_and_reocr(frame_path: Path, lang: str | None = None) -> list[OcrBlock]:
         raise PerceptionError(
             "Pillow is required for zoom crops",
             code="perceive.missing_dependency",
-            fix='install the perceive extra: `uv sync --extra perceive`',
+            fix='install the perception extra: `pip install "watch-skill[perceive]"` '
+                '(from a checkout: `uv sync --extra perceive`)',
         ) from exc
 
     full_blocks = ocr_frame(frame_path, min_confidence=0.2, lang=lang)

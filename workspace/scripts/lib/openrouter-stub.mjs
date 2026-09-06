@@ -142,15 +142,79 @@ function completion(model, scripted) {
  * on the next. Nothing here inspects the conversation to decide what to do,
  * because a stub that made decisions would be a second agent in the test.
  */
-function scriptedCall(script, seen) {
+function scriptedCall(script, seen, messages = []) {
   if (script === null || seen > script.length) return null
   const step = script[seen - 1]
   if (step === undefined) return null
   return {
     id: `call_stub_${String(seen)}`,
     type: 'function',
-    function: { name: step.name, arguments: JSON.stringify(step.arguments ?? {}) },
+    function: {
+      name: step.name,
+      arguments: JSON.stringify(fillSlots(step.arguments ?? {}, messages)),
+    },
   }
+}
+
+/**
+ * Fill a declared slot from the last tool result.
+ *
+ * The module note says a stub that made decisions would be a second agent in
+ * the test, and that still holds: nothing here inspects the conversation to
+ * choose *what* to do. The script decides that, in advance, and does not
+ * change. What it cannot know in advance is a value the product mints at run
+ * time — a live browser session id, for instance — and a sequence that needs
+ * one is otherwise unscriptable, which would leave the browser loop provable
+ * only by a human.
+ *
+ * So a step may write the exact string `"$previous.<field>"` where such a
+ * value belongs, and it is replaced by that field of the most recent tool
+ * result. A slot with no value is left as it is rather than silently emptied:
+ * the product then refuses an obviously wrong argument, which is a legible
+ * failure, where an empty string would look like the agent asking for
+ * nothing.
+ */
+function fillSlots(argumentsValue, messages) {
+  const fill = (value) => {
+    if (typeof value === 'string') {
+      const slot = /^\$previous\.([A-Za-z0-9_]+)$/.exec(value)
+      if (slot === null) return value
+      const found = mostRecentField(messages, slot[1])
+      return found === undefined ? value : found
+    }
+    if (Array.isArray(value)) return value.map(fill)
+    if (value !== null && typeof value === 'object') {
+      return Object.fromEntries(Object.entries(value).map(([key, inner]) => [key, fill(inner)]))
+    }
+    return value
+  }
+  return fill(argumentsValue)
+}
+
+/**
+ * The newest tool result that carries `field`, or undefined.
+ *
+ * Newest-first and not only the immediately preceding one: a live session id
+ * is minted by the call that starts the session, and the two or three calls
+ * that use it each have their own result in between. Stopping at the last
+ * message would leave every step after the first with an unfilled slot.
+ */
+function mostRecentField(messages, field) {
+  for (let at = messages.length - 1; at >= 0; at -= 1) {
+    const message = messages[at]
+    if (message?.role !== 'tool') continue
+    const content = typeof message.content === 'string'
+      ? message.content
+      : Array.isArray(message.content)
+        ? message.content.map(part => part?.text ?? '').join('')
+        : ''
+    let parsed = null
+    try { parsed = JSON.parse(content) } catch { continue }
+    if (parsed === null || typeof parsed !== 'object') continue
+    const found = parsed[field]
+    if (typeof found === 'string' || typeof found === 'number') return found
+  }
+  return undefined
 }
 
 /** The same answer as server-sent events, for a client that asked to stream. */
@@ -266,6 +330,17 @@ export async function startOpenRouterStub({
   // How many completions this stub has answered, so a script advances one step
   // per model round rather than repeating its first answer forever.
   let completions = 0
+  /**
+   * Which step this stub emitted, in order.
+   *
+   * A script step is consumed by a model round, and a round is not the same
+   * thing as a dispatched call: a call can be refused before it reaches the
+   * tool, and a round can be spent on something that is not the agent's own
+   * turn. Without this, a step that was asked for and never ran is
+   * indistinguishable from a step the script never reached, and the two have
+   * completely different causes.
+   */
+  const emitted = []
 
   const server = createServer((request, response) => {
     void (async () => {
@@ -322,7 +397,15 @@ export async function startOpenRouterStub({
         const advertisesTools = Array.isArray(entry.body?.tools)
           && entry.body.tools.length > 0
         if (advertisesTools) completions += 1
-        const scripted = advertisesTools ? scriptedCall(script, completions) : null
+        const messages = Array.isArray(entry.body?.messages) ? entry.body.messages : []
+        const scripted = advertisesTools ? scriptedCall(script, completions, messages) : null
+        if (scripted !== null) {
+          emitted.push({
+            round: completions,
+            name: scripted.function.name,
+            arguments: scripted.function.arguments,
+          })
+        }
         if (entry.body?.stream === true) {
           response.writeHead(200, {
             'content-type': 'text/event-stream',
@@ -359,6 +442,7 @@ export async function startOpenRouterStub({
     /** Every request the stub received, in order. */
     requests,
     /** Completion requests only, which is what "did it route?" asks about. */
+    emitted: () => emitted.slice(),
     completions: () => requests.filter(entry => entry.url.includes('/chat/completions')),
     async stop() {
       await new Promise(resolve => { server.close(() => { resolve(undefined) }) })

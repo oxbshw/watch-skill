@@ -41,6 +41,17 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const toolsPlugin = await import(
   pathToFileURL(join(ROOT, 'packages', 'watch', 'tools', 'lib', 'index.js')).href)
 
+/**
+ * The id the product gives one execution's receipt.
+ *
+ * Named through the product rather than restated here. The receipt's natural
+ * identity is its idempotency key, which is a path shape the query contract
+ * refuses -- a row that could be listed and not opened. Asking the product
+ * what it calls the record keeps these tests honest if that answer changes
+ * again.
+ */
+const recordIdFor = toolsPlugin.receiptRecordId
+
 const BASE = mkdtempSync(join(tmpdir(), 'watch-receipts-'))
 after(() => { rmSync(BASE, { recursive: true, force: true, maxRetries: 5 }) })
 
@@ -138,7 +149,7 @@ describe('a restart does not lose what the Host recorded', () => {
     const after_ = await records(second)
 
     assert.equal(after_.length, 2, 'a restart lost receipts')
-    const write = after_.find(entry => entry.recordId === 'session-1/agent-1#1/c1#1')
+    const write = after_.find(entry => entry.recordId === recordIdFor('session-1/agent-1#1/c1#1'))
     assert.ok(write !== undefined)
     assert.equal(write.verdict, 'VERIFIED', 'the verdict did not survive the restart')
     assert.ok((write.tags ?? []).includes('scope:inside'), 'the containment decision was lost')
@@ -162,7 +173,7 @@ describe('a restart does not lose what the Host recorded', () => {
 
     const after_ = await records(second)
     assert.equal(after_.length, 1, 'Refresh dropped a restored receipt')
-    assert.equal(after_[0].recordId, 'session-1/agent-1#1/c1#1')
+    assert.equal(after_[0].recordId, recordIdFor('session-1/agent-1#1/c1#1'))
   })
 
   test('replay does not duplicate: three boots, one record', async () => {
@@ -206,7 +217,8 @@ describe('a restart does not lose what the Host recorded', () => {
     assert.equal(after_.length, 3,
       'a torn append cost more than the record it was writing')
     assert.deepEqual(after_.map(entry => entry.recordId).sort(),
-      ['session-1/agent-1#1/c1#1', 'session-1/agent-1#1/c2#1', 'session-1/agent-1#1/c3#1'])
+      ['session-1/agent-1#1/c1#1', 'session-1/agent-1#1/c2#1', 'session-1/agent-1#1/c3#1']
+        .map(recordIdFor).sort())
   })
 
   test('a corrupted journal files nothing rather than rubbish', async () => {
@@ -312,7 +324,7 @@ describe('an interrupted write does not take the next one with it', () => {
       'session-1/agent-1#1/c2#1',
       'session-1/agent-1#1/c3#1',
       'session-1/agent-1#1/c5#1',
-    ], 'the append after a torn tail did not survive the next restart')
+    ].map(recordIdFor).sort(), 'the append after a torn tail did not survive the next restart')
 
     // And exactly once each.
     assert.equal(new Set(ids).size, ids.length, 'a record was restored twice')
@@ -347,7 +359,8 @@ describe('an interrupted write does not take the next one with it', () => {
 
     const second = await boot(receipts)
     const ids = (await records(second)).map(entry => entry.recordId).sort()
-    assert.deepEqual(ids, ['session-1/agent-1#1/c1#1', 'session-1/agent-1#1/c9#1'],
+    assert.deepEqual(ids,
+      ['session-1/agent-1#1/c1#1', 'session-1/agent-1#1/c9#1'].map(recordIdFor).sort(),
       'a mid-file damaged line cost the records after it')
   })
 })
@@ -469,5 +482,34 @@ describe('a store that is not working says so', () => {
     new ReceiptJournal(receipts).load()
     assert.equal(statSync(journal.path).mode & 0o777, 0o600,
       'an existing journal kept the permissions it was found with')
+  })
+})
+
+describe('a receipt can be opened, not only listed', () => {
+  // The defect: a receipt's record id was its idempotency key, which is a path
+  // shape — `<session>/<turn>/<call>#<n>`. `@deepwatch/dsh-contracts/query`
+  // refuses that by design, because an id carrying a slash or a colon could
+  // name a location, and `libraryGet` validates against the same grammar the
+  // search does not. So the Library listed rows whose sibling method answered
+  // `rejected`, and every receipt in the product was unopenable.
+
+  test('the id a receipt is filed under is one the read plane accepts', async () => {
+    const { isIdentifier } = await import('@deepwatch/dsh-contracts/query')
+    for (const key of [
+      'session-1/agent-1#1/c1#1',
+      'session-abc-def/agent-2#17/call_stub_9#3',
+      'weird key with spaces and : colons',
+    ]) {
+      const id = recordIdFor(key)
+      assert.ok(isIdentifier(id), `${id} is not an id this contract will carry`)
+    }
+  })
+
+  test('the same execution is the same record, across processes', async () => {
+    // What makes a restored journal line up with a live index.
+    assert.equal(recordIdFor('session-1/agent-1#1/c1#1'),
+      recordIdFor('session-1/agent-1#1/c1#1'))
+    assert.notEqual(recordIdFor('session-1/agent-1#1/c1#1'),
+      recordIdFor('session-1/agent-1#1/c2#1'))
   })
 })

@@ -48,6 +48,17 @@ const TOOLS = join(ROOT, 'packages', 'watch', 'tools', 'lib', 'index.js')
 
 const toolsPlugin = await import(pathToFileURL(TOOLS).href)
 
+/**
+ * The id the product gives one execution's receipt.
+ *
+ * Named through the product rather than restated here. The receipt's natural
+ * identity is its idempotency key, which is a path shape the query contract
+ * refuses -- a row that could be listed and not opened. Asking the product
+ * what it calls the record keeps these tests honest if that answer changes
+ * again.
+ */
+const recordIdFor = toolsPlugin.receiptRecordId
+
 const BASE = mkdtempSync(join(tmpdir(), 'watch-verdict-join-'))
 after(() => { rmSync(BASE, { recursive: true, force: true, maxRetries: 5 }) })
 let rooms = 0
@@ -156,7 +167,7 @@ describe('Core’s verdict reaches the record it is about', () => {
 
     const found = await records(ctx)
     assert.notEqual(found, null, 'the plugin exposes no way to read its records')
-    const row = found.find(entry => entry.recordId === 'session-1/agent-1#1/c1#1')
+    const row = found.find(entry => entry.recordId === recordIdFor('session-1/agent-1#1/c1#1'))
     assert.ok(row !== undefined, `no record was filed: ${JSON.stringify(found)}`)
     assert.equal(row.verdict, 'VERIFIED', 'Core’s verdict never reached the receipt')
     assert.ok((row.tags ?? []).includes('verdict:VERIFIED'))
@@ -174,7 +185,7 @@ describe('Core’s verdict reaches the record it is about', () => {
     ctx.emit('watch/execution-recorded', receiptEvent())
     await settle()
 
-    const row = (await records(ctx)).find(entry => entry.recordId === 'session-1/agent-1#1/c1#1')
+    const row = (await records(ctx)).find(entry => entry.recordId === recordIdFor('session-1/agent-1#1/c1#1'))
     assert.ok(row !== undefined, 'no record was filed')
     assert.equal(row.verdict, 'VERIFIED',
       'the verdict arrived first and was dropped instead of held')
@@ -187,7 +198,7 @@ describe('Core’s verdict reaches the record it is about', () => {
     ctx.emit('watch/attestation-recorded', attestationEvent())
     await settle()
 
-    const all = (await records(ctx)).filter(entry => entry.recordId === 'session-1/agent-1#1/c1#1')
+    const all = (await records(ctx)).filter(entry => entry.recordId === recordIdFor('session-1/agent-1#1/c1#1'))
     assert.equal(all.length, 1, 'repeat delivery split one receipt into several records')
     assert.equal(all[0].verdict, 'VERIFIED')
   })
@@ -198,7 +209,7 @@ describe('Core’s verdict reaches the record it is about', () => {
       ctx.emit('watch/execution-recorded', receiptEvent())
       ctx.emit('watch/attestation-recorded', attestationEvent({ coreVerdict: verdict }))
       await settle()
-      const row = (await records(ctx)).find(entry => entry.recordId === 'session-1/agent-1#1/c1#1')
+      const row = (await records(ctx)).find(entry => entry.recordId === recordIdFor('session-1/agent-1#1/c1#1'))
       assert.equal(row.verdict, verdict, `${verdict} did not survive the join`)
       assert.ok((row.tags ?? []).includes(`verdict:${verdict}`))
     }
@@ -213,7 +224,7 @@ describe('Core’s verdict reaches the record it is about', () => {
       attestationEvent({ coreVerdict: null, state: 'requested_but_not_run' }))
     await settle()
 
-    const row = (await records(ctx)).find(entry => entry.recordId === 'session-1/agent-1#1/c1#1')
+    const row = (await records(ctx)).find(entry => entry.recordId === recordIdFor('session-1/agent-1#1/c1#1'))
     assert.equal(row.verdict, null, 'an unanswered attestation produced a verdict')
     assert.ok(!(row.tags ?? []).some(tag => tag.startsWith('verdict:')))
   })
@@ -227,7 +238,7 @@ describe('Core’s verdict reaches the record it is about', () => {
       attestationEvent({ coreVerdict: null, state: 'unavailable' }))
     await settle()
 
-    const row = (await records(ctx)).find(entry => entry.recordId === 'session-1/agent-1#1/c1#1')
+    const row = (await records(ctx)).find(entry => entry.recordId === recordIdFor('session-1/agent-1#1/c1#1'))
     assert.equal(row.verdict, 'FAILED', 'an absence erased an answer Core had given')
   })
 
@@ -238,7 +249,7 @@ describe('Core’s verdict reaches the record it is about', () => {
       attestationEvent({ idempotencyKey: 'session-9/agent-9#9/zz#1', coreVerdict: 'FAILED' }))
     await settle()
 
-    const row = (await records(ctx)).find(entry => entry.recordId === 'session-1/agent-1#1/c1#1')
+    const row = (await records(ctx)).find(entry => entry.recordId === recordIdFor('session-1/agent-1#1/c1#1'))
     assert.equal(row.verdict, null, 'a stranger’s verdict was attached to this receipt')
   })
 })
@@ -254,13 +265,13 @@ describe('replay cannot erase an answer Core gave', () => {
     ctx.emit('watch/attestation-recorded', attestationEvent())
     await settle()
     assert.equal((await records(ctx))
-      .find(entry => entry.recordId === 'session-1/agent-1#1/c1#1').verdict, 'VERIFIED')
+      .find(entry => entry.recordId === recordIdFor('session-1/agent-1#1/c1#1')).verdict, 'VERIFIED')
 
     // The same receipt again, as a reconcile or a replay delivers it.
     ctx.emit('watch/execution-recorded', receiptEvent())
     await settle()
 
-    const row = (await records(ctx)).find(entry => entry.recordId === 'session-1/agent-1#1/c1#1')
+    const row = (await records(ctx)).find(entry => entry.recordId === recordIdFor('session-1/agent-1#1/c1#1'))
     assert.equal(row.verdict, 'VERIFIED', 'a duplicate receipt erased the verdict')
     assert.ok((row.tags ?? []).includes('verdict:VERIFIED'))
     assert.deepEqual(row.evidenceIds, ['vr_abc123'],
@@ -278,7 +289,7 @@ describe('replay cannot erase an answer Core gave', () => {
     ctx.emit('watch/execution-recorded', receiptEvent({ state: 'completed' }))
     await settle()
 
-    const row = (await records(ctx)).find(entry => entry.recordId === 'session-1/agent-1#1/c1#1')
+    const row = (await records(ctx)).find(entry => entry.recordId === recordIdFor('session-1/agent-1#1/c1#1'))
     assert.ok((row.tags ?? []).includes('state:completed'), 'the newer state was lost')
     assert.ok(!(row.tags ?? []).includes('state:running'), 'the stale state survived')
     assert.equal(row.verdict, 'VERIFIED', 'the verdict was lost with the state update')
@@ -293,7 +304,7 @@ describe('replay cannot erase an answer Core gave', () => {
     ctx.emit('watch/attestation-recorded', attestationEvent())
     await settle()
 
-    const all = (await records(ctx)).filter(e => e.recordId === 'session-1/agent-1#1/c1#1')
+    const all = (await records(ctx)).filter(e => e.recordId === recordIdFor('session-1/agent-1#1/c1#1'))
     assert.equal(all.length, 1)
     assert.equal(all[0].verdict, 'VERIFIED')
   })
@@ -310,7 +321,7 @@ describe('replay cannot erase an answer Core gave', () => {
       attestationEvent({ verificationId: 'vr_second' }))
     await settle()
 
-    const row = (await records(ctx)).find(entry => entry.recordId === 'session-1/agent-1#1/c1#1')
+    const row = (await records(ctx)).find(entry => entry.recordId === recordIdFor('session-1/agent-1#1/c1#1'))
     assert.equal(row.verdict, 'VERIFIED')
     assert.deepEqual(row.evidenceIds, ['vr_second'],
       'a second verification did not replace the evidence link')
@@ -328,7 +339,7 @@ describe('replay cannot erase an answer Core gave', () => {
     ctx.emit('watch/attestation-recorded', attestationEvent())
     await settle()
 
-    const row = (await records(ctx)).find(entry => entry.recordId === 'session-1/agent-1#1/c1#1')
+    const row = (await records(ctx)).find(entry => entry.recordId === recordIdFor('session-1/agent-1#1/c1#1'))
     assert.equal(row.verdict, 'VERIFIED', 'a late verdict missed its receipt')
   })
 })

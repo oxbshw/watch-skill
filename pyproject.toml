@@ -48,6 +48,12 @@ mcp = ["fastmcp>=3.4,<4"]
 api = ["fastapi>=0.139,<1", "uvicorn>=0.50,<1"]
 loop = ["playwright>=1.61,<2"]
 diarize = ["pyannote.audio>=4.0,<5"]
+# Ed25519 signing for verification attestations. Optional because a
+# bundle is hash-bound and tamper-evident without it; signing is what
+# adds "and this is who wrote it". The name was already in three error
+# messages and in `verify/evidence.py`'s docstring before it was a
+# group anybody could install.
+attest = ["cryptography>=42,<50"]
 # framework adapters (each thin; see src/watch_skill/integrations/)
 langchain = ["langchain-core>=0.3,<2"]
 openai-agents = ["openai-agents>=0.1,<1"]
@@ -59,7 +65,7 @@ autogen = ["autogen-core>=0.4,<0.8"]
 # most sources, and both add ~170 MB. `doctor` reports what is missing and
 # prints the one command that adds it.
 standard = ["watch-skill[perceive,index,mcp]"]
-all = ["watch-skill[perceive,ocr,whisper,index,mcp,api,loop]"]
+all = ["watch-skill[perceive,ocr,whisper,index,mcp,api,loop,attest]"]
 
 [project.scripts]
 watch-skill = "watch_skill.surfaces.cli.main:app"

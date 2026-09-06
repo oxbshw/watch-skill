@@ -36,7 +36,8 @@ def _get_model(name: str):
         _unavailable = True
         print(
             "[watch-skill] fastembed not installed — keyword-only search "
-            '(install with `uv sync --extra index`)',
+            '(install with `pip install "watch-skill[index]"`, or `uv sync --extra '
+            'index` from a checkout)',
             file=sys.stderr,
         )
     except Exception as exc:  # noqa: BLE001

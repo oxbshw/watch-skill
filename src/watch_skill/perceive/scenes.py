@@ -182,7 +182,8 @@ def compute_phash(image_path: Path) -> str:
         raise PerceptionError(
             "imagehash/Pillow are not installed",
             code="perceive.missing_dependency",
-            fix='install the perception extras: `uv sync --extra perceive`',
+            fix='install the perception extras: `pip install "watch-skill[perceive]"` '
+            '(from a checkout: `uv sync --extra perceive`)',
         ) from exc
     with Image.open(image_path) as img:
         return str(imagehash.phash(img))

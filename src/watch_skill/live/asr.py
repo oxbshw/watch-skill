@@ -104,7 +104,8 @@ class LocalWhisperASR:
             raise WatchSkillError(
                 "faster-whisper is not installed",
                 code="models.missing_dependency",
-                fix='install the transcribe extra: `uv sync --extra transcribe`',
+                fix='install the whisper extra: `pip install "watch-skill[whisper]"` '
+                     '(from a checkout: `uv sync --extra whisper`)',
             ) from exc
 
         size = self.model_size or self._auto_size()

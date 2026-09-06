@@ -10,6 +10,7 @@ Two guarantees, enforced forever:
 from __future__ import annotations
 
 import ast
+import re
 from pathlib import Path
 
 import pytest
@@ -172,3 +173,71 @@ def test_top_error_paths_fix_text_is_executable(tmp_path: Path) -> None:
     vague = {code: fix for code, fix in collected.items()
              if not fix or not _actionable(fix)}
     assert not vague, f"fix text is not executable advice: {vague}"
+
+
+# ── the extras a fix names have to exist, and be installable by a reader ─────
+
+
+def _declared_extras() -> set[str]:
+    """The optional-dependency groups this project actually has."""
+    import tomllib
+
+    pyproject = Path(__file__).resolve().parents[1] / "pyproject.toml"
+    with pyproject.open("rb") as handle:
+        data = tomllib.load(handle)
+    return set(data["project"].get("optional-dependencies", {}))
+
+
+def _sources() -> list[tuple[Path, str]]:
+    return [(py, py.read_text(encoding="utf-8-sig")) for py in sorted(SRC.rglob("*.py"))]
+
+
+def test_every_extra_a_message_names_exists() -> None:
+    """A fix that names an extra that does not exist is a dead end with a command in it.
+
+    `uv sync --extra transcribe` and `uv sync --extra vlm` both shipped. Neither
+    extra has ever been declared: the first is spelled `whisper`, and the second
+    was never a group at all. Both read as executable advice and neither one
+    installs anything, which is worse than saying nothing — a reader runs it,
+    it fails differently, and the original problem is still there.
+    """
+    declared = _declared_extras()
+    offenders: list[str] = []
+    for path, text in _sources():
+        for line_no, line in enumerate(text.splitlines(), start=1):
+            for match in re.finditer(r"--extra ([A-Za-z0-9_-]+)", line):
+                if match.group(1) not in declared:
+                    offenders.append(f"{path.relative_to(SRC)}:{line_no} --extra {match.group(1)}")
+            for match in re.finditer(r'watch-skill\[([A-Za-z0-9_,\- ]+)\]', line):
+                for name in match.group(1).split(","):
+                    extra = name.strip()
+                    # A formatted placeholder is filled from the same table.
+                    if extra.startswith("{") or extra == "":
+                        continue
+                    if extra not in declared:
+                        offenders.append(
+                            f"{path.relative_to(SRC)}:{line_no} watch-skill[{extra}]")
+    assert not offenders, (
+        "these messages name an extra this project does not declare "
+        f"(declared: {sorted(declared)}): {offenders}")
+
+
+def test_an_extra_is_offered_in_a_form_a_pip_user_can_run() -> None:
+    """`uv sync` works in a checkout. Most readers installed with pip.
+
+    Every place that tells someone to install an extra has to give them a
+    command that works where they are, and `uv sync --extra ocr` does not run
+    against a wheel from PyPI.
+    """
+    offenders: list[str] = []
+    for path, text in _sources():
+        for line_no, line in enumerate(text.splitlines(), start=1):
+            if "--extra " not in line:
+                continue
+            # The pip form may sit on the following line of a wrapped string.
+            window = "\n".join(text.splitlines()[max(0, line_no - 2):line_no + 2])
+            if "pip install" not in window:
+                offenders.append(f"{path.relative_to(SRC)}:{line_no}: {line.strip()[:100]}")
+    assert not offenders, (
+        "these tell a reader to run `uv sync`, which only works from a "
+        f"checkout, without offering the pip form: {offenders}")
