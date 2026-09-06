@@ -1,22 +1,21 @@
 /**
- * The first search of a session pays for a model load, and 30s does not cover it.
+ * The first read after a connection gets a load budget, and only the first.
  *
- * Measured in the acceptance room against 1.4.0, on a fast laptop: the first
- * `watch.library.search` in a freshly started Core came back at 30003ms as
- * `bridge.deadline_exceeded`, and the next one — same process, same query —
- * answered in 4388ms. A semantic search loads an embedding model on first use,
- * and the read deadline was sized for a read.
+ * This started as a fix for the wrong thing. The first `watch_search_sources`
+ * of a session failed, and the obvious reading — a slow model load against a
+ * deadline sized for a read — was wrong: measured with a fifteen-minute
+ * client deadline, the first search in a fresh Core *never answered*, while a
+ * second one issued afterwards in the same process answered in 51 seconds and
+ * a third in 1.2. That is a deadlock, not slowness, and the cure was in Core:
+ * the embedding stack is now imported on the thread that owns the Bridge
+ * server rather than lazily on a worker. A first search now answers in under
+ * a second.
  *
- * The consequence is specific and bad: the first `watch_search_sources` an
- * agent makes after the product opens is exactly the cold one, so the tool
- * that finds which source mentioned something fails the first time it is
- * asked, on a machine where nothing is wrong. Raising every read's deadline
- * would trade that for waiting two minutes to be told about a genuine hang, so
- * the first read after a connection gets its own budget and the rest keep the
- * ordinary one.
- *
- * Keyed on the Bridge's restart count, because a Core that exited and was
- * restarted is a new process with a cold model again.
+ * What survives is this: warming is best-effort, and where it was skipped the
+ * first read still pays for the import. So the first read after each
+ * connection keeps a larger budget — keyed on the Bridge's restart count,
+ * because a restarted Core is a new process — and it is deliberately not
+ * large enough to make a hang look like patience.
  */
 
 import { test, describe } from 'node:test'
@@ -44,7 +43,7 @@ class RecordingCore extends Service {
   }
 }
 
-const COLD = 180_000
+const COLD = 60_000
 const WARM = 30_000
 
 async function mount(reply) {

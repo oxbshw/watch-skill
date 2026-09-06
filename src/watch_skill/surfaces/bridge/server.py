@@ -666,6 +666,15 @@ def serve(*, max_in_flight: int = DEFAULT_MAX_IN_FLIGHT) -> int:
         level=os.environ.get("WATCH_BRIDGE_LOG", "INFO").upper(),
         format="%(asctime)s %(levelname)s %(name)s: %(message)s",
     )
+    # Before any worker can take a request. This server answers on a bounded
+    # pool, and the embedding stack deadlocks when its native extensions are
+    # first imported from a worker thread -- so the first `watch.library.search`
+    # in a fresh Core never returned at all. See
+    # `watch_skill.index.embeddings.warm_native_imports`.
+    from watch_skill.index.embeddings import warm_native_imports
+
+    warm_native_imports()
+
     server = BridgeServer(stdin, stdout, max_in_flight=max_in_flight)
     return server.run()
 

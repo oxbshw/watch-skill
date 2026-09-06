@@ -66,7 +66,7 @@
       {
         "name": "@deepwatch/dsh-bundle",
         "version": "0.1.0",
-        "integrity": "sha256:9b2cd80ac61bafcf243def8d7f5205ca3f49ddf4cb5cd1b0842d6abe2bcf6e21",
+        "integrity": "sha256:eca326d2ec31ee48316ed0c8fd05c06d08bd7d936f8e3c67ab80a22ad21b8a5a",
         "sourceFiles": 7
       },
       {
@@ -150,7 +150,7 @@
       {
         "name": "@deepwatch/dsh-tools",
         "version": "0.1.0",
-        "integrity": "sha256:7ee7abe0a9fe76affecc3edd7f9e5a738086766d957b83e0e03b8fbd9c263688",
+        "integrity": "sha256:a46bcc94436e553ecd9b04360843784ee56f0461b6a8c54d0d2d2461bc38b790",
         "sourceFiles": 11
       },
       {
@@ -189,7 +189,7 @@
       "creators": [
         "Tool: watch-gen-release-manifest"
       ],
-      "created": "2026-09-06T02:51:07Z"
+      "created": "2026-09-06T11:53:38Z"
     },
     "packages": [
       {
@@ -236,7 +236,7 @@
         "checksums": [
           {
             "algorithm": "SHA256",
-            "checksumValue": "9b2cd80ac61bafcf243def8d7f5205ca3f49ddf4cb5cd1b0842d6abe2bcf6e21"
+            "checksumValue": "eca326d2ec31ee48316ed0c8fd05c06d08bd7d936f8e3c67ab80a22ad21b8a5a"
           }
         ]
       },
@@ -460,7 +460,7 @@
         "checksums": [
           {
             "algorithm": "SHA256",
-            "checksumValue": "7ee7abe0a9fe76affecc3edd7f9e5a738086766d957b83e0e03b8fbd9c263688"
+            "checksumValue": "a46bcc94436e553ecd9b04360843784ee56f0461b6a8c54d0d2d2461bc38b790"
           }
         ]
       },

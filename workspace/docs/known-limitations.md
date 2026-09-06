@@ -104,15 +104,32 @@ in Core, and the way to it is `watch_search_sources`, which reaches
 appear in the Library mode, and that is the design rather than a fault; but the
 shared word is a real trap and this is the sentence that disarms it.
 
-## The first search of a session is slow
+## The first search of a session used to hang, and now does not
 
-A semantic search loads an embedding model into the Core process on first use.
-Measured against 1.4.0 on a fast laptop: the first `watch.library.search` in a
-freshly started Core took longer than 30 seconds, and the next one in the same
-process answered in 4.4. The first read after each connection is given a much
-larger deadline for exactly this reason, so it completes rather than failing —
-but it is slow, it is slow again after Core restarts, and there is no
-pre-warming in this release.
+Worth writing down because the wrong explanation held for a while and it was a
+plausible one.
+
+A semantic search loads an embedding model. The Bridge answers requests on a
+bounded worker pool, and the stack (fastembed, then numpy's and onnxruntime's
+native extensions) was imported lazily at its call sites — so the first import
+landed inside a worker thread, where loading the numpy C extension deadlocks
+and never returns. Measured with a fifteen-minute client deadline against
+1.4.0: the first `watch.library.search` in a fresh Core did not answer at all;
+a second, issued afterwards in the same process, answered in 51 seconds; a
+third in 1.2. Everything that does not embed stayed instant the whole time, so
+the engine looked healthy while `watch_search_sources` — the tool an agent
+reaches for to find which source mentioned something — hung the first time it
+was used.
+
+Core now imports that stack at startup, on the thread that owns the server.
+The same measurement on an equally fresh process: 677ms, 507ms, 506ms. The
+MCP server has done this since the deadlock was first found there; the Bridge
+had not, and one of two servers having the call is the whole of the defect.
+
+What remains: warming is best-effort. On a box where fastembed is missing or
+cannot load, search degrades to keyword-only and says so on stderr, and the
+first read after each connection keeps a larger deadline in case it is the one
+paying for the import.
 
 ## Perception is optional, and unconfigured by default
 

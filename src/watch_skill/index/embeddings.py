@@ -55,6 +55,50 @@ def _get_model(name: str):
     return _models.get(name)
 
 
+def warm_native_imports() -> None:
+    """Import the native-extension stack on the calling thread, before serving.
+
+    Both servers in this project answer requests on worker threads: FastMCP
+    runs sync tools in a pool, and the Bridge owns a bounded pool of its own.
+    The embedding stack (fastembed -> numpy -> onnxruntime) is imported lazily
+    at its call sites, so the first import lands inside a worker — where
+    loading the numpy C extension deadlocks and never returns.
+
+    The symptom is asymmetric and misleading in both. Measured on the Bridge
+    against 1.4.0: the first ``watch.library.search`` in a fresh Core did not
+    answer in fifteen minutes; a second search issued afterwards, in the same
+    process, answered in 51 seconds, and a third in 1.2. Everything that does
+    not embed stayed instant throughout, so the engine looked healthy and the
+    one tool an agent reaches for to find a source hung forever.
+
+    The MCP server has had this call since the deadlock was first found there.
+    The Bridge did not, which is the whole of the defect: two servers with the
+    same shape and one of them warmed. It lives here now so a third cannot be
+    written without it.
+
+    Best-effort by design: :func:`warm_up` degrades to keyword-only search on a
+    box where fastembed is missing or unloadable, and serving must start either
+    way.
+    """
+    try:
+        from watch_skill.index.db import connect, get_meta  # noqa: PLC0415
+
+        warm_up()
+        # Retrieval embeds with the model recorded in the index, not the
+        # current default, so an index built by an older release pulls a
+        # second model in -- lazily, on a worker thread, which is the exact
+        # deadlock this function exists to prevent. Warm that one too.
+        conn = connect()
+        try:
+            recorded = get_meta(conn, "embedding_model")
+        finally:
+            conn.close()
+        if recorded and recorded != MODEL_NAME:
+            warm_up(recorded)
+    except Exception as exc:  # noqa: BLE001 - never block serving on a warmup
+        print(f"[watch-skill] embedding warmup skipped ({exc})", file=sys.stderr)
+
+
 def warm_up(model_name: str | None = None) -> bool:
     """Load the embedding stack on the CALLING thread. Returns availability.
 

@@ -102,8 +102,8 @@ export interface Config {
   /**
    * Deadline for the first read after the engine connects.
    *
-   * Separate from `readTimeoutMs` because the first semantic search pays for
-   * an embedding model load and the ordinary deadline does not cover it. See
+   * A backstop for the case where Core's own startup warm-up was skipped and
+   * the first read pays for the model import. See
    * `SensoryConfig.coldReadTimeoutMs`.
    */
   readonly coldReadTimeoutMs: number
@@ -145,7 +145,7 @@ export const Config: s<Config> = s.object({
   queryTimeoutMs: s.number().step(1).min(1_000).default(120_000),
   verifyTimeoutMs: s.number().step(1).min(1_000).default(60_000),
   readTimeoutMs: s.number().step(1).min(1_000).default(30_000),
-  coldReadTimeoutMs: s.number().step(1).min(1_000).default(180_000),
+  coldReadTimeoutMs: s.number().step(1).min(1_000).default(60_000),
   liveStartTimeoutMs: s.number().step(1).min(1_000).default(75_000),
   actTimeoutMs: s.number().step(1).min(1_000).default(60_000),
   observeTimeoutMs: s.number().step(1).min(1_000).default(30_000),

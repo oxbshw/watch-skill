@@ -25,13 +25,16 @@ export interface SensoryConfig {
   /**
    * Deadline for the first read after the engine connects.
    *
-   * A semantic search loads an embedding model into the Core process on first
-   * use. Measured on a fast laptop against 1.4.0: the first
-   * `watch.library.search` in a freshly started Core took longer than 30s and
-   * came back `bridge.deadline_exceeded`; the next one, in the same process,
-   * answered in 4.4s. The ordinary read deadline is right for a read and
-   * wrong for a load, and the read that pays for the load is the first one a
-   * person makes after opening the product.
+   * A semantic search loads an embedding model into the Core process. Core
+   * now does that at startup, on the thread that owns the server, because
+   * doing it lazily on a worker deadlocked and the first search never
+   * returned at all — see `watch_skill.index.embeddings.warm_native_imports`.
+   *
+   * This budget is what remains after that fix: warming is best-effort, and
+   * on a box where it was skipped the first read still pays for the import.
+   * It is not a cure for a hang, and it is deliberately not large enough to
+   * look like one — a read that has not answered in a minute is a fault to
+   * report, not patience to extend.
    */
   readonly coldReadTimeoutMs: number
   /** Deadline for starting a live session, which may launch a browser. */

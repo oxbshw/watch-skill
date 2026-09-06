@@ -159,16 +159,19 @@
       config:
         queryTimeoutMs: 120000
         verifyTimeoutMs: 60000
-        # A read is quick; the first read of a session is not. A semantic
-        # search loads an embedding model into the Core process on first use,
-        # and that load is what the first `watch_search_sources` after the
-        # product opens actually waits for. Measured against 1.4.0 on a fast
-        # laptop: 30003ms and `bridge.deadline_exceeded` cold, 4388ms warm in
-        # the same process. So the ordinary deadline stays short enough to
-        # report a genuine hang, and the first read after each connection is
-        # given room for the load instead.
+        # A read is quick. The first read of a session used to hang: the
+        # embedding stack was imported lazily on a Bridge worker thread, where
+        # loading numpy's C extension deadlocks, and `watch_search_sources`
+        # never answered at all the first time it was asked. Core now warms
+        # that stack at startup on the thread that owns the server, and a
+        # first search in a fresh engine answers in under a second.
+        #
+        # `coldReadTimeoutMs` is the backstop for a box where that warm-up was
+        # skipped and the first read pays for the import itself. Deliberately
+        # not larger: waiting three minutes on a request that is never coming
+        # back is worse than reporting it.
         readTimeoutMs: 30000
-        coldReadTimeoutMs: 180000
+        coldReadTimeoutMs: 60000
         # Where execution receipts are journalled, beside the memory store and
         # for the same reason: a record the Host makes about your workspace
         # belongs in your profile, not in a process that is about to exit.
