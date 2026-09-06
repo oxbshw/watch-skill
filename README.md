@@ -25,9 +25,9 @@ inside it.
 [![Workspace](https://github.com/oxbshw/watch-skill/actions/workflows/workspace-ci.yml/badge.svg)](https://github.com/oxbshw/watch-skill/actions/workflows/workspace-ci.yml)
 [![Install](https://github.com/oxbshw/watch-skill/actions/workflows/install.yml/badge.svg)](https://github.com/oxbshw/watch-skill/actions/workflows/install.yml)
 
-[Quickstart](#start-here) ·
-[What it does](#what-it-actually-looks-like) ·
+[Install](#start-here) ·
 [THE LOOP](#the-loop-observe-act-verify) ·
+[Workspace](#the-deepwatch-workspace) ·
 [Architecture](#how-it-fits-together) ·
 [Docs](#documentation) ·
 [Community](#community)
@@ -36,16 +36,18 @@ inside it.
 
 ---
 
-## Why this exists
+## Two capabilities, and they work apart
 
-An agent that cannot see cannot check its own work, so it tells you what it
-believes it did. Watch Skill gives it two things it did not have: **perception**
-— video, audio and screen activity turned into frames, transcripts and OCR text,
-every one carrying an absolute timestamp — and **verification**, a frozen
-contract run by a separate process whose verdict does not come from a language
-model.
+**Perception.** Video, audio and screen activity become frames, transcripts and
+OCR text, each carrying an absolute timestamp. Index a source once and query it
+for as long as you keep it; every answer cites a moment you can open.
 
-Both halves are useful on their own, and the split is deliberate.
+**Verification.** A frozen contract — file digests, JSON values, SQL results,
+HTTP responses, DOM state — is evaluated by a separate process. The verdict is
+`VERIFIED`, `FAILED`, `UNVERIFIED` or `INCONCLUSIVE`, and it does not come from
+a language model.
+
+Either is useful on its own, and the split is deliberate.
 
 <table>
 <tr>
@@ -80,32 +82,6 @@ contract.
 </table>
 
 **Watch Skill is what sees and proves. DeepWatch is where the work happens.**
-
----
-
-## What it actually looks like
-
-An ordinary request — *create `totals.json` and tell me the sum*. Nobody
-mentioned Watch.
-
-<div align="center">
-<img src="workspace/docs/screenshots/release/05-ordinary-task.png" alt="A DeepWatch session. The agent was asked to create a file and read back its total. Write, Read and Pwsh rows are shown, each naming a workspace-relative path, and the answer confirms the file contents and the calculated total." width="88%">
-</div>
-
-Every row is a receipt, every path is workspace-relative, and the total was read
-back from the file rather than remembered. Then the part that matters:
-
-<div align="center">
-<img src="workspace/docs/screenshots/release/06-independent-verification.png" alt="A VERIFIED result card from watch_verify: two of two checks passed, one confirming the file exists and one confirming its total field equals 60, with the contract's sha256 digest." width="88%">
-</div>
-
-`watch_verify` ran a frozen contract and **Watch Core** answered. The agent did
-not grade itself: a check either passed or it did not, the contract's SHA-256 is
-on screen, and the same contract run from a different directory fails.
-
-Every image on this page is a photograph of a running build.
-[The screenshot page](workspace/docs/screenshots-release.md) names the build each
-one came from.
 
 ---
 
@@ -197,7 +173,18 @@ reconciles it into the profile's layer stack and applies the patch after its
 own. Four narrower variants — media, browser, memory, document — are declared
 alongside it for a profile that wants one capability rather than all of them.
 
-Add the engine with `pip install watch-skill`; the Bridge finds it on `PATH`.
+Add the engine — with the extras, because the bundle's media capabilities are
+the engine's:
+
+```bash
+pip install 'watch-skill[standard,ocr]'
+```
+
+`[standard]` is frames, retrieval and MCP; `[ocr]` reads on-screen text. A bare
+`pip install watch-skill` installs a Core that cannot extract a frame, and the
+Bridge would connect to it and report `perceive.missing_dependency` on the first
+video. The Bridge finds the executable on `PATH` by itself.
+
 Full guide: **[`@deepwatch/dsh-bundle`](workspace/packages/watch/bundle/README.md)**.
 
 **Requirements.** Node ≥ 22.19 and Python 3.11, 3.12 or 3.13 — the versions CI
@@ -239,13 +226,66 @@ When an answer is wrong, you correct it. Watch Skill classifies the correction,
 stores it as a lesson in the local store, re-asks the question with the lesson
 applied where the error class is mechanical, and counts what that saved.
 
-<div align="center">
-<img src="docs/assets/lessons_loop.gif" alt="A wrong answer is reported with its correction; Watch Skill classifies the mistake, re-asks the question with the lesson applied, validates the new answer, and the mistake becomes a replayable evaluation." width="640">
-</div>
-
 Lessons persist between runs and stay on your machine. Nothing learns on its
 own — the correction is yours to give — and nothing is uploaded.
 **[Lessons and savings](docs/guides/lessons-and-savings.md)**.
+
+---
+
+## The DeepWatch Workspace
+
+Everything above is the engine, and any agent can use it. DeepWatch is the
+workspace where an agent's own work happens inside it: the official DeepSeek
+Harness composed with Watch Skill, so every tool call leaves a receipt and
+"it worked" is a claim you can open.
+
+Four screens, in the order you meet them.
+
+<table>
+<tr>
+<td width="50%" valign="top">
+
+<img src="workspace/docs/screenshots/release/05-ordinary-task.png" width="100%" alt="A DeepWatch session titled 'Create totals.json and read sum'. Write, Read and Pwsh tool rows are listed, each naming a workspace-relative path such as owner-test/totals.json, and the reply states the file contents and the total read back from it.">
+
+**An ordinary task.** Nobody mentioned Watch. Every row is a receipt, every
+path is workspace-relative, and the total was read back from the file rather
+than remembered.
+
+</td>
+<td width="50%" valign="top">
+
+<img src="workspace/docs/screenshots/release/08-library-receipts.png" width="100%" alt="The Library screen showing thirteen matches, with rows for read and write on owner-test/totals.json and a pwsh call. A notice reads 'Index ready. Answered by this workspace's own host', and the page is marked Local-first.">
+
+**Evidence, retrieved.** Every source and every receipt this workspace
+recorded, searched on the workspace's own host — no service, no model.
+
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+
+<img src="workspace/docs/screenshots/release/06-independent-verification.png" width="100%" alt="A VERIFIED result card from watch_verify: two of two checks passed, one confirming the file exists and one confirming its total field equals 60, shown with the contract's sha256 digest.">
+
+**Independent verification.** `watch_verify` froze a contract and Watch Core
+answered. The agent did not grade itself: the contract's SHA-256 is on screen,
+and the same contract run from a different directory fails.
+
+</td>
+<td width="50%" valign="top">
+
+<img src="workspace/docs/screenshots/release/09-compare-two-records.png" width="100%" alt="The Compare screen with two verification records selected. The left is a FAILED watch_verify, the right a VERIFIED one from the run that repaired the file, and the difference table counts them as present on one side each.">
+
+**Compare, on real outcomes.** Two runs of one contract — the broken claim and
+its repair — with the verdicts Core issued for each. A comparison describes a
+difference; it never issues a verdict of its own.
+
+</td>
+</tr>
+</table>
+
+Every image is a photograph of a running build, and each caption on
+**[the screenshot page](workspace/docs/screenshots-release.md)** names the build
+it came from. The full gallery is there too.
 
 ---
 
