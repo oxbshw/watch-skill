@@ -114,10 +114,21 @@ jobs:
           python3 - "$GITHUB_SHA" "${{ steps.version.outputs.version }}" "$GITHUB_REF_NAME" <<'EOF'
           import hashlib, json, os, sys
           commit, version, tag = sys.argv[1:4]
+          # The manifest describes exactly the files SHA256SUMS names, and
+          # nothing else that happens to be in this directory.
+          #
+          # It used to list everything `os.listdir` returned, which is how
+          # `core-v1.4.0` failed before it published anything: `uv build`
+          # writes a `.gitignore` into its output directory, `upload-artifact`
+          # excludes hidden files by default, and the next job checked a
+          # manifest entry for a file the sealed set had never contained. The
+          # two descriptions of "the release" disagreed, and the one that
+          # decided was the one nobody had written on purpose.
           entries = []
-          for name in sorted(os.listdir('.')):
-              if name in ('SHA256SUMS', 'release-manifest.json'):
-                  continue
+          with open('SHA256SUMS', encoding='utf-8') as handle:
+              sealed = [line.split('  ', 1)[1].strip().removeprefix('./')
+                        for line in handle if line.strip()]
+          for name in sealed:
               with open(name, 'rb') as handle:
                   digest = hashlib.sha256(handle.read()).hexdigest()
               entries.append({'file': name, 'sha256': digest, 'size': os.path.getsize(name)})
