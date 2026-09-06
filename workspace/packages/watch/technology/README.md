@@ -2,10 +2,13 @@
 
 Technology descriptors, capability lifecycle, and role bindings over DSH Models and Providers
 
-Part of **DeepWatch** — the Web and Desktop agent product built on the
-official [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)
-packages and powered by [Watch Skill](https://github.com/oxbshw/watch-skill) for perception, evidence,
-memory and independent verification.
+Part of **DeepWatch** — the agent workspace built on the official
+[DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)
+and powered by [Watch Skill](https://github.com/oxbshw/watch-skill) for perception, evidence, memory and
+independent verification.
+
+> **Host plugin — runs beside the agent in the DSH process.**
+> Composed by the bundle.
 
 ## Exports
 
@@ -49,6 +52,8 @@ single piece in a composition you control.
 - Node `^22.19.0 || >=24.0.0`
 - The peers above, supplied by the host composition
 
+DSH Models and Providers configured in the host profile.
+
 ## Stability
 
 `0.1.0` — a stable release.
@@ -69,10 +74,12 @@ workspace boundary and the host's permissions, not by this flag.
 
 ## Where this fits
 
-These packages are composed together; installing one on its own is rarely
-what you want. The whole picture, the gates it has to pass, and how to run
-DeepWatch is in the
-[workspace README](https://github.com/oxbshw/watch-skill/tree/main/workspace#readme).
+Where "this model can see images" is recorded, and where a capability is bound to a role. The Settings surface reads it; nothing else guesses at a model's abilities.
+
+The twenty packages and how they compose:
+[the package map](https://github.com/oxbshw/watch-skill/blob/main/workspace/docs/packages.md).
+Running DeepWatch, and the gates a change has to pass:
+[the workspace README](https://github.com/oxbshw/watch-skill/tree/main/workspace#readme).
 
 ## Attribution
 

@@ -2,10 +2,13 @@
 
 The third-party Watch capability developer path — declare, probe, observe, request
 
-Part of **DeepWatch** — the Web and Desktop agent product built on the
-official [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)
-packages and powered by [Watch Skill](https://github.com/oxbshw/watch-skill) for perception, evidence,
-memory and independent verification.
+Part of **DeepWatch** — the agent workspace built on the official
+[DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)
+and powered by [Watch Skill](https://github.com/oxbshw/watch-skill) for perception, evidence, memory and
+independent verification.
+
+> **Optional extra — nothing requires it.**
+> Third parties building a Watch capability of their own.
 
 ## Exports
 
@@ -35,10 +38,20 @@ composes this package with the rest of DeepWatch and is what a profile
 normally depends on; installing this one directly is for embedding a
 single piece in a composition you control.
 
+## Example
+
+The four verbs a capability gets:
+
+```sh
+import { declare, probe, observe, request } from '@deepwatch/dsh-sdk'
+```
+
 ## Requirements
 
 - Node `^22.19.0 || >=24.0.0`
 - The peers above, supplied by the host composition
+
+A DSH host to mount into.
 
 ## Stability
 
@@ -60,10 +73,12 @@ workspace boundary and the host's permissions, not by this flag.
 
 ## Where this fits
 
-These packages are composed together; installing one on its own is rarely
-what you want. The whole picture, the gates it has to pass, and how to run
-DeepWatch is in the
-[workspace README](https://github.com/oxbshw/watch-skill/tree/main/workspace#readme).
+The supported extension path: declare a capability, probe whether its prerequisites hold, observe what happens, request work. It is how a capability joins the composition without patching it.
+
+The twenty packages and how they compose:
+[the package map](https://github.com/oxbshw/watch-skill/blob/main/workspace/docs/packages.md).
+Running DeepWatch, and the gates a change has to pass:
+[the workspace README](https://github.com/oxbshw/watch-skill/tree/main/workspace#readme).
 
 ## Attribution
 

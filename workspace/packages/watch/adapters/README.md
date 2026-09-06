@@ -2,10 +2,13 @@
 
 Optional adapters: Obsidian vaults and LLMWiki bundles. Watch works fully without either.
 
-Part of **DeepWatch** — the Web and Desktop agent product built on the
-official [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)
-packages and powered by [Watch Skill](https://github.com/oxbshw/watch-skill) for perception, evidence,
-memory and independent verification.
+Part of **DeepWatch** — the agent workspace built on the official
+[DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)
+and powered by [Watch Skill](https://github.com/oxbshw/watch-skill) for perception, evidence, memory and
+independent verification.
+
+> **Optional extra — nothing requires it.**
+> Anyone exporting Watch's memory into another tool. Nothing depends on it.
 
 ## Exports
 
@@ -27,6 +30,16 @@ Rarely on its own. [`@deepwatch/dsh-bundle`](https://github.com/oxbshw/watch-ski
 composes this package with the rest of DeepWatch and is what a profile
 normally depends on; installing this one directly is for embedding a
 single piece in a composition you control.
+
+## Example
+
+Export the wiki as an Obsidian vault:
+
+```sh
+import { buildWiki, toVault } from '@deepwatch/dsh-adapters'
+
+const vault = toVault(buildWiki(records), { name: 'Watch' })
+```
 
 ## Requirements
 
@@ -52,10 +65,12 @@ workspace boundary and the host's permissions, not by this flag.
 
 ## Where this fits
 
-These packages are composed together; installing one on its own is rarely
-what you want. The whole picture, the gates it has to pass, and how to run
-DeepWatch is in the
-[workspace README](https://github.com/oxbshw/watch-skill/tree/main/workspace#readme).
+Obsidian vaults and LLMWiki bundles, generated from the ledger. An edit in an exported vault is a proposal, never a change: Watch is the record and the folder is a copy.
+
+The twenty packages and how they compose:
+[the package map](https://github.com/oxbshw/watch-skill/blob/main/workspace/docs/packages.md).
+Running DeepWatch, and the gates a change has to pass:
+[the workspace README](https://github.com/oxbshw/watch-skill/tree/main/workspace#readme).
 
 ## Attribution
 
