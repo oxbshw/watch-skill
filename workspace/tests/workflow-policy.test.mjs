@@ -272,9 +272,32 @@ describe('merging a branch cannot publish anything', () => {
     // and the wrong one for a project with two release trains.
     assert.ok(!/value=latest,enable=\{\{is_default_branch\}\}/.test(docker),
       'latest must not follow the default branch')
-    assert.match(docker, /value=latest,enable=\$\{\{ github\.event_name == 'release'/)
-    assert.match(docker, /github\.event\.release\.prerelease == false/,
+
+    // The property, not one spelling of it. This asserted the exact
+    // expression, which made a second legitimate way to publish a release
+    // look like a policy violation: `release: published` does not reach this
+    // workflow when the release was created by `GITHUB_TOKEN`, so a dispatch
+    // has to be able to publish one — and the rule that matters is which
+    // triggers may take the tag, not how the condition is written.
+    const latest = docker.split('\n')
+      .filter(line => line.includes('value=latest'))
+      .join('\n')
+    assert.notEqual(latest, '', 'nothing sets latest at all')
+    assert.match(latest, /github\.event_name == 'release'/,
+      'a release must be able to take latest')
+    assert.match(latest, /github\.event\.release\.prerelease == false/,
       'a prerelease must not take latest')
+
+    // Every trigger named in that condition is one a person chose. A branch
+    // push is not, and neither is a pull request.
+    const triggers = [...latest.matchAll(/github\.event_name == '([a-z_]+)'/g)]
+      .map(match => match[1])
+    assert.deepEqual(triggers.filter(name => !['release', 'workflow_dispatch'].includes(name)),
+      [], `latest is reachable from a trigger nobody chose: ${triggers.join(', ')}`)
+    if (triggers.includes('workflow_dispatch')) {
+      assert.match(latest, /inputs\.latest/,
+        'a dispatch may take latest only when it was asked for explicitly')
+    }
   })
 
   test('a branch push still builds the image, so a broken Dockerfile fails early', () => {

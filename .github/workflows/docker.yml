@@ -33,6 +33,18 @@ on:
       - "Dockerfile"
       - ".github/workflows/docker.yml"
   workflow_dispatch:
+    inputs:
+      version:
+        description: >-
+          The released version to tag the image with, e.g. 1.4.0. Leave empty
+          to build and push only the branch tag.
+        required: false
+        type: string
+      latest:
+        description: Also move `latest` to this image. Only for a stable release.
+        required: false
+        default: false
+        type: boolean
 
 env:
   IMAGE: ghcr.io/${{ github.repository }}
@@ -71,11 +83,22 @@ jobs:
             type=ref,event=branch
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
-            # `latest` is the released image, so it is set by a release and
-            # never by a branch. A prerelease tag is excluded by the metadata
-            # action's own semver handling, which is why this is expressed as
-            # a release event rather than as "the newest thing we built".
-            type=raw,value=latest,enable=${{ github.event_name == 'release' && github.event.release.prerelease == false }}
+            # The version, when a dispatch names one.
+            #
+            # `release: published` does not reach this workflow when the
+            # release was created by `GITHUB_TOKEN` — GitHub does not raise
+            # workflow events for actions a workflow token took, which is loop
+            # prevention working as designed. `core-v1.4.0` published to PyPI,
+            # completed its Release, and no image was ever pushed for it: the
+            # registry held `main` and a `latest` from some earlier path, and
+            # nothing said so.
+            #
+            # Core's tag is `core-v<version>`, which is not semver, so the
+            # `type=semver` lines above match nothing on that ref either. The
+            # version is therefore passed in rather than derived, and the two
+            # raw tags below are what a dispatch actually publishes.
+            type=raw,value=${{ inputs.version }},enable=${{ inputs.version != '' }}
+            type=raw,value=latest,enable=${{ (github.event_name == 'release' && github.event.release.prerelease == false) || (github.event_name == 'workflow_dispatch' && inputs.latest) }}
 
       - name: Build
         uses: docker/build-push-action@v7
