@@ -64,10 +64,16 @@ const PROFILE = flag('profile', 'deepwatch')
 const BUDGET_MS = Number(flag('budget-ms', '1800000'))
 const MAX_TURNS = Number(flag('max-turns', '12'))
 const TURN_MS = Number(flag('turn-timeout-ms', '300000'))
+const RECEIPTS = flag('receipts', null)
 const OUT = flag('out', join(dirname(fileURLToPath(import.meta.url)), '..', 'qa', 'journey-live.json'))
 
-if (HOME === null || WORKSPACE === null || MODEL === null) {
-  process.stderr.write('qa-journey-live: --home, --workspace and --model are required\n')
+if (HOME === null || WORKSPACE === null || MODEL === null || RECEIPTS === null) {
+  process.stderr.write(
+    'qa-journey-live: --home, --workspace, --model and --receipts are required.\n'
+    + '`--receipts` is the journal directory the profile writes to, normally\n'
+    + '<workspace>/.watch/receipts. Which tools a model chose is read from there\n'
+    + 'rather than from a text search, because a search answers a different\n'
+    + 'question and answers it wrongly.\n')
   process.exit(2)
 }
 
@@ -117,6 +123,37 @@ const receiptsFor = async (sessionId, query) => {
   const found = await search(query)
   return (found.records ?? []).filter(record =>
     (record.tags ?? []).includes('execution-receipt') && record.runId === sessionId)
+}
+
+/**
+ * Every receipt this run produced, read from the journal rather than searched.
+ *
+ * The Library's search is the surface a person uses and it is the right thing
+ * to assert *about*. It is the wrong thing to establish *which tools the model
+ * chose*: a text query matches indexed content, so "did it call `write`"
+ * becomes "does the word write retrieve anything", and the first version of
+ * this file reported that a model which had called `write` four times had
+ * called it none. The journal is the Host's own append-only record of its own
+ * dispatches, and it answers the question that was actually being asked.
+ */
+function journalled(receiptsDir) {
+  const file = join(receiptsDir, 'receipts.jsonl')
+  if (!existsSync(file)) return []
+  return readFileSync(file, 'utf8')
+    .split('\n')
+    .filter(line => line.trim() !== '')
+    .flatMap((line) => { try { return [JSON.parse(line)] } catch { return [] } })
+}
+
+/** The tool each journalled receipt names. */
+function toolsIn(records) {
+  const counts = {}
+  for (const record of records) {
+    const tag = (record.tags ?? []).find(entry => entry.startsWith('tool:'))
+    if (tag === undefined) continue
+    counts[tag.slice('tool:'.length)] = (counts[tag.slice('tool:'.length)] ?? 0) + 1
+  }
+  return counts
 }
 
 const wait = (ms) => new Promise((done) => { setTimeout(done, ms) })
@@ -243,13 +280,13 @@ if (sessionId !== null) {
     { path: 'owner-test/totals.json', content: onDisk })
 
   await wait(2_500)
-  const writes = await receiptsFor(sessionId, 'write')
   // The model chose the tool. Nothing here scripted a call, so a receipt is
   // evidence that tools were offered *and* taken -- which a completion body
   // carrying a tool list is not.
-  claim('LJ-06 the model chose a tool, and Watch recorded the call unasked',
-    writes.length >= 1,
-    { receipts: writes.length, tags: writes.map(record => record.tags) })
+  const chosen = toolsIn(journalled(RECEIPTS))
+  claim('LJ-06 the model chose tools nobody scripted, and Watch recorded them',
+    (chosen.write ?? 0) >= 1,
+    { tools: chosen })
 
   // ── 3. ask for proof, and let the model pick the verification tool ────────
   await turn(sessionId,
@@ -261,31 +298,58 @@ if (sessionId !== null) {
   claim('LJ-07 the model reached for independent verification on its own',
     proofs.length >= 1,
     { verifications: proofs.length, verdicts: proofs.map(record => record.verdict) })
-  claim('LJ-08 the first verdict is VERIFIED, and it is Core’s',
-    proofs.some(record => record.verdict === 'VERIFIED'),
-    { verdicts: proofs.map(record => record.verdict) })
+  // Not "the first verdict is VERIFIED". That asserts an ordering the model
+  // controls, and one run failed it for the best reason in this whole file:
+  // the model composed a contract that included a `file_digest` check and
+  // supplied a sha256 it had made up. Three checks passed, the invented one
+  // did not, and Core returned FAILED — which is the product doing exactly
+  // what it exists to do. A gate that called that a regression would be
+  // teaching somebody to make Core agree with the model.
+  //
+  // What must hold is that every verdict is Core's, carrying Core's identity
+  // and Core's reason.
+  claim('LJ-08 every verdict carries Core’s identity and Core’s reason',
+    proofs.length >= 1
+      && proofs.every(record => (record.evidenceIds ?? []).some(
+        id => String(id).startsWith('ver_'))),
+    { verdicts: proofs.map(record => record.verdict),
+      identities: proofs.flatMap(record => record.evidenceIds ?? []) })
 
   // ── 4. a controlled mismatch ───────────────────────────────────────────────
+  //
+  // The break has to be one the claim under test can see. The first version of
+  // this asked for items `[12,18,28]` with the total left at 60 and then asked
+  // for "the same check" -- and the model, which composes its own contract,
+  // had written one that checks the `total` field. Sixty was still sixty, the
+  // contract passed, and the run recorded a mismatch that was not one. What is
+  // broken now is the number the claim is *about*.
   await turn(sessionId,
-    'Now change owner-test/totals.json so the items are [12,18,28] and the total '
-    + 'field still says 60, then run the same check again and tell me the verdict.')
+    'Change the total field in owner-test/totals.json to 58, leaving the items '
+    + 'as they are. Then prove again that the file holds a total of 60, and tell '
+    + 'me the verdict you get back.')
   await wait(2_500)
   proofs = await receiptsFor(sessionId, 'watch_verify')
   const failed = proofs.filter(record => record.verdict === 'FAILED')
-  claim('LJ-09 the mismatch fails, rather than being reported as fine',
+  claim('LJ-09 the broken claim fails, rather than being reported as fine',
     failed.length >= 1,
     { verdicts: proofs.map(record => record.verdict) })
 
   // ── 5. the correction ──────────────────────────────────────────────────────
   await turn(sessionId,
-    'Put owner-test/totals.json back to items [12,18,30] with a total of 60, and '
-    + 'run the check once more.')
+    'Put the total back to 60 so it matches the items, and prove it once more.')
   await wait(2_500)
-  proofs = await receiptsFor(sessionId, 'watch_verify')
-  const passes = proofs.filter(record => record.verdict === 'VERIFIED')
-  claim('LJ-10 the correction passes again',
-    passes.length >= 2 && failed.length >= 1,
-    { verdicts: proofs.map(record => record.verdict) })
+  // Read from the journal, which is in dispatch order. The Library returns
+  // records, and "did the repair land after the break" is a question about
+  // sequence that a result set cannot answer.
+  const sequence = journalled(RECEIPTS)
+    .filter(record => (record.tags ?? []).includes('tool:watch_verify')
+      && typeof record.verdict === 'string')
+    .map(record => record.verdict)
+  const lastFailure = sequence.lastIndexOf('FAILED')
+  const lastPass = sequence.lastIndexOf('VERIFIED')
+  claim('LJ-10 the repair comes after the break, and it passes',
+    lastFailure !== -1 && lastPass > lastFailure,
+    { sequence, brokeAt: lastFailure, fixedAt: lastPass })
 
   // ── 6. distinct Core identities, in the rows Compare renders ──────────────
   const identities = [...new Set(proofs.flatMap(record => record.evidenceIds ?? []))]
@@ -304,23 +368,44 @@ if (sessionId !== null) {
     revisions: revisions.length })
 
   // ── 7. perception ─────────────────────────────────────────────────────────
+  //
+  // Which Watch tool answers this is the model's choice, and there are several
+  // right ones -- `watch_search_sources` for a query, `watch_list_sources` for
+  // an inventory. Asserting one tool name was asserting a decision the model
+  // gets to make: the run below chose `watch_list_sources`, answered correctly,
+  // and was recorded as a failure.
   const before = turnsTaken
   const perception = await turn(sessionId,
-    'Look at what has been indexed and tell me what sources are available to you, '
-    + 'citing anything you find by its timestamp.')
-  const perceptionCalls = await receiptsFor(sessionId, 'watch_search_sources')
+    `There is a short video indexed under media/. Find what on-screen text it `
+    + `contains and tell me the timestamp it appears at.`)
+  await wait(2_500)
+  const perceptionTools = toolsIn(journalled(RECEIPTS))
+  const reachedCore = Object.keys(perceptionTools).filter(name => name.startsWith('watch_'))
   claim('LJ-13 a perception request reached Core through a tool the model chose',
-    perception.settled && perceptionCalls.length >= 1,
-    { settled: perception.settled, calls: perceptionCalls.length, turnsUsed: turnsTaken - before })
+    perception.settled && reachedCore.some(name => name !== 'watch_verify'),
+    { settled: perception.settled, watchTools: reachedCore, turnsUsed: turnsTaken - before })
+
+  const readText = existsSync(join(repo, '..', 'seen.txt'))
+    ? readFileSync(join(repo, '..', 'seen.txt'), 'utf8')
+    : null
+  notes.perceptionAnswer = readText
 
   // ── 8. a bounded delegated task ────────────────────────────────────────────
+  //
+  // Named explicitly, because delegation is the capability under test rather
+  // than a preference being measured. Asked as "delegate this to a sub-task",
+  // one run spawned a subagent and the next did the work itself with `glob` --
+  // both correct answers to that instruction, and only one of them exercises
+  // the thing. What stays the model's choice is how it runs the child.
   const delegated = await turn(sessionId,
-    'Delegate this to a sub-task and report back in one sentence: count how many '
-    + 'JSON files are under owner-test and name them.')
-  const subagent = await receiptsFor(sessionId, 'task')
-  claim('LJ-14 a delegated task ran within the budget',
-    delegated.settled,
-    { settled: delegated.settled, reason: delegated.reason, subagentReceipts: subagent.length })
+    'Use your subagent tool to delegate this to a child task, and report back in '
+    + 'one sentence what it found: how many JSON files are under owner-test, and '
+    + 'what they are called.')
+  await wait(2_500)
+  const afterDelegation = toolsIn(journalled(RECEIPTS))
+  claim('LJ-14 a delegated task ran, and the delegation is in the record',
+    delegated.settled && (afterDelegation.subagent ?? afterDelegation.task ?? 0) >= 1,
+    { settled: delegated.settled, reason: delegated.reason, tools: afterDelegation })
 
   // ── 9. stopping a running task ─────────────────────────────────────────────
   await rpc('session.prompt', { sessionId, mode: 'queue', content: [{ type: 'text',
