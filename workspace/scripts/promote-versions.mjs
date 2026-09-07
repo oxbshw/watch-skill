@@ -84,6 +84,15 @@ export const HISTORICAL = [
   // to do here.
   'workspace/inventory/dsh-closure.json',
   'workspace/pnpm-lock.yaml',
+  // Generated from the lockfile, and it carries both halves: `firstParty`
+  // holds this project's packages and moves with a release, `thirdParty` holds
+  // everybody else's and must not. A search-and-replace cannot see the
+  // difference -- it rewrote the same two third-party entries here that it
+  // rewrote in the lockfile -- and it does not need to, because
+  // `gen-sbom.mjs` derives the whole file and `sbom-determinism.test.mjs`
+  // fails when it disagrees with what the lockfile resolves. Regenerate it;
+  // never rewrite it.
+  'workspace/docs/sbom.json',
   'docs/release-proof.md',
   'docs/history/',
   'workspace/docs/history/',
