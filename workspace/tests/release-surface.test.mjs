@@ -174,4 +174,26 @@ describe('the exemptions stay narrow', () => {
         `${glob} excludes something that is not history or a generated artifact`)
     }
   })
+
+  test('phantom-repository names a repository, not a substring of the product', () => {
+    // Unanchored, `watch-workspace` also matches `deepwatch-workspace`, so a
+    // README heading called "The DeepWatch Workspace" was reported as naming a
+    // repository that does not exist. The rule is about a repository name, so
+    // it is bounded like one -- narrowed to its own intent rather than
+    // loosened, and every case it exists for still fires.
+    const rule = CONFIG.rules.find(entry => entry.id === 'phantom-repository')
+    const fires = text => new RegExp(rule.pattern, 'g').test(text)
+
+    for (const named of [
+      'oxbshw/watch-workspace',
+      'clone the watch-workspace repository',
+      'see watch-workspace.',
+    ]) assert.ok(fires(named), `${named} names the repository this rule refuses`)
+
+    for (const fine of [
+      '#the-deepwatch-workspace',
+      '@deepwatch/dsh-workspace',
+      'deepwatch-workspace/thing',
+    ]) assert.ok(!fires(fine), `${fine} is not a repository name`)
+  })
 })
