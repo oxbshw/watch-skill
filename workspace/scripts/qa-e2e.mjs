@@ -116,7 +116,14 @@ const LOCATE = `(function (needle) {
   const target = candidates[0]
   target.scrollIntoView({ block: 'center', inline: 'center' })
   const box = target.getBoundingClientRect()
-  return { x: Math.round(box.left + box.width / 2), y: Math.round(box.top + box.height / 2) }
+  // The ratio comes back with the rectangle because the caller aims a mouse
+  // at it, and on a scaled display the two are not in the same units. See
+  // the click helper below.
+  return {
+    x: Math.round(box.left + box.width / 2),
+    y: Math.round(box.top + box.height / 2),
+    ratio: window.devicePixelRatio || 1,
+  }
 })`
 
 /**
@@ -232,8 +239,19 @@ async function click(win, needle) {
   await wait(350)
   const at = await ask(win, `${LOCATE}(${JSON.stringify(needle)})`)
   if (at === null) return false
+  // A rectangle is in CSS pixels and `sendInputEvent` wants the window's own,
+  // and on Windows those differ by the display's scale factor. At 125% every
+  // click landed four fifths of the way towards the top left of where it was
+  // aimed: the sidebar's Settings hit nothing, and a re-click inside an open
+  // dialog hit the backdrop and closed it -- so the run reported nine
+  // navigation failures against an application that was rendering correctly.
+  // On a display at 100%, and on every CI runner, the ratio is 1 and this
+  // changes nothing.
+  const ratio = typeof at.ratio === 'number' && at.ratio > 0 ? at.ratio : 1
+  const x = Math.round(at.x * ratio)
+  const y = Math.round(at.y * ratio)
   for (const type of ['mouseDown', 'mouseUp']) {
-    win.webContents.sendInputEvent({ type, x: at.x, y: at.y, button: 'left', clickCount: 1 })
+    win.webContents.sendInputEvent({ type, x, y, button: 'left', clickCount: 1 })
   }
   return true
 }
@@ -284,6 +302,12 @@ async function navigate(win, needle, expect, tries = 20) {
     // Re-click once midway: the settings dialog animates in, and a click
     // delivered during the transition lands on nothing.
     if (attempt === 8) await click(win, needle)
+    // And once by DOM, because a synthetic mouse event at a coordinate is not
+    // the only way this can fail. Where the two differ is stated above
+    // `CLICK_DIRECT`; what is new is that a run where every coordinate click
+    // missed reported nine navigation failures against an application that
+    // was rendering correctly, and had no second way to ask.
+    if (attempt === 13) await clickDirect(win, needle)
   }
   log(`navigate: never saw ${JSON.stringify(expect)} after clicking ${JSON.stringify(needle)}`)
   return false
@@ -297,7 +321,12 @@ async function navigate(win, needle, expect, tries = 20) {
  * appear in `innerText`, so waiting for one reported a form that had opened.
  */
 async function navigateTo(win, needle, selector, { tries = 20, retry = true } = {}) {
-  await click(win, needle)
+  // The DOM click first, and the mouse second, which is the opposite of the
+  // order navigation uses. What this opens is a control inside an open dialog,
+  // and a mouse event that misses one of those does not merely fail to open
+  // the form -- it lands on the backdrop and closes the dialog underneath,
+  // taking every step after it. A DOM click cannot miss.
+  if (!await clickDirect(win, needle)) await click(win, needle)
   for (let attempt = 0; attempt < tries; attempt += 1) {
     const there = await ask(win, 
       `document.querySelector(${JSON.stringify(selector)}) !== null`)
@@ -307,9 +336,6 @@ async function navigateTo(win, needle, selector, { tries = 20, retry = true } = 
     // toggles: clicking a row's "Choose a model" twice closes the editor the
     // first click opened, and the poll then correctly reports no select.
     if (attempt === 8 && retry) await click(win, needle)
-    // Halfway, try the other kind of click once. A `<button onClick>` inside a
-    // scrolling dialog is reached by the DOM and not always by coordinates.
-    if (attempt === 4) await clickDirect(win, needle)
   }
   log(`navigateTo: never saw ${selector} after clicking ${JSON.stringify(needle)}`)
   return false
@@ -615,7 +641,19 @@ async function main() {
     width: 1440,
     height: 900,
     show: false,
-    webPreferences: { contextIsolation: true, nodeIntegration: false },
+    webPreferences: {
+      contextIsolation: true,
+      nodeIntegration: false,
+      // A hidden window's renderer is throttled by default: timers are
+      // clamped and frames stop being produced. This harness clicks by
+      // sending real input events and then waits eight seconds for the view
+      // to change, which is ample against a renderer running normally and not
+      // nearly enough against one that is being deliberately slowed down. On
+      // a quiet machine it got through anyway; on a busy one every navigation
+      // timed out and the run reported nine failures against an application
+      // that was rendering correctly.
+      backgroundThrottling: false,
+    },
   })
 
   log(`e2e against ${URL} with stub ${STUB === '' ? '(none)' : STUB}`)
