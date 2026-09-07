@@ -14,6 +14,7 @@ from watch_skill.acquire import AcquireResult, acquire, fetch_captions_only
 from watch_skill.acquire.sources import classify_source, is_url_kind
 from watch_skill.errors import PerceptionError
 from watch_skill.perceive import PerceptionResult, perceive, probe
+from watch_skill.perceive.cues import discover_cues
 from watch_skill.perceive.types import VideoMetadata
 from watch_skill.transcribe import Transcript, get_transcript
 
@@ -126,6 +127,17 @@ def watch(
             width=None, height=None, fps=None, codec=None, has_audio=False,
         )
     _validate_window(start_seconds, end_seconds, metadata.duration_seconds)
+
+    # A recording made by `watch-skill capture --script` carries the moments
+    # its interactions happened at, and those are the frames it exists to
+    # show -- also the frames near-duplicate selection is likeliest to drop,
+    # a page where three numbers change hashing within the threshold of the
+    # page before it. Reading them here rather than in a surface is what gives
+    # every ingestion path the same behaviour: the CLI, MCP, REST, the job
+    # queue and the batch runner all arrive through this function. An explicit
+    # `cue_timestamps` is the caller naming the moments that matter, and wins.
+    if cue_timestamps is None and acq.video_path is not None:
+        cue_timestamps = discover_cues(acq.video_path, metadata.duration_seconds)
 
     progress("extracting frames (scenes, dedup, OCR)", 0.35)
     perception: PerceptionResult | None = None
