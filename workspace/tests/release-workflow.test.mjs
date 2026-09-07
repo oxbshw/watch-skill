@@ -337,6 +337,40 @@ describe('the sealed set survives the round trip through an artifact', () => {
   })
 })
 
+describe('the release runs the gates the way CI runs them', () => {
+  test('the verify job prepares `npm run check` the way the gate job does', () => {
+    // Both jobs run the same `npm run check`, and that command needs two
+    // things a bare checkout does not have. `upstream/deepseek-harness/` is
+    // not committed, so inventory generation and parity diffing have nothing
+    // to read; and without an importable Core the cross-language workspace
+    // contract skips instead of running.
+    //
+    // workspace-ci does both. The release train did neither, and the first
+    // `deepwatch-v0.1.0` tag stopped at `inventory:check` with "upstream
+    // checkout missing". Nothing was published — every publishing step is
+    // gated on that job — but the release could not complete either.
+    const workspace = readFileSync(join(WORKFLOWS, 'workspace-ci.yml'), 'utf8')
+    const gate = job(workspace, 'check')
+    const verify = job(DEEPWATCH, 'verify')
+
+    for (const [needle, why] of [
+      ['scripts/upstream-sync.mjs', 'the pinned upstream the inventory gates read'],
+      ['astral-sh/setup-uv', 'a Python the cross-language contract can import'],
+    ]) {
+      assert.ok(gate.includes(needle), `workspace-ci's gate job no longer does: ${why}`)
+      assert.ok(verify.includes(needle),
+        `the release verify job runs \`npm run check\` without ${why}`)
+    }
+
+    // And the preparation has to come first, or it prepares nothing. Read
+    // from the steps rather than the file: the comment explaining this fix
+    // names `npm run check`, and a text search finds the prose before the run.
+    const steps = verify.split('\n').filter(line => !/^\s*#/.test(line)).join('\n')
+    assert.ok(steps.indexOf('upstream-sync.mjs') < steps.indexOf('npm run check'),
+      'the upstream is synced before the gates that read it')
+  })
+})
+
 describe('the npm release ends in something a person can link to', () => {
   test('DeepWatch completes a GitHub Release, and only after npm accepted', () => {
     // This train had no release job at all. Twenty packages reached the

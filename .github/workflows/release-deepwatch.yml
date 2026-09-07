@@ -107,6 +107,32 @@ jobs:
           version: 10.29.1
       - run: pnpm install --frozen-lockfile
 
+      # The same preparation the gate job in workspace-ci does, because it runs
+      # the same `npm run check`.
+      #
+      # Core importable, so the cross-language contract is checked rather than
+      # skipped: `workspace-canonical.test.mjs` compares the launcher's idea of
+      # the workspace root with Core's, through a Python subprocess.
+      - uses: astral-sh/setup-uv@v7
+        with:
+          python-version: "3.11"
+      - name: Core importable
+        working-directory: .
+        run: uv sync
+
+      # And the pinned upstream, because inventory generation and parity
+      # diffing read the DSH source rather than a description of it.
+      # `upstream/deepseek-harness/` is not committed, so a fresh checkout has
+      # none — which is every checkout this job ever makes.
+      #
+      # Left out, `npm run check` stops at `inventory:check` with "upstream
+      # checkout missing", and it stopped there on the first `deepwatch-v0.1.0`
+      # tag. Nothing was published, because every publishing step is gated on
+      # this job, which is the design working — but the release train had never
+      # been run end to end, and this is the step it was missing.
+      - name: Pinned upstream baseline
+        run: node scripts/upstream-sync.mjs
+
       - name: Every gate, before anything is packed
         run: npm run check
 
