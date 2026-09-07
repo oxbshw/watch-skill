@@ -66,13 +66,13 @@
       {
         "name": "@deepwatch/dsh-bundle",
         "version": "0.1.2",
-        "integrity": "sha256:cbd746c8d9b2e87472053786c78c631fe5a23158f7eaf570d4913afca6a9950b",
+        "integrity": "sha256:002d363ed4d82f7046e54853ffa522d5adf3a5fde75f118558a8d4f5af253502",
         "sourceFiles": 7
       },
       {
         "name": "@deepwatch/cli",
         "version": "0.1.2",
-        "integrity": "sha256:546743f4eb436e6b41385fd1df5d212b75349b8b29b17bec285a194e1f034f2f",
+        "integrity": "sha256:8602c4d657a2daf506b6d2b8bbaee1dc6b32d0351d1e7ecf61c62297ee375147",
         "sourceFiles": 12
       },
       {
@@ -150,7 +150,7 @@
       {
         "name": "@deepwatch/dsh-tools",
         "version": "0.1.2",
-        "integrity": "sha256:fe9d04f1c379249d355d2a0df0829a2a40685401262ae33a4429442ea9ba483b",
+        "integrity": "sha256:82635a8c06ecee35657fccb9a028e35e7eb94af545eac8071590ce3d769b83e5",
         "sourceFiles": 11
       },
       {
@@ -189,7 +189,7 @@
       "creators": [
         "Tool: watch-gen-release-manifest"
       ],
-      "created": "2026-09-07T20:56:50Z"
+      "created": "2026-09-07T22:06:43Z"
     },
     "packages": [
       {
@@ -236,7 +236,7 @@
         "checksums": [
           {
             "algorithm": "SHA256",
-            "checksumValue": "cbd746c8d9b2e87472053786c78c631fe5a23158f7eaf570d4913afca6a9950b"
+            "checksumValue": "002d363ed4d82f7046e54853ffa522d5adf3a5fde75f118558a8d4f5af253502"
           }
         ]
       },
@@ -252,7 +252,7 @@
         "checksums": [
           {
             "algorithm": "SHA256",
-            "checksumValue": "546743f4eb436e6b41385fd1df5d212b75349b8b29b17bec285a194e1f034f2f"
+            "checksumValue": "8602c4d657a2daf506b6d2b8bbaee1dc6b32d0351d1e7ecf61c62297ee375147"
           }
         ]
       },
@@ -460,7 +460,7 @@
         "checksums": [
           {
             "algorithm": "SHA256",
-            "checksumValue": "fe9d04f1c379249d355d2a0df0829a2a40685401262ae33a4429442ea9ba483b"
+            "checksumValue": "82635a8c06ecee35657fccb9a028e35e7eb94af545eac8071590ce3d769b83e5"
           }
         ]
       },
