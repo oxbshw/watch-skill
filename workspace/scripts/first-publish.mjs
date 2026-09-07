@@ -136,12 +136,69 @@ export function distTag(version) {
   return 'latest'
 }
 
+/**
+ * A read-only npm probe, with its output captured so it can be sanitized.
+ *
+ * Everything this script asks npm *about* goes through here: identity,
+ * organisation role, scope listing. Capturing is right for those — the answers
+ * are inspected, and anything credential-shaped has to be removed before it
+ * reaches a console or a state file.
+ */
 function npm(args) {
   const spec = resolveNpm()
   if (spec === null) {
     return { code: 1, stdout: '', stderr: 'npm is unavailable: nothing named npm is on PATH' }
   }
   return run(spec.command, [...spec.prefix, ...args], { cwd: ROOT })
+}
+
+/**
+ * Whether npm can run an authentication challenge from here.
+ *
+ * npm's `otplease` wrapper (`lib/utils/auth.js`) is the whole reason this
+ * distinction exists. Its first act inside the catch is:
+ *
+ *     if (!process.stdin.isTTY || !process.stdout.isTTY) { throw err }
+ *
+ * — *before* it looks at whether the error is `EOTP` and carries the `authUrl`
+ * and `doneUrl` that drive the browser flow. So on a captured pipe npm never
+ * offers to authenticate; it rethrows, and the caller sees a bare
+ * `EOTP: This operation requires a one-time password` for an account that is
+ * perfectly able to publish. Verified against the npm this script resolves,
+ * 11.17.0.
+ *
+ * That is not a thing `stdio: 'inherit'` can fix on its own: inheriting a pipe
+ * inherits a pipe. The parent has to have a terminal.
+ */
+function interactive() {
+  return Boolean(process.stdin.isTTY) && Boolean(process.stdout.isTTY)
+}
+
+/**
+ * The one npm call that writes, run so npm owns the terminal.
+ *
+ * `stdio: 'inherit'` hands npm this process's stdin and stdout, so when the
+ * registry answers `EOTP` npm can open the browser challenge, wait for it, and
+ * retry the upload with the one-time password it obtained. Nothing about that
+ * exchange passes through this script: no OTP is read here, printed here,
+ * stored here, or accepted as an argument.
+ *
+ * The cost is that npm's output is not captured for this call, so a failure
+ * cannot be summarised into the state file the way a probe's can. That is the
+ * right trade: the operator is watching a terminal, npm's own message is in
+ * front of them, and a captured message they could not have answered is worth
+ * less than an authentication they can complete.
+ */
+function npmInteractive(args) {
+  const spec = resolveNpm()
+  if (spec === null) {
+    return { code: 1, stdout: '', stderr: 'npm is unavailable: nothing named npm is on PATH' }
+  }
+  const result = spawnSync(spec.command, [...spec.prefix, ...args], {
+    cwd: ROOT,
+    stdio: 'inherit',
+  })
+  return { code: result.status ?? 1, stdout: '', stderr: '' }
 }
 
 function gitClean() {
@@ -374,6 +431,27 @@ async function main() {
   }
   if (!confirmed) throw new Error('--publish also requires --confirm-first-publish')
 
+  // Refused here rather than discovered at the first upload.
+  //
+  // Without a terminal npm cannot run an authentication challenge: `otplease`
+  // rethrows before it looks at whether the error is one it could answer. The
+  // symptom is `EOTP` on package one, which reads like a broken credential and
+  // is not — it is a broken *place to run this from*. Saying so up front is the
+  // difference between a five-minute fix and an afternoon spent reissuing
+  // tokens that were never the problem.
+  if (!interactive()) {
+    throw new Error(
+      'this needs a real terminal, and stdin/stdout here are not one.\n\n'
+      + "npm's `otplease` (lib/utils/auth.js) rethrows an authentication error\n"
+      + 'before attempting its browser flow when either stream is not a TTY, so\n'
+      + 'a publish from a captured pipe fails with EOTP and never offers you the\n'
+      + 'challenge you could have completed.\n\n'
+      + 'Run this from a terminal you are sitting at — PowerShell, Windows\n'
+      + 'Terminal, or any shell with a console attached — and npm will open the\n'
+      + 'authentication itself. Nothing about the one-time password passes\n'
+      + 'through this script.')
+  }
+
   // Asked once, before the first upload, and recorded. Between planning and
   // publishing sits nothing but this loop, so re-asking per package would only
   // add twenty round trips and twenty more chances to misread an outage.
@@ -398,18 +476,21 @@ async function main() {
     }
 
     process.stdout.write(`publish   ${item.name}@${item.version}\n`)
-    const result = npm([
+    // npm owns the terminal for this call, so an authentication challenge is
+    // something the operator can answer rather than something that kills the
+    // run. Its output is therefore npm's own, on their screen, uncaptured.
+    const result = npmInteractive([
       'publish', join(artifacts, item.file), '--access', 'public', '--tag', distTag(item.version),
     ])
     if (result.code !== 0) {
-      const said = diagnostics(result)
       state.failed.push({
-        name: item.name, version: item.version, category: 'publish_failed', npm: said,
+        name: item.name, version: item.version, category: 'publish_failed',
+        npm: 'npm wrote to the terminal; its message is above this line',
       })
       saveState(statePath, state)
-      process.stderr.write(`\nnpm refused ${item.name}@${item.version}:\n${said}\n\n`)
       throw new Error(
-        `${item.name} failed. ${String(state.created.length)} package(s) reached the registry `
+        `${item.name} failed — npm's own output is above. `
+        + `${String(state.created.length)} package(s) reached the registry `
         + `and are recorded in ${statePath}. Re-running re-plans against the registry and `
         + 'resumes at the first package that is not already published from this exact build.')
     }

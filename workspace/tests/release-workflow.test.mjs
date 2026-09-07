@@ -310,10 +310,30 @@ describe('the sealed set survives the round trip through an artifact', () => {
 
   test('the publish job restores the shape the manifest describes', () => {
     const publish = job(DEEPWATCH, 'publish')
-    assert.doesNotMatch(publish, /workspace-artifacts\/workspace/,
-      'the artifact is flat; there is no nested workspace directory')
-    assert.match(publish, /cp \.\.\/workspace-artifacts\/provenance\.json \.release-artifacts-provenance\.json/)
+    assert.match(publish, /cp "\$RUNNER_TEMP"\/sealed\/provenance\.json \.release-artifacts-provenance\.json/)
     assert.match(publish, /test "\$\(ls \.release-artifacts\/\*\.tgz \| wc -l\)" -eq 20/)
+  })
+
+  test('a downloaded artifact never lands inside the checkout', () => {
+    // `path: workspace-artifacts` put twenty-five files in the working tree.
+    // Nothing ignores them, so `verify-provenance.mjs` counted them and
+    // refused the release with `worktree_dirty` — correctly: a dirty tree
+    // cannot honestly name the source of its own artifacts. The verify job
+    // never hit it because `.release-artifacts/` and its manifest are both in
+    // `.gitignore`.
+    const publish = job(DEEPWATCH, 'publish')
+    const download = publish.slice(publish.indexOf('download-artifact'))
+    const path = /path:\s*([^\n]+)/.exec(download)?.[1]?.trim() ?? ''
+    assert.match(path, /runner\.temp/,
+      'the download must go outside the checkout, or it dirties the tree')
+
+    // And the step that restores it proves the tree survived. Read from the
+    // steps rather than the file: the comment explaining this fix names
+    // `verify-provenance.mjs`, so a text search finds the prose before the run.
+    assert.match(publish, /status --porcelain=v1 --untracked-files=all/)
+    const steps = publish.split('\n').filter(line => !/^\s*#/.test(line)).join('\n')
+    assert.ok(steps.indexOf('--untracked-files=all') < steps.indexOf('verify-provenance.mjs'),
+      'the cleanliness check comes before the gate that depends on it')
   })
 
   test('the publishing npm is pinned, not whatever shipped this morning', () => {
