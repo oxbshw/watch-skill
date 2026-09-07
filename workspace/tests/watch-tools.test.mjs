@@ -439,3 +439,52 @@ describe('acting on a page', () => {
     }
   })
 })
+
+describe('a tool forwards the parameter names the method takes', () => {
+  // A tool's own parameter names are the model's vocabulary and the Bridge
+  // method's are Core's; the tool is the translation between them. `at_ms`
+  // was forwarded to `watch.source.moment` under its own name, and that method
+  // takes `timestampMs` — so every call refused with `"timestampMs" must be a
+  // number` and `watch_moment` had never worked. A real model found it, twice,
+  // and then stopped trying to read the video.
+  //
+  // The integration test next door calls each method with no parameters, on
+  // purpose, so a name mismatch produces exactly the refusal it expects. This
+  // one reads what the tool actually sends.
+  const forwarded = async (tool, args) => {
+    const mounted = await mountTools()
+    try {
+      const sent = []
+      mounted.ctx.watchCore.request = async (method, params) => {
+        sent.push({ method, params })
+        return { ok: true, value: {} }
+      }
+      await mounted.registered.get(tool).execute(args, EXEC)
+      return sent
+    } finally {
+      await mounted.dispose()
+    }
+  }
+
+  test('watch_moment sends timestampMs, which is what the method reads', async () => {
+    const sent = await forwarded('watch_moment', { source_id: 'src_1', at_ms: 450 })
+    assert.equal(sent.length, 1)
+    assert.equal(sent[0].method, 'watch.source.moment')
+    assert.equal(sent[0].params.timestampMs, 450,
+      'the moment is sent under the name the method takes')
+    assert.equal('atMs' in sent[0].params, false,
+      'the tool must not forward its own parameter name to the engine')
+    assert.equal(sent[0].params.sourceId, 'src_1')
+  })
+
+  test('an omitted window is omitted rather than sent as undefined', async () => {
+    const sent = await forwarded('watch_moment', { source_id: 'src_1', at_ms: 450 })
+    assert.equal('windowMs' in sent[0].params, false)
+  })
+
+  test('a window that was given is forwarded', async () => {
+    const sent = await forwarded(
+      'watch_moment', { source_id: 'src_1', at_ms: 450, window_ms: 5000 })
+    assert.equal(sent[0].params.windowMs, 5000)
+  })
+})

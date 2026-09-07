@@ -6,7 +6,7 @@ the thread parks in ``create_module`` and never returns. The MCP server has
 warmed on its main thread since that was found there.
 
 The Bridge has the same shape — a bounded worker pool — and did not warm.
-Measured against 1.4.0 in the acceptance room, on a fresh Core process:
+Measured against 1.4.1 in the acceptance room, on a fresh Core process:
 
     search 1: 900008ms  (client gave up; the request never settled)
     search 2:  50807ms  ok

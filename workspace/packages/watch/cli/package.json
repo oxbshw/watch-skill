@@ -1,6 +1,6 @@
 {
   "name": "@deepwatch/cli",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "DeepWatch — set up and run the agent workspace built on DeepSeek Harness and powered by Watch Skill",
   "type": "module",
   "license": "MIT",

@@ -230,6 +230,36 @@ describe('the Bridge against a real Watch Core', { skip }, () => {
     assert.deepEqual(missing, [], 'the tools call methods the engine does not implement')
   })
 
+  test('every Bridge call the tools make is one the engine accepts', async () => {
+    // The test above calls each method with no parameters *on purpose*, so it
+    // proves the method exists and nothing else. A method that exists and is
+    // handed the wrong parameter name refuses in exactly the way that test
+    // expects, which is how `watch_moment` shipped forwarding its own `at_ms`
+    // to a method that takes `timestampMs`. Every call it made came back
+    // `"timestampMs" must be a number`; the tool had never worked.
+    //
+    // So these are the calls the tools actually build, with parameters shaped
+    // the way the tools shape them. The ids are deliberately ones nothing has
+    // indexed: what is asserted is that the engine got far enough to look.
+    const calls = [
+      ['watch.library.list', { limit: 1 }],
+      ['watch.library.search', { query: 'anything', limit: 1 }],
+      ['watch.source.ask', { sourceId: 'src_absent_4182', question: 'what?' }],
+      ['watch.source.moment', { sourceId: 'src_absent_4182', timestampMs: 450 }],
+      ['watch.source.moment',
+        { sourceId: 'src_absent_4182', timestampMs: 450, windowMs: 5000 }],
+    ]
+    const rejected = []
+    for (const [method, params] of calls) {
+      const result = await ctx.watchCore.request(method, params)
+      if (!result.ok && result.error.error === 'bridge.invalid_params') {
+        rejected.push(`${method}: ${result.error.message}`)
+      }
+    }
+    assert.deepEqual(rejected, [],
+      'the engine refused a call the tools make, for the shape of the call')
+  })
+
   test('a live session that was never started is a refusal, not a crash', async () => {
     const result = await ctx.watchCore.request('watch.live.observe', {
       sessionId: 'live_does_not_exist',

@@ -5,7 +5,7 @@
  * The README's first instruction was `npm install -g @deepwatch/cli`, written
  * plainly, with an npm version badge above it. Nothing existed under the
  * `@deepwatch` scope — the twenty packages are published for the first time by
- * the `deepwatch-v0.1.1` tag — so the first thing a visitor did was run a
+ * the first `deepwatch-v*` tag — so the first thing a visitor did was run a
  * command that resolves nothing, on the page that was supposed to introduce
  * the product.
  *
@@ -31,7 +31,7 @@
  *
  * The same mistake has a second shape, and Watch Skill made it. `watch-skill`
  * *is* published, so its honest note was never "pending" but "which version
- * you actually get" — and the moment `core-v1.4.0` reached PyPI, three pages
+ * you actually get" — and the moment the first `core-v*` tag reached PyPI, three pages
  * went on saying the newest release was 1.2.0. A currency claim about a
  * registry is a fact with an expiry date, and the last test here is what
  * notices when one expires.

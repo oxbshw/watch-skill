@@ -210,3 +210,61 @@ describe('delegation is proved by the child’s result, not its existence', () =
     assert.equal(delegationSucceeded([receipt('glob')], ['totals.json']).ok, false)
   })
 })
+
+describe('a verification revised into the journal is one verification', () => {
+  // The Host appends. A `watch_verify` receipt lands first with no verdict --
+  // the call has completed, Core has not answered -- and again once it has.
+  // Counting lines makes three verifications look like six, half of them
+  // `null`, and a live run failed exactly that way: "6 verifications, 3
+  // identities", then "Library shows VERIFIED, journal recorded null" three
+  // times over. Both were the journal's shape, not the product's behaviour.
+  const revised = (recordId, verdict, evidenceIds = []) => ({
+    recordId,
+    runId: 'session-1',
+    verdict,
+    evidenceIds,
+    tags: ['execution-receipt', 'tool:watch_verify'],
+  })
+
+  test('the two revisions collapse onto one record', () => {
+    const journal = [
+      revised('rcpt_a', null),
+      revised('rcpt_a', 'VERIFIED', ['ver_1']),
+      revised('rcpt_b', null),
+      revised('rcpt_b', 'FAILED', ['ver_2']),
+    ]
+    const found = verificationsIn(journal)
+    assert.equal(found.length, 2, 'a revision is not a second verification')
+    assert.deepEqual(found.map(e => e.recordId), ['rcpt_a', 'rcpt_b'])
+    assert.deepEqual(found.map(e => e.verdict), ['VERIFIED', 'FAILED'])
+  })
+
+  test('the verdict Core issued wins over the absence that preceded it', () => {
+    const found = verificationsIn([
+      revised('rcpt_a', null),
+      revised('rcpt_a', 'VERIFIED', ['ver_1']),
+    ])
+    assert.equal(found[0].verdict, 'VERIFIED')
+  })
+
+  test('a later revision naming no evidence does not retract the evidence', () => {
+    const found = verificationsIn([
+      revised('rcpt_a', 'VERIFIED', ['ver_1']),
+      revised('rcpt_a', 'VERIFIED', []),
+    ])
+    assert.deepEqual(found[0].identities, ['ver_1'])
+  })
+
+  test('one identity per verification is still what is asserted', () => {
+    // The claim LJ-11 makes is that no two verifications share Core's identity.
+    // Collapsing revisions must not make that claim vacuous.
+    const found = verificationsIn([
+      revised('rcpt_a', 'VERIFIED', ['ver_1']),
+      revised('rcpt_a', null),
+      revised('rcpt_b', 'VERIFIED', ['ver_1']),
+    ])
+    const identities = new Set(found.flatMap(e => e.identities))
+    assert.equal(found.length, 2)
+    assert.equal(identities.size, 1, 'two records sharing one identity is a finding')
+  })
+})

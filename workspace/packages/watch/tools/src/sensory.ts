@@ -205,7 +205,13 @@ export function applySensoryTools(ctx: Context, config: SensoryConfig): void {
       'watch.source.moment',
       {
         sourceId: args.source_id,
-        atMs: args.at_ms,
+        // `timestampMs`, because that is what the method takes. It was `atMs`
+        // -- the tool's own parameter forwarded under the tool's own name --
+        // so every call refused with `"timestampMs" must be a number` and this
+        // tool had never once worked. A real model found it: it asked for a
+        // moment, was told to send a parameter it had no way to send, tried
+        // again identically, and gave up on reading the video.
+        timestampMs: args.at_ms,
         ...args.window_ms === undefined ? {} : { windowMs: args.window_ms },
       },
       exec,

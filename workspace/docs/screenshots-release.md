@@ -7,10 +7,17 @@ in for a record, and no result was edited.
 
 **Which build.** Not all of these came from the same one, and saying "this
 release" of all of them would not be true. Shots `01`–`08`, `10` and `11` were
-taken from the `1.4.0` / `0.1.1` candidate on 2026-09-05. Shot `09` was retaken
-on 2026-09-06, from the build this release ships, for the reason below. The
-version panel in `04-health-and-versions.png` reads the versions that were
-running when the shutter fell, and those did not change between the two.
+taken from the `1.4.0` / `0.1.1` candidate on 2026-09-05, and shot `09` on
+2026-09-06 from that same line. They are kept because each is a photograph of
+the product doing what its caption says, and nothing in this release changed
+the surface any of them shows.
+
+The gallery next door — [`docs/screenshots/`](screenshots/), 57 shots across
+three viewports — is the one that moves every release, and it was retaken on
+2026-09-08 against **Watch Core 1.4.1** and **DeepWatch 0.1.2**, from a profile
+composed out of this candidate's own sealed tarballs, with the deterministic
+E2E scenario passing 42 of 42 in front of it. Its manifest records the engine
+version it was connected to, and a gate refuses the pair when they disagree.
 
 **How they were made.** `deepwatch setup --artifacts <dir>` composed the room
 from the twenty sealed tarballs; Watch Core was installed from the sealed wheel;

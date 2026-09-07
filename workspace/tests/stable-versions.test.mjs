@@ -24,7 +24,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url'
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const REPO = join(ROOT, '..')
 
-const { VERSIONS, isHistorical } = await import(
+const { VERSIONS, isHistorical, exactly } = await import(
   pathToFileURL(join(ROOT, 'scripts', 'promote-versions.mjs')).href)
 
 /** Shapes that mean "not a stable release", whatever the number in front. */
@@ -113,6 +113,33 @@ describe('no active surface carries a prerelease string', () => {
     assert.match(run, /versions are stable/)
   })
 
+  test('a version is replaced only where it is the whole version', () => {
+    // A plain substring replace was enough until a version being promoted away
+    // from became a prefix of one that must not move. `0.1.1` is: the pinned
+    // Harness is `0.1.1-rc.2`, and promoting DeepWatch to `0.1.2` rewrote it to
+    // a Harness nobody published -- in the lockfile whose whole job is to say
+    // which one was measured.
+    const bump = (text, from, to) => text.replace(exactly(from), to)
+
+    assert.equal(bump('pinned: 0.1.1-rc.2', '0.1.1', '0.1.2'), 'pinned: 0.1.1-rc.2')
+    assert.equal(bump('tag: dsh-v0.1.1-rc.2', '0.1.1', '0.1.2'), 'tag: dsh-v0.1.1-rc.2')
+    assert.equal(bump('watch-skill 1.4.0rc1', '1.4.0', '1.4.1'), 'watch-skill 1.4.0rc1')
+    assert.equal(bump('version: 0.1.10', '0.1.1', '0.1.2'), 'version: 0.1.10')
+    assert.equal(bump('yocto-queue@10.1.1', '0.1.1', '0.1.2'), 'yocto-queue@10.1.1')
+
+    // And everything a release actually writes still moves.
+    for (const [before, after] of [
+      ['version: 0.1.1', 'version: 0.1.2'],
+      ['deepwatch-v0.1.1', 'deepwatch-v0.1.2'],
+      ['"@deepwatch/cli": "0.1.1"', '"@deepwatch/cli": "0.1.2"'],
+      ['pin with ~0.1.1 if you', 'pin with ~0.1.2 if you'],
+      ['the packages are `0.1.1`, and', 'the packages are `0.1.2`, and'],
+      ['0.1.1, 0.1.1', '0.1.2, 0.1.2'],
+    ]) {
+      assert.equal(bump(before, '0.1.1', '0.1.2'), after, before)
+    }
+  })
+
   test('records of past releases are deliberately left alone', () => {
     // The other half of the rule. If this ever passes because the changelog was
     // rewritten, the guarantee above has been bought with a falsified history.
@@ -120,7 +147,15 @@ describe('no active surface carries a prerelease string', () => {
     assert.equal(isHistorical('docs/release-proof.md'), true)
     assert.equal(isHistorical('workspace/docs/history/anything.md'), true)
     assert.equal(isHistorical('pyproject.toml'), false)
-    assert.equal(isHistorical('uv.lock'), false)
+
+    // Both lockfiles are, and for one reason: most of what is in them belongs
+    // to somebody else. A substring promotion of Watch Skill 1.4.0 to 1.4.1
+    // also rewrote `aiosignal` and `pyclipper` — two third parties that happen
+    // to share our number — and `uv` refused the file outright, taking every
+    // Python job with it. The self-version still has to move; `uv lock` moves
+    // it and `uv lock --check` in CI fails when nobody has.
+    assert.equal(isHistorical('uv.lock'), true)
+    assert.equal(isHistorical('workspace/pnpm-lock.yaml'), true)
   })
 })
 

@@ -1,6 +1,6 @@
 {
   "name": "@deepwatch/dsh-client-remotes",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Client composition: mounts Watch's generated Typert Remote into ctx.remote",
   "type": "module",
   "license": "MIT",

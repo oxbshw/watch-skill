@@ -114,7 +114,7 @@ bounded worker pool, and the stack (fastembed, then numpy's and onnxruntime's
 native extensions) was imported lazily at its call sites — so the first import
 landed inside a worker thread, where loading the numpy C extension deadlocks
 and never returns. Measured with a fifteen-minute client deadline against
-1.4.0: the first `watch.library.search` in a fresh Core did not answer at all;
+1.4.1: the first `watch.library.search` in a fresh Core did not answer at all;
 a second, issued afterwards in the same process, answered in 51 seconds; a
 third in 1.2. Everything that does not embed stayed instant the whole time, so
 the engine looked healthy while `watch_search_sources` — the tool an agent
@@ -159,7 +159,7 @@ encryption in this release, and nothing here should be read as providing it.
 
 ## The first twenty packages carry no provenance attestation
 
-Watch Skill 1.4.0 is on PyPI, in the MCP registry, and on
+Watch Skill 1.4.1 is on PyPI, in the MCP registry, and on
 `ghcr.io/oxbshw/watch-skill`. The twenty `@deepwatch/*` packages have been on
 npm since 2026-09-07, and `npx @deepwatch/cli` works.
 

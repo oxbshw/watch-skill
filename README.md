@@ -13,31 +13,40 @@ deterministic contract rather than a model's opinion. Add it to the agent you
 already use over MCP.
 
 **DeepWatch** is a ready-made agent workspace — the official DeepSeek Harness
-with Watch Skill already composed in — where every tool call leaves a receipt
-you can open and every result can be checked by something other than the agent
-that produced it.
+with Watch Skill already composed in — where a tool call leaves a receipt you
+can open, and a result can be checked by something other than the agent that
+produced it.
 
-[![PyPI](https://img.shields.io/pypi/v/watch-skill?label=watch-skill&logo=pypi&logoColor=white)](https://pypi.org/project/watch-skill/)
-[![Downloads](https://img.shields.io/pypi/dm/watch-skill?label=pypi%20downloads)](https://pypi.org/project/watch-skill/)
-[![Python](https://img.shields.io/pypi/pyversions/watch-skill?logo=python&logoColor=white)](https://pypi.org/project/watch-skill/)
-[![npm](https://img.shields.io/npm/v/@deepwatch/cli?label=%40deepwatch%2Fcli&logo=npm&logoColor=white)](https://www.npmjs.com/package/@deepwatch/cli)
-[![dsh-bundle](https://img.shields.io/npm/v/@deepwatch/dsh-bundle?label=%40deepwatch%2Fdsh-bundle&logo=npm&logoColor=white)](https://www.npmjs.com/package/@deepwatch/dsh-bundle)
-[![DeepWatch release](https://img.shields.io/github/v/release/oxbshw/watch-skill?filter=deepwatch-v*&label=DeepWatch%20release)](https://github.com/oxbshw/watch-skill/releases?q=deepwatch)
+**Python · PyPI**
+
+[![watch-skill on PyPI](https://img.shields.io/pypi/v/watch-skill?label=watch-skill&logo=pypi&logoColor=white)](https://pypi.org/project/watch-skill/)
+[![PyPI downloads](https://img.shields.io/pypi/dm/watch-skill?label=downloads%2Fmonth&color=blue)](https://pypistats.org/packages/watch-skill)
+[![Python versions](https://img.shields.io/pypi/pyversions/watch-skill?logo=python&logoColor=white)](https://pypi.org/project/watch-skill/)
+
+**Node · npm**
+
+[![@deepwatch/cli](https://img.shields.io/npm/v/@deepwatch/cli?label=%40deepwatch%2Fcli&logo=npm&logoColor=white)](https://www.npmjs.com/package/@deepwatch/cli)
+[![@deepwatch/dsh-bundle](https://img.shields.io/npm/v/@deepwatch/dsh-bundle?label=%40deepwatch%2Fdsh-bundle&logo=npm&logoColor=white)](https://www.npmjs.com/package/@deepwatch/dsh-bundle)
+[![npm downloads](https://img.shields.io/npm/dm/@deepwatch/cli?label=downloads%2Fmonth&color=cb3837)](https://www.npmjs.com/package/@deepwatch/cli)
 [![Node](https://img.shields.io/badge/node-%E2%89%A5%2022.19-339933?logo=node.js&logoColor=white)](workspace/docs/install-and-upgrade.md)
-[![Agent Skills](https://www.skills.sh/b/oxbshw/watch-skill)](https://www.skills.sh/oxbshw/watch-skill/watch)
-[![MCP](https://img.shields.io/badge/MCP-stdio%20%C2%B7%20HTTP-8A2BE2)](docs/agents/README.md)
-[![License](https://img.shields.io/github/license/oxbshw/watch-skill)](LICENSE)
+[![DeepWatch release](https://img.shields.io/github/v/release/oxbshw/watch-skill?filter=deepwatch-v*&label=release)](https://github.com/oxbshw/watch-skill/releases?q=deepwatch)
+
+**Gates and directories**
 
 [![CI](https://github.com/oxbshw/watch-skill/actions/workflows/ci.yml/badge.svg)](https://github.com/oxbshw/watch-skill/actions/workflows/ci.yml)
 [![Workspace](https://github.com/oxbshw/watch-skill/actions/workflows/workspace-ci.yml/badge.svg)](https://github.com/oxbshw/watch-skill/actions/workflows/workspace-ci.yml)
 [![Install](https://github.com/oxbshw/watch-skill/actions/workflows/install.yml/badge.svg)](https://github.com/oxbshw/watch-skill/actions/workflows/install.yml)
+[![Agent Skills](https://www.skills.sh/b/oxbshw/watch-skill)](https://www.skills.sh/oxbshw/watch-skill/watch)
+[![MCP](https://img.shields.io/badge/MCP-stdio%20%C2%B7%20HTTP-8A2BE2)](docs/agents/README.md)
+[![License](https://img.shields.io/github/license/oxbshw/watch-skill)](LICENSE)
 
 [Install](#start-here) ·
+[Use it](#the-deepwatch-workspace) ·
 [THE LOOP](#the-loop-observe-act-verify) ·
-[Workspace](#the-deepwatch-workspace) ·
+[Packages](#which-package-is-for-you) ·
 [Architecture](#how-it-fits-together) ·
 [Docs](#documentation) ·
-[Community](#community)
+[Community](#community--ecosystem)
 
 </div>
 
@@ -192,13 +201,58 @@ installed yourself. `--artifacts <dir>` installs from verified local tarballs
 instead, for an air-gapped machine or a checkout build.
 
 **A model provider is not required to start.** The workspace boots, the Library
-works and Watch tools answer without one. Configure a provider in Settings when
-you want the agent to reason; `deepwatch doctor` reports what is configured.
+works and Watch tools answer without one. You need a provider for the *agent* —
+chat, tool use, and the critique step of THE LOOP.
+
+#### Connect a model, and prove the connection
+
+Four steps in the workspace itself, in this order. The last one is the point.
+
+| In the app | What it does |
+| --- | --- |
+| **Settings → Models → Add provider** | Names a provider and takes a key, *or* leaves the field blank and reads one from the launch environment. |
+| **Settings → Role Bindings → Choose a model** | Binds a specific provider and model to a role — Chat, or Visual perception. |
+| **Run provider test** | Sends one real request to that exact binding and reports what came back. |
+| **Ready** | Only now will the workspace send anything to it. |
+
+Saved is not presented as tested. A binding with no successful provider test
+behind it is blocked, and the turn says so: *"…is bound but no provider test
+has proved it, so nothing may be sent to it yet."* Re-run the test after a host
+restart — the binding persists, the proof does not.
+
+#### A first task worth running
+
+Open a workspace directory and ask for something that touches the disk:
+
+> Create `notes/totals.json` with the numbers 12, 30 and 18, then read it back
+> and tell me the sum.
+
+You get an answer, and underneath it a row per tool call naming the exact
+workspace-relative path each one touched. That is the shape everything else in
+this README builds on.
+
+**Dependency readiness is not the same as a capability you have used.**
+`deepwatch doctor` reports what is *installed and reachable* — Node, the
+Harness, the profile, Watch Core, ffmpeg. It does not claim those capabilities
+have been exercised on your machine, and the workspace's own readiness panel
+counts the same thing. A green row means the pieces are there; running the task
+above is what tells you the pieces work together.
 
 ### 3. Into a DeepSeek Harness you already run
 
 ```bash
-dsh plugin --profile web add @deepwatch/dsh-bundle
+dsh plugin --profile <your-profile> add @deepwatch/dsh-bundle
+dsh --profile <your-profile> web
+```
+
+**Name the same profile twice.** `dsh plugin add` writes into the profile you
+name and `dsh web` serves the profile *it* is given, so installing into one and
+serving another leaves you looking at an agent with no `watch_*` tools and no
+error to explain it. Both commands take `--profile`; give them the same value.
+To check what a profile actually composes before you start it:
+
+```bash
+dsh --profile <your-profile> --dump-config | grep watch-
 ```
 
 **Compatible Harness.** This release was measured against
@@ -206,7 +260,7 @@ dsh plugin --profile web add @deepwatch/dsh-bundle
 profile on a different Harness is a combination nobody tested. `dsh --version`
 tells you which you have.
 
-That is the whole installation. The package declares `dsh.bundle.patch`, so DSH
+That is the installation. The package declares `dsh.bundle.patch`, so DSH
 reconciles it into the profile's layer stack and applies the patch after its
 own. Four narrower variants — media, browser, memory, document — are declared
 alongside it for a profile that wants one capability rather than all of them.
@@ -227,6 +281,33 @@ Full guide: **[`@deepwatch/dsh-bundle`](workspace/packages/watch/bundle/README.m
 
 **Requirements.** Node ≥ 22.19 and Python 3.11, 3.12 or 3.13 — the versions CI
 runs and the classifiers declare. Windows, macOS and Linux.
+
+---
+
+## Which package is for you
+
+Twenty-one packages ship from this repository across two registries, and only
+three of them are things a person installs on purpose.
+
+| Package | Registry | Install it if |
+| --- | --- | --- |
+| **`watch-skill`** | [PyPI](https://pypi.org/project/watch-skill/) | You want perception, evidence, retrieval and verification — from a CLI, over MCP, or through REST. This is the engine. |
+| **`@deepwatch/cli`** | [npm](https://www.npmjs.com/package/@deepwatch/cli) | You want the whole workspace. Provides the `deepwatch` command, which provisions and launches everything else. |
+| **`@deepwatch/dsh-bundle`** | [npm](https://www.npmjs.com/package/@deepwatch/dsh-bundle) | You already run a DeepSeek Harness and want Watch added to a profile you control. |
+
+Everything else under `@deepwatch/` is a **plugin or an internal dependency** —
+the Harness rows the bundle composes (`dsh-tools`, `dsh-library`, `dsh-live`,
+`dsh-memory`, `dsh-workspace` and the rest) and the packages they share
+(`dsh-contracts`, `dsh-sdk`, `dsh-core-bridge`). They are published so the
+bundle resolves and so a composition can pick one row rather than all of them.
+Installing one directly is for embedding a single piece in a composition you
+control; it is not a route into the product.
+
+`npx @deepwatch/cli` is a way of *running* `@deepwatch/cli` rather than a
+different package, and there is no unscoped `deepwatch` on npm.
+
+**[The package map](workspace/docs/packages.md)** shows how the twenty compose,
+and each package's own README says what it is for and what it needs.
 
 ---
 
@@ -276,40 +357,85 @@ Everything above is the engine, and any agent can use it. DeepWatch is the
 official DeepSeek Harness with Watch Skill already composed in, so an agent you
 run there produces receipts and verdicts without you wiring anything up.
 
-Four screens, in the order you meet them.
+The rest of this section is one job, end to end. **A checkout page charges the
+wrong amount, and all you have is a screen recording of it.**
+
+### 1 · Give the recording to the engine
+
+Four seconds of somebody changing a quantity. Nothing is typed about what is
+wrong with it.
+
+```bash
+watch-skill watch ./checkout-bug.webm --index
+```
+
+Frames come out with absolute timestamps, and the on-screen text with them:
+
+```
+Selection: 4 kept from 8 candidates (4 near-duplicates dropped)
+  t=00:00   2 × $10.00   Subtotal $20.00   Tax (10%) $2.00   Total $20.00
+  t=00:01   5 × $10.00   Subtotal $50.00   Tax (10%) $5.00   Total $50.00
+  t=00:02   3 × $10.00   Subtotal $30.00   Tax (10%) $3.00   Total $30.00
+```
+
+The bug is now readable: tax is computed, displayed, and left out of the total.
+It is readable *because those frames survived* — three amounts changing in an
+otherwise identical layout look like a duplicate to a frame sampler, so a
+scripted capture writes down the moments it acted and the engine pins them.
+
+### 2 · Ask where it happened
+
+```bash
+watch-skill ask <video-id> "what was the total when the quantity was three?"
+```
+
+The answer cites the timestamp it came from and the frame is on disk. When the
+recording does not show an answer, that is what it says: an unanswerable
+question is not a cue to guess.
+
+### 3 · Repair the application
+
+Now the agent has somewhere to start. It reads the evidence, finds `orderTotal`
+in `cart.js`, and sees that the tax it computed never reaches the return value.
+
+Every file it touches leaves a receipt naming the path, and every path a tool
+declares is resolved against one workspace boundary — a write outside it is
+refused rather than logged.
 
 <div align="center">
-<img src="workspace/docs/screenshots/release/05-ordinary-task.png" width="86%" alt="A DeepWatch session titled 'Create totals.json and read sum'. Write, Read and Pwsh tool rows are listed, each naming a workspace-relative path such as owner-test/totals.json, and the reply states the file contents and the total read back from it.">
+<img src="workspace/docs/screenshots/release/05-ordinary-task.png" width="86%" alt="A DeepWatch session listing Write, Read and Pwsh tool rows, each naming a workspace-relative path, with the reply stating the file contents and the total read back from it.">
 </div>
 
-**1 · An ordinary task.** Nobody mentioned Watch. Every row is a receipt, every
-path is workspace-relative, and the total was read back from the file rather
-than remembered.
+### 4 · Prove the repair, from outside the agent
+
+The contract was frozen before the repair and lives outside the directory the
+agent can write to. Watch Core evaluates it in a separate process and returns a
+verdict the agent does not author — `VERIFIED`, `FAILED`, `UNVERIFIED` or
+`INCONCLUSIVE`. Before the repair it is `FAILED`: *expected 22, got 20*.
 
 <div align="center">
-<img src="workspace/docs/screenshots/release/08-library-receipts.png" width="86%" alt="The Library screen showing thirteen matches, with rows for read and write on owner-test/totals.json and a pwsh call. A notice reads 'Index ready. Answered by this workspace's own host', and the page is marked Local-first.">
+<img src="workspace/docs/screenshots/release/06-independent-verification.png" width="86%" alt="A VERIFIED result card from watch_verify: two of two checks passed, one confirming the file exists and one confirming its total field, shown with the contract's sha256 digest.">
 </div>
 
-**2 · Evidence, retrieved.** Every source and every receipt this workspace
-recorded. The index is built and searched by the workspace's own host, with no
-model and no external service in the path — this screen is answered entirely on
-your machine.
+The contract's SHA-256 is on screen, so you can tell it is the same contract.
+Run it from a different directory and it fails.
+
+### 5 · Come back to it tomorrow
+
+Restart everything. The Library still holds every source, receipt and verdict,
+and each one reopens with the identity it was recorded under.
 
 <div align="center">
-<img src="workspace/docs/screenshots/release/06-independent-verification.png" width="86%" alt="A VERIFIED result card from watch_verify: two of two checks passed, one confirming the file exists and one confirming its total field equals 60, shown with the contract's sha256 digest.">
+<img src="workspace/docs/screenshots/release/08-library-receipts.png" width="86%" alt="The Library screen showing matches with rows for read and write on workspace-relative paths and a pwsh call. A notice reads 'Index ready. Answered by this workspace's own host', and the page is marked Local-first.">
 </div>
 
-**3 · Independent verification.** `watch_verify` froze a contract and Watch
-Core answered. The agent did not grade itself: the contract's SHA-256 is on
-screen, and the same contract run from a different directory fails.
+Compare puts the failing run and the passing run side by side and shows where
+their verdicts diverged. A comparison describes a difference; it never issues a
+verdict of its own.
 
 <div align="center">
-<img src="workspace/docs/screenshots/release/09-compare-two-records.png" width="86%" alt="The Compare screen with two verification records selected. The left is a FAILED watch_verify and the right a VERIFIED one from the run that repaired the file; the difference table counts each as present on one side only.">
+<img src="workspace/docs/screenshots/release/09-compare-two-records.png" width="86%" alt="The Compare screen with two verification records selected: a FAILED watch_verify on the left and a VERIFIED one on the right from the run that repaired the file, with a difference table counting each as present on one side only.">
 </div>
-
-**4 · Compare, on real outcomes.** Two runs of one contract — a broken claim
-and its repair — carrying the verdicts Core issued for each. A comparison
-describes a difference; it never issues a verdict of its own.
 
 Every image is a photograph of a running build, and each caption on
 **[the screenshot page](workspace/docs/screenshots-release.md)** names the build
@@ -477,17 +603,37 @@ DeepWatch, **47** tools that agent is offered in total.
 
 ---
 
-## Community
+## Community & ecosystem
 
-Written by other people, about using this:
+Coverage written by other people, and the directories that carry the project.
+Described by what each one actually contains — a write-up is somebody trying
+the thing and reporting back, which is not the same as an endorsement, and none
+of these say anything about how many people use it.
 
-- [Watch Skill 使用教程：让 Codex 看懂视频和录屏](https://www.opcchina.ai/?p=4329) — step-by-step tutorial for wiring Watch Skill into Codex (Chinese)
-- [Watch Skill: AI video analysis and video correction](https://en.aistacknav.com/watch-skill-ai-video-analysis-video-correction/) — setup and operation guide with its own use cases and troubleshooting (English)
-- [Video walkthrough](https://www.bilibili.com/video/BV1XnNK6DEdr/) · [second part](https://www.bilibili.com/video/BV1eBKp6TEKh/) — Bilibili (Chinese)
-- [Skills.sh](https://www.skills.sh/oxbshw/watch-skill/watch) · [SkillsMP](https://skillsmp.com/creators/oxbshw/watch-skill) — install directly from a skills directory
+**Tutorials and write-ups**
 
-The full collection, separated into tutorials, video, integrations and
-directory listings: **[docs/ecosystem.md](docs/ecosystem.md)**.
+| | |
+| --- | --- |
+| [Watch Skill 使用教程：让 Codex 看懂视频和录屏](https://www.opcchina.ai/?p=4329) | A step-by-step walkthrough of wiring Watch Skill into Codex CLI: install, MCP configuration, and a first video. Chinese. |
+| [Watch Skill: AI video analysis and video correction](https://en.aistacknav.com/watch-skill-ai-video-analysis-video-correction/) | Setup and operation guide with its own worked use cases and a troubleshooting section. English. |
+
+**Video**
+
+| | |
+| --- | --- |
+| [Walkthrough, part one](https://www.bilibili.com/video/BV1XnNK6DEdr/) · [part two](https://www.bilibili.com/video/BV1eBKp6TEKh/) | A screen-recorded run-through on Bilibili, covering installation and a first analysis. Chinese. |
+
+**Directories**
+
+| | |
+| --- | --- |
+| [Skills.sh](https://www.skills.sh/oxbshw/watch-skill/watch) | Lists the ten agent skills and installs them into a supported client with one command. |
+| [SkillsMP](https://skillsmp.com/creators/oxbshw/watch-skill) | A second skills directory carrying the same set. |
+| [MCP registry](server.json) | The `io.github.oxbshw/watch-skill` server entry, for clients that resolve MCP servers by name. |
+
+The full collection, kept separated into tutorials, video, integrations and
+directory listings: **[docs/ecosystem.md](docs/ecosystem.md)**. If you have
+written or recorded something, open a pull request adding it there.
 
 ---
 

@@ -40,8 +40,13 @@ const REPO = join(ROOT, '..')
  * left on an older prerelease is exactly what this exists to catch.
  */
 export const VERSIONS = {
-  core: { name: 'Watch Skill', to: '1.4.0', from: ['1.4.0rc1'] },
-  deepwatch: { name: 'DeepWatch', to: '0.1.1', from: ['0.1.0-preview.0', '0.1.0'] },
+  core: { name: 'Watch Skill', to: '1.4.1', from: ['1.4.0rc1', '1.4.0'] },
+  // `0.1.0-preview.0` and `0.1.0` are gone from `from` because their promotions
+  // are finished: nothing active carries either, and the one place `0.1.0`
+  // still appears is `firstPublicationTag`, which records the tag that first
+  // put the scope on npm. That is a fact about a release that happened, and
+  // leaving the version in this list would rewrite it every time.
+  deepwatch: { name: 'DeepWatch', to: '0.1.2', from: ['0.1.1'] },
 }
 
 /**
@@ -52,16 +57,25 @@ export const VERSIONS = {
  * of them would make the repository lie in order to make a search come out
  * empty.
  *
- * `uv.lock` is deliberately *not* here, and the distinction is worth stating.
- * Most of a lockfile is third-party resolution and none of this touches it —
- * but the lock also records the project's **own** version, and that entry is a
- * live claim about the package being built, not a record of a past build. Left
- * behind, `uv` reports the lock as stale against `pyproject.toml` and the
- * lockfile gate fails. Only the self-version line matches the promotion, so
- * rewriting it changes exactly that.
+ * `uv.lock` is here for the reason the pnpm lockfile is, and it took a broken
+ * release candidate to see it. The lock records the project's own version,
+ * which must move — so this script used to rewrite it, on the argument that
+ * "only the self-version line matches the promotion". That was true until it
+ * was not: promoting Watch Skill 1.4.0 to 1.4.1 also rewrote `aiosignal` and
+ * `pyclipper`, two third parties that happen to share our number, and `uv`
+ * refused the file outright:
+ *
+ *     error: Failed to parse `uv.lock`
+ *       Caused by: The entry for package `aiosignal` (1.4.1) has wheel
+ *       `aiosignal-1.4.0-py3-none-any.whl` with inconsistent version
+ *
+ * Every Python job in CI died at the first `uv run`. The self-version still
+ * has to move; `uv lock` is what moves it, and `uv lock --check` in CI is what
+ * fails when nobody has. Regenerate it; never rewrite it.
  */
 export const HISTORICAL = [
   'CHANGELOG.md',
+  'uv.lock',
   // Two records of somebody else's dependency graph. Nothing in either is a
   // claim about this project's version, and the promotion cannot tell
   // `powershell-utils@0.1.0` -- a real third party that happens to share our
@@ -93,10 +107,23 @@ export const HISTORICAL = [
   // fails when it disagrees with what the lockfile resolves. Regenerate it;
   // never rewrite it.
   'workspace/docs/sbom.json',
+  // Two more generated records of somebody else's graph, and the same trap
+  // the lockfile carries: upstream publishes
+  // `@deepseek-ai/node-addon-landlock-run@0.1.1`, which is DeepWatch's own
+  // outgoing version written by a different project. Promoting it would name
+  // a release nobody made. Both files are derived -- `gen-inventory.mjs` and
+  // `gen-managed-runtime.mjs` own them and their `:check` gates fail when
+  // they disagree with the tree -- so this project's own versions in them
+  // move by regeneration, which is the only way they should move at all.
+  'workspace/inventory/packages.json',
+  'workspace/inventory/managed-runtime.json',
   'docs/release-proof.md',
   'docs/history/',
   'workspace/docs/history/',
   'workspace/docs/screenshot-manifest.json',
+  // The captions name the amounts, versions and health a running build
+  // actually showed. Promoting them would relabel a photograph.
+  'workspace/docs/screenshots-release.md',
   'workspace/docs/screenshot-manifest.md',
 ]
 
@@ -166,14 +193,36 @@ function candidates() {
   return [...found].sort()
 }
 
+/**
+ * One version string, matched only where it is the whole version.
+ *
+ * A plain substring replace was enough while no version being promoted away
+ * from was a prefix of a version that must not move. `0.1.1` is: the Harness
+ * this distribution pins is `0.1.1-rc.2`, and promoting DeepWatch to `0.1.2`
+ * rewrote it to `0.1.2-rc.2` — a Harness nobody published, in the lockfile
+ * that exists to say which one was measured. `1.4.0rc1` is the same shape
+ * from the other side.
+ *
+ * So a version has to end where it ends: not followed by another digit, a
+ * dot, a dash or a letter, and not preceded by a digit or a dot. Everything
+ * a release actually writes — `v0.1.1`, `~0.1.1`, `@0.1.1`, `"0.1.1"`,
+ * `0.1.1,` — still matches.
+ */
+export function exactly(version) {
+  const escaped = version.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  return new RegExp(`(?<![0-9.])${escaped}(?![0-9A-Za-z.-])`, 'g')
+}
+
 /** Rewrite one file's active version strings; returns how many it changed. */
 function promote(path) {
   const full = join(REPO, path)
   const before = readFileSync(full, 'utf8')
   let after = before
   for (const product of Object.values(VERSIONS)) {
-    for (const stale of product.from) {
-      after = after.split(stale).join(product.to)
+    // Longest first, so `1.4.0` never eats the `1.4.0` inside `1.4.0rc1`
+    // before the entry that names the prerelease has had its turn.
+    for (const stale of [...product.from].sort((a, b) => b.length - a.length)) {
+      after = after.replace(exactly(stale), product.to)
     }
   }
   if (after === before) return { path, changed: 0, after: null }
