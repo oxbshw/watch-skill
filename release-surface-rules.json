@@ -132,6 +132,12 @@
       "rule": "phantom-repository",
       "why": "the `watch-workspace` profile row that mounts @deepwatch/dsh-workspace is an identifier in somebody’s YAML, not a repository anybody could clone. Scoped to the occurrence that follows the row key, so another reference on the same line still fires.",
       "precededBy": "(?:^|[\\s-])id:[\\t ]*$"
+    },
+    {
+      "file": "deepwatch-dsh-workspace:README.md",
+      "rule": "phantom-repository",
+      "precededBy": "(?:^|[\\s-])id:[\\t ]*$",
+      "why": "the packed copy of the same README, keyed by package with the version stripped. Same row, same scoping: only the occurrence following the row key is excused."
     }
   ]
 }

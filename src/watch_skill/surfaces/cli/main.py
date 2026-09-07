@@ -174,6 +174,21 @@ def watch(
     cues = None
     if timestamps:
         cues = [t for t in (parse_time(tok) for tok in timestamps.split(",") if tok.strip()) if t is not None]
+    elif Path(source).is_file():
+        # A recording made by `watch-skill capture --script` leaves a sidecar
+        # naming the moment of each interaction. Those frames are the point of
+        # the recording and are the ones near-duplicate selection is most
+        # likely to drop: a page where three numbers change hashes within the
+        # threshold of the page before it. Pinning them is why the sidecar
+        # exists; a recording without one is unaffected.
+        sidecar = Path(source).with_suffix(".cues.json")
+        if sidecar.is_file():
+            try:
+                recorded = json.loads(sidecar.read_text(encoding="utf-8")).get("cues")
+            except (OSError, ValueError):
+                recorded = None
+            if isinstance(recorded, list) and recorded:
+                cues = [float(t) for t in recorded if isinstance(t, (int, float))]
     try:
         result = run_watch(
             source,

@@ -22,6 +22,8 @@ import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
+import { publishOrder } from '../scripts/publish-order.mjs'
+
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const REPO = join(ROOT, '..')
 const CONFIG = JSON.parse(readFileSync(join(REPO, 'release-surface-rules.json'), 'utf8'))
@@ -208,7 +210,19 @@ describe('the exemptions stay narrow', () => {
     const tracked = new Set(
       execFileSync('git', ['ls-files'], { cwd: REPO, encoding: 'utf8', maxBuffer: 1 << 28 })
         .split('\n').map(line => line.trim()).filter(line => line !== ''))
+    // Two shapes. A repository path must be tracked. A `package:member` key
+    // scopes an exemption to a file *inside* a packed tarball, where the repo
+    // path does not exist -- so it is checked against the packages this
+    // workspace actually publishes instead, which catches a typo just as well.
+    const published = new Set(publishOrder()
+      .map(entry => entry.name.replace('@', '').replace('/', '-')))
     for (const exemption of CONFIG.exemptions) {
+      if (exemption.file.includes(':')) {
+        const [pkg] = exemption.file.split(':')
+        assert.ok(published.has(pkg),
+          `${exemption.file} names a package this workspace does not publish`)
+        continue
+      }
       assert.ok(tracked.has(exemption.file),
         `${exemption.file} is exempt and not in the repository`)
     }

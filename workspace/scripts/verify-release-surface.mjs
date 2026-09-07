@@ -182,7 +182,12 @@ function scanTarballs() {
       const text = execFileSync('tar', ['-xzOf', tarball, member], {
         cwd: ARTIFACTS, encoding: 'utf8', maxBuffer: 1 << 28,
       })
-      scan(`${tarball}:${member.replace(/^package\//, '')}`, text, member.replace(/^package\//, ''))
+      const inside = member.replace(/^package\//, '')
+      // Keyed by package, not by the bare member path: `README.md` alone would
+      // excuse the same file in all twenty tarballs. The version is stripped so
+      // an exemption written today still names the same package next release.
+      const pkg = tarball.replace(/-\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?\.tgz$/, '')
+      scan(`${tarball}:${inside}`, text, `${pkg}:${inside}`)
       files += 1
     }
   }

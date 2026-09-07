@@ -6,6 +6,7 @@ machine does not need the ~350 MB bundled Chromium download.
 """
 from __future__ import annotations
 
+import json
 import subprocess
 import sys
 import time
@@ -98,6 +99,7 @@ def capture_url(
 
     out_dir.mkdir(parents=True, exist_ok=True)
     size = viewport or DEFAULT_VIEWPORT
+    cue_times: list[float] = []
     with sync_playwright() as p:
         browser = _launch_browser(p)
         context = browser.new_context(
@@ -106,9 +108,17 @@ def capture_url(
         page = context.new_page()
         try:
             page.goto(url, wait_until="load")
+            started = time.monotonic()
             if script:
                 for step in script:
                     _run_script_step(page, step)
+                    # An interaction is the moment the page became something
+                    # new. Recorded so frame selection can pin it: the frames
+                    # either side of a `fill` are perceptually near-identical
+                    # -- a checkout page where three numbers change hashes
+                    # within the near-duplicate threshold -- and the one that
+                    # shows the result is exactly the one worth keeping.
+                    cue_times.append(round(time.monotonic() - started, 3))
             else:
                 page.wait_for_timeout(int(duration_seconds * 500))
                 page.mouse.wheel(0, 800)
@@ -127,9 +137,17 @@ def capture_url(
         )
     dest = out_dir / "capture.webm"
     raw_path.replace(dest)
+    # A sidecar, because `watch-skill watch <file>` is a separate invocation
+    # that receives only the path. Without it the interaction moments are lost
+    # between the two commands, and frame selection has nothing to pin.
+    if cue_times:
+        cue_file = dest.with_suffix(".cues.json")
+        cue_file.write_text(
+            json.dumps({"cues": cue_times}, indent=2) + "\n", encoding="utf-8"
+        )
     return CaptureResult(
         video_path=dest, kind="url", target=url,
-        meta={"viewport": size, "scripted": bool(script)},
+        meta={"viewport": size, "scripted": bool(script), "cues": cue_times},
     )
 
 
