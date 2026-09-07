@@ -42,8 +42,8 @@
     },
     {
       "id": "phantom-repository",
-      "pattern": "(?:^\\s*|[^:]\\s|/)watch-workspace\\b",
-      "why": "names a repository that does not exist; both halves live in oxbshw/watch-skill. A profile row (`id: watch-workspace`) is the plugin that mounts @deepwatch/dsh-workspace, not a repository, so it does not fire."
+      "pattern": "\\bwatch-workspace\\b",
+      "why": "names a repository that does not exist; both halves live in oxbshw/watch-skill"
     },
     {
       "id": "personal-path",
@@ -120,6 +120,16 @@
       "file": "workspace/docs/releasing.md",
       "rule": "unfinished-claim",
       "why": "documents that the first npm publication has not happened, which is a fact about the release rather than an unfinished page"
+    },
+    {
+      "file": "workspace/docs/package-notes.json",
+      "rule": "phantom-repository",
+      "why": "carries the `watch-workspace` profile row that mounts @deepwatch/dsh-workspace, which is an identifier in somebody’s YAML rather than a repository anybody could clone"
+    },
+    {
+      "file": "workspace/packages/watch/workspace/README.md",
+      "rule": "phantom-repository",
+      "why": "carries the `watch-workspace` profile row that mounts @deepwatch/dsh-workspace, which is an identifier in somebody’s YAML rather than a repository anybody could clone"
     }
   ]
 }

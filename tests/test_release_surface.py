@@ -67,6 +67,28 @@ class TestTheRuleTableIsShared:
             assert pattern.pattern, f"{rule_id} has no pattern"
             assert len(why) > 15, f"{rule_id} does not say why it matters"
 
+    def test_the_shared_fixtures_hold_in_this_engine_too(self) -> None:
+        """One fixture file, read by this suite and by the Node one.
+
+        `phantom-repository` shipped broken twice because each engine kept its
+        own cases: once with a literal backspace that matched nothing here, and
+        once with a lookbehind that missed Markdown and ``repository:`` forms.
+        A shared file is what stops a rule being green in one engine and blind
+        in the other.
+        """
+        fixtures = json.loads(
+            (REPO / "release-surface-fixtures.json").read_text(encoding="utf-8"))
+        by_id = {rule_id: pattern for rule_id, pattern, _why in RULES}
+        for rule_id, cases in fixtures.items():
+            if rule_id.startswith("$"):
+                continue
+            assert rule_id in by_id, f"{rule_id} has fixtures but is not a rule"
+            pattern = by_id[rule_id]
+            for text in cases["catches"]:
+                assert pattern.search(text), f"{rule_id} must catch: {text}"
+            for text in cases["allows"]:
+                assert not pattern.search(text), f"{rule_id} must not fire on: {text}"
+
     def test_the_patterns_compile_the_same_way_in_both_engines(self) -> None:
         """A JS-only construct in the table would silently never match here."""
         for rule_id, pattern, _why in RULES:

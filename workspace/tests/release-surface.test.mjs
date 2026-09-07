@@ -175,6 +175,27 @@ describe('the exemptions stay narrow', () => {
     }
   })
 
+  test('the shared fixtures hold in this engine too', () => {
+    // One fixture file, read by this suite and by tests/test_release_surface.py.
+    // The rule shipped broken twice -- once matching nothing in Python, once
+    // missing Markdown and `repository:` forms -- because each engine had its
+    // own idea of the cases. A shared file makes that impossible.
+    const fixtures = JSON.parse(
+      readFileSync(join(REPO, 'release-surface-fixtures.json'), 'utf8'))
+    for (const [id, cases] of Object.entries(fixtures)) {
+      if (id.startsWith('$')) continue
+      const rule = rules.get(id)
+      assert.ok(rule !== undefined, `${id} has fixtures but is not a rule`)
+      const pattern = new RegExp(rule.pattern)
+      for (const text of cases.catches) {
+        assert.ok(pattern.test(text), `${id} must catch: ${text}`)
+      }
+      for (const text of cases.allows) {
+        assert.equal(pattern.test(text), false, `${id} must not fire on: ${text}`)
+      }
+    }
+  })
+
   test('phantom-repository names a repository, not a substring of the product', () => {
     // Unanchored, `watch-workspace` also matches `deepwatch-workspace`, so a
     // README heading called "The DeepWatch Workspace" was reported as naming a
@@ -184,21 +205,20 @@ describe('the exemptions stay narrow', () => {
     const rule = CONFIG.rules.find(entry => entry.id === 'phantom-repository')
     const fires = text => new RegExp(rule.pattern, 'g').test(text)
 
-    for (const named of [
-      'oxbshw/watch-workspace',
-      'clone the watch-workspace repository',
-      'see watch-workspace.',
-    ]) assert.ok(fires(named), `${named} names the repository this rule refuses`)
-
-    for (const fine of [
-      '#the-deepwatch-workspace',
-      '@deepwatch/dsh-workspace',
-      'deepwatch-workspace/thing',
-      // The profile row that mounts the package. It appears in every example
-      // showing how to compose the workspace half, and it is an identifier in
-      // somebody's YAML rather than a repository anybody could clone.
-      "- id: watch-workspace",
-      "  id: watch-workspace",
-    ]) assert.ok(!fires(fine), `${fine} is not a repository name`)
+    const fixtures = JSON.parse(
+      readFileSync(join(REPO, 'release-surface-fixtures.json'), 'utf8'))
+    for (const named of fixtures['phantom-repository'].catches) {
+      assert.ok(fires(named), `${named} names the repository this rule refuses`)
+    }
+    for (const fine of fixtures['phantom-repository'].allows) {
+      assert.ok(!fires(fine), `${fine} is not a repository name`)
+    }
+    // The row id cannot be separated from a reference by pattern alone, so it
+    // is handled by a per-file exemption rather than by a cleverer regex.
+    assert.ok(fires('- id: watch-workspace'),
+      'the pattern is deliberately simple; the row id is exempted by file')
+    assert.ok(CONFIG.exemptions.some(e => e.rule === 'phantom-repository'
+      && e.file.endsWith('packages/watch/workspace/README.md')),
+      'the file carrying the row must hold the exemption')
   })
 })
