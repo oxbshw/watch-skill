@@ -2,21 +2,27 @@
 /**
  * Run `deepwatch` the ways people actually run it.
  *
- * **This is not a test of `npx @deepwatch/cli`.** Nothing is published, so
- * there is no registry to fetch from and no claim to make about one. What this
- * does is *packed-artifact equivalent* testing: the same tarball a publish
- * would upload, installed locally, and then invoked through each runner's own
- * resolution path — `npm exec`, `npx` against an existing install, `pnpm exec`,
- * and a real global install into a prefix this script owns.
+ * **This is not a test of `npx @deepwatch/cli` from the registry.** The
+ * registry serves the last release; this gate is about the candidate, which
+ * has not been published and, if it fails here, will not be. So what it does
+ * is *packed-artifact equivalent* testing: the exact tarballs a publish of
+ * this commit would upload, installed locally, and then invoked through each
+ * runner's own resolution path — `npm exec`, `npx` against an existing
+ * install, `pnpm exec`, and a real global install into a prefix this script
+ * owns. The published equivalent runs after a publish, in the `smoke` job of
+ * release-deepwatch.yml, pinned to the version that was just uploaded.
  *
  * Each runner finds a binary differently, and each has broken this before: a
  * `bin` field that points at a file `files` does not ship, a shim that cannot
  * find its own package, a global install with no dependency closure.
  *
  * The subcommands exercised here are the ones that are safe to exercise
- * anywhere: version, help, doctor, and both sides of setup's consent gate.
- * Booting the Web app and the desktop shell needs a real Harness, and belongs
- * to the QA pass that has one.
+ * anywhere: version, help, doctor, and every side of setup's consent gate
+ * that refuses. A setup allowed to proceed fetches a Harness and its closure,
+ * so the successful install belongs to a gate with a machine to do it on —
+ * `browser-e2e` in workspace-ci.yml composes a profile from these same
+ * artifacts and boots it. Booting the desktop shell needs a real Harness too,
+ * and belongs to the QA pass that has one.
  *
  * Usage:
  *   node scripts/verify-packed-exec.mjs
@@ -208,9 +214,10 @@ ERR<${result.stderr.slice(0, 300)}>
   //
   // Handed twenty sibling tarballs, npm satisfies `@deepwatch/dsh-bundle` from
   // the one on its own command line. pnpm does not: it resolves every
-  // transitive range by name against the registry, and an unpublished scope is
-  // a 404 there. That is a fact about these packages not being published, not
-  // a defect in them — and it means the honest pnpm equivalent is a workspace
+  // transitive range by name against the registry, where the candidate's
+  // version does not exist yet — a 404 for exactly the version under test,
+  // whatever else the scope already serves. That is a fact about a candidate,
+  // not a defect in it, and it means the honest pnpm equivalent is a workspace
   // of the *unpacked* tarballs, where pnpm links them by version and its own
   // `exec` resolution is what gets exercised.
   //
@@ -380,6 +387,7 @@ if (report.problems.length > 0) {
   process.exitCode = 1
 } else {
   process.stdout.write(
-    `\npacked-exec: ${report.ran.length} invocations, all from packed artifacts `
-    + '(nothing is published, so no registry install was tested)\n')
+    `\npacked-exec: ${report.ran.length} invocations, all from this commit's `
+    + 'packed artifacts (a published version is smoked after it is published, '
+    + 'not here)\n')
 }
