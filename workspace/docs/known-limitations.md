@@ -205,6 +205,38 @@ identity and notarisation for macOS, per-platform CI runners, and a release job
 that attaches the outputs. None of that is present, and none of it can be
 improvised at release time.
 
+## Two client bundles are not reproducible across operating systems
+
+Packing the same tree on Windows and on Linux produces **eighteen identical
+archives and two that differ**: `@deepwatch/dsh-client-evidence` and
+`@deepwatch/dsh-client-settings`. The difference is in what they contain, not
+in how they are wrapped — `scripts/pack-digests.mjs` reports a content digest
+over every entry path and its bytes, sorted, and for those two it differs
+between the platforms while the other eighteen match exactly.
+
+Two candidate causes were measured and ruled out. It is not the gzip container:
+the tenth byte of a gzip member records the writing operating system, `0x0a` on
+Windows and `0x03` on Unix, and equalising it fixed the other eighteen and did
+nothing for these two. It is not the zlib version: packing under the release
+toolchain's own Node 22.19.0 (zlib 1.3.1) rather than 24.19.0 (zlib 1.3.2.1)
+left the same two out. Both packages ship a bundled `lib/client.js`, and they
+are the two largest such bundles.
+
+`npm run verify:pack-reproducible` passes, and correctly: it packs twice on one
+machine, and on one machine these two are stable. Reproducibility *across*
+platforms is a stronger property and nothing checked it until the digests of
+two platforms were compared directly.
+
+**What this does and does not affect.** Every release after the first is packed
+and published by the same Linux runner, so no cross-platform comparison happens
+and the release is unaffected. It matters exactly once: the first publication
+has to be made by hand, because npm will not accept a Trusted Publisher for a
+package that does not exist. Publishing Windows-packed bytes and then tagging
+would leave `publish-plan.mjs` refusing those two as "already published with
+DIFFERENT bytes" — correctly. The release therefore publishes the bytes the
+workflow itself packed, which is the procedure in
+[releasing.md](releasing.md).
+
 ## The first-run headline is upstream's
 
 "Into the Unknown" on the workspace hero comes from the pinned Harness and has no
