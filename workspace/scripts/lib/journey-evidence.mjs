@@ -52,16 +52,40 @@ export function phaseSlice(all, from, sessionId) {
     sessionId === undefined || record.runId === undefined || record.runId === sessionId)
 }
 
-/** Verifications in a slice, with the verdict Core returned for each. */
+/**
+ * Verifications in a slice, one per verification, with the verdict Core gave.
+ *
+ * The journal is append-only and a verification reaches it twice: once when
+ * the tool call completes, carrying no verdict yet, and again once Core has
+ * answered. Read line by line that is two verifications, half of them `null` —
+ * which is how a run with three of them reported six and failed for describing
+ * the journal's shape rather than the product's behaviour.
+ *
+ * So revisions collapse onto the record they revise. The newest verdict wins,
+ * and identities accumulate, because a later revision that names no evidence
+ * is not retracting the evidence an earlier one named.
+ */
 export function verificationsIn(records) {
-  return records
-    .filter(record => toolOf(record) === 'watch_verify')
-    .map(record => ({
-      recordId: record.recordId ?? null,
-      verdict: typeof record.verdict === 'string' ? record.verdict : null,
-      identities: (record.evidenceIds ?? []).filter(id => String(id).startsWith('ver_')),
-      text: typeof record.text === 'string' ? record.text : '',
-    }))
+  const byRecord = new Map()
+  for (const record of records) {
+    if (toolOf(record) !== 'watch_verify') continue
+    const recordId = record.recordId ?? null
+    const verdict = typeof record.verdict === 'string' ? record.verdict : null
+    const identities = (record.evidenceIds ?? [])
+      .filter(id => String(id).startsWith('ver_'))
+    const text = typeof record.text === 'string' ? record.text : ''
+    const seen = byRecord.get(recordId)
+    if (seen === undefined) {
+      byRecord.set(recordId, { recordId, verdict, identities: [...identities], text })
+      continue
+    }
+    if (verdict !== null) seen.verdict = verdict
+    for (const id of identities) {
+      if (!seen.identities.includes(id)) seen.identities.push(id)
+    }
+    if (text !== '') seen.text = text
+  }
+  return [...byRecord.values()]
 }
 
 /**
