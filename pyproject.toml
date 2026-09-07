@@ -44,7 +44,7 @@ perceive = [
 ocr = ["rapidocr>=3.9,<4", "onnxruntime>=1.27,<2", "python-bidi>=0.6,<1"]
 whisper = ["faster-whisper>=1.2,<2"]
 index = ["fastembed>=0.8,<0.9", "numpy>=2.4,<3"]
-mcp = ["fastmcp>=3.4,<4"]
+mcp = ["fastmcp>=3.4,<5"]
 api = ["fastapi>=0.139,<1", "uvicorn>=0.50,<1"]
 loop = ["playwright>=1.61,<2"]
 diarize = ["pyannote.audio>=4.0,<5"]
