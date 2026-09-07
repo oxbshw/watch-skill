@@ -53,7 +53,7 @@ diarize = ["pyannote.audio>=4.0,<5"]
 # adds "and this is who wrote it". The name was already in three error
 # messages and in `verify/evidence.py`'s docstring before it was a
 # group anybody could install.
-attest = ["cryptography>=42,<50"]
+attest = ["cryptography>=42,<51"]
 # framework adapters (each thin; see src/watch_skill/integrations/)
 langchain = ["langchain-core>=0.3,<2"]
 openai-agents = ["openai-agents>=0.1,<1"]
