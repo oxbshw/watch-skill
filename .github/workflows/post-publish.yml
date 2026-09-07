@@ -152,7 +152,37 @@ jobs:
           spec='${{ needs.version.outputs.spec }}'
           requested='${{ needs.version.outputs.version }}'
           echo "resolving $spec"
-          reported=$(uvx --from "$spec" watch-skill --version)
+
+          # Retry only what a second attempt could plausibly fix: a CDN that
+          # is serving the metadata and not yet the file, a dropped
+          # connection, a 429. A resolution failure, a hash mismatch or a
+          # wheel that will not build says the same thing next time, and
+          # retrying it buries the sentence that explained it under three more
+          # minutes. The version assertion below stays outside the loop — a
+          # package that installs and then reports the wrong version is a
+          # finding, not a flake.
+          attempt=0
+          delay=5
+          until reported=$(uvx --from "$spec" watch-skill --version 2>uvx-err.log); do
+            attempt=$((attempt + 1))
+            case "$(cat uvx-err.log)" in
+              *"hash mismatch"*|*"Failed to build"*|*"No solution found"*|*401*|*403*)
+                echo "::error::uvx failed for a reason a retry cannot fix:"
+                cat uvx-err.log
+                exit 1
+                ;;
+            esac
+            if [ "$attempt" -ge 4 ]; then
+              echo "::error::uvx --from $spec failed ${attempt} times over 35s:"
+              cat uvx-err.log
+              exit 1
+            fi
+            echo "attempt ${attempt} failed; retrying in ${delay}s"
+            tail -n 20 uvx-err.log
+            sleep "$delay"
+            delay=$((delay * 2))
+          done
+
           echo "reported: $reported"
           test -n "$reported"
           if [ -n "$requested" ]; then

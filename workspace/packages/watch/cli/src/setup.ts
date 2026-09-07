@@ -67,7 +67,9 @@ import {
 } from './lib/provision.js'
 import type { ManagedPackage, ManagedPlan, SourceMode } from './lib/provision.js'
 import { deepwatchHome, dshHome, profileName, watchCoreBin } from './lib/paths.js'
-import { BUNDLE_PACKAGE, BUNDLE_VERSION, HARNESS_VERSION, VERSION } from './version.js'
+import {
+  BUNDLE_PACKAGE, BUNDLE_VERSION, HARNESS_REGISTRY, HARNESS_VERSION, VERSION,
+} from './version.js'
 
 /** How long a profile operation may take before it is a hang rather than work. */
 const PROFILE_TIMEOUT_MS = 10 * 60 * 1000
@@ -357,8 +359,17 @@ export async function runSetup(invocation: Invocation): Promise<number> {
       // sometimes pasted, and a maintainer's absolute path is not this
       // product's to publish.
       resolvedFrom: 'the managed DeepWatch runtime',
-      registryRequests: 'none — every DeepWatch package came from the runtime\'s own '
-        + 'verified copies',
+      // Where the DeepWatch packages actually came from, not a sentence written
+      // when only one answer was possible. This said "none — every DeepWatch
+      // package came from the runtime's own verified copies" unconditionally,
+      // which is true of an --artifacts install and false of the registry
+      // install that is now the default. No request count is claimed either
+      // way: nothing here counts them, and a number nobody measured is worse
+      // than the mode, which is recorded.
+      deepwatchPackagesFrom: source.mode === 'local-artifacts'
+        ? 'verified local tarballs, copied into the runtime and installed from the copies'
+        : `the registry (${HARNESS_REGISTRY}), by name at ${BUNDLE_VERSION}, checked by npm `
+          + 'against each package\'s published integrity',
       // Recorded as a fact about this machine, not as a URL to keep: the probe
       // asked the operating system for a port and stopped the server again.
       boot: composition.servedFrom === undefined

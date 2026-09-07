@@ -439,7 +439,37 @@ jobs:
             sleep 10
           done
 
-          reported=$(npx --yes "@deepwatch/cli@${version}" --version)
+          # Retry only what a second attempt could plausibly fix.
+          #
+          # A replica that has not caught up, a dropped connection, a 429 or a
+          # 5xx are worth another go. An authentication failure or an integrity
+          # mismatch are not: they say the same thing next time, and retrying
+          # them turns a red check into a slow red check while burying the
+          # sentence that explained it. The version assertion is outside the
+          # loop for the same reason — a CLI that installs and then reports the
+          # wrong version is a finding, not a flake.
+          attempt=0
+          delay=5
+          until reported=$(npx --yes "@deepwatch/cli@${version}" --version 2>npx-err.log); do
+            attempt=$((attempt + 1))
+            case "$(cat npx-err.log)" in
+              *EINTEGRITY*|*ENEEDAUTH*|*E401*|*E403*|*EPERM*)
+                echo "::error::npx failed for a reason a retry cannot fix:"
+                cat npx-err.log
+                exit 1
+                ;;
+            esac
+            if [ "$attempt" -ge 4 ]; then
+              echo "::error::npx @deepwatch/cli@${version} failed ${attempt} times over 35s:"
+              cat npx-err.log
+              exit 1
+            fi
+            echo "attempt ${attempt} failed; retrying in ${delay}s"
+            tail -n 20 npx-err.log
+            sleep "${delay}"
+            delay=$((delay * 2))
+          done
+
           echo "reported: ${reported}"
           test "${reported}" = "${version}"
 

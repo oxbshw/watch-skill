@@ -518,3 +518,56 @@ test('the required workspace result includes the real browser journey', () => {
   const required = job(workflow, 'workspace-required')
   assert.match(required, /browser-e2e/)
 })
+
+describe('the published smoke retries a flake and never a finding', () => {
+  // A published smoke is the one check that runs against something nobody can
+  // take back, so it has to be believable in both directions. Retrying
+  // everything makes a broken publish look slow instead of broken; retrying
+  // nothing makes a CDN that is thirty seconds behind look like a broken
+  // publish. Each smoke retries the fetch and asserts the version outside the
+  // loop, and each names the failures it will not retry.
+  const SMOKES = [
+    ['release-deepwatch.yml', DEEPWATCH, 'npx-err.log',
+      ['EINTEGRITY', 'ENEEDAUTH', 'E401', 'E403']],
+    ['post-publish.yml', readFileSync(join(WORKFLOWS, 'post-publish.yml'), 'utf8'),
+      'uvx-err.log', ['hash mismatch', 'Failed to build', 'No solution found']],
+  ]
+
+  for (const [name, workflow, log, fatal] of SMOKES) {
+    test(`${name} bounds its retries and backs off`, () => {
+      assert.match(workflow, /attempt=0\s*\n\s*delay=5/,
+        `${name} does not start a bounded retry`)
+      assert.match(workflow, /delay=\$\(\(delay \* 2\)\)/,
+        `${name} retries without backing off`)
+      assert.match(workflow, /if \[ "\$attempt" -ge 4 \]/,
+        `${name} has no ceiling on its retries`)
+    })
+
+    test(`${name} keeps a failure a retry cannot fix visible`, () => {
+      for (const marker of fatal) {
+        assert.ok(workflow.includes(marker),
+          `${name} would retry ${marker}, which says the same thing every time`)
+      }
+      assert.match(workflow, /a reason a retry cannot fix/,
+        `${name} does not distinguish the two kinds of failure`)
+    })
+
+    test(`${name} reports what actually went wrong`, () => {
+      // `stderr` discarded is how a CI failure takes three runs to characterise.
+      assert.ok(workflow.includes(`2>${log}`),
+        `${name} does not capture the error stream`)
+      assert.ok(workflow.includes(`cat ${log}`),
+        `${name} captures the error stream and never prints it`)
+      assert.ok(workflow.includes(`tail -n 20 ${log}`),
+        `${name} says nothing between attempts`)
+    })
+
+    test(`${name} asserts the version outside the retry loop`, () => {
+      // A package that installs and reports the wrong version is a finding.
+      // Retrying it would eventually report the same wrong version, slower.
+      const afterLoop = workflow.split('done\n').slice(1).join('done\n')
+      assert.match(afterLoop, /test "\$\{?reported\}?" = "\$\{?(version|requested)\}?"/,
+        `${name} asserts the version somewhere a retry could paper over`)
+    })
+  }
+})

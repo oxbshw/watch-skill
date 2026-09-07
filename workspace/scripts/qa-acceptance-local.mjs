@@ -221,13 +221,17 @@ try {
   const receipt = join(HOME, 'harness', 'deepwatch-install-receipt.json')
   const installed = existsSync(receipt)
     ? JSON.parse(readFileSync(receipt, 'utf8')) : null
+  // Both receipts have to agree, and both now say where the packages came from
+  // rather than asserting a request count nothing measured. The composition
+  // receipt used to carry a fixed sentence beginning "none", which was true of
+  // this path and false of a registry install.
   claim('AL-01 the packages came from sealed local artifacts, not a registry',
     installed?.deepwatchSource === 'local-artifacts'
-      && composed?.registryRequests?.startsWith('none') === true,
+      && composed?.deepwatchPackagesFrom?.startsWith('verified local tarballs') === true,
     { source: installed?.deepwatchSource ?? null,
       origin: installed?.deepwatchArtifactOrigin ?? null,
       deepwatchPackages: installed?.deepwatchPackages?.length ?? 0,
-      registryRequests: composed?.registryRequests ?? null })
+      packagesFrom: composed?.deepwatchPackagesFrom ?? null })
 
   // ── 2. it starts, and it starts without a provider ─────────────────────────
   const readiness = await rpc('watchQuery/routeReadiness', { args: { request: {

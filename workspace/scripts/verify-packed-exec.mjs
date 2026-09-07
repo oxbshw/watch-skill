@@ -2,21 +2,27 @@
 /**
  * Run `deepwatch` the ways people actually run it.
  *
- * **This is not a test of `npx @deepwatch/cli`.** Nothing is published, so
- * there is no registry to fetch from and no claim to make about one. What this
- * does is *packed-artifact equivalent* testing: the same tarball a publish
- * would upload, installed locally, and then invoked through each runner's own
- * resolution path — `npm exec`, `npx` against an existing install, `pnpm exec`,
- * and a real global install into a prefix this script owns.
+ * **This is not a test of `npx @deepwatch/cli` from the registry.** The
+ * registry serves the last release; this gate is about the candidate, which
+ * has not been published and, if it fails here, will not be. So what it does
+ * is *packed-artifact equivalent* testing: the exact tarballs a publish of
+ * this commit would upload, installed locally, and then invoked through each
+ * runner's own resolution path — `npm exec`, `npx` against an existing
+ * install, `pnpm exec`, and a real global install into a prefix this script
+ * owns. The published equivalent runs after a publish, in the `smoke` job of
+ * release-deepwatch.yml, pinned to the version that was just uploaded.
  *
  * Each runner finds a binary differently, and each has broken this before: a
  * `bin` field that points at a file `files` does not ship, a shim that cannot
  * find its own package, a global install with no dependency closure.
  *
  * The subcommands exercised here are the ones that are safe to exercise
- * anywhere: version, help, doctor, and both sides of setup's consent gate.
- * Booting the Web app and the desktop shell needs a real Harness, and belongs
- * to the QA pass that has one.
+ * anywhere: version, help, doctor, and every side of setup's consent gate
+ * that refuses. A setup allowed to proceed fetches a Harness and its closure,
+ * so the successful install belongs to a gate with a machine to do it on —
+ * `browser-e2e` in workspace-ci.yml composes a profile from these same
+ * artifacts and boots it. Booting the desktop shell needs a real Harness too,
+ * and belongs to the QA pass that has one.
  *
  * Usage:
  *   node scripts/verify-packed-exec.mjs
@@ -208,9 +214,10 @@ ERR<${result.stderr.slice(0, 300)}>
   //
   // Handed twenty sibling tarballs, npm satisfies `@deepwatch/dsh-bundle` from
   // the one on its own command line. pnpm does not: it resolves every
-  // transitive range by name against the registry, and an unpublished scope is
-  // a 404 there. That is a fact about these packages not being published, not
-  // a defect in them — and it means the honest pnpm equivalent is a workspace
+  // transitive range by name against the registry, where the candidate's
+  // version does not exist yet — a 404 for exactly the version under test,
+  // whatever else the scope already serves. That is a fact about a candidate,
+  // not a defect in it, and it means the honest pnpm equivalent is a workspace
   // of the *unpacked* tarballs, where pnpm links them by version and its own
   // `exec` resolution is what gets exercised.
   //
@@ -297,39 +304,65 @@ ERR<${result.stderr.slice(0, 300)}>
     }
   })
 
-  // Setup, refused for want of an artifact directory. Nothing under
-  // `@deepwatch` is published, so there is no registry answer to fall back to
-  // and the product says so rather than asking for a scope that does not exist.
-  expect('setup with no artifacts', run(process.execPath, [cli, 'setup', '--yes'], withHome),
-    result => {
-      if (result.code === 0) return 'reported success with nowhere to get the packages from'
-      const said = result.stdout + result.stderr
-      if (!said.includes('--artifacts')) return 'did not say what was missing'
-      if (existsSync(join(home, 'harness'))) return 'wrote where the runtime goes'
-      return null
-    })
+  // Each setup case gets a home of its own.
+  //
+  // They shared one until the scope was published. `setup --yes` with no
+  // artifacts used to refuse, so nothing was ever built and the later cases
+  // ran against an empty home by luck. It installs from the registry now, and
+  // a shared home meant every case after the first was judging a machine that
+  // already had a runtime on it -- consent and offline both behave differently
+  // once one exists.
+  const setupHome = label => {
+    const dir = join(room('deepwatch-setup-'), label)
+    mkdirSync(dir, { recursive: true })
+    return { cwd: project, env: { ...process.env, DEEPWATCH_HOME: dir } }
+  }
 
-  // Setup, refused. Non-interactive and without `--yes`, so the plan is shown
-  // and nothing is fetched — the case that would otherwise install five
-  // hundred packages inside somebody's CI.
-  expect('setup without consent',
-    run(process.execPath, [cli, 'setup', '--artifacts', ARTIFACTS], withHome), result => {
+  // No artifacts, no consent: the registry plan is printed and nothing is
+  // fetched. This is the path a new user takes, and the one that would
+  // otherwise install five hundred packages inside somebody's CI.
+  const registryPlan = setupHome('registry-plan')
+  expect('setup with no artifacts, no consent',
+    run(process.execPath, [cli, 'setup'], registryPlan), result => {
       if (result.code === 0) return 'reported success without installing anything'
       const said = result.stdout + result.stderr
       if (!said.includes('registry.npmjs.org')) return 'did not name the registry first'
-      if (!said.includes('@deepseek-ai/dsh')) return 'did not name the package first'
-      if (!said.includes(ARTIFACTS)) return 'did not name where the local packages come from'
-      if (existsSync(join(home, 'harness', 'node_modules'))) return 'downloaded something anyway'
+      if (!said.includes('@deepseek-ai/dsh')) return 'did not name the Harness first'
+      if (!/from the registry/.test(said)) return 'did not say where the DeepWatch packages come from'
+      if (!said.includes('--yes')) return 'did not say how to agree'
+      if (existsSync(join(registryPlan.env.DEEPWATCH_HOME, 'harness', 'node_modules'))) {
+        return 'downloaded something nobody agreed to'
+      }
       return null
     })
 
-  // Setup, refused for a different reason: offline wins over consent.
+  // The sealed-artifact path is a different mode, and it names the directory
+  // it would install from. Still no consent, so still nothing fetched.
+  const artifactPlan = setupHome('artifact-plan')
+  expect('setup --artifacts without consent',
+    run(process.execPath, [cli, 'setup', '--artifacts', ARTIFACTS], artifactPlan), result => {
+      if (result.code === 0) return 'reported success without installing anything'
+      const said = result.stdout + result.stderr
+      if (!said.includes('registry.npmjs.org')) return 'did not name the registry first'
+      if (!said.includes(ARTIFACTS)) return 'did not name where the local packages come from'
+      if (!/verified local artifacts/.test(said)) return 'did not distinguish the artifact mode'
+      if (existsSync(join(artifactPlan.env.DEEPWATCH_HOME, 'harness', 'node_modules'))) {
+        return 'downloaded something anyway'
+      }
+      return null
+    })
+
+  // Offline wins over consent, in a home of its own so the refusal is about
+  // the policy rather than about a runtime that happens to be there already.
+  const offline = setupHome('offline')
   expect('setup --offline --yes',
-    run(process.execPath, [cli, 'setup', '--offline', '--yes'], withHome),
+    run(process.execPath, [cli, 'setup', '--offline', '--yes'], offline),
     result => {
       if (result.code === 0) return 'reported success while offline'
       if (!/offline/i.test(result.stdout + result.stderr)) return 'did not say why it refused'
-      if (existsSync(join(home, 'harness', 'node_modules'))) return 'downloaded something anyway'
+      if (existsSync(join(offline.env.DEEPWATCH_HOME, 'harness', 'node_modules'))) {
+        return 'downloaded something anyway'
+      }
       return null
     })
 
@@ -354,6 +387,7 @@ if (report.problems.length > 0) {
   process.exitCode = 1
 } else {
   process.stdout.write(
-    `\npacked-exec: ${report.ran.length} invocations, all from packed artifacts `
-    + '(nothing is published, so no registry install was tested)\n')
+    `\npacked-exec: ${report.ran.length} invocations, all from this commit's `
+    + 'packed artifacts (a published version is smoked after it is published, '
+    + 'not here)\n')
 }

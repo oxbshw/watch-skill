@@ -60,7 +60,25 @@ function globToRegExp(glob) {
 
 const INCLUDE = CONFIG.surfaces.include.map(globToRegExp)
 const EXCLUDE = CONFIG.surfaces.exclude.map(globToRegExp)
-const EXEMPT = new Set(CONFIG.exemptions.map(entry => `${entry.file}\u0000${entry.rule}`))
+/**
+ * Exemptions, keyed by file and rule.
+ *
+ * An entry without `precededBy` excuses the whole file, which is the blunt form
+ * and what most of these need. An entry *with* it excuses only the occurrences
+ * whose preceding text matches — one match at a time, not a whole line. That
+ * distinction matters where the flagged name is also a legitimate identifier:
+ * `watch-workspace` is a real profile row id *and* the name of a repository
+ * that does not exist, and both can appear on one line.
+ */
+const EXEMPT = new Map()
+for (const entry of CONFIG.exemptions) {
+  const key = `${entry.file}\u0000${entry.rule}`
+  const scoped = EXEMPT.get(key)
+  if (entry.precededBy === undefined) EXEMPT.set(key, null)
+  else if (scoped !== null) {
+    EXEMPT.set(key, [...(scoped ?? []), new RegExp(entry.precededBy)])
+  }
+}
 
 const findings = []
 
@@ -68,10 +86,28 @@ const findings = []
 function scan(label, text, exemptKey = label) {
   const lines = text.split(/\r?\n/)
   for (const rule of RULES) {
-    if (EXEMPT.has(`${exemptKey}\u0000${rule.id}`)) continue
+    const key = `${exemptKey}\u0000${rule.id}`
+    if (EXEMPT.has(key) && EXEMPT.get(key) === null) continue
+    const allowed = EXEMPT.get(key) ?? []
     for (let i = 0; i < lines.length; i += 1) {
-      rule.re.lastIndex = 0
-      const found = rule.re.exec(lines[i])
+      // Every occurrence on the line, so an exempt one does not hide the rest.
+      const all = new RegExp(rule.re.source, `${rule.re.flags.replace('g', '')}g`)
+      let found = null
+      let hit = null
+      while ((hit = all.exec(lines[i])) !== null) {
+        if (hit[0].length === 0) { all.lastIndex += 1; continue }
+        // The text before this occurrence, and nothing else — the same window
+        // tests/test_release_surface.py uses, so an exemption cannot mean two
+        // things. A second, wider window was tried alongside it, computed
+        // from `indexOf('watch')` *inside* the match: 0 for the one rule that
+        // has a scoped exemption, and -1 for every other, which slides the
+        // boundary a character to the left. Two answers to one question, of
+        // which this is the question.
+        const prefix = lines[i].slice(0, hit.index)
+        if (allowed.some(re => re.test(prefix))) continue
+        found = hit
+        break
+      }
       if (found === null) continue
       findings.push({
         file: label,
@@ -152,7 +188,12 @@ function scanTarballs() {
       const text = execFileSync('tar', ['-xzOf', tarball, member], {
         cwd: ARTIFACTS, encoding: 'utf8', maxBuffer: 1 << 28,
       })
-      scan(`${tarball}:${member.replace(/^package\//, '')}`, text, member.replace(/^package\//, ''))
+      const inside = member.replace(/^package\//, '')
+      // Keyed by package, not by the bare member path: `README.md` alone would
+      // excuse the same file in all twenty tarballs. The version is stripped so
+      // an exemption written today still names the same package next release.
+      const pkg = tarball.replace(/-\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?\.tgz$/, '')
+      scan(`${tarball}:${inside}`, text, `${pkg}:${inside}`)
       files += 1
     }
   }

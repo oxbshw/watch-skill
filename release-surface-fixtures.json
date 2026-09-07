@@ -1,0 +1,71 @@
+{
+  "$comment": [
+    "Positive and negative cases for release-surface rules, read by BOTH engines:",
+    "workspace/tests/release-surface.test.mjs (Node) and tests/test_release_surface.py",
+    "(Python). One file, so a case cannot be fixed in one engine and left broken in",
+    "the other -- which is exactly how `phantom-repository` shipped a pattern that",
+    "matched nothing on the Python side.",
+    "",
+    "`catches` must fire. `allows` must not. Add a case whenever a rule is",
+    "narrowed: a narrowing without a case is a rule nobody re-checked."
+  ],
+  "phantom-repository": {
+    "why": [
+      "The rule names a repository that does not exist. It was narrowed twice and",
+      "broke both times: first with an unanchored pattern that matched inside",
+      "`deepwatch-workspace`, then with a lookbehind that Python's shared table",
+      "forbids and that silently missed Markdown and `repository:` forms while",
+      "wrongly sparing a row id written with two spaces.",
+      "",
+      "The pattern is now the simple bounded name. The profile row that mounts",
+      "@deepwatch/dsh-workspace is genuinely called `watch-workspace`, and no",
+      "pattern can tell it from a repository reference by surrounding characters",
+      "alone -- so those two files carry a narrow, per-file exemption instead."
+    ],
+    "catches": [
+      "Clone watch-workspace and run pnpm install.",
+      "Clone `watch-workspace` and run pnpm install.",
+      "repository: watch-workspace",
+      "oxbshw/watch-workspace",
+      "see watch-workspace.",
+      "clone the watch-workspace repository",
+      "watch-workspace at the start of a line",
+      "  watch-workspace indented"
+    ],
+    "allows": [
+      "Clone watch-skill and run pnpm install in workspace/.",
+      "#the-deepwatch-workspace",
+      "@deepwatch/dsh-workspace",
+      "deepwatch-workspace/thing",
+      "the DeepWatch Workspace"
+    ]
+  },
+  "$exemptions": {
+    "phantom-repository": {
+      "$comment": [
+        "Lines as they appear inside a file exempted from phantom-repository.",
+        "`clean` must produce no finding; `reported` must produce one. Both real",
+        "scanners run these against the actual exempted file, because the point",
+        "is the exemption path, not the pattern.",
+        "",
+        "The whitespace cases exist because a `contains` exemption matched the",
+        "exact string only: a row written with two spaces or a tab was still",
+        "rejected. The same-line case exists because that exemption skipped the",
+        "whole line, hiding a genuine stale reference sitting beside the row."
+      ],
+      "clean": [
+        "- id: watch-workspace",
+        "- id:  watch-workspace",
+        "- id:\twatch-workspace",
+        "  id: watch-workspace",
+        "    - id: watch-workspace"
+      ],
+      "reported": [
+        "Clone watch-workspace and run pnpm install.",
+        "repository: watch-workspace",
+        "oxbshw/watch-workspace",
+        "- id: watch-workspace  <!-- clone watch-workspace to get started -->"
+      ]
+    }
+  }
+}

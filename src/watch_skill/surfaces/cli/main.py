@@ -171,6 +171,9 @@ def watch(
         elif max_frames is None:
             max_frames = presets[preset]
 
+    # Only what the caller typed. A recording that carries its own interaction
+    # moments is read by the engine, so every surface behaves the same way and
+    # this one stays the wrapper it is supposed to be.
     cues = None
     if timestamps:
         cues = [t for t in (parse_time(tok) for tok in timestamps.split(",") if tok.strip()) if t is not None]
