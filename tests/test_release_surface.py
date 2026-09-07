@@ -33,16 +33,18 @@ RULES = [
 ]
 #: Exemptions, keyed by (file, rule).
 #:
-#: ``None`` excuses the whole file. A tuple of strings excuses only the lines
-#: containing one of them, so a file may hold one legitimate phrase a rule
-#: would otherwise flag without going blind to every other occurrence.
-EXEMPT: dict[tuple[str, str], tuple[str, ...] | None] = {}
+#: ``None`` excuses the whole file. A tuple of compiled patterns excuses only
+#: the occurrences whose preceding text matches — one match at a time, never a
+#: whole line, so a legitimate identifier and a stale reference can share a line
+#: and only the first is excused.
+EXEMPT: dict[tuple[str, str], tuple[re.Pattern[str], ...] | None] = {}
 for _entry in CONFIG["exemptions"]:
     _key = (_entry["file"], _entry["rule"])
-    if "contains" not in _entry:
+    if "precededBy" not in _entry:
         EXEMPT[_key] = None
     elif EXEMPT.get(_key, ()) is not None:
-        EXEMPT[_key] = tuple(EXEMPT.get(_key) or ()) + (_entry["contains"],)
+        EXEMPT[_key] = tuple(EXEMPT.get(_key) or ()) + (re.compile(_entry["precededBy"]),)
+
 
 #: Text that is fine in source and not fine in something a user is handed.
 #:
@@ -60,9 +62,13 @@ def findings_in(label: str, text: str, key: str | None = None) -> list[str]:
         if exempt_key in EXEMPT and allowed is None:
             continue
         for number, line in enumerate(text.splitlines(), start=1):
-            match = pattern.search(line)
-            if match and any(a in line for a in (allowed or ())):
-                continue
+            match = None
+            for candidate in pattern.finditer(line):
+                prefix = line[: candidate.start()]
+                if any(a.search(prefix) for a in (allowed or ())):
+                    continue
+                match = candidate
+                break
             if match:
                 found.append(f"{label}:{number} [{rule_id}] {why} -- {line.strip()[:110]}")
                 break
@@ -111,6 +117,44 @@ class TestTheRuleTableIsShared:
                 f"{rule_id} uses a lookbehind; keep the table to syntax both "
                 "engines read the same way"
             )
+
+
+class TestTheExemptionIsScopedToOneOccurrence:
+    """`watch-workspace` is a profile row id and a repository that does not exist.
+
+    The exemption must excuse the row and nothing else: not the whole file,
+    which would blind the rule where the confusing name lives, and not the
+    whole line, which would hide a stale reference sitting beside the row.
+    These cases are shared with workspace/tests/release-surface.test.mjs.
+    """
+
+    EXEMPTED = REPO / "workspace" / "packages" / "watch" / "workspace" / "README.md"
+
+    @staticmethod
+    def _findings_for(line: str) -> list[str]:
+        cases = TestTheExemptionIsScopedToOneOccurrence
+        original = cases.EXEMPTED.read_text(encoding="utf-8")
+        try:
+            cases.EXEMPTED.write_text(f"{original}\n{line}\n", encoding="utf-8")
+            relative = str(cases.EXEMPTED.relative_to(REPO)).replace("\\", "/")
+            found = findings_in(relative, cases.EXEMPTED.read_text(encoding="utf-8"))
+            return [f for f in found if "[phantom-repository]" in f]
+        finally:
+            cases.EXEMPTED.write_text(original, encoding="utf-8")
+
+    def test_the_allowed_row_is_not_reported_however_it_is_spaced(self) -> None:
+        cases = json.loads(
+            (REPO / "release-surface-fixtures.json").read_text(encoding="utf-8"))
+        for line in cases["$exemptions"]["phantom-repository"]["clean"]:
+            assert self._findings_for(line) == [], (
+                f"reported a legitimate profile row: {line!r}")
+
+    def test_a_genuine_stale_reference_is_reported_including_beside_the_row(self) -> None:
+        cases = json.loads(
+            (REPO / "release-surface-fixtures.json").read_text(encoding="utf-8"))
+        for line in cases["$exemptions"]["phantom-repository"]["reported"]:
+            assert len(self._findings_for(line)) == 1, (
+                f"missed a stale repository reference: {line!r}")
 
 
 class TestTheCliHelpIsCleanText:

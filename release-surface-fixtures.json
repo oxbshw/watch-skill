@@ -39,5 +39,33 @@
       "deepwatch-workspace/thing",
       "the DeepWatch Workspace"
     ]
+  },
+  "$exemptions": {
+    "phantom-repository": {
+      "$comment": [
+        "Lines as they appear inside a file exempted from phantom-repository.",
+        "`clean` must produce no finding; `reported` must produce one. Both real",
+        "scanners run these against the actual exempted file, because the point",
+        "is the exemption path, not the pattern.",
+        "",
+        "The whitespace cases exist because a `contains` exemption matched the",
+        "exact string only: a row written with two spaces or a tab was still",
+        "rejected. The same-line case exists because that exemption skipped the",
+        "whole line, hiding a genuine stale reference sitting beside the row."
+      ],
+      "clean": [
+        "- id: watch-workspace",
+        "- id:  watch-workspace",
+        "- id:\twatch-workspace",
+        "  id: watch-workspace",
+        "    - id: watch-workspace"
+      ],
+      "reported": [
+        "Clone watch-workspace and run pnpm install.",
+        "repository: watch-workspace",
+        "oxbshw/watch-workspace",
+        "- id: watch-workspace  <!-- clone watch-workspace to get started -->"
+      ]
+    }
   }
 }

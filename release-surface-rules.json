@@ -124,14 +124,14 @@
     {
       "file": "workspace/docs/package-notes.json",
       "rule": "phantom-repository",
-      "why": "the `watch-workspace` profile row that mounts @deepwatch/dsh-workspace is an identifier in somebody’s YAML, not a repository anybody could clone. Scoped to lines holding that row: any other stale reference in this file still fires.",
-      "contains": "id: watch-workspace"
+      "why": "the `watch-workspace` profile row that mounts @deepwatch/dsh-workspace is an identifier in somebody’s YAML, not a repository anybody could clone. Scoped to the occurrence that follows the row key, so another reference on the same line still fires.",
+      "precededBy": "(?:^|[\\s-])id:[\\t ]*$"
     },
     {
       "file": "workspace/packages/watch/workspace/README.md",
       "rule": "phantom-repository",
-      "why": "the `watch-workspace` profile row that mounts @deepwatch/dsh-workspace is an identifier in somebody’s YAML, not a repository anybody could clone. Scoped to lines holding that row: any other stale reference in this file still fires.",
-      "contains": "id: watch-workspace"
+      "why": "the `watch-workspace` profile row that mounts @deepwatch/dsh-workspace is an identifier in somebody’s YAML, not a repository anybody could clone. Scoped to the occurrence that follows the row key, so another reference on the same line still fires.",
+      "precededBy": "(?:^|[\\s-])id:[\\t ]*$"
     }
   ]
 }

@@ -297,39 +297,65 @@ ERR<${result.stderr.slice(0, 300)}>
     }
   })
 
-  // Setup, refused for want of an artifact directory. Nothing under
-  // `@deepwatch` is published, so there is no registry answer to fall back to
-  // and the product says so rather than asking for a scope that does not exist.
-  expect('setup with no artifacts', run(process.execPath, [cli, 'setup', '--yes'], withHome),
-    result => {
-      if (result.code === 0) return 'reported success with nowhere to get the packages from'
-      const said = result.stdout + result.stderr
-      if (!said.includes('--artifacts')) return 'did not say what was missing'
-      if (existsSync(join(home, 'harness'))) return 'wrote where the runtime goes'
-      return null
-    })
+  // Each setup case gets a home of its own.
+  //
+  // They shared one until the scope was published. `setup --yes` with no
+  // artifacts used to refuse, so nothing was ever built and the later cases
+  // ran against an empty home by luck. It installs from the registry now, and
+  // a shared home meant every case after the first was judging a machine that
+  // already had a runtime on it -- consent and offline both behave differently
+  // once one exists.
+  const setupHome = label => {
+    const dir = join(room('deepwatch-setup-'), label)
+    mkdirSync(dir, { recursive: true })
+    return { cwd: project, env: { ...process.env, DEEPWATCH_HOME: dir } }
+  }
 
-  // Setup, refused. Non-interactive and without `--yes`, so the plan is shown
-  // and nothing is fetched — the case that would otherwise install five
-  // hundred packages inside somebody's CI.
-  expect('setup without consent',
-    run(process.execPath, [cli, 'setup', '--artifacts', ARTIFACTS], withHome), result => {
+  // No artifacts, no consent: the registry plan is printed and nothing is
+  // fetched. This is the path a new user takes, and the one that would
+  // otherwise install five hundred packages inside somebody's CI.
+  const registryPlan = setupHome('registry-plan')
+  expect('setup with no artifacts, no consent',
+    run(process.execPath, [cli, 'setup'], registryPlan), result => {
       if (result.code === 0) return 'reported success without installing anything'
       const said = result.stdout + result.stderr
       if (!said.includes('registry.npmjs.org')) return 'did not name the registry first'
-      if (!said.includes('@deepseek-ai/dsh')) return 'did not name the package first'
-      if (!said.includes(ARTIFACTS)) return 'did not name where the local packages come from'
-      if (existsSync(join(home, 'harness', 'node_modules'))) return 'downloaded something anyway'
+      if (!said.includes('@deepseek-ai/dsh')) return 'did not name the Harness first'
+      if (!/from the registry/.test(said)) return 'did not say where the DeepWatch packages come from'
+      if (!said.includes('--yes')) return 'did not say how to agree'
+      if (existsSync(join(registryPlan.env.DEEPWATCH_HOME, 'harness', 'node_modules'))) {
+        return 'downloaded something nobody agreed to'
+      }
       return null
     })
 
-  // Setup, refused for a different reason: offline wins over consent.
+  // The sealed-artifact path is a different mode, and it names the directory
+  // it would install from. Still no consent, so still nothing fetched.
+  const artifactPlan = setupHome('artifact-plan')
+  expect('setup --artifacts without consent',
+    run(process.execPath, [cli, 'setup', '--artifacts', ARTIFACTS], artifactPlan), result => {
+      if (result.code === 0) return 'reported success without installing anything'
+      const said = result.stdout + result.stderr
+      if (!said.includes('registry.npmjs.org')) return 'did not name the registry first'
+      if (!said.includes(ARTIFACTS)) return 'did not name where the local packages come from'
+      if (!/verified local artifacts/.test(said)) return 'did not distinguish the artifact mode'
+      if (existsSync(join(artifactPlan.env.DEEPWATCH_HOME, 'harness', 'node_modules'))) {
+        return 'downloaded something anyway'
+      }
+      return null
+    })
+
+  // Offline wins over consent, in a home of its own so the refusal is about
+  // the policy rather than about a runtime that happens to be there already.
+  const offline = setupHome('offline')
   expect('setup --offline --yes',
-    run(process.execPath, [cli, 'setup', '--offline', '--yes'], withHome),
+    run(process.execPath, [cli, 'setup', '--offline', '--yes'], offline),
     result => {
       if (result.code === 0) return 'reported success while offline'
       if (!/offline/i.test(result.stdout + result.stderr)) return 'did not say why it refused'
-      if (existsSync(join(home, 'harness', 'node_modules'))) return 'downloaded something anyway'
+      if (existsSync(join(offline.env.DEEPWATCH_HOME, 'harness', 'node_modules'))) {
+        return 'downloaded something anyway'
+      }
       return null
     })
 

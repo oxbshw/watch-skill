@@ -63,19 +63,21 @@ const EXCLUDE = CONFIG.surfaces.exclude.map(globToRegExp)
 /**
  * Exemptions, keyed by file and rule.
  *
- * An entry without `contains` excuses the whole file, which is the blunt form
- * and is what most of these need. An entry *with* `contains` excuses only the
- * lines holding that text — so a file may carry one legitimate phrase a rule
- * would otherwise flag without going blind to every other occurrence of it.
- * `watch-workspace` is exactly that: a real profile row id, and also the name
- * of a repository that does not exist.
+ * An entry without `precededBy` excuses the whole file, which is the blunt form
+ * and what most of these need. An entry *with* it excuses only the occurrences
+ * whose preceding text matches — one match at a time, not a whole line. That
+ * distinction matters where the flagged name is also a legitimate identifier:
+ * `watch-workspace` is a real profile row id *and* the name of a repository
+ * that does not exist, and both can appear on one line.
  */
 const EXEMPT = new Map()
 for (const entry of CONFIG.exemptions) {
   const key = `${entry.file}\u0000${entry.rule}`
   const scoped = EXEMPT.get(key)
-  if (entry.contains === undefined) EXEMPT.set(key, null)
-  else if (scoped !== null) EXEMPT.set(key, [...(scoped ?? []), entry.contains])
+  if (entry.precededBy === undefined) EXEMPT.set(key, null)
+  else if (scoped !== null) {
+    EXEMPT.set(key, [...(scoped ?? []), new RegExp(entry.precededBy)])
+  }
 }
 
 const findings = []
@@ -88,10 +90,19 @@ function scan(label, text, exemptKey = label) {
     if (EXEMPT.has(key) && EXEMPT.get(key) === null) continue
     const allowed = EXEMPT.get(key) ?? []
     for (let i = 0; i < lines.length; i += 1) {
-      rule.re.lastIndex = 0
-      const found = rule.re.exec(lines[i])
+      // Every occurrence on the line, so an exempt one does not hide the rest.
+      const all = new RegExp(rule.re.source, `${rule.re.flags.replace('g', '')}g`)
+      let found = null
+      let hit = null
+      while ((hit = all.exec(lines[i])) !== null) {
+        if (hit[0].length === 0) { all.lastIndex += 1; continue }
+        const before = lines[i].slice(0, hit.index + hit[0].indexOf('watch') + 0)
+        const prefix = lines[i].slice(0, hit.index)
+        if (allowed.some(re => re.test(prefix) || re.test(before))) continue
+        found = hit
+        break
+      }
       if (found === null) continue
-      if (allowed.some(text_ => lines[i].includes(text_))) continue
       findings.push({
         file: label,
         line: i + 1,

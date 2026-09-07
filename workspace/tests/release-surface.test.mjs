@@ -144,53 +144,50 @@ describe('the gate fails on a file that breaks a rule', () => {
   })
 })
 
-describe('a scoped exemption excuses a line, never a file', () => {
-  // The exemption exists because `watch-workspace` is both a real profile row
-  // id and the name of a repository that does not exist. Excusing the whole
-  // file would switch the rule off exactly where the confusing name lives --
-  // so the excuse is scoped to the row, and this proves the rest of that same
-  // file is still scanned.
+describe('a scoped exemption excuses one occurrence, never a line or a file', () => {
+  // `watch-workspace` is a real profile row id *and* the name of a repository
+  // that does not exist. A whole-file exemption would switch the rule off
+  // exactly where the confusing name lives; a whole-line one would hide a
+  // stale reference sitting beside the row. The cases are shared with
+  // tests/test_release_surface.py so both scanners are held to them.
   const EXEMPTED = join(REPO, 'workspace', 'packages', 'watch', 'workspace', 'README.md')
+  const CASES = JSON.parse(
+    readFileSync(join(REPO, 'release-surface-fixtures.json'), 'utf8'),
+  )['$exemptions']['phantom-repository']
 
-  test('a genuine stale reference in the exempted file is still reported', () => {
+  /** Append one line to the exempted file and return its phantom findings. */
+  function findingsFor(line) {
     const original = readFileSync(EXEMPTED, 'utf8')
-    // The row this file is allowed to contain, unchanged, plus a real one.
-    assert.ok(original.includes('id: watch-workspace'),
-      'the fixture assumes this file carries the allowed profile row')
-    let output
-    let status = 0
     try {
-      writeFileSync(EXEMPTED,
-        `${original}\n\nClone watch-workspace and run pnpm install.\n`, 'utf8')
+      writeFileSync(EXEMPTED, `${original}\n${line}\n`, 'utf8')
       try {
-        output = execFileSync(
+        execFileSync(
           process.execPath, [join(ROOT, 'scripts', 'verify-release-surface.mjs'), '--json'],
           { cwd: ROOT, encoding: 'utf8' })
+        return []
       } catch (error) {
-        status = error.status
-        output = error.stdout
+        return JSON.parse(error.stdout).findings
+          .filter(finding => finding.rule === 'phantom-repository')
       }
     } finally {
       writeFileSync(EXEMPTED, original, 'utf8')
     }
+  }
 
-    assert.equal(status, 1, 'a stale repository reference passed inside an exempted file')
-    const result = JSON.parse(output)
-    const hits = result.findings.filter(finding =>
-      finding.rule === 'phantom-repository'
-      && finding.file.endsWith('packages/watch/workspace/README.md'))
-    assert.equal(hits.length, 1,
-      `the planted reference was not reported: ${JSON.stringify(result.findings)}`)
+  test('the allowed row is not reported, however it is spaced', () => {
+    // Two spaces and a tab both used to be rejected, because the exemption
+    // matched one exact string.
+    for (const line of CASES.clean) {
+      assert.deepEqual(findingsFor(line), [],
+        `the scanner reported a legitimate profile row: ${JSON.stringify(line)}`)
+    }
   })
 
-  test('and the allowed row in that same file is still not reported', () => {
-    // The other half: with nothing planted, the file is clean even though it
-    // contains the string the rule matches.
-    const output = execFileSync(
-      process.execPath, [join(ROOT, 'scripts', 'verify-release-surface.mjs'), '--json'],
-      { cwd: ROOT, encoding: 'utf8' })
-    const result = JSON.parse(output)
-    assert.equal(result.ok, true, JSON.stringify(result.findings, null, 2))
+  test('a genuine stale reference is reported, including beside the row', () => {
+    for (const line of CASES.reported) {
+      assert.equal(findingsFor(line).length, 1,
+        `the scanner missed a stale repository reference: ${JSON.stringify(line)}`)
+    }
   })
 })
 
