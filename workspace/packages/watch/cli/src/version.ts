@@ -12,7 +12,7 @@
  */
 
 /** Kept in step with this package's `version` by the test named above. */
-export const VERSION = '0.1.0'
+export const VERSION = '0.1.1'
 
 /** The Harness package DeepWatch composes. Official, unforked, unpatched. */
 export const HARNESS_PACKAGE = '@deepseek-ai/dsh'
@@ -39,7 +39,7 @@ export const HARNESS_VERSION = '0.1.1-rc.2'
  * against it, so a release that bumps a package version without regenerating
  * both fails a gate instead of shipping a CLI that vouches for the wrong build.
  */
-export const RELEASE_RUNTIME_DIGEST = 'sha256:75d652f82e8636d3ff60ba77e938e04091b2075ac36549f58600191353993ccd'
+export const RELEASE_RUNTIME_DIGEST = 'sha256:78f518f936eb118f0a8ecbd453af42be7eb2d8f9c5bca750ddd4fe56489bb5d2'
 
 /**
  * Whether the `@deepwatch` scope exists on a public registry yet.
@@ -55,7 +55,7 @@ export const RELEASE_RUNTIME_DIGEST = 'sha256:75d652f82e8636d3ff60ba77e938e04091
  * packages this CLI was built to compose, and the digest agrees with the
  * release manifest. That is a *recorded* composition, not a published one.
  */
-export const SCOPE_PUBLISHED = false
+export const SCOPE_PUBLISHED = true
 
 /** Where it is fetched from, named in the plan before anything is fetched. */
 export const HARNESS_REGISTRY = 'https://registry.npmjs.org'

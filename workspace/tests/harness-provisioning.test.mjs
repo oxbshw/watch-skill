@@ -178,20 +178,27 @@ describe('nothing reaches the network unless setup was told to', () => {
     }
   })
 
-  test('setup with no artifact directory refuses, and never asks a registry', () => {
+  test('setup with no artifact directory plans a registry install, and fetches nothing unasked', () => {
     const room = cleanRoom()
-    // Nothing under `@deepwatch` is published, so there is no registry answer
-    // to fall back to. A product that tried anyway would get a 404 for a scope
-    // that does not exist and report it as a network problem.
-    const ran = underSentinel(room, ['setup', '--yes'])
+    // This asserted a refusal until 0.1.1, and the refusal was the defect: the
+    // scope had been published for a day and `setup` still exited 2 saying the
+    // packages were not. Naming no `--artifacts` is now the ordinary path, so
+    // what has to hold is the property the old test was really protecting --
+    // that nothing reaches the network before somebody agrees to it. That
+    // matters more here than it did under the refusal, because this is the
+    // path a new user takes.
+    const ran = underSentinel(room, ['setup'])
 
-    assert.notEqual(ran.code, 0)
-    assert.deepEqual(ran.violations, [], 'a refusal reached the network')
+    assert.notEqual(ran.code, 0, 'setup that installed nothing must not report success')
+    assert.deepEqual(ran.violations, [], 'a run nobody consented to reached the network')
     const said = ran.stdout + ran.stderr
-    assert.match(said, /--artifacts/, 'the refusal did not say what is missing')
-    assert.match(said, /not published/, 'the refusal did not say why')
+    assert.match(said, /registry\.npmjs\.org/, 'the registry was not named before asking')
+    assert.match(said, /from the registry/, 'the plan did not say where the packages come from')
+    assert.match(said, /--yes/, 'the plan did not say how to agree')
+    assert.doesNotMatch(said, /nowhere to get them/,
+      'the refusal that could not install a published product is back')
     assert.ok(!existsSync(join(room.home, 'harness')),
-      'a refusal wrote where the runtime goes')
+      'a run nobody agreed to wrote where the runtime goes')
   })
 
   test('setup without consent prints the plan and downloads nothing', () => {
@@ -349,7 +356,10 @@ describe('an existing installation is inspected, never overwritten', () => {
       assert.ok(rendered.includes(part), `the plan did not show ${part}`)
     }
     assert.match(rendered, /LGPL/, 'the plan did not mention the licence it should')
-    assert.match(rendered, /never requested from a registry/,
+    // Whitespace-tolerant: this is a claim the plan has to make, not a
+    // line the plan has to wrap in one particular place. It failed once
+    // for the wrapping alone, which tells you nothing about the product.
+    assert.match(rendered, /never requested\s+from a registry/,
       'the plan did not say the DeepWatch packages are not fetched')
   })
 

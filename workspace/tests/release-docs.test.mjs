@@ -10,12 +10,16 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const DOCS = join(ROOT, 'docs')
 const read = name => readFileSync(join(DOCS, name), 'utf8')
 
-test('unpublished packages are installed only from verified artifacts', () => {
+test('the checkout path is documented, and the published one is not forbidden', () => {
+  // This forbade `npx @deepwatch/cli` and `dsh plugin add @deepwatch/...` in
+  // the guides, correctly, while the scope was empty -- a documented command
+  // that resolves nothing is worse than no command. The scope is published, so
+  // the prohibition is gone and what remains is that these guides still
+  // describe the candidate path, which is the one somebody working on Watch
+  // itself needs.
   const docs = [read('getting-started.md'), read('setup.md'), read('releasing.md')].join('\n')
   assert.match(docs, /npm run release:artifacts/)
   assert.match(docs, /manual-profile\.mjs --from-artifacts/)
-  assert.ok(!/dsh plugin[^\n]*add @deepwatch\//.test(docs))
-  assert.ok(!/^\s*npx @deepwatch\//m.test(docs))
 })
 
 test('auto transport and provider testing are described as real operations', () => {

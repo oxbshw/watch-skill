@@ -62,8 +62,8 @@ function runtime(packages, { harness = null } = {}) {
 describe('the digest is a function of the composition and nothing else', () => {
   test('the same packages give the same digest', () => {
     const packages = [
-      { name: `${SCOPE}/dsh-tools`, version: '0.1.0' },
-      { name: `${SCOPE}/dsh-contracts`, version: '0.1.0' },
+      { name: `${SCOPE}/dsh-tools`, version: '0.1.1' },
+      { name: `${SCOPE}/dsh-contracts`, version: '0.1.1' },
     ]
     assert.equal(compositionDigest(packages), compositionDigest(packages))
   })
@@ -102,8 +102,8 @@ describe('the digest is a function of the composition and nothing else', () => {
 describe('reading an installation', () => {
   test('every first-party package is found, sorted', () => {
     const nodeModules = runtime({
-      [`${SCOPE}/dsh-tools`]: '0.1.0',
-      [`${SCOPE}/dsh-contracts`]: '0.1.0',
+      [`${SCOPE}/dsh-tools`]: '0.1.1',
+      [`${SCOPE}/dsh-contracts`]: '0.1.1',
       '@other/thing': '9.9.9',
     })
     const found = readComposition(nodeModules)
@@ -123,7 +123,7 @@ describe('reading an installation', () => {
   })
 
   test('a package whose manifest will not parse is left out rather than guessed', () => {
-    const nodeModules = runtime({ [`${SCOPE}/dsh-tools`]: '0.1.0' })
+    const nodeModules = runtime({ [`${SCOPE}/dsh-tools`]: '0.1.1' })
     const broken = join(nodeModules, SCOPE, 'dsh-broken')
     mkdirSync(broken, { recursive: true })
     writeFileSync(join(broken, 'package.json'), '{ not json', 'utf8')
@@ -149,7 +149,7 @@ describe('reading an installation', () => {
 describe('nothing about this machine gets into the report', () => {
   test('no absolute path, user name or clock reading is rendered', () => {
     const nodeModules = runtime({
-      [`${SCOPE}/dsh-tools`]: '0.1.0',
+      [`${SCOPE}/dsh-tools`]: '0.1.1',
     }, { harness: HARNESS_VERSION })
     const rendered = renderProvenance(describeProvenance(nodeModules)).join('\n')
 
@@ -160,14 +160,14 @@ describe('nothing about this machine gets into the report', () => {
   })
 
   test('the serialised provenance carries no path either', () => {
-    const nodeModules = runtime({ [`${SCOPE}/dsh-tools`]: '0.1.0' })
+    const nodeModules = runtime({ [`${SCOPE}/dsh-tools`]: '0.1.1' })
     const serialised = JSON.stringify(describeProvenance(nodeModules))
     assert.equal(serialised.includes(BASE), false)
     assert.equal(serialised.includes(nodeModules.replace(/\\/g, '\\\\')), false)
   })
 
   test('two machines with the same install agree', () => {
-    const packages = { [`${SCOPE}/dsh-tools`]: '0.1.0' }
+    const packages = { [`${SCOPE}/dsh-tools`]: '0.1.1' }
     assert.equal(
       describeProvenance(runtime(packages)).compositionDigest,
       describeProvenance(runtime(packages)).compositionDigest)
@@ -215,13 +215,16 @@ describe('the released manifest and an installation speak the same language', ()
     const provenance = describeProvenance(runtime(packages))
     assert.equal(provenance.compositionDigest, MANIFEST.integrity.composition.runtime)
     assert.equal(provenance.matchesRelease, true)
-    // "Recorded", not "published". Nothing has been published, so no
-    // installation can match a published composition — and a report claiming
-    // otherwise tells a person a registry could confirm their build.
+    // "Recorded", not "published" -- and this distinction outlived the empty
+    // scope that first motivated it. The packages are on npm now, so the
+    // registry line says so; but matching a *recorded* composition still is
+    // not a registry confirming the build, because a version digest cannot see
+    // bytes. A report that blurred the two would tell a person they had
+    // checked something they had not.
     const rendered = renderProvenance(provenance).join(String.fromCharCode(10))
     assert.match(rendered, /versions\s+match the composition this release recorded/)
     assert.doesNotMatch(rendered, /published composition/)
-    assert.match(rendered, /registry\s+not published/)
+    assert.match(rendered, /registry\s+published/)
   })
 
   test('an installation that is not the release says so, loudly', () => {

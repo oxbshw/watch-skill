@@ -5,7 +5,7 @@
  * The README's first instruction was `npm install -g @deepwatch/cli`, written
  * plainly, with an npm version badge above it. Nothing existed under the
  * `@deepwatch` scope — the twenty packages are published for the first time by
- * the `deepwatch-v0.1.0` tag — so the first thing a visitor did was run a
+ * the `deepwatch-v0.1.1` tag — so the first thing a visitor did was run a
  * command that resolves nothing, on the page that was supposed to introduce
  * the product.
  *
@@ -82,7 +82,7 @@ const INSTALL = /(?:npm\s+(?:install|i|exec)|npx|pnpm\s+(?:add|dlx)|yarn\s+(?:ad
  * had not been told about. A guard against dishonest documentation should not
  * also be a style guide for how to be honest.
  */
-const PENDING = /not on npm yet|not published yet|are not published|pending[^\n]{0,40}release|first publication|has never published|never published|does not exist yet|nothing exists under/i
+const PENDING = /not on npm yet|not published yet|are not published|pending[^\n]{0,40}release|first publication|has never published|never published|does not exist yet|nothing exists under|not on any registry/i
 
 /** Documentation, as the release-surface gate defines it, minus its history. */
 function documents() {

@@ -5,11 +5,9 @@ and is honest about which parts have been exercised and which have not.
 
 > **Registry status.** `watch-skill` is on PyPI and the newest published
 > version is 1.4.0 — `pip install 'watch-skill[standard]'` gives you the
-> release this page describes. Nothing exists under the `@deepwatch` scope
-> yet: the twenty packages are published for the first time by
-> `deepwatch-v0.1.0`, so until that tag runs the npm commands below are the
-> commands you *will* run, and the from-a-checkout path is the one that works
-> today.
+> release this page describes. The twenty `@deepwatch` packages are on npm;
+> `deepwatch-v0.1.1` was the first publication and every command below has
+> been run against the registry.
 
 ---
 
@@ -92,7 +90,7 @@ matters. It is a directory of SQLite files and frames; copying it is enough.
 ### Install
 
 ```bash
-npm install -g @deepwatch/cli        # pending the deepwatch-v0.1.0 release
+npm install -g @deepwatch/cli
 deepwatch setup
 deepwatch web --workspace ./my-project
 ```
@@ -119,7 +117,7 @@ Every tarball's digest is checked before the profile is served. See
 ### Upgrade
 
 ```bash
-npm install -g @deepwatch/cli@latest      # pending the first release
+npm install -g @deepwatch/cli@latest
 deepwatch setup                            # recompose the profile
 ```
 
@@ -148,10 +146,10 @@ directory.
 
 ### Compatibility policy
 
-The `@deepwatch/*` packages are `0.1.0`. **Stable means tested, documented and
+The `@deepwatch/*` packages are `0.1.1`. **Stable means tested, documented and
 supported — not 1.0.** Semantic versioning gives `0.x` no compatibility
 guarantee across minor versions: a `0.MINOR` bump may change or remove surface,
-and a patch will not. Pin with a tilde range (`~0.1.0`) if you want that
+and a patch will not. Pin with a tilde range (`~0.1.1`) if you want that
 enforced by your lockfile rather than by a changelog. The usual major-version
 promise starts at 1.0.
 

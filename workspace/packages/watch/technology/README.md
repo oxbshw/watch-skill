@@ -32,12 +32,6 @@ Provided by the host rather than installed here:
 
 ## Install
 
-> **Not on npm yet.** Nothing exists under the `@deepwatch` scope. This
-> package is published for the first time by the `deepwatch-v0.1.0`
-> release; until then the command below resolves nothing, and
-> [the workspace README](https://github.com/oxbshw/watch-skill/tree/main/workspace#readme) has the path
-> that works from a checkout.
-
 ```sh
 npm install @deepwatch/dsh-technology
 ```
@@ -46,6 +40,23 @@ Rarely on its own. [`@deepwatch/dsh-bundle`](https://github.com/oxbshw/watch-ski
 composes this package with the rest of DeepWatch and is what a profile
 normally depends on; installing this one directly is for embedding a
 single piece in a composition you control.
+
+## Example
+
+Five host plugins behind one package, each mounted by its own subpath:
+
+```yaml
+- id: watch-routing
+  name: '@deepwatch/dsh-technology/routing'
+  config:
+    enforce: true
+
+- id: watch-provenance
+  name: '@deepwatch/dsh-technology/provenance'
+
+- id: watch-observation
+  name: '@deepwatch/dsh-technology/observation'
+```
 
 ## Requirements
 
@@ -56,13 +67,13 @@ DSH Models and Providers configured in the host profile.
 
 ## Stability
 
-`0.1.0` — a stable release.
+`0.1.1` — a stable release.
 
 Stable means tested, documented and supported — not 1.0. This is a
 pre-1.0 line, and semantic versioning gives `0.x` no compatibility
 guarantee across minor versions: **a `0.MINOR` bump may change or remove
 surface, and a patch will not.** Depend on it with a tilde range
-(`~0.1.0`) if you want that difference enforced by your lockfile
+(`~0.1.1`) if you want that difference enforced by your lockfile
 rather than by a changelog. The usual major-version promise starts at 1.0.
 
 ## Side effects

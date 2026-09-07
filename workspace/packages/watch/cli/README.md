@@ -22,12 +22,6 @@ Provided by the host rather than installed here:
 
 ## Install
 
-> **Not on npm yet.** Nothing exists under the `@deepwatch` scope. This
-> package is published for the first time by the `deepwatch-v0.1.0`
-> release; until then the command below resolves nothing, and
-> [the workspace README](https://github.com/oxbshw/watch-skill/tree/main/workspace#readme) has the path
-> that works from a checkout.
-
 ```sh
 npm install @deepwatch/cli
 ```
@@ -35,8 +29,6 @@ npm install @deepwatch/cli
 ## Example
 
 Set up once, then serve a workspace:
-
-> Pending the `deepwatch-v0.1.0` release — see Install above.
 
 ```sh
 npm install -g @deepwatch/cli
@@ -54,13 +46,13 @@ Node ≥ 22.19. Python 3.11–3.13 with `watch-skill` installed for the percepti
 
 ## Stability
 
-`0.1.0` — a stable release.
+`0.1.1` — a stable release.
 
 Stable means tested, documented and supported — not 1.0. This is a
 pre-1.0 line, and semantic versioning gives `0.x` no compatibility
 guarantee across minor versions: **a `0.MINOR` bump may change or remove
 surface, and a patch will not.** Depend on it with a tilde range
-(`~0.1.0`) if you want that difference enforced by your lockfile
+(`~0.1.1`) if you want that difference enforced by your lockfile
 rather than by a changelog. The usual major-version promise starts at 1.0.
 
 ## Side effects

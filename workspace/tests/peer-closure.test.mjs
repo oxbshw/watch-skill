@@ -101,7 +101,7 @@ describe('deciding whether a version satisfies a range', () => {
     const cases = [
       ['0.1.1-rc.2', '^0.1.1-rc.2', true],
       ['0.1.1-rc.2', '0.1.1-rc.2', true],
-      ['0.1.1-rc.2', '^0.1.0', false],
+      ['0.1.1-rc.2', '^0.1.1', false],
       ['4.0.2', '^4.0.1', true],
       ['4.0.1', '4.0.1', true],
       ['4.0.1', '^4.0.2', false],

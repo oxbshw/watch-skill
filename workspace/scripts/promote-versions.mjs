@@ -41,7 +41,7 @@ const REPO = join(ROOT, '..')
  */
 export const VERSIONS = {
   core: { name: 'Watch Skill', to: '1.4.0', from: ['1.4.0rc1'] },
-  deepwatch: { name: 'DeepWatch', to: '0.1.0', from: ['0.1.0-preview.0'] },
+  deepwatch: { name: 'DeepWatch', to: '0.1.1', from: ['0.1.0-preview.0', '0.1.0'] },
 }
 
 /**
@@ -62,6 +62,37 @@ export const VERSIONS = {
  */
 export const HISTORICAL = [
   'CHANGELOG.md',
+  // Two records of somebody else's dependency graph. Nothing in either is a
+  // claim about this project's version, and the promotion cannot tell
+  // `powershell-utils@0.1.0` -- a real third party that happens to share our
+  // number -- from one of ours.
+  //
+  // Promoting DeepWatch 0.1.0 to 0.1.1 rewrote exactly those lines. In the
+  // closure it invented a dependency range upstream never published and broke
+  // the capture's self-digest, so `managed:check` failed with "edited by
+  // hand". In the lockfile it rewrote `powershell-utils` and `yocto-queue` to
+  // versions that do not exist, and every CI job died at install with
+  //
+  //     ERR_PNPM_FETCH_404  GET .../yocto-queue-0.1.1.tgz: Not Found
+  //
+  // The lockfile is here and `uv.lock` deliberately is not, and the difference
+  // is what each records about *us*. `uv.lock` carries the Python project's
+  // own version, which is a live claim that must move. A pnpm lockfile records
+  // this workspace's own packages as `link:packages/...` with
+  // `specifier: workspace:*` and no version string at all -- so every version
+  // in it belongs to somebody else, and the promotion has no legitimate work
+  // to do here.
+  'workspace/inventory/dsh-closure.json',
+  'workspace/pnpm-lock.yaml',
+  // Generated from the lockfile, and it carries both halves: `firstParty`
+  // holds this project's packages and moves with a release, `thirdParty` holds
+  // everybody else's and must not. A search-and-replace cannot see the
+  // difference -- it rewrote the same two third-party entries here that it
+  // rewrote in the lockfile -- and it does not need to, because
+  // `gen-sbom.mjs` derives the whole file and `sbom-determinism.test.mjs`
+  // fails when it disagrees with what the lockfile resolves. Regenerate it;
+  // never rewrite it.
+  'workspace/docs/sbom.json',
   'docs/release-proof.md',
   'docs/history/',
   'workspace/docs/history/',
@@ -82,6 +113,11 @@ export const HISTORICAL = [
  * script exists to catch, and blanket-exempting the suite would hide it.
  */
 export const FIXTURES = [
+  // Quotes the command that failed, at the version that shipped it:
+  //   npx --yes @deepwatch/cli@<that version> setup --yes
+  // Promoting it would make the test claim a later version failed, and
+  // the whole point of the file is which one did.
+  'workspace/tests/registry-install.test.mjs',
   'workspace/tests/first-publish.test.mjs',
   'workspace/tests/stable-versions.test.mjs',
   // This file. It has to name the versions it promotes *from*, in VERSIONS

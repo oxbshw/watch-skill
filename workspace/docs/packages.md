@@ -73,7 +73,7 @@ and is loaded through the DSH client loader contract.
 | | |
 | --- | --- |
 | `@deepwatch/desktop` | The Electron shell around the same workspace packages. Marked `private`, and this release does not distribute a desktop application. `npm run smoke:desktop` proves the shell starts and its context isolation holds; that is a build check, not a download. Run the web workspace. |
-| `@deepwatch/monorepo` | The workspace root. Never published. |
+| `@deepwatch/monorepo` | The workspace root. Private; not distributed. |
 
 ---
 
@@ -101,11 +101,11 @@ every version resolves the moment it is public —
 
 ## Versioning
 
-All twenty move together and share the workspace version. `0.1.0` is a stable
+All twenty move together and share the workspace version. `0.1.1` is a stable
 release: tested, documented and supported — **not 1.0**. Semantic versioning
 gives `0.x` no compatibility guarantee across minor versions, so a `0.MINOR`
 bump may change or remove surface and a patch will not. Depend on a tilde range
-(`~0.1.0`) if you want that enforced by your lockfile rather than by a
+(`~0.1.1`) if you want that enforced by your lockfile rather than by a
 changelog.
 
 Watch Core versions independently, on PyPI, and the Bridge negotiates a protocol

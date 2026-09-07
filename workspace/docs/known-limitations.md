@@ -157,23 +157,25 @@ Memory is not enabled by default. The store is plaintext and says so; it is
 created owner-only where the operating system enforces file modes. There is no
 encryption in this release, and nothing here should be read as providing it.
 
-## DeepWatch is not published; Watch Skill is
+## The first twenty packages carry no provenance attestation
 
 Watch Skill 1.4.0 is on PyPI, in the MCP registry, and on
-`ghcr.io/oxbshw/watch-skill`. The twenty `@deepwatch/*` packages are not on any
-registry: they are prepared as verified tarballs, `npx @deepwatch/cli` does not
-work, and there are no npm download figures to quote.
+`ghcr.io/oxbshw/watch-skill`. The twenty `@deepwatch/*` packages have been on
+npm since 2026-09-07, and `npx @deepwatch/cli` works.
 
-The reason is specific rather than a delay. `release-deepwatch.yml` publishes
-over OIDC with no token path at all, and npm requires a package to exist before
-a Trusted Publisher can be configured for it — so the *first* publication of
-each of the twenty has to be made by the release owner with a short-lived
-credential, through `scripts/first-publish.mjs`. Every publication after that
-one goes through the workflow.
+What is missing is narrower, and it is permanent for one version. npm requires a
+package to exist before a Trusted Publisher can be configured for it, so the
+first publication of each of the twenty was made by the release owner from a
+machine rather than by `release-deepwatch.yml` over OIDC. Provenance
+attestation is generated from a CI workload identity, and a laptop does not
+have one — so **the first release has none**, and its packuments carry a
+registry signature without an attestation. Trusted Publishers were configured
+immediately afterwards, so every release from the second onward is published by
+the workflow and attested.
 
-Until then `deepwatch setup --artifacts <dir>` is the supported path and it is
-the one both acceptance passes use. `doctor` reports the composition it was
-built to compose and says outright that no registry can confirm it.
+`doctor` reports the composition the installed CLI was built to compose and says
+outright that a version digest cannot confirm bytes; that is a statement about
+what a digest can prove, not about the registry.
 
 ## There is no desktop application to download
 

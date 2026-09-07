@@ -14,12 +14,16 @@ happened to contain at that moment.
 **The two trains are not in the same position, and saying they were was
 wrong.**
 
-*DeepWatch has never published.* Nothing exists under the `@deepwatch` scope,
-so `npx @deepwatch/cli` does not work and no document in this repository may
-say it does. That train's first run really is a first publication. What has
-been exercised is the packed artifact a publish would upload: `npm run
-release:artifacts` packs all twenty, installs them into a clean project, and
-runs the CLI through `npm exec`, `npx`, `pnpm` and a global install.
+*DeepWatch published on 2026-09-07.* The first `deepwatch-v*` tag put twenty
+packages under the `@deepwatch` scope, so `npx @deepwatch/cli` now resolves and
+every page that says so is correct. Before that tag the scope held nothing, and
+a `deepwatch-v*` run had failure modes a later one does not: no project page to
+attach a Trusted Publisher to, and no earlier version to compare bytes against.
+A release after this one is an **update**, planned the same way the Core train
+is. What is still exercised before every upload is the packed artifact itself:
+`npm run release:artifacts` packs all twenty, installs them into a clean
+project, and runs the CLI through `npm exec`, `npx`, `pnpm` and a global
+install.
 
 *Watch Skill has published before.* `watch-skill` is on PyPI and this
 repository's own changelog records 1.0.0, 1.1.0, 1.2.0 and 1.3.0rc2 before the
@@ -272,11 +276,11 @@ rather than a consequence of pushing.
 
 | Version shape | Dist-tag | Why |
 | --- | --- | --- |
-| `0.1.0-preview.N` | `preview` | early, and not what `npm i` should give anyone |
-| `0.1.0-rc.N` | `next` | a candidate, opted into deliberately |
-| `0.1.0` | `latest` | the version this project stands behind |
+| `0.1.1-preview.N` | `preview` | early, and not what `npm i` should give anyone |
+| `0.1.1-rc.N` | `next` | a candidate, opted into deliberately |
+| `0.1.1` | `latest` | the version this project stands behind |
 
-The first stable release is `0.1.0`, so it takes `latest`.
+The first stable release took `latest`, and so does every stable release after it.
 
 A prerelease never takes `latest`. The workflow derives the tag from the
 version and refuses a prerelease shape it has no dist-tag for, so this cannot
@@ -365,7 +369,7 @@ Then, and only then, the recovery is a new version.
    guessing:
 
    ```bash
-   npm deprecate @deepwatch/dsh-library@0.1.0 "incomplete release; use 0.1.1"
+   npm deprecate @deepwatch/dsh-library@0.1.1 "incomplete release; use 0.1.1"
    ```
 
 3. **Tag again**, with the new version, and approve the environment.

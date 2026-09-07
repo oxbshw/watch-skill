@@ -47,6 +47,7 @@ import { fileURLToPath } from 'node:url'
 import { byCodeUnit } from './lib/order.mjs'
 import { catalog, resolveRange } from './lib/catalog.mjs'
 import { satisfies, UnsupportedRange } from './lib/semver-lite.mjs'
+import { publishOrder } from './publish-order.mjs'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const EVIDENCE = join(ROOT, 'inventory', 'dsh-closure.json')
@@ -211,6 +212,18 @@ function moduleSource(document) {
     '',
     '/** How many of the entries below are required peers rather than the Harness. */',
     `export const REQUIRED_PEER_COUNT = ${String(document.counts['required-peer'] ?? 0)}`,
+    '',
+    '/**',
+    ' * The publishable DeepWatch packages, in the order they must be installed.',
+    ' *',
+    ' * Derived from the workspace manifests by the same walk `publish-order.mjs`',
+    ' * uses, so this list and the release order cannot disagree. `setup` needs it',
+    ' * in registry mode: a published CLI has no packed inventory beside it, and',
+    ' * the managed runtime still has to contain every one of these.',
+    ' */',
+    'export const DEEPWATCH_PACKAGES: readonly string[] = [',
+    publishOrder().map(entry => `  '${entry.name}',`).join('\n'),
+    ']',
     '',
     '/** Exact package versions the managed runtime is installed from. */',
     'export const MANAGED_DEPENDENCIES: Readonly<Record<string, string>> = {',

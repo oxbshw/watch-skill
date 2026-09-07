@@ -21,12 +21,19 @@
  * `--offline` refuses outright, and it is checked before anything else, so the
  * refusal a person gets is the one they asked about.
  *
- * **The DeepWatch packages are never fetched from a registry.** Nothing under
- * that scope is published. Before publication they come from verified local
- * tarballs whose directory is named explicitly, and the mode is recorded in
- * the receipt rather than inferred. There is no silent fallback: a missing
- * `--artifacts` is a refusal, not a registry request for a scope that would
- * answer 404 and be reported as a network problem.
+ * **Where the DeepWatch packages come from is decided, never inferred.** The
+ * `@deepwatch` scope is published, so the default is the registry: the exact
+ * version this CLI composes, by name, checked by npm against the registry's
+ * published integrity. `--artifacts` names a directory of packed tarballs
+ * instead, and that path additionally hashes every file itself, before and
+ * after copying — which is what a checkout build and an air-gapped install
+ * need. Whichever was used is recorded in the receipt as the mode, so an
+ * installation can always say where its packages came from.
+ *
+ * This was a refusal until 0.1.1, and the refusal outlived its reason: it was
+ * written while the scope was empty, and it survived publication, so the first
+ * thing a new user met was `setup` exiting 2 to say the packages "are not
+ * published" while twenty of them were on npm.
  *
  * **Nothing is half-installed.** The runtime is assembled in a staging
  * directory and promoted with one rename after every check passes. A failure
@@ -55,10 +62,12 @@ import type { Invocation } from './args.js'
 import { harness, harnessDir, harnessVersion } from './lib/harness.js'
 import { resolveBundle } from './lib/bundle.js'
 import { composeProfile } from './lib/compose.js'
-import { managedPlan, provisionManagedRuntime, readArtifacts } from './lib/provision.js'
+import {
+  managedPlan, provisionManagedRuntime, readArtifacts, registryPackages,
+} from './lib/provision.js'
 import type { ManagedPackage, ManagedPlan, SourceMode } from './lib/provision.js'
 import { deepwatchHome, dshHome, profileName, watchCoreBin } from './lib/paths.js'
-import { BUNDLE_PACKAGE, BUNDLE_VERSION, HARNESS_VERSION } from './version.js'
+import { BUNDLE_PACKAGE, BUNDLE_VERSION, HARNESS_VERSION, VERSION } from './version.js'
 
 /** How long a profile operation may take before it is a hang rather than work. */
 const PROFILE_TIMEOUT_MS = 10 * 60 * 1000
@@ -110,7 +119,7 @@ export function renderManagedPlan(plan: ManagedPlan): string {
     `  version      ${plan.harness.version}   (exact — never a range)`,
     `  peers        ${String(plan.peers)} required peer packages at exact versions,`,
     '               generated from the audited closure, not hand-listed',
-    `  deepwatch    ${String(plan.deepwatch.length)} local packages at ${BUNDLE_VERSION}, `
+    `  deepwatch    ${String(plan.deepwatch.length)} DeepWatch packages at ${BUNDLE_VERSION}, `
       + `from ${local ? 'verified local artifacts' : 'the registry'}`,
     `  source       ${plan.artifacts ?? plan.registry}`,
     `  into         ${plan.destination}`,
@@ -118,10 +127,21 @@ export function renderManagedPlan(plan: ManagedPlan): string {
     '',
     '  Network:     one npm install of the exact Harness version above and its',
     '               generated peer set, from that registry, into that directory.',
-    `  Local:       ${String(plan.deepwatch.length)} verified tarballs are copied into the`,
-    '               runtime and installed from those copies, so the runtime does',
-    '               not depend on where they came from afterwards.',
-    '  The DeepWatch packages are not published, and are never requested from a registry.',
+    ...local
+      ? [
+          `  Local:       ${String(plan.deepwatch.length)} verified tarballs are copied into the`,
+          '               runtime and installed from those copies, so the runtime does',
+          '               not depend on where they came from afterwards.',
+          '  The DeepWatch packages come from that directory and are never requested',
+          '  from a registry in this mode.',
+        ]
+      : [
+          `               The same install also fetches ${String(plan.deepwatch.length)} DeepWatch packages at`,
+          `               ${BUNDLE_VERSION}, by name and exact version, from that same registry.`,
+          '  Digests:     npm checks every tarball against the registry\'s published',
+          '               integrity. Pass --artifacts instead to install from local',
+          '               tarballs this product hashes itself.',
+        ],
     '',
     '  The Harness closure includes prebuilt native binaries, one of them under',
     '  Apache-2.0 AND LGPL-3.0-or-later. They are fetched from the registry under',
@@ -143,6 +163,10 @@ function chooseSource(
 
 /** `deepwatch setup`. */
 export async function runSetup(invocation: Invocation): Promise<number> {
+  // Decided once, before either arm below: an existing managed runtime takes
+  // the other branch, and the composition after them still has to say where
+  // the DeepWatch packages come from.
+  const source = chooseSource(invocation, { ...process.env })
   const env = { ...process.env }
   if (invocation.profile !== null) env['DEEPWATCH_PROFILE'] = invocation.profile
 
@@ -193,7 +217,6 @@ export async function runSetup(invocation: Invocation): Promise<number> {
       return 2
     }
 
-    const source = chooseSource(invocation, env)
     let packages: readonly ManagedPackage[] = []
     if (source.mode === 'local-artifacts') {
       const read = readArtifacts(source.artifacts as string)
@@ -207,12 +230,12 @@ export async function runSetup(invocation: Invocation): Promise<number> {
       }
       packages = read.packages
     } else {
-      process.stderr.write(
-        'deepwatch: no DeepWatch artifact directory was given, and the DeepWatch\n'
-        + '           packages are not published, so there is nowhere to get them.\n'
-        + '           Nothing has been changed. Pass --artifacts <dir> naming the\n'
-        + '           packed tarballs and their packed-artifacts.json inventory.\n')
-      return 2
+      // The published scope is the ordinary path. `--artifacts` stays as the
+      // explicit alternative for a checkout build or an air-gapped install,
+      // and it is still the only one that verifies digests this product
+      // computed; a registry install is verified by npm against the
+      // registry's own published integrity for each tarball.
+      packages = registryPackages(VERSION)
     }
 
     const plan = managedPlan(destination, source.mode, source.artifacts, packages)
@@ -296,6 +319,8 @@ export async function runSetup(invocation: Invocation): Promise<number> {
     profile,
     env,
     timeoutMs: PROFILE_TIMEOUT_MS,
+    deepwatchMode: source.mode,
+    deepwatchVersion: BUNDLE_VERSION,
     // Asked rather than assumed. A manifest that names a layer is not a tree
     // that imports one, and `--dump-config` cannot tell the two apart: it
     // resolves configuration without loading a plugin or binding a port. The

@@ -62,7 +62,7 @@ jobs:
           echo "version=${version}" >> "$GITHUB_OUTPUT"
 
           # PEP 440 pre-release markers, read off the *version* and not the
-          # tag: `core-v0.1.0` contains a hyphen, and classifying on the tag
+          # tag: `core-v0.1.1` contains a hyphen, and classifying on the tag
           # made every stable release look like a prerelease. Without this an
           # rc produced a release GitHub labels "Latest", so anyone landing on
           # the repository was shown a release candidate as the current one.

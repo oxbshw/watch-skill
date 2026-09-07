@@ -332,24 +332,33 @@ describe('telling pnpm where the local packages are', () => {
   })
 })
 
-describe('the registry is never asked about @deepwatch', () => {
+describe('where the DeepWatch packages come from is chosen, never fallen back to', () => {
   test('setup names no @deepwatch package as an install argument', () => {
     const source = readFileSync(join(CLI, 'src', 'setup.ts'), 'utf8')
     assert.doesNotMatch(source, /'add',\s*'@deepwatch/,
       'setup must not hand a @deepwatch name to `dsh plugin add`')
-    assert.doesNotMatch(source, /plugin[\s\S]{0,80}add[\s\S]{0,40}@deepwatch/,
-      'no plugin-add path may name the unpublished scope')
+    // `setup` itself hands nothing to `dsh plugin add`; composition does,
+      // and in registry mode what it hands over is a name at an exact
+      // version. Keeping that out of `setup` is what stops two places
+      // deciding where packages come from.
+    assert.doesNotMatch(source, /'add',/,
+      'setup must leave the profile install to compose.ts')
   })
 
   test('composition installs paths, and tells pnpm where every package is first', () => {
     const source = readFileSync(join(CLI, 'src', 'lib', 'compose.js').replace('.js', '.ts'), 'utf8')
-    // `plugin add` is handed tarball paths from the runtime's own copies.
-    assert.match(source, /'add', \.\.\.tarballs/,
-      'the profile install must name files, never a package in an unpublished scope')
-    // And the overrides are written before it, or the transitive @deepwatch
-    // dependencies of the bundle go straight to the registry and 404.
+    // One list, built from the mode: tarball paths from the runtime's own
+    // copies, or names at an exact version.
+    assert.match(source, /'add', \.\.\.specs/,
+      'the profile install must be handed the list composition built')
+    // The overrides pin each name to a verified copy, so they only mean
+    // anything when there are copies -- and they must be written before
+    // pnpm resolves, or the bundle's transitive @deepwatch dependencies go
+    // to the registry instead of to the tarballs that were checked.
+    assert.match(source, /if \(local\) writeArtifactOverrides\(profileDir/,
+      'overrides must be written for an --artifacts install, and only for one')
     assert.ok(
-      source.indexOf('writeArtifactOverrides(profileDir') < source.indexOf("'add', ...tarballs"),
+      source.indexOf('writeArtifactOverrides(profileDir') < source.indexOf("'add', ...specs"),
       'the overrides have to exist before pnpm resolves anything')
   })
 
@@ -362,10 +371,13 @@ describe('the registry is never asked about @deepwatch', () => {
     assert.doesNotMatch(source, /catch[\s\S]{0,120}registry/i)
   })
 
-  test('an unpublished scope is never requested when no artifacts are given', () => {
+  test('no artifacts means a registry install, not a refusal', () => {
     const source = readFileSync(join(CLI, 'src', 'setup.ts'), 'utf8')
-    // Setup refuses rather than asking a registry for a scope that is not there.
-    assert.match(source, /are not published, so there is nowhere to get them/)
+    // The inverse of what this asserted until 0.1.1. The refusal was
+    // written while the scope was empty and outlived it by a day, during
+    // which `npx @deepwatch/cli setup` exited 2 on a published product.
+    assert.match(source, /packages = registryPackages\(VERSION\)/)
+    assert.doesNotMatch(source, /nowhere to get them/)
   })
 
   test('the bundle package name reaches composition as a constant, not a spec', () => {

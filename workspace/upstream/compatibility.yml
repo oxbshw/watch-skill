@@ -4,7 +4,7 @@
 # gate in tests/ is not allowed to appear here.
 
 deepwatch:
-  version: 0.1.0
+  version: 0.1.1
   channel: preview
 
 deepseek_harness:
