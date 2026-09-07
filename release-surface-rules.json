@@ -42,8 +42,8 @@
     },
     {
       "id": "phantom-repository",
-      "pattern": "(?<!id: )\\bwatch-workspace\\b",
-      "why": "names a repository that does not exist; both halves live in oxbshw/watch-skill. Not fired after `id: `, where it is the profile row that mounts @deepwatch/dsh-workspace rather than a repository reference."
+      "pattern": "(?:^\\s*|[^:]\\s|/)watch-workspace\\b",
+      "why": "names a repository that does not exist; both halves live in oxbshw/watch-skill. A profile row (`id: watch-workspace`) is the plugin that mounts @deepwatch/dsh-workspace, not a repository, so it does not fire."
     },
     {
       "id": "personal-path",
