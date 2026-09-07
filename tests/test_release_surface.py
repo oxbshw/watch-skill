@@ -131,33 +131,74 @@ class TestTheExemptionIsScopedToOneOccurrence:
     EXEMPTED = REPO / "workspace" / "packages" / "watch" / "workspace" / "README.md"
 
     @staticmethod
-    def _findings_for(line: str) -> list[str]:
+    def _appended(line: str) -> tuple[list[str], bytes]:
+        """Scan the real file with ``line`` appended; return findings and bytes.
+
+        Bytes throughout, for two separate reasons. `write_text` emits
+        `os.linesep`, which would rewrite this tracked file's endings on
+        Windows — and interpolating the bytes that were read into an f-string
+        writes their *repr*: ``b'# @deepwatch...\\n\\n- id: ...'``, one long
+        line of escapes where the file used to be. Scanning that is not
+        scanning this file. The exempted row stops being at the start of a
+        line, every other line stops existing, and what the rule then reports
+        is a fact about a string the test invented.
+        """
         cases = TestTheExemptionIsScopedToOneOccurrence
-        # Bytes, not text: `write_text` emits os.linesep, which would rewrite
-        # this tracked file's endings on Windows.
         original = cases.EXEMPTED.read_bytes()
         try:
-            cases.EXEMPTED.write_text(f"{original}\n{line}\n", encoding="utf-8")
+            cases.EXEMPTED.write_bytes(original + f"\n{line}\n".encode())
+            written = cases.EXEMPTED.read_bytes()
             relative = str(cases.EXEMPTED.relative_to(REPO)).replace("\\", "/")
-            found = findings_in(
-                relative, cases.EXEMPTED.read_bytes().decode("utf-8"))
-            return [f for f in found if "[phantom-repository]" in f]
+            found = findings_in(relative, written.decode("utf-8"))
+            return [f for f in found if "[phantom-repository]" in f], written
         finally:
             cases.EXEMPTED.write_bytes(original)
 
+    @classmethod
+    def _findings_for(cls, line: str) -> list[str]:
+        return cls._appended(line)[0]
+
+    @staticmethod
+    def _cases() -> dict[str, list[str]]:
+        return json.loads(
+            (REPO / "release-surface-fixtures.json").read_text(encoding="utf-8")
+        )["$exemptions"]["phantom-repository"]
+
+    def test_the_scanned_fixture_is_the_real_file_plus_the_line(self) -> None:
+        # If the fixture is not the file it claims to be, every assertion
+        # below is about something else.
+        original = self.EXEMPTED.read_bytes()
+        line = self._cases()["clean"][0]
+        _found, written = self._appended(line)
+        assert written.startswith(original), "rewritten rather than appended to"
+        assert written.endswith(f"\n{line}\n".encode())
+        assert b"\\n" not in written, "the bytes were interpolated, not appended"
+        assert written.decode("utf-8").splitlines()[-1] == line
+
+    def test_the_original_bytes_come_back_exactly(self) -> None:
+        original = self.EXEMPTED.read_bytes()
+        self._findings_for("Clone watch-workspace and run pnpm install.")
+        assert self.EXEMPTED.read_bytes() == original, (
+            "a tracked file did not survive the scan byte for byte")
+
     def test_the_allowed_row_is_not_reported_however_it_is_spaced(self) -> None:
-        cases = json.loads(
-            (REPO / "release-surface-fixtures.json").read_text(encoding="utf-8"))
-        for line in cases["$exemptions"]["phantom-repository"]["clean"]:
+        for line in self._cases()["clean"]:
             assert self._findings_for(line) == [], (
                 f"reported a legitimate profile row: {line!r}")
 
     def test_a_genuine_stale_reference_is_reported_including_beside_the_row(self) -> None:
-        cases = json.loads(
-            (REPO / "release-surface-fixtures.json").read_text(encoding="utf-8"))
-        for line in cases["$exemptions"]["phantom-repository"]["reported"]:
-            assert len(self._findings_for(line)) == 1, (
+        own_lines = len(self.EXEMPTED.read_text(encoding="utf-8").splitlines())
+        for line in self._cases()["reported"]:
+            found = self._findings_for(line)
+            assert len(found) == 1, (
                 f"missed a stale repository reference: {line!r}")
+            # And on the appended line, not somewhere in the file's own text:
+            # a finding reported against line 1 would pass the count and mean
+            # the case under test was never reached.
+            reported_at = int(found[0].split(" ", 1)[0].rsplit(":", 1)[1])
+            assert reported_at > own_lines, (
+                f"reported line {reported_at} of a {own_lines}-line file, "
+                f"which is its own content rather than {line!r}")
 
 
 class TestTheCliHelpIsCleanText:

@@ -96,9 +96,15 @@ function scan(label, text, exemptKey = label) {
       let hit = null
       while ((hit = all.exec(lines[i])) !== null) {
         if (hit[0].length === 0) { all.lastIndex += 1; continue }
-        const before = lines[i].slice(0, hit.index + hit[0].indexOf('watch') + 0)
+        // The text before this occurrence, and nothing else — the same window
+        // tests/test_release_surface.py uses, so an exemption cannot mean two
+        // things. A second, wider window was tried alongside it, computed
+        // from `indexOf('watch')` *inside* the match: 0 for the one rule that
+        // has a scoped exemption, and -1 for every other, which slides the
+        // boundary a character to the left. Two answers to one question, of
+        // which this is the question.
         const prefix = lines[i].slice(0, hit.index)
-        if (allowed.some(re => re.test(prefix) || re.test(before))) continue
+        if (allowed.some(re => re.test(prefix))) continue
         found = hit
         break
       }

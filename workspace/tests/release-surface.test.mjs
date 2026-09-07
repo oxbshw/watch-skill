@@ -23,10 +23,37 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { publishOrder } from '../scripts/publish-order.mjs'
+import { resolveNpm } from '../scripts/lib/process.mjs'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const REPO = join(ROOT, '..')
 const CONFIG = JSON.parse(readFileSync(join(REPO, 'release-surface-rules.json'), 'utf8'))
+
+/**
+ * What a publish of one package would actually upload, by member path.
+ *
+ * npm is asked rather than the filesystem, because `files` is what decides
+ * and a README present on disk is not a README that ships. `--dry-run`
+ * uploads nothing; it lists.
+ *
+ * Cached, because the exemption check would otherwise pack the same package
+ * once per assertion.
+ */
+const packed = new Map()
+function packedMembers(dir) {
+  if (packed.has(dir)) return packed.get(dir)
+  const npm = resolveNpm()
+  assert.ok(npm !== null, 'no npm this tooling can run was found')
+  const listed = execFileSync(
+    npm.command, [...npm.prefix, 'pack', '--dry-run', '--json'],
+    { cwd: join(ROOT, dir), encoding: 'utf8', maxBuffer: 1 << 28 })
+  // npm prints the tarball name on stdout before the JSON in some versions,
+  // so the array is taken from the first `[` rather than from position zero.
+  const parsed = JSON.parse(listed.slice(listed.indexOf('[')))
+  const members = new Set(parsed[0].files.map(file => file.path))
+  packed.set(dir, members)
+  return members
+}
 
 /** Text that each rule must catch, and text it must leave alone. */
 const CONTROLS = {
@@ -212,15 +239,24 @@ describe('the exemptions stay narrow', () => {
         .split('\n').map(line => line.trim()).filter(line => line !== ''))
     // Two shapes. A repository path must be tracked. A `package:member` key
     // scopes an exemption to a file *inside* a packed tarball, where the repo
-    // path does not exist -- so it is checked against the packages this
-    // workspace actually publishes instead, which catches a typo just as well.
-    const published = new Set(publishOrder()
-      .map(entry => entry.name.replace('@', '').replace('/', '-')))
+    // path does not exist -- so the package and the member are checked
+    // separately, against what a publish would actually upload.
+    const byTarballName = new Map(publishOrder()
+      .map(entry => [entry.name.replace('@', '').replace('/', '-'), entry]))
     for (const exemption of CONFIG.exemptions) {
       if (exemption.file.includes(':')) {
-        const [pkg] = exemption.file.split(':')
-        assert.ok(published.has(pkg),
+        const [pkg, member] = exemption.file.split(':')
+        const entry = byTarballName.get(pkg)
+        assert.ok(entry !== undefined,
           `${exemption.file} names a package this workspace does not publish`)
+        // The package name alone was the whole check, so an exemption could
+        // name a member that no longer ships -- or never did -- and still
+        // read as verified. `files` decides what a tarball carries and the
+        // disk does not, so the question goes to npm.
+        assert.ok(packedMembers(entry.dir).has(member),
+          `${exemption.file} excuses a file @${entry.name} does not ship: `
+          + `npm pack lists ${[...packedMembers(entry.dir)].length} members `
+          + 'and none of them is that one')
         continue
       }
       assert.ok(tracked.has(exemption.file),
