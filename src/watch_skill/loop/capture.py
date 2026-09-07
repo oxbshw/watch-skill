@@ -15,7 +15,13 @@ from typing import Any
 
 from watch_skill.errors import LoopError
 from watch_skill.health.binaries import require_binary
-from watch_skill.perceive.cues import Cue, clear_sidecar, to_media_timeline, write_sidecar
+from watch_skill.perceive.cues import (
+    Cue,
+    clear_sidecar,
+    measure_offset,
+    to_media_timeline,
+    write_sidecar,
+)
 
 DEFAULT_VIEWPORT = {"width": 1280, "height": 720}
 MOBILE_VIEWPORT = {"width": 390, "height": 844}
@@ -180,6 +186,7 @@ def capture_url(
     out_dir.mkdir(parents=True, exist_ok=True)
     size = viewport or DEFAULT_VIEWPORT
     marks: list[tuple[float, str]] = []
+    first_change: float | None = None
     with sync_playwright() as p:
         browser = _launch_browser(p)
         context = browser.new_context(
@@ -203,13 +210,23 @@ def capture_url(
                     # one that shows the result is the one worth keeping, so
                     # the capture writes down when that state was on screen.
                     watching = step.get("action") != "wait"
+                    began = time.monotonic() - origin
                     before = _rendered_text(page) if watching else None
                     _run_script_step(page, step)
                     if watching:
                         appeared, settled = _observe(page, before, origin)
+                        # The first time this session saw the page change is
+                        # the one event both clocks witnessed; it is what the
+                        # recording is aligned against afterwards.
+                        if first_change is None and settled > appeared:
+                            first_change = appeared
                     else:
-                        settled = time.monotonic() - origin
-                        appeared = settled
+                        # A wait produces no new state. What it shows is
+                        # whatever was already there, for the whole of its
+                        # duration -- and its far edge is the instant the next
+                        # step runs, which is the one moment in that window
+                        # that may catch a half-applied interaction.
+                        appeared, settled = began, time.monotonic() - origin
                     marks.append(((appeared + settled) / 2, _step_label(step)))
             else:
                 page.wait_for_timeout(int(duration_seconds * 500))
@@ -239,9 +256,24 @@ def capture_url(
         from watch_skill.perceive import probe  # noqa: PLC0415 — heavy import
 
         media_duration = probe(dest).duration_seconds
+        # Where this session's clock sits relative to the recording's, measured
+        # against the recording rather than guessed from its length. The two
+        # differ by a fraction of a second that the durations do not reveal:
+        # a screencast starts a little after the page does, and then holds its
+        # last frame past the end of the session, so a file with a leading gap
+        # comes out *longer* than the session that produced it.
+        offset = 0.0
+        if first_change is not None:
+            measured = measure_offset(
+                dest,
+                changed_at=first_change - (_SETTLE_POLL_MS / 2000),
+                media_duration=media_duration,
+            )
+            if measured is not None:
+                offset = measured
         cue_seconds = to_media_timeline(
             [moment for moment, _label in marks],
-            wall_span=wall_span,
+            offset=offset,
             media_duration=media_duration,
         )
         # A sidecar, because `watch-skill watch <file>` is a separate
@@ -252,7 +284,11 @@ def capture_url(
             dest,
             [Cue(seconds=t, label=label)
              for t, (_moment, label) in zip(cue_seconds, marks, strict=True)],
-            timeline={"wall_span": wall_span, "media_duration": media_duration},
+            timeline={
+                "wall_span": wall_span,
+                "media_duration": media_duration,
+                "offset": offset,
+            },
         )
     return CaptureResult(
         video_path=dest, kind="url", target=url,

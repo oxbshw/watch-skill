@@ -22,6 +22,7 @@ from watch_skill.perceive.cues import (
     CueError,
     clear_sidecar,
     discover_cues,
+    measure_offset,
     read_sidecar,
     sidecar_path_for,
     to_media_timeline,
@@ -238,31 +239,93 @@ class TestDiscoveryDegradesLoudly:
 
 
 class TestTheMediaTimeline:
-    """The recording and the wall clock share an origin, not a length."""
+    """The two clocks run at the same rate and start at different moments."""
 
-    def test_a_recording_shorter_than_the_session_shifts_everything_earlier(
-        self,
-    ) -> None:
-        # 0.4 s of the session never made it into the file, and it is the 0.4 s
-        # at the front -- the screencast starts once the browser is ready to
-        # emit frames.
+    def test_a_measured_offset_moves_every_moment_by_the_same_amount(self) -> None:
+        # A screencast that started 0.28 s after the page did puts every later
+        # moment 0.28 s earlier in the file than the session clock says.
         assert to_media_timeline(
-            [1.0, 3.0, 5.0], wall_span=6.0, media_duration=5.6
-        ) == [0.6, 2.6, 4.6]
+            [1.0, 3.0, 5.0], offset=-0.28, media_duration=5.6
+        ) == [0.72, 2.72, 4.72]
 
     def test_a_moment_before_the_recording_starts_is_clamped_not_dropped(self) -> None:
-        assert to_media_timeline([0.1], wall_span=6.0, media_duration=5.0) == [0.0]
+        assert to_media_timeline([0.1], offset=-1.0, media_duration=5.0) == [0.0]
 
     def test_nothing_is_pushed_past_the_end(self) -> None:
-        assert to_media_timeline([6.0], wall_span=6.0, media_duration=5.0) == [5.0]
+        assert to_media_timeline([6.0], offset=0.5, media_duration=5.0) == [5.0]
 
     def test_an_unmeasurable_recording_leaves_the_moments_alone(self) -> None:
-        assert to_media_timeline([1.0, 2.0], wall_span=3.0, media_duration=0.0) == [
-            1.0, 2.0]
+        assert to_media_timeline(
+            [1.0, 2.0], offset=-0.5, media_duration=0.0) == [1.0, 2.0]
 
-    def test_the_offset_is_never_negative(self) -> None:
-        # A container that rounds its duration up must not push cues later.
-        assert to_media_timeline([1.0], wall_span=5.0, media_duration=5.2) == [1.0]
+    def test_no_measurement_means_no_correction(self) -> None:
+        # Nothing to align against is not a licence to invent an alignment.
+        assert to_media_timeline(
+            [1.0, 2.0], offset=0.0, media_duration=5.0) == [1.0, 2.0]
+
+
+class TestMeasuringTheOffset:
+    """The alignment is measured against the recording, never inferred."""
+
+    def _recording(self, tmp_path: Path, change_at: float, seconds: float) -> Path:
+        """A clip that is one colour and then abruptly another."""
+        import shutil
+        import subprocess
+
+        ffmpeg = shutil.which("ffmpeg")
+        if ffmpeg is None:
+            pytest.skip("ffmpeg not available")
+        out = tmp_path / "aligned" / "capture.mp4"
+        out.parent.mkdir(parents=True, exist_ok=True)
+        result = subprocess.run([
+            ffmpeg, "-hide_banner", "-loglevel", "error", "-y",
+            "-f", "lavfi", "-i", f"color=c=black:s=320x240:r=25:d={change_at}",
+            "-f", "lavfi", "-i",
+            f"color=c=white:s=320x240:r=25:d={seconds - change_at}",
+            "-filter_complex", "[0:v][1:v]concat=n=2:v=1[v]", "-map", "[v]",
+            "-c:v", "libx264", "-pix_fmt", "yuv420p", str(out),
+        ], capture_output=True, text=True)
+        if result.returncode != 0:
+            pytest.skip(f"ffmpeg could not build the fixture: {result.stderr[-200:]}")
+        return out
+
+    def test_it_finds_how_far_the_recording_lags_the_session_clock(
+        self, tmp_path: Path
+    ) -> None:
+        # The change is at 1.0 s in the file. A session that saw it at 1.30 s
+        # was running 0.30 s ahead of the recording.
+        video = self._recording(tmp_path, change_at=1.0, seconds=3.0)
+        offset = measure_offset(video, changed_at=1.30, media_duration=3.0)
+        assert offset is not None
+        assert offset == pytest.approx(-0.30, abs=0.12)
+
+    def test_it_finds_a_session_clock_that_lags_the_recording(
+        self, tmp_path: Path
+    ) -> None:
+        video = self._recording(tmp_path, change_at=1.5, seconds=3.0)
+        offset = measure_offset(video, changed_at=1.2, media_duration=3.0)
+        assert offset is not None
+        assert offset == pytest.approx(0.30, abs=0.12)
+
+    def test_a_recording_that_never_changes_aligns_to_nothing(
+        self, tmp_path: Path
+    ) -> None:
+        video = self._recording(tmp_path, change_at=3.0, seconds=3.0)
+        assert measure_offset(video, changed_at=1.0, media_duration=3.0) is None
+
+    def test_an_absurd_result_is_refused_rather_than_applied(
+        self, tmp_path: Path
+    ) -> None:
+        # Half a minute apart is not a measurement of the same event.
+        video = self._recording(tmp_path, change_at=1.0, seconds=3.0)
+        assert measure_offset(video, changed_at=30.0, media_duration=3.0) is None
+
+    def test_the_search_gives_up_rather_than_reading_a_whole_film(
+        self, tmp_path: Path
+    ) -> None:
+        video = self._recording(tmp_path, change_at=1.0, seconds=3.0)
+        assert measure_offset(
+            video, changed_at=1.0, media_duration=3.0, search_seconds=0.3) is None
 
 
 class TestRoundTripping:
@@ -286,7 +349,7 @@ class TestRoundTripping:
         # something strange and a file the reader then has to refuse. It is
         # also length-preserving, because the caller pairs it with labels.
         mapped = to_media_timeline(
-            [math.inf, math.nan, -5.0, 2.0], wall_span=6.0, media_duration=5.0)
+            [math.inf, math.nan, -5.0, 2.0], offset=-0.3, media_duration=5.0)
         assert len(mapped) == 4
         assert all(math.isfinite(value) and value >= 0 for value in mapped)
         write_sidecar(recording, [Cue(value) for value in mapped])

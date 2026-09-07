@@ -28,6 +28,7 @@ from __future__ import annotations
 import json
 import math
 import sys
+import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -93,42 +94,158 @@ def clear_sidecar(video_path: str | Path) -> None:
     sidecar_path_for(video_path).unlink(missing_ok=True)
 
 
+#: How finely the recording is sampled when looking for its first change.
+ALIGN_STEP_SECONDS = 0.08
+
+#: How far into a recording that search goes before giving up.
+ALIGN_SEARCH_SECONDS = 6.0
+
+#: Past this, an "alignment" is a coincidence rather than a measurement.
+ALIGN_LIMIT_SECONDS = 3.0
+
+#: How much a pixel has to move to count as having changed, out of 255, and
+#: what share of the frame has to move before the frame has.
+#:
+#: Pixels rather than a perceptual hash, and the reason is the same one cues
+#: exist for: a phash is built to ignore what matters here. Three numbers
+#: changing on a checkout page hash four apart against a near-duplicate
+#: threshold of six -- and a black frame and a white frame hash *one* apart,
+#: because a DCT hash normalises brightness away entirely.
+ALIGN_PIXEL_DELTA = 24
+ALIGN_CHANGED_SHARE = 0.0004
+
+
 def to_media_timeline(
-    wall_seconds: list[float], *, wall_span: float, media_duration: float
+    wall_seconds: list[float], *, offset: float, media_duration: float
 ) -> list[float]:
     """Move wall-clock moments onto the recording's own timeline.
 
-    The two clocks share an origin -- the recording starts with the page that
-    is being recorded -- but not a length. A screencast is a stream of frames
-    the browser emits once it is ready to emit them, so the file that lands on
-    disk is normally a little shorter than the session that produced it, and
-    the missing part is at the front.
+    The two clocks run at the same rate and start at different moments, and
+    the difference cannot be worked out from their lengths -- which is the
+    trap, because it looks as though it can. Measured on a local page: a
+    1.609 s session produced a 2.600 s recording, which reads like a file with
+    a second to spare at the end and no gap at the front. It had both. The
+    trailing second is a flush of held frames; the front was missing 0.28 s,
+    and every moment in that recording sat 0.28 s later in content than the
+    clock said.
 
-    So the correction is an offset and not a rate: everything is early by the
-    same amount, the amount being whatever the recording turned out to be
-    missing. A moment that lands before the start of the recording is clamped
-    to it rather than dropped, because the alternative is losing the cue for
-    the first interaction on a session that started slowly.
-
-    The residual error is why the writer pins the middle of a state's visible
-    window rather than the instant it appeared; see
-    :func:`watch_skill.loop.capture.capture_url`.
+    So the offset is measured against the recording rather than inferred from
+    it -- see :func:`measure_offset` -- and applied here. A moment that lands
+    outside the recording is clamped rather than dropped, because the caller
+    pairs this list with the labels it collected and the two have to stay the
+    same length.
     """
-    # Length-preserving: the caller pairs the result with the labels it
-    # collected, so a value that maps to nothing has to map to *something*.
-    # A moment that is not a number is not one, and the start of the recording
-    # is the least wrong place for a frame nobody can locate.
     if media_duration <= 0 or not math.isfinite(media_duration):
         return [
             round(max(0.0, value), 3) if math.isfinite(value) else 0.0
             for value in wall_seconds
         ]
-    drift = max(0.0, wall_span - media_duration)
+    shift = offset if math.isfinite(offset) else 0.0
     return [
-        round(min(max(value - drift, 0.0), media_duration), 3)
+        round(min(max(value + shift, 0.0), media_duration), 3)
         if math.isfinite(value) else 0.0
         for value in wall_seconds
     ]
+
+
+def measure_offset(
+    video_path: Path,
+    *,
+    changed_at: float,
+    media_duration: float,
+    search_seconds: float = ALIGN_SEARCH_SECONDS,
+) -> float | None:
+    """Where the capture's clock sits relative to the recording's own.
+
+    Both clocks saw one event: the first time the page changed. The capture
+    noticed it by polling and wrote down when; the recording contains it, and
+    this finds where. The difference is the offset, and it is a measurement
+    rather than an assumption about how a browser starts a screencast.
+
+    ``changed_at`` is when the capture *observed* the change, so it is late by
+    up to one poll interval; the search below is late by up to one sample. Both
+    are corrected to the middle of their own interval, which leaves a residual
+    of about a twentieth of a second in each direction -- comfortably inside
+    the window a cue is pinned in.
+
+    Returns ``None`` when there is nothing to align to: a recording that never
+    changes, a search that runs out, or a result too large to be a measurement
+    of anything.
+    """
+    from watch_skill.perceive import media  # noqa: PLC0415 — heavy
+
+    if media_duration <= 0 or not math.isfinite(changed_at):
+        return None
+    # Only the neighbourhood the answer can be in. A recording also changes
+    # when it starts -- the first paint moves most of the frame -- and that
+    # transition is not the one both clocks saw.
+    low = max(0.0, changed_at - ALIGN_LIMIT_SECONDS)
+    high = min(media_duration, changed_at + ALIGN_LIMIT_SECONDS,
+               low + search_seconds)
+    if high <= low:
+        return None
+
+    nearest: float | None = None
+    with tempfile.TemporaryDirectory(prefix="watch-skill-align-") as room:
+        out = Path(room)
+        previous: bytes | None = None
+        at = low
+        index = 0
+        while at <= high:
+            index += 1
+            # PNG, not JPEG: two identical frames re-encoded lossily differ by
+            # more than a page's worth of digits do, which puts the noise floor
+            # above the signal. Decoded losslessly, two identical frames are
+            # identical and the floor is zero.
+            frame = media.extract_frame_at(
+                video_path, at, out / f"s{index:04d}.png", width=320)
+            if frame is None:
+                break
+            sample = _pixels(frame)
+            if sample is None:
+                return None
+            if previous is not None and _differ(previous, sample):
+                # Both clocks are late by half of their own interval.
+                seen_at = at - ALIGN_STEP_SECONDS / 2
+                if nearest is None or abs(seen_at - changed_at) < abs(
+                    nearest - changed_at
+                ):
+                    nearest = seen_at
+            previous = sample
+            at += ALIGN_STEP_SECONDS
+
+    if nearest is None:
+        return None
+    offset = nearest - changed_at
+    return offset if abs(offset) <= ALIGN_LIMIT_SECONDS else None
+
+
+def _pixels(image_path: Path) -> bytes | None:
+    """One frame as greyscale levels, or None if Pillow is not installed."""
+    try:
+        from PIL import Image  # noqa: PLC0415
+    except ImportError:
+        return None
+    with Image.open(image_path) as img:
+        return img.convert("L").tobytes()
+
+
+def _differ(previous: bytes, sample: bytes) -> bool:
+    """Whether enough of the frame moved to be a change rather than nothing.
+
+    Measured on a checkout recording: identical frames move 0.000 of the
+    pixels, the quantity edit that rewrites three amounts moves 0.002, and the
+    page's first paint moves 0.016. The floor is genuinely zero, so the
+    threshold sits an order of magnitude below the smallest real signal rather
+    than being tuned against noise.
+    """
+    if len(previous) != len(sample):
+        return True
+    moved = sum(
+        1 for a, b in zip(previous, sample, strict=True)
+        if abs(a - b) > ALIGN_PIXEL_DELTA
+    )
+    return moved / len(previous) > ALIGN_CHANGED_SHARE
 
 
 def write_sidecar(

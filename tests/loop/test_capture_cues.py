@@ -168,6 +168,27 @@ def test_the_cue_names_the_state_after_the_step_not_before_it(
 
 
 @pytest.mark.timeout(300)
+def test_a_wait_is_pinned_inside_the_wait_not_at_its_far_edge(
+    tmp_path: Path
+) -> None:
+    """The far edge of a wait is the instant the next step runs.
+
+    Measured: a cue stamped there caught a frame where the quantity box
+    already read the *next* value and the totals had not been recomputed --
+    a state that existed for about a tenth of a second and is the one frame
+    in that window nobody wants pinned.
+    """
+    script = [{"action": "wait", "seconds": 1.5}, *_SCRIPT]
+    result = capture(_page(tmp_path).resolve().as_uri(), tmp_path / "cap wait",
+                     script=script)
+    cues = read_sidecar(result.video_path) or []
+    assert len(cues) == 3
+    assert 0.4 < cues[0] < 1.4, (
+        f"the wait's cue is at {cues[0]:.2f}s, not inside the 1.5s wait")
+    assert cues[0] < cues[1], "the wait outlasted the interaction after it"
+
+
+@pytest.mark.timeout(300)
 def test_a_second_recording_into_the_same_place_leaves_no_stale_cues(
     tmp_path: Path
 ) -> None:
