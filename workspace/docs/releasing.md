@@ -173,6 +173,46 @@ shape by the same rule the workflow uses, so the bootstrap and the workflow
 cannot disagree about a publication that cannot be taken back. This task must
 never run that command.
 
+### Publish the bytes the workflow packed, not the bytes your machine packs
+
+The bootstrap and the tag each produce twenty tarballs, and `publish-plan.mjs`
+compares them by integrity. Where they differ, the tag refuses that package as
+*already published with DIFFERENT bytes* — correctly, and irrecoverably at that
+version.
+
+They can differ. Packing one tree on Windows and on Linux gives eighteen
+identical archives and two that are not: `@deepwatch/dsh-client-evidence` and
+`@deepwatch/dsh-client-settings` differ inside their bundled `lib/client.js`,
+in content rather than in compression — see
+[known limitations](known-limitations.md). So the bootstrap does not pack
+locally at all:
+
+1. **Push the tag.** `release-deepwatch.yml`'s `verify` job packs, seals and
+   uploads `deepwatch-tarballs` on the same Linux runner every later release
+   uses. Its `publish` job then fails, because no package has a Trusted
+   Publisher yet. Nothing reaches the registry, and that failure is expected.
+2. **Download that artifact** and check it against the manifest the job sealed:
+
+   ```bash
+   gh run download <run-id> --name deepwatch-tarballs --dir sealed
+   node scripts/verify-provenance.mjs \
+     --artifacts sealed --manifest sealed/provenance.json \
+     --expect-commit "$(git rev-parse HEAD)"
+   ```
+
+3. **Publish those exact files**, with
+   `node scripts/first-publish.mjs --artifacts sealed --publish
+   --confirm-first-publish`.
+4. **Configure the Trusted Publishers** (below). This needs interactive 2FA —
+   `npm trust` refuses a token that bypasses it.
+5. **Re-run the workflow.** It packs the same bytes, the plan says `skip`
+   twenty times, nothing is uploaded and no OIDC identity is needed, and
+   `github-release` completes the Release with the sealed assets.
+
+Publishing locally and tagging afterwards is the one shape that cannot be
+recovered from: two of the twenty versions would be spent on bytes the workflow
+will never produce again.
+
 Current organisation hardening is a prerequisite, not an afterthought. The
 default `Developers` team currently has read/write access: add no members while
 that remains true. Create a limited publisher/maintainer team, make ordinary

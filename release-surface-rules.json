@@ -42,7 +42,7 @@
     },
     {
       "id": "phantom-repository",
-      "pattern": "watch-workspace",
+      "pattern": "\\bwatch-workspace\\b",
       "why": "names a repository that does not exist; both halves live in oxbshw/watch-skill"
     },
     {

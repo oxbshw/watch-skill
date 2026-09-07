@@ -153,6 +153,45 @@ function pnpmPack(args, cwd) {
 }
 
 /**
+ * The tenth byte of a gzip member says which operating system wrote it.
+ *
+ * zlib fills it in from the platform it was compiled for: `0x03` on Unix,
+ * `0x0a` on Windows. Nothing reads it — `tar`, npm and every unpacker ignore
+ * it — but it is inside the archive, so it is inside the digest, and two packs
+ * of one commit on two operating systems therefore produce twenty tarballs
+ * that differ in exactly one byte each.
+ *
+ * That single byte is enough to break a release. The first publication has to
+ * be made from a machine, because npm will not accept a Trusted Publisher for
+ * a package that does not exist yet; the `deepwatch-v*` tag then re-packs on a
+ * Linux runner and asks the registry whether it holds these same bytes.
+ * `publish-plan.mjs` compares integrity, correctly refuses "already published
+ * with DIFFERENT bytes", and the release cannot be completed at that version
+ * by anyone. Measured, not theorised: eighteen of the twenty archives packed
+ * here matched CI's byte for byte once this byte was equalised.
+ *
+ * Normalised to `0x03` rather than zeroed, because `0x03` is what the Linux
+ * runners that publish every subsequent release already write.
+ *
+ * The rest of the archive was already deterministic: pnpm zeroes the gzip
+ * mtime, and npm stamps every tar entry with a fixed date and uid/gid 0.
+ *
+ * @param tarball - path to a `.tgz`, rewritten in place.
+ */
+function normaliseGzipOs(tarball) {
+  const bytes = readFileSync(tarball)
+  if (bytes.length < 10 || bytes[0] !== 0x1f || bytes[1] !== 0x8b) {
+    throw new Error(`${basename(tarball)} is not a gzip member`)
+  }
+  if (bytes[9] === GZIP_OS_UNIX) return
+  bytes[9] = GZIP_OS_UNIX
+  writeFileSync(tarball, bytes)
+}
+
+/** The value zlib writes on the platform every release runner uses. */
+const GZIP_OS_UNIX = 0x03
+
+/**
  * Every path inside a tarball, without unpacking it.
  *
  * Run from the tarball's own directory with a bare filename, because a tar
@@ -272,6 +311,7 @@ function packOne(entry, out, versions) {
   if (filename === undefined) throw new Error(`pnpm pack printed no tarball for ${entry.dir}`)
 
   const tarball = join(out, filename.split(/[\\/]/).pop())
+  normaliseGzipOs(tarball)
   const bytes = readFileSync(tarball)
   const files = listing(tarball)
   const manifest = JSON.parse(extract(tarball, 'package.json') ?? '{}')

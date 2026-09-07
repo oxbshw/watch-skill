@@ -1,11 +1,11 @@
 {
-  "url": "http://127.0.0.1:8931",
-  "session": "session-d0a96241-6851-4614-b05f-3312dc69d826",
+  "url": "http://127.0.0.1:8878",
+  "session": "session-7e459911-9e61-45ac-9019-597dd2c066d6",
   "width": 1440,
   "height": 1200,
-  "zoom": 0.82,
-  "left": "watch_verify — 2026-09-06T12:15:52.160Z (verification)",
-  "right": "watch_verify — 2026-09-06T12:15:53.093Z (verification)",
-  "rendered": "VERIFICATION DIFFERENCES\nMatching\n0\nClaim changed\n0\nVerdict changed\n0\nOnly on one side\n2\nContradictory\n0\nUnverifiable\n0\nOnly on the right\nrcpt_7e79edf093dd7a84\nLeft: absent\nRight: watch_verify — VERIFIED ()\n\nPresent on the right and absent on the left.\n\nOnly on the left\nrcpt_9056217b90329f9d\nLeft: watch_verify — FAILED ()\nRight: absent\n\nPresent on the left and absent on the right.\n\nOUTPUT DIFFERENCES\n\nThe outputs are identical.\n\ni\n\nA comparison describes a difference. It never issues a verdict of its own — that is why the verification column and the output column are kept apart.\n\nWorkspace Wri",
-  "capturedAt": "2026-09-06T12:34:42.839Z"
+  "zoom": 1,
+  "left": "watch_verify — 2026-09-06T17:44:26.462Z (verification)",
+  "right": "watch_verify — 2026-09-06T17:44:45.330Z (verification)",
+  "rendered": "VERIFICATION DIFFERENCES\nMatching\n0\nClaim changed\n0\nVerdict changed\n0\nOnly on one side\n2\nContradictory\n0\nUnverifiable\n0\nOnly on the left\nrcpt_083ac2985e1c813e\nLeft: watch_verify — FAILED ()\nRight: absent\n\nPresent on the left and absent on the right.\n\nOnly on the right\nrcpt_7b9a2d86acdfd9b7\nLeft: absent\nRight: watch_verify — VERIFIED ()\n\nPresent on the right and absent on the left.\n\nOUTPUT DIFFERENCES\n\nThe outputs are identical.\n\ni\n\nA comparison describes a difference. It never issues a verdict of its own — that is why the verification column and the output column are kept apart.\n\nWorkspace Wri",
+  "capturedAt": "2026-09-06T19:44:12.715Z"
 }

@@ -42,6 +42,15 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
+import {
+  delegationSucceeded,
+  libraryAgreesWithCore,
+  perceptionProved,
+  phaseSlice,
+  toolsIn,
+  verificationsIn,
+} from './lib/journey-evidence.mjs'
+
 function flag(name, fallback = null) {
   const at = process.argv.indexOf(`--${name}`)
   if (at === -1) return fallback
@@ -65,6 +74,8 @@ const BUDGET_MS = Number(flag('budget-ms', '1800000'))
 const MAX_TURNS = Number(flag('max-turns', '12'))
 const TURN_MS = Number(flag('turn-timeout-ms', '300000'))
 const RECEIPTS = flag('receipts', null)
+/** The on-screen text the perception fixture was generated with. */
+const FIXTURE_TOKEN = flag('fixture-token', 'LIVEJOURNEY4482')
 const OUT = flag('out', join(dirname(fileURLToPath(import.meta.url)), '..', 'qa', 'journey-live.json'))
 
 if (HOME === null || WORKSPACE === null || MODEL === null || RECEIPTS === null) {
@@ -119,6 +130,8 @@ const open = async (recordId) => {
   return answer.result?.value ?? {}
 }
 
+const wait = (ms) => new Promise((done) => { setTimeout(done, ms) })
+
 const receiptsFor = async (sessionId, query) => {
   const found = await search(query)
   return (found.records ?? []).filter(record =>
@@ -144,19 +157,6 @@ function journalled(receiptsDir) {
     .filter(line => line.trim() !== '')
     .flatMap((line) => { try { return [JSON.parse(line)] } catch { return [] } })
 }
-
-/** The tool each journalled receipt names. */
-function toolsIn(records) {
-  const counts = {}
-  for (const record of records) {
-    const tag = (record.tags ?? []).find(entry => entry.startsWith('tool:'))
-    if (tag === undefined) continue
-    counts[tag.slice('tool:'.length)] = (counts[tag.slice('tool:'.length)] ?? 0) + 1
-  }
-  return counts
-}
-
-const wait = (ms) => new Promise((done) => { setTimeout(done, ms) })
 
 /** Whether a base URL points at this machine. */
 export function isLoopback(url) {
@@ -294,7 +294,7 @@ if (sessionId !== null) {
     + 'that something other than you evaluates. Report the verdict you get back.')
 
   await wait(2_500)
-  let proofs = await receiptsFor(sessionId, 'watch_verify')
+  const proofs = await receiptsFor(sessionId, 'watch_verify')
   claim('LJ-07 the model reached for independent verification on its own',
     proofs.length >= 1,
     { verifications: proofs.length, verdicts: proofs.map(record => record.verdict) })
@@ -317,55 +317,82 @@ if (sessionId !== null) {
 
   // ── 4. a controlled mismatch ───────────────────────────────────────────────
   //
-  // The break has to be one the claim under test can see. The first version of
-  // this asked for items `[12,18,28]` with the total left at 60 and then asked
-  // for "the same check" -- and the model, which composes its own contract,
-  // had written one that checks the `total` field. Sixty was still sixty, the
-  // contract passed, and the run recorded a mismatch that was not one. What is
-  // broken now is the number the claim is *about*.
+  // The break has to be one the claim under test can see, and the evidence for
+  // it has to come from *this* phase. An earlier version asked for items
+  // `[12,18,28]` with the total left at 60, and the model's own contract
+  // checked the `total` field -- sixty was still sixty, so the "mismatch"
+  // passed. The version after that broke the right number but counted FAILED
+  // verdicts across the whole session, so the invented-digest failure from
+  // phase 3 satisfied it and the mismatch phase could have done nothing at all.
+  const beforeBreak = journalled(RECEIPTS).length
   await turn(sessionId,
     'Change the total field in owner-test/totals.json to 58, leaving the items '
     + 'as they are. Then prove again that the file holds a total of 60, and tell '
     + 'me the verdict you get back.')
   await wait(2_500)
-  proofs = await receiptsFor(sessionId, 'watch_verify')
-  const failed = proofs.filter(record => record.verdict === 'FAILED')
-  claim('LJ-09 the broken claim fails, rather than being reported as fine',
-    failed.length >= 1,
-    { verdicts: proofs.map(record => record.verdict) })
+
+  // The mutation is a fact about the file, checked here rather than inferred
+  // from a verdict.
+  const broken = existsSync(totalsPath) ? readFileSync(totalsPath, 'utf8') : ''
+  let brokenTotal = null
+  try { brokenTotal = JSON.parse(broken).total } catch { brokenTotal = null }
+  claim('LJ-09a the controlled mutation actually happened on disk',
+    brokenTotal === 58,
+    { path: 'owner-test/totals.json', total: brokenTotal, content: broken.trim().slice(0, 80) })
+
+  const breakPhase = phaseSlice(journalled(RECEIPTS), beforeBreak, sessionId)
+  const breakVerdicts = verificationsIn(breakPhase)
+  claim('LJ-09 the broken claim fails, in the phase that broke it',
+    brokenTotal === 58
+      && breakVerdicts.length >= 1
+      && breakVerdicts.some(entry => entry.verdict === 'FAILED'),
+    { phaseReceipts: breakPhase.length,
+      verdictsThisPhase: breakVerdicts.map(entry => entry.verdict),
+      brokenTotal })
 
   // ── 5. the correction ──────────────────────────────────────────────────────
+  const beforeRepair = journalled(RECEIPTS).length
   await turn(sessionId,
     'Put the total back to 60 so it matches the items, and prove it once more.')
   await wait(2_500)
-  // Read from the journal, which is in dispatch order. The Library returns
-  // records, and "did the repair land after the break" is a question about
-  // sequence that a result set cannot answer.
-  const sequence = journalled(RECEIPTS)
-    .filter(record => (record.tags ?? []).includes('tool:watch_verify')
-      && typeof record.verdict === 'string')
-    .map(record => record.verdict)
-  const lastFailure = sequence.lastIndexOf('FAILED')
-  const lastPass = sequence.lastIndexOf('VERIFIED')
-  claim('LJ-10 the repair comes after the break, and it passes',
-    lastFailure !== -1 && lastPass > lastFailure,
-    { sequence, brokeAt: lastFailure, fixedAt: lastPass })
+
+  const repaired = existsSync(totalsPath) ? readFileSync(totalsPath, 'utf8') : ''
+  let repairedTotal = null
+  try { repairedTotal = JSON.parse(repaired).total } catch { repairedTotal = null }
+  const repairPhase = phaseSlice(journalled(RECEIPTS), beforeRepair, sessionId)
+  const repairVerdicts = verificationsIn(repairPhase)
+  claim('LJ-10 the repair lands on disk and earns its own passing verdict',
+    repairedTotal === 60
+      && repairVerdicts.length >= 1
+      && repairVerdicts.some(entry => entry.verdict === 'VERIFIED'),
+    { total: repairedTotal,
+      verdictsThisPhase: repairVerdicts.map(entry => entry.verdict),
+      phaseReceipts: repairPhase.length })
 
   // ── 6. distinct Core identities, in the rows Compare renders ──────────────
-  const identities = [...new Set(proofs.flatMap(record => record.evidenceIds ?? []))]
+  //
+  // Refreshed after the repair, so the rows read here include the one the
+  // repair produced rather than the set as it stood two phases ago.
+  await rpc('watchQuery/libraryRefresh', { args: { request: {
+    protocol: 1, requestId: `refresh-${Date.now().toString(36)}`, deadlineMs: 30_000,
+  } } })
+  await wait(1_500)
+
+  const journalVerifications = verificationsIn(
+    journalled(RECEIPTS).filter(record => record.runId === undefined
+      || record.runId === sessionId))
+  const identities = [...new Set(journalVerifications.flatMap(entry => entry.identities))]
   claim('LJ-11 each verification has its own Core identity',
-    identities.length >= 3 && identities.every(id => String(id).startsWith('ver_')),
-    { identities })
+    journalVerifications.length >= 3
+      && identities.length === journalVerifications.length,
+    { verifications: journalVerifications.length, identities })
 
   const opened = []
-  for (const record of proofs) opened.push(await open(record.recordId))
-  const revisions = [...new Set(opened.map(entry => entry.record?.revisionId).filter(Boolean))]
-  claim('LJ-12 the Library opens each one carrying the verdict Compare reads',
-    opened.filter(entry => entry.outcome === 'record').length === proofs.length
-      && revisions.length === proofs.length,
-    { opened: opened.map(entry => ({
-      outcome: entry.outcome ?? null, verdict: entry.record?.verdict ?? null })),
-    revisions: revisions.length })
+  for (const entry of journalVerifications) opened.push(await open(entry.recordId))
+  const agreement = libraryAgreesWithCore(opened, journalVerifications)
+  claim('LJ-12 the Library shows the verdict Core issued, for every verification',
+    agreement.ok,
+    { problems: agreement.problems ?? [agreement.reason], rows: agreement.rows })
 
   // ── 7. perception ─────────────────────────────────────────────────────────
   //
@@ -374,21 +401,37 @@ if (sessionId !== null) {
   // an inventory. Asserting one tool name was asserting a decision the model
   // gets to make: the run below chose `watch_list_sources`, answered correctly,
   // and was recorded as a failure.
+  //
+  // And what it answered has to be the fixture. Accepting "a `watch_*` tool was
+  // called" let `watch_capabilities` — which reads nothing at all — satisfy a
+  // claim about reading a video.
   const before = turnsTaken
+  const beforePerception = journalled(RECEIPTS).length
   const perception = await turn(sessionId,
-    `There is a short video indexed under media/. Find what on-screen text it `
-    + `contains and tell me the timestamp it appears at.`)
+    'There is a short video indexed under media/. Find the on-screen text it '
+    + 'contains and tell me the timestamp that text appears at.')
   await wait(2_500)
-  const perceptionTools = toolsIn(journalled(RECEIPTS))
-  const reachedCore = Object.keys(perceptionTools).filter(name => name.startsWith('watch_'))
-  claim('LJ-13 a perception request reached Core through a tool the model chose',
-    perception.settled && reachedCore.some(name => name !== 'watch_verify'),
-    { settled: perception.settled, watchTools: reachedCore, turnsUsed: turnsTaken - before })
+  const perceptionPhase = phaseSlice(journalled(RECEIPTS), beforePerception, sessionId)
+  const read = perceptionProved(perceptionPhase, FIXTURE_TOKEN)
+  notes.perception = read
+  claim('LJ-13 a perception call returned the fixture’s text and a timestamp',
+    perception.settled && read.ok,
+    { settled: perception.settled, ...read, turnsUsed: turnsTaken - before })
 
-  const readText = existsSync(join(repo, '..', 'seen.txt'))
-    ? readFileSync(join(repo, '..', 'seen.txt'), 'utf8')
-    : null
-  notes.perceptionAnswer = readText
+  // Cross-checked against Core's own answer for the same source, so the claim
+  // is "the model's tool call and the engine agree" rather than "a string
+  // appeared somewhere".
+  if (read.ok) {
+    const direct = await rpc('watchQuery/librarySearch', { args: { request: {
+      protocol: 1, requestId: `fixture-${Date.now().toString(36)}`, query: FIXTURE_TOKEN,
+      modalities: [], limit: 10, cursor: null, deadlineMs: 30_000,
+    } } })
+    const hits = JSON.stringify(direct.result?.value ?? {})
+    claim('LJ-13a Core independently reports the same token for that source',
+      hits.includes(FIXTURE_TOKEN),
+      { token: FIXTURE_TOKEN, modelSawAtMs: read.timestampMs,
+        coreAnswer: hits.slice(0, 220) })
+  }
 
   // ── 8. a bounded delegated task ────────────────────────────────────────────
   //
@@ -397,15 +440,21 @@ if (sessionId !== null) {
   // one run spawned a subagent and the next did the work itself with `glob` --
   // both correct answers to that instruction, and only one of them exercises
   // the thing. What stays the model's choice is how it runs the child.
+  // What is asserted is the child's own outcome. A `subagent` receipt says a
+  // child was started, which is not the claim: a child that started and failed
+  // leaves the same receipt as one that did the work.
+  const beforeDelegation = journalled(RECEIPTS).length
   const delegated = await turn(sessionId,
     'Use your subagent tool to delegate this to a child task, and report back in '
     + 'one sentence what it found: how many JSON files are under owner-test, and '
     + 'what they are called.')
   await wait(2_500)
-  const afterDelegation = toolsIn(journalled(RECEIPTS))
-  claim('LJ-14 a delegated task ran, and the delegation is in the record',
-    delegated.settled && (afterDelegation.subagent ?? afterDelegation.task ?? 0) >= 1,
-    { settled: delegated.settled, reason: delegated.reason, tools: afterDelegation })
+  const delegationPhase = phaseSlice(journalled(RECEIPTS), beforeDelegation, sessionId)
+  const child = delegationSucceeded(delegationPhase, ['totals.json'])
+  claim('LJ-14 the delegated child completed and reported what it found',
+    delegated.settled && child.ok,
+    { settled: delegated.settled, reason: delegated.reason, ...child,
+      tools: toolsIn(delegationPhase) })
 
   // ── 9. stopping a running task ─────────────────────────────────────────────
   await rpc('session.prompt', { sessionId, mode: 'queue', content: [{ type: 'text',
