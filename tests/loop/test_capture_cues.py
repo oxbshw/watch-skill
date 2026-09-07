@@ -57,8 +57,16 @@ _CHECKOUT = """<!doctype html>
 """
 
 #: Fill the quantity box twice. Two totals, both of which have to survive.
+#:
+#: The wait between them is about this test rather than about the product. Back
+#: to back, the first total is on screen only from its own repaint until the
+#: second edit's -- a window whose width is however long the harness took to
+#: notice the first one, which on a loaded runner is not the same number as it
+#: is here. The second edit is held off so the state has a life of its own, and
+#: a cue that lands anywhere sensible lands inside it.
 _SCRIPT = [
     {"action": "fill", "selector": "#qty", "value": "1"},
+    {"action": "wait", "seconds": 1},
     {"action": "fill", "selector": "#qty", "value": "4"},
 ]
 _FIRST_TOTAL = "22.00"
@@ -189,7 +197,7 @@ def test_a_wait_is_pinned_inside_the_wait_not_at_its_far_edge(
     result = capture(_page(tmp_path).resolve().as_uri(), tmp_path / "cap wait",
                      script=script)
     cues = read_sidecar(result.video_path) or []
-    assert len(cues) == 3
+    assert len(cues) == len(script)
     assert 0.4 < cues[0] < 1.4, (
         f"the wait's cue is at {cues[0]:.2f}s, not inside the 1.5s wait")
     assert cues[0] < cues[1], "the wait outlasted the interaction after it"
@@ -217,7 +225,7 @@ def test_an_explicit_timestamp_wins_over_a_recorded_one(tmp_path: Path) -> None:
     """`--timestamps` is the caller naming the moments that matter."""
     result = capture(_page(tmp_path).resolve().as_uri(), tmp_path / "cap explicit",
                      script=_SCRIPT)
-    assert len(read_sidecar(result.video_path) or []) == 2
+    assert len(read_sidecar(result.video_path) or []) == len(_SCRIPT)
 
     watched = watch(str(result.video_path), use_cache=False, run_ocr=False,
                     cue_timestamps=[0.2])
