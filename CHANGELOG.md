@@ -1,5 +1,152 @@
 # Changelog
 
+## DeepWatch v0.1.2 — 2026-09-08
+
+Moves with Watch Skill 1.4.1, and carries the gate work that release needed.
+
+Nothing in the workspace behaves differently. The compatibility matrix names
+the engine this distribution was measured against, so a release that stayed at
+`1.4.0` there would describe a build nobody ran.
+
+### `watch_moment` had never worked
+
+It forwarded its own parameter, `at_ms`, to `watch.source.moment`, which reads
+`timestampMs`. Every call it has ever made refused with
+
+```
+bridge.invalid_params: "timestampMs" must be a number.
+```
+
+A real model found it during acceptance: asked to find on-screen text in an
+indexed video, it opened a moment, was told to send a parameter it had no way
+to send, tried once more identically, and gave up on reading the video.
+
+The gate that exists for this calls every Bridge method the tools use — with no
+parameters, on purpose, so a method that exists refuses with
+`bridge.invalid_params` and one that does not refuses with
+`bridge.method_not_found`. A name mismatch produces exactly the refusal it
+treats as success. Two tests now cover the two halves: the integration gate
+makes the calls the tools actually build, and a unit test records what the tool
+forwards.
+
+### The published smoke retries a flake, and only a flake
+
+The `deepwatch-v0.1.1` smoke failed on all three platforms seconds after a
+*successful* publish, with `No matching version found for
+@deepwatch/dsh-bundle@^0.1.1`, and a re-run passed. It was racing npm's own
+propagation, and it had no retry at all.
+
+It now retries the fetch four times with doubling backoff and prints the error
+stream between attempts. It refuses to retry a failure that says the same thing
+every time — `EINTEGRITY`, `ENEEDAUTH`, 401, 403 — and the version assertion
+stays outside the loop, because a CLI that installs and then reports the wrong
+version is a finding rather than a flake. Watch Core's `uvx` smoke gets the
+same treatment against a hash mismatch, an unbuildable wheel or an unsolvable
+resolution.
+
+### A packed exemption has to name a file that ships
+
+The release-surface table lets one file be excused from one rule inside one
+packed tarball. Only the *package* half of that key was checked, so an
+exemption could name a member the tarball does not carry and still read as
+verified. `files` decides what ships and the filesystem does not, so the member
+is now put to `npm pack --dry-run`.
+
+The scanner also computed a second, wider exemption window beside the first,
+from `indexOf('watch')` inside the match — zero for the one rule with a scoped
+exemption and minus one for every other, which slides the boundary a character.
+Two answers to a question with one; the Python half only ever asked the one.
+
+### The version promoter stops rewriting versions that are not ours
+
+It replaced version strings by substring, which was enough until a version
+being promoted away from became a prefix of one that must not move. `0.1.1` is
+exactly that: the pinned Harness is `@deepseek-ai/dsh@0.1.1-rc.2`, and
+promoting DeepWatch to `0.1.2` rewrote it to a Harness nobody published — in
+the lockfile whose whole purpose is recording which one was measured. Versions
+now match only where the version ends.
+
+Two generated inventories join the historical list for the reason the lockfile
+is already on it: upstream publishes
+`@deepseek-ai/node-addon-landlock-run@0.1.1`, which is DeepWatch's own outgoing
+version written by a different project.
+
+### Documentation
+
+The README's DeepWatch section is a job rather than a tour of four screens: a
+checkout page that charges the wrong amount, a recording of it, and the path
+from evidence to repair to an independent verdict and back. Onboarding now runs
+as far as a *proved* provider — add, bind, test, ready — and says plainly that
+a dependency being present is not a capability anybody has exercised.
+
+Route 3 names the profile twice. `dsh plugin add` writes into the profile you
+name and `dsh web` serves the one it is given; installing into one and serving
+another leaves an agent with no `watch_*` tools and nothing on screen to
+explain it. `--dump-config` shows what a profile composes before it starts.
+
+`@deepwatch/dsh-bundle` stops recommending a bare `pip install watch-skill`,
+which installs a Core that cannot extract a frame.
+
+## v1.4.1 — 2026-09-08
+
+A recording made to show something now keeps the thing it was made to show.
+
+### The states a scripted capture recorded survive frame selection
+
+`watch-skill capture --script` records when it acted, so frame selection can
+pin those moments. This was measured on a checkout page where a quantity edit
+rewrites three amounts: the frames either side hash **4** apart and the
+near-duplicate threshold is **6**, so the frame carrying the change was dropped
+and the report described the page before it. On one recording, **one** frame of
+eleven candidates survived and none of the quantity changes reached the index.
+The same recording now keeps four, and OCR reads every state.
+
+Three things were wrong with how those moments were recorded and read.
+
+**The clock started after the navigation.** `page.goto` takes as long as the
+site takes, so on a slow server every later moment was early by the length of
+the load — pointing frame selection at the blank page the app had not rendered
+into. It starts with the page now.
+
+**A moment was written the instant a step returned**, which names when the
+input changed rather than when the page changed because of it. Waiting for the
+page to stop moving is not enough either: a page that repaints 350 ms after an
+edit is perfectly stable for the 200 ms in between. Each step now waits for the
+change first and for it to settle second, both bounded, and the cue is pinned
+inside the window where the new state was actually observed. A `wait` step is
+pinned in the middle of the wait rather than at its far edge, which is the
+instant the next step runs.
+
+**The two clocks were assumed to share an origin.** They do not, and the
+difference cannot be worked out from their lengths — which is the trap, because
+it looks as though it can. Measured on a local page: a 1.609 s session produced
+a 2.600 s recording. That reads as a file with a second to spare and no gap at
+the front; it had both. The trailing second is a flush of held frames, and the
+front was missing 0.28 s. The offset is now *measured* against the recording,
+by finding the first page change in it and comparing with when the capture saw
+that change happen.
+
+### Reading them moved into the engine
+
+The sidecar was read by the CLI's `watch` command and nowhere else, so MCP,
+REST, the job queue and `batch` ingested the same recording and ignored what it
+carried. DeepWatch ingests through `watch-skill watch --index`, which meant the
+one path that worked was also the only one anybody had looked at. It lives in
+`watch()` now, and every route gets it.
+
+The shared loader validates what it finds. `[]` and `null` — the two shapes a
+half-written file actually takes — raised an uncaught `AttributeError`; booleans,
+negative numbers, `NaN`, `Infinity` and a timestamp past the end of the
+recording were all accepted. A sidecar is bound to its recording's bytes, so a
+second capture into the same directory cannot inherit the first one's moments,
+and capture clears the sidecar rather than leaving one to be refused. An
+explicit `--timestamps` still wins, and an invalid sidecar is a diagnostic with
+a code and a fix rather than a failed watch.
+
+**Scope.** This helps recordings that carry interaction cues. It does not make
+every semantic change in an arbitrary uploaded video survive selection, and a
+video with no sidecar behaves exactly as before.
+
 ## DeepWatch v0.1.1 — 2026-09-07
 
 A patch for one defect: **the published product could not be installed.**
