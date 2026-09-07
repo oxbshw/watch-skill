@@ -266,7 +266,7 @@ jobs:
           cd sealed
           sha256sum -c SHA256SUMS
       - name: GitHub Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           body_path: sealed/release-notes.md
           prerelease: ${{ needs.build.outputs.prerelease == 'true' }}
