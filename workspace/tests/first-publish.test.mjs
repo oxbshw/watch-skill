@@ -54,7 +54,7 @@ test('dry-run is the default and publishing needs two explicit flags', () => {
 
 /** The single publish call, for the assertions that read its arguments. */
 function publishCall() {
-  const calls = [...SOURCE.matchAll(/npm\(\[\s*'publish',[\s\S]{0,220}?\]\)/g)]
+  const calls = [...SOURCE.matchAll(/npmInteractive\(\[\s*'publish',[\s\S]{0,220}?\]\)/g)]
   assert.equal(calls.length, 1, 'there must be exactly one publish command')
   return calls[0][0]
 }
@@ -113,6 +113,53 @@ describe('one registry policy, and it is not this file\'s own', () => {
   })
 })
 
+describe('npm can answer for itself when the registry challenges it', () => {
+  // `otplease` in npm's `lib/utils/auth.js` opens with, inside the catch:
+  //
+  //     if (!process.stdin.isTTY || !process.stdout.isTTY) { throw err }
+  //
+  // *before* it checks whether the error is an `EOTP` carrying the `authUrl`
+  // and `doneUrl` that drive its browser flow. Publishing through a captured
+  // pipe therefore fails with a bare EOTP for an account that can publish
+  // perfectly well, and never offers the challenge. Confirmed against the npm
+  // this script resolves, 11.17.0.
+
+  test('the publish call gives npm the terminal', () => {
+    assert.match(SOURCE, /function npmInteractive\(/)
+    assert.match(SOURCE, /stdio: 'inherit'/)
+    // And it is the publish that uses it, not a probe.
+    assert.match(publishCall(), /'publish'/)
+  })
+
+  test('the read-only probes stay captured, so they can be sanitized', () => {
+    for (const probe of ["'whoami'", "'org', 'ls'", "'access', 'list'"]) {
+      const at = SOURCE.indexOf(probe)
+      assert.notEqual(at, -1, `${probe} is gone`)
+      const call = SOURCE.slice(Math.max(0, at - 60), at)
+      assert.match(call, /npm\(\[/,
+        `${probe} must go through the capturing helper, not the interactive one`)
+    }
+    assert.match(SOURCE, /function sanitize\(/)
+  })
+
+  test('a run with no terminal is refused before the first upload', () => {
+    assert.match(SOURCE, /function interactive\(/)
+    assert.match(SOURCE, /this needs a real terminal/)
+    assert.ok(SOURCE.indexOf('if (!interactive())') < SOURCE.indexOf("'publish', join(artifacts"),
+      'the refusal must come before anything is uploaded')
+    // And it explains the cause rather than blaming the credential.
+    assert.match(SOURCE, /otplease/)
+  })
+
+  test('no one-time password is read, stored or accepted as an argument', () => {
+    // The operator answers npm, not this script. An OTP that reached here
+    // would end up in argv, in a log, or in the state file beside the run.
+    assert.doesNotMatch(CODE, /--otp/)
+    assert.doesNotMatch(CODE, /otp\s*[:=]/i)
+    assert.doesNotMatch(CODE, /npm_config_otp/)
+  })
+})
+
 describe('a read-only probe is not a permission', () => {
   test('access probes do not print an npm identity or configuration', () => {
     assert.match(SOURCE, /'whoami'/)
@@ -150,9 +197,18 @@ describe('npm gets to say what went wrong', () => {
     assert.match(SOURCE, /npm login --registry=https:\/\/registry\.npmjs\.org\/ --auth-type=web/)
   })
 
-  test('a failed publish prints the diagnostics it tells the operator to read', () => {
-    assert.match(SOURCE, /process\.stderr\.write\(`\\nnpm refused/)
-    assert.match(SOURCE, /diagnostics\(result\)/)
+  test('a failed publish points at output npm has already written', () => {
+    // This used to assert that the script re-printed a captured message. It
+    // cannot any more, and should not: capturing the publish is what stopped
+    // npm offering an authentication challenge in the first place. npm writes
+    // to the operator's terminal directly, so the script's job is to say where
+    // to look and what state the run is in -- not to paraphrase.
+    assert.match(SOURCE, /npm's own output is above/)
+    assert.match(SOURCE, /npm wrote to the terminal/)
+    assert.match(SOURCE, /package\(s\) reached the registry/)
+    assert.match(SOURCE, /resumes at the first package/)
+    // The captured path is still there, for the probes that are inspected.
+    assert.match(SOURCE, /function diagnostics\(/)
   })
 
   test('local uploads are never described as attested', () => {

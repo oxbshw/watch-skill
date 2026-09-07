@@ -271,10 +271,19 @@ jobs:
           npm install --global npm@11.17.0
           npm --version
 
+      # Downloaded outside the checkout, and that is load-bearing.
+      #
+      # `path: workspace-artifacts` put twenty-five files inside the working
+      # tree. They are not in any `.gitignore`, so the very next step --
+      # `verify-provenance.mjs`, which refuses a tree that cannot honestly name
+      # the source of its own artifacts -- counted them and rejected the
+      # release with `worktree_dirty`. The check was right; the download was in
+      # the wrong place. `.release-artifacts/` and the manifest beside it are
+      # both ignored, which is why the verify job never hit this.
       - uses: actions/download-artifact@v8
         with:
           name: deepwatch-tarballs
-          path: workspace-artifacts
+          path: ${{ runner.temp }}/sealed
 
       - name: Put the sealed set back where the manifest describes it
         run: |
@@ -284,14 +293,17 @@ jobs:
           # The upload staged a flat, visible directory; the manifest describes
           # a hidden one. Restoring the shape here keeps every script that
           # reads `.release-artifacts` unchanged.
-          cp ../workspace-artifacts/*.tgz .release-artifacts/
-          cp ../workspace-artifacts/SHA256SUMS .release-artifacts/
-          cp ../workspace-artifacts/packed-artifacts.json .release-artifacts/
-          cp ../workspace-artifacts/publish-plan.json .release-artifacts/
-          cp ../workspace-artifacts/release-notes.md .release-artifacts/
-          cp ../workspace-artifacts/provenance.json .release-artifacts-provenance.json
+          cp "$RUNNER_TEMP"/sealed/*.tgz .release-artifacts/
+          cp "$RUNNER_TEMP"/sealed/SHA256SUMS .release-artifacts/
+          cp "$RUNNER_TEMP"/sealed/packed-artifacts.json .release-artifacts/
+          cp "$RUNNER_TEMP"/sealed/publish-plan.json .release-artifacts/
+          cp "$RUNNER_TEMP"/sealed/release-notes.md .release-artifacts/
+          cp "$RUNNER_TEMP"/sealed/provenance.json .release-artifacts-provenance.json
           ls -l .release-artifacts
           test "$(ls .release-artifacts/*.tgz | wc -l)" -eq 20
+          # The tree has to still be clean, because the next step refuses a
+          # dirty one and this step is the only thing that touched it.
+          test -z "$(git -C .. status --porcelain=v1 --untracked-files=all)"             || { echo "::error::restoring the sealed set left the worktree dirty";                  git -C .. status --porcelain=v1 --untracked-files=all; exit 1; }
 
       # The manifest is checked before the first upload, not after. A publish
       # job that trusts whatever arrived in an artifact is a publish job that

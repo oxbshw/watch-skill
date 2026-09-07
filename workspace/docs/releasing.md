@@ -200,9 +200,26 @@ locally at all:
      --expect-commit "$(git rev-parse HEAD)"
    ```
 
-3. **Publish those exact files**, with
+3. **Publish those exact files**, from a terminal you are sitting at, with
    `node scripts/first-publish.mjs --artifacts sealed --publish
    --confirm-first-publish`.
+
+   *A terminal, specifically.* npm's `otplease` wrapper
+   (`lib/utils/auth.js`) rethrows an authentication error before attempting
+   its browser flow when either stdin or stdout is not a TTY:
+
+   ```js
+   if (!process.stdin.isTTY || !process.stdout.isTTY) { throw err }
+   ```
+
+   Run from a captured pipe — a CI step, an agent, anything reading the
+   output — the publish fails with a bare `EOTP: This operation requires a
+   one-time password` for an account that can publish perfectly well, and
+   never offers the challenge that would have completed it. The script now
+   refuses up front rather than letting you discover this on package one.
+   Everything else it does stays captured and sanitized; only the upload
+   hands npm the terminal, and no one-time password passes through the
+   script, its arguments, or its state file.
 4. **Configure the Trusted Publishers** (below). This needs interactive 2FA —
    `npm trust` refuses a token that bypasses it.
 5. **Re-run the workflow.** It packs the same bytes, the plan says `skip`
