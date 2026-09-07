@@ -57,16 +57,25 @@ export const VERSIONS = {
  * of them would make the repository lie in order to make a search come out
  * empty.
  *
- * `uv.lock` is deliberately *not* here, and the distinction is worth stating.
- * Most of a lockfile is third-party resolution and none of this touches it —
- * but the lock also records the project's **own** version, and that entry is a
- * live claim about the package being built, not a record of a past build. Left
- * behind, `uv` reports the lock as stale against `pyproject.toml` and the
- * lockfile gate fails. Only the self-version line matches the promotion, so
- * rewriting it changes exactly that.
+ * `uv.lock` is here for the reason the pnpm lockfile is, and it took a broken
+ * release candidate to see it. The lock records the project's own version,
+ * which must move — so this script used to rewrite it, on the argument that
+ * "only the self-version line matches the promotion". That was true until it
+ * was not: promoting Watch Skill 1.4.0 to 1.4.1 also rewrote `aiosignal` and
+ * `pyclipper`, two third parties that happen to share our number, and `uv`
+ * refused the file outright:
+ *
+ *     error: Failed to parse `uv.lock`
+ *       Caused by: The entry for package `aiosignal` (1.4.1) has wheel
+ *       `aiosignal-1.4.0-py3-none-any.whl` with inconsistent version
+ *
+ * Every Python job in CI died at the first `uv run`. The self-version still
+ * has to move; `uv lock` is what moves it, and `uv lock --check` in CI is what
+ * fails when nobody has. Regenerate it; never rewrite it.
  */
 export const HISTORICAL = [
   'CHANGELOG.md',
+  'uv.lock',
   // Two records of somebody else's dependency graph. Nothing in either is a
   // claim about this project's version, and the promotion cannot tell
   // `powershell-utils@0.1.0` -- a real third party that happens to share our

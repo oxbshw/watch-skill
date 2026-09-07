@@ -147,7 +147,15 @@ describe('no active surface carries a prerelease string', () => {
     assert.equal(isHistorical('docs/release-proof.md'), true)
     assert.equal(isHistorical('workspace/docs/history/anything.md'), true)
     assert.equal(isHistorical('pyproject.toml'), false)
-    assert.equal(isHistorical('uv.lock'), false)
+
+    // Both lockfiles are, and for one reason: most of what is in them belongs
+    // to somebody else. A substring promotion of Watch Skill 1.4.0 to 1.4.1
+    // also rewrote `aiosignal` and `pyclipper` — two third parties that happen
+    // to share our number — and `uv` refused the file outright, taking every
+    // Python job with it. The self-version still has to move; `uv lock` moves
+    // it and `uv lock --check` in CI fails when nobody has.
+    assert.equal(isHistorical('uv.lock'), true)
+    assert.equal(isHistorical('workspace/pnpm-lock.yaml'), true)
   })
 })
 
