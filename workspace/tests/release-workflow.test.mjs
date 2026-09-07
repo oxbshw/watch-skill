@@ -398,10 +398,17 @@ describe('the npm release ends in something a person can link to', () => {
       ],
     }
     const page = notes(inventory, { source: {}, harness: {}, toolchain: {} })
-    assert.match(page, /takes fourteen of them, not one/)
-    assert.match(page, /deepwatch-dsh-core-bridge-\*\.tgz/,
-      'the siblings a real offline install needs are named')
     assert.doesNotMatch(page, /offline install can use the file directly/)
+
+    // Nor does supplying all fourteen make it one. That was the first
+    // correction, and it was also wrong: `dsh plugin add` shells out to pnpm,
+    // which resolves the bundle's `^0.1.0` sibling ranges from the registry
+    // whether or not the tarballs are on the command line. Tested against a
+    // stock Harness profile; it reaches npmjs.org either way.
+    assert.doesNotMatch(page, /takes fourteen of them, not one/)
+    assert.match(page, /Offline, the entry point is `deepwatch setup`/)
+    assert.match(page, /deepwatch setup --artifacts/,
+      'the path that does work without a registry is the one named')
   })
 
   test('a partial npm release is reported as the state it is', () => {
