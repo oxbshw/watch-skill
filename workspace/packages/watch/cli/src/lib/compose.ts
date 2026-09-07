@@ -46,6 +46,8 @@ import { join } from 'node:path'
 
 import { run, startAndWaitFor } from './exec.js'
 import { ARTIFACT_DIR } from './provision.js'
+import type { SourceMode } from './provision.js'
+import { DEEPWATCH_PACKAGES } from '../generated/managed-runtime.js'
 import {
   BUNDLE_PACKAGE, UPSTREAM_NOTICE_FIELD, UPSTREAM_NOTICE_NAMESPACE, UPSTREAM_NOTICE_VERSION,
 } from '../version.js'
@@ -89,6 +91,18 @@ export interface CompositionReport {
 export interface ComposeOptions {
   /** The managed Harness's `lib/bin.js`. */
   readonly dshEntry: string
+  /**
+   * Where the DeepWatch packages came from, passed rather than guessed.
+   *
+   * The profile install used to look for tarballs under the managed runtime
+   * and treat an empty directory as a broken runtime. That is right for an
+   * `--artifacts` install and wrong for a registry one, where there are no
+   * tarballs by design -- which is how a working registry install failed in
+   * the composition phase saying the runtime "kept no DeepWatch artifacts".
+   */
+  readonly deepwatchMode: SourceMode
+  /** The exact version to install from the registry, in registry mode. */
+  readonly deepwatchVersion: string
   /** The promoted (or staged) managed runtime root, which owns `.artifacts/`. */
   readonly managedRoot: string
   /** `DSH_HOME`, which is where profiles live. */
@@ -329,8 +343,8 @@ export function writeArtifactOverrides(profileDir: string, tarballs: readonly st
     OVERRIDE_MARK,
     '#',
     '# Every DeepWatch package, resolved to the copy inside the managed runtime.',
-    '# Nothing under @deepwatch is published; without these, pnpm asks the public',
-    '# registry for a scope that does not exist and reports nineteen 404s.',
+    '# Written only for an --artifacts install: it is what pins the profile to the',
+    '# tarballs that were verified, rather than to whatever the registry serves.',
     'overrides:',
     ...rows,
     OVERRIDE_END,
@@ -398,25 +412,40 @@ export async function composeProfile(
   const already = before.includes(BUNDLE_PACKAGE)
     && Object.keys(manifest.dependencies ?? {}).some(name => name.startsWith('@deepwatch/'))
 
-  const tarballs = keptArtifacts(options.managedRoot)
-  if (tarballs.length === 0) {
+  const local = options.deepwatchMode === 'local-artifacts'
+  const specs = local
+    ? keptArtifacts(options.managedRoot)
+    : DEEPWATCH_PACKAGES
+      .filter(name => name !== '@deepwatch/cli')
+      .map(name => `${name}@${options.deepwatchVersion}`)
+  if (specs.length === 0) {
     return {
       outcome: 'install-failed',
-      detail: `the managed runtime at ${options.managedRoot} kept no DeepWatch artifacts, so `
-        + 'the profile has nowhere to install them from',
-      fix: 'Run `deepwatch setup --artifacts <dir>` to rebuild the managed runtime.',
+      detail: local
+        ? `the managed runtime at ${options.managedRoot} kept no DeepWatch artifacts, so `
+          + 'the profile has nowhere to install them from'
+        : 'the generated DeepWatch package list is empty, so there is nothing to compose',
+      fix: local
+        ? 'Run `deepwatch setup --artifacts <dir>` to rebuild the managed runtime.'
+        : 'Reinstall @deepwatch/cli; this build has no package list in it.',
     }
   }
 
-  say(`  installing ${String(tarballs.length)} DeepWatch packages into the profile`)
-  writeArtifactOverrides(profileDir, tarballs)
-  const added = await dsh(['plugin', '--profile', options.profile, 'add', ...tarballs])
+  say(`  installing ${String(specs.length)} DeepWatch packages into the profile`)
+  // Overrides pin each name to the runtime's own copy, which is only
+  // meaningful when there are copies. In registry mode the profile resolves
+  // the same names from the registry, at the same exact version.
+  if (local) writeArtifactOverrides(profileDir, specs)
+  const added = await dsh(['plugin', '--profile', options.profile, 'add', ...specs])
   if (added.code !== 0) {
     return {
       outcome: 'install-failed',
       detail: firstLine(added.stderr === '' ? added.stdout : added.stderr),
-      fix: 'The profile could not install the DeepWatch packages from the managed '
-        + "runtime's own copies. Run `deepwatch setup --artifacts <dir>` again.",
+      fix: local
+        ? 'The profile could not install the DeepWatch packages from the managed '
+          + "runtime's own copies. Run `deepwatch setup --artifacts <dir>` again."
+        : 'The profile could not install the DeepWatch packages from the registry. '
+          + 'Check network access to the registry named in the plan, then run setup again.',
     }
   }
 

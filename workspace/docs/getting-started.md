@@ -5,7 +5,7 @@ inside it; pick the second if you are working on Watch itself.
 
 ---
 
-## 1. Test the unpublished candidate in a Harness you already run
+## 1. Test a local candidate build in a Harness you already run
 
 ```bash
 # the engine that sees and proves
@@ -18,10 +18,12 @@ npm run release:artifacts
 WATCH_CORE_BIN=watch-skill node scripts/manual-profile.mjs --from-artifacts
 ```
 
-The `@deepwatch` packages are not published yet. Do not install them by
-registry name and do not use `npx @deepwatch/cli`; the candidate path above
-checks every tarball hash before the profile is served. The Bridge command is
-the packed `watch-skill` executable supplied through `WATCH_CORE_BIN`.
+The `@deepwatch` packages are on npm, so `npm install -g @deepwatch/cli` and
+`npx @deepwatch/cli` both resolve. This page uses the
+candidate path anyway, on purpose: it serves the working tree you are editing
+and checks every tarball hash before the profile is served, which is what you
+want while changing Watch itself. The Bridge command is the packed
+`watch-skill` executable supplied through `WATCH_CORE_BIN`.
 
 Ask your agent what it can see:
 

@@ -194,6 +194,11 @@ describe('the exemptions stay narrow', () => {
       '#the-deepwatch-workspace',
       '@deepwatch/dsh-workspace',
       'deepwatch-workspace/thing',
+      // The profile row that mounts the package. It appears in every example
+      // showing how to compose the workspace half, and it is an identifier in
+      // somebody's YAML rather than a repository anybody could clone.
+      "- id: watch-workspace",
+      "  id: watch-workspace",
     ]) assert.ok(!fires(fine), `${fine} is not a repository name`)
   })
 })

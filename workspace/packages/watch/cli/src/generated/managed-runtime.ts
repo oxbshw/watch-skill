@@ -23,6 +23,37 @@ export const MANIFEST_DIGEST = 'sha256:daebefc8ace7e66f67f319b63ae6c3db8a6989ecc
 /** How many of the entries below are required peers rather than the Harness. */
 export const REQUIRED_PEER_COUNT = 30
 
+/**
+ * The publishable DeepWatch packages, in the order they must be installed.
+ *
+ * Derived from the workspace manifests by the same walk `publish-order.mjs`
+ * uses, so this list and the release order cannot disagree. `setup` needs it
+ * in registry mode: a published CLI has no packed inventory beside it, and
+ * the managed runtime still has to contain every one of these.
+ */
+export const DEEPWATCH_PACKAGES: readonly string[] = [
+  '@deepwatch/dsh-client-brand',
+  '@deepwatch/dsh-contracts',
+  '@deepwatch/dsh-trajectory',
+  '@deepwatch/dsh-workspace',
+  '@deepwatch/dsh-client-evidence',
+  '@deepwatch/dsh-memory',
+  '@deepwatch/dsh-client-memory',
+  '@deepwatch/dsh-technology',
+  '@deepwatch/dsh-library',
+  '@deepwatch/dsh-core-bridge',
+  '@deepwatch/dsh-tools',
+  '@deepwatch/dsh-client-remotes',
+  '@deepwatch/dsh-client-settings',
+  '@deepwatch/dsh-live',
+  '@deepwatch/dsh-bundle',
+  '@deepwatch/cli',
+  '@deepwatch/dsh-wiki',
+  '@deepwatch/dsh-adapters',
+  '@deepwatch/dsh-sdk',
+  '@deepwatch/dsh-tenancy',
+]
+
 /** Exact package versions the managed runtime is installed from. */
 export const MANAGED_DEPENDENCIES: Readonly<Record<string, string>> = {
   '@deepseek-ai/cordis': '4.0.2',

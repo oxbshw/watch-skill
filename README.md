@@ -5,17 +5,24 @@
 
 # Watch Skill · DeepWatch
 
-**Give AI agents eyes and ears — and a record of their work that something
-other than the agent wrote.**
+**Give AI agents eyes, ears, and verifiable results.**
 
-Watch Skill turns video, audio and screen activity into searchable, timestamped
-evidence, and answers *did that actually work?* with a deterministic contract
-instead of a model's opinion. DeepWatch is the workspace that puts an agent
-inside it.
+**Watch Skill** turns video, audio and screen activity into searchable,
+timestamped evidence, and answers *did that actually work?* with a
+deterministic contract rather than a model's opinion. Add it to the agent you
+already use over MCP.
+
+**DeepWatch** is a ready-made agent workspace — the official DeepSeek Harness
+with Watch Skill already composed in — where every tool call leaves a receipt
+you can open and every result can be checked by something other than the agent
+that produced it.
 
 [![PyPI](https://img.shields.io/pypi/v/watch-skill?label=watch-skill&logo=pypi&logoColor=white)](https://pypi.org/project/watch-skill/)
 [![Downloads](https://img.shields.io/pypi/dm/watch-skill?label=pypi%20downloads)](https://pypi.org/project/watch-skill/)
 [![Python](https://img.shields.io/pypi/pyversions/watch-skill?logo=python&logoColor=white)](https://pypi.org/project/watch-skill/)
+[![npm](https://img.shields.io/npm/v/@deepwatch/cli?label=%40deepwatch%2Fcli&logo=npm&logoColor=white)](https://www.npmjs.com/package/@deepwatch/cli)
+[![dsh-bundle](https://img.shields.io/npm/v/@deepwatch/dsh-bundle?label=%40deepwatch%2Fdsh-bundle&logo=npm&logoColor=white)](https://www.npmjs.com/package/@deepwatch/dsh-bundle)
+[![DeepWatch release](https://img.shields.io/github/v/release/oxbshw/watch-skill?filter=deepwatch-v*&label=DeepWatch%20release)](https://github.com/oxbshw/watch-skill/releases?q=deepwatch)
 [![Node](https://img.shields.io/badge/node-%E2%89%A5%2022.19-339933?logo=node.js&logoColor=white)](workspace/docs/install-and-upgrade.md)
 [![Agent Skills](https://www.skills.sh/b/oxbshw/watch-skill)](https://www.skills.sh/oxbshw/watch-skill/watch)
 [![MCP](https://img.shields.io/badge/MCP-stdio%20%C2%B7%20HTTP-8A2BE2)](docs/agents/README.md)
@@ -69,19 +76,22 @@ Any agent can use it: **MCP**, a **CLI**, or a **REST** API.
 ### <img src="workspace/packages/watch/brand/assets/watch-orca-32.png" alt="" width="22" align="absmiddle"> DeepWatch — the workspace
 
 The official [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)
-composed with Watch Skill, so an agent's work happens *inside* something that
-watches it. Every tool call leaves a receipt. Every path a tool declares is
-checked against one workspace boundary. "It worked" becomes a claim you can
-open.
+with Watch Skill composed in, installed by one command. You get an agent that
+can see and prove, without wiring anything together yourself.
 
-Web workspace, a Library of what happened, and Compare for two runs of the same
-contract.
+Every tool call leaves a receipt naming what it touched. Every path a tool
+declares is checked against one workspace boundary, so a tool cannot quietly
+write outside it. Results carry a Core verdict you can open, and the Library
+keeps them after a restart.
+
+Runs in your browser. Compare puts two runs of the same contract side by side
+and shows where their verdicts diverged.
 
 </td>
 </tr>
 </table>
 
-**Watch Skill is what sees and proves. DeepWatch is where the work happens.**
+**Watch Skill sees and proves. DeepWatch is the workspace it comes built into.**
 
 ---
 
@@ -142,31 +152,59 @@ npx skills add oxbshw/watch-skill -g
 
 ### 2. The whole workspace
 
-> **Not on npm yet.** Nothing exists under the `@deepwatch` scope until the
-> `deepwatch-v0.1.0` release publishes it, so the command below resolves
-> nothing today. [Getting started](workspace/docs/getting-started.md) has the
-> path that works from a checkout.
+**Prerequisites.** Node **22.19+ or 24+**. Python 3.11+ only if you want the
+perception and verification engine — DeepWatch starts without it and reports
+every Watch capability as unavailable until it is there.
 
 ```bash
+# 1. the engine that sees and proves (optional, but it is the point)
+pip install 'watch-skill[standard,ocr]'
+
+# 2. the workspace
 npm install -g @deepwatch/cli
-deepwatch setup                 # builds the runtime and composes the profile
+deepwatch doctor                     # what is present, what is missing, how to fix it
+deepwatch setup                      # builds the runtime; shows the download and asks first
+
+# 3. a workspace directory to work in
+mkdir my-project
 deepwatch web --workspace ./my-project
 ```
 
-`@deepwatch/cli` is the package; `npm`, `npx` and `pnpm dlx` are three ways to
-reach it, not three products. `deepwatch doctor` reports what is installed and
-what is missing; `deepwatch setup` is the only thing that builds, and it asks
-before downloading anything.
+`deepwatch web` prints a local URL and opens the workspace there.
+
+**Without a global install**, the same package through `npx`:
+
+```bash
+npx --yes @deepwatch/cli setup
+mkdir my-project
+npx --yes @deepwatch/cli web --workspace ./my-project
+```
+
+`npx` is a way of running `@deepwatch/cli`, not a different package — there is
+no unscoped `deepwatch` on npm.
+
+**What `setup` downloads.** The pinned DeepSeek Harness, its exact required
+peers, and the DeepWatch packages at this release's version, into a runtime
+under your DeepWatch home. It prints the registry, the versions and the
+destination and stops for your agreement; `--yes` agrees in advance and
+`--offline` refuses outright. Nothing is installed globally except the CLI you
+installed yourself. `--artifacts <dir>` installs from verified local tarballs
+instead, for an air-gapped machine or a checkout build.
+
+**A model provider is not required to start.** The workspace boots, the Library
+works and Watch tools answer without one. Configure a provider in Settings when
+you want the agent to reason; `deepwatch doctor` reports what is configured.
 
 ### 3. Into a DeepSeek Harness you already run
-
-> **Not on npm yet**, the same as above — the bundle is published by
-> `deepwatch-v0.1.0`. Until then, compose it from a checkout:
-> [getting started](workspace/docs/getting-started.md).
 
 ```bash
 dsh plugin --profile web add @deepwatch/dsh-bundle
 ```
+
+**Compatible Harness.** This release was measured against
+`@deepseek-ai/dsh@0.1.1-rc.2`, exactly — it is a pinned peer, not a range, so a
+profile on a different Harness is a combination nobody tested. `dsh --version`
+tells you which you have.
 
 That is the whole installation. The package declares `dsh.bundle.patch`, so DSH
 reconciles it into the profile's layer stack and applies the patch after its
@@ -235,9 +273,8 @@ own — the correction is yours to give — and nothing is uploaded.
 ## The DeepWatch Workspace
 
 Everything above is the engine, and any agent can use it. DeepWatch is the
-workspace where an agent's own work happens inside it: the official DeepSeek
-Harness composed with Watch Skill, so every tool call leaves a receipt and
-"it worked" is a claim you can open.
+official DeepSeek Harness with Watch Skill already composed in, so an agent you
+run there produces receipts and verdicts without you wiring anything up.
 
 Four screens, in the order you meet them.
 
@@ -254,8 +291,9 @@ than remembered.
 </div>
 
 **2 · Evidence, retrieved.** Every source and every receipt this workspace
-recorded, searched on the workspace's own host — no service, no model, nothing
-leaving the machine.
+recorded. The index is built and searched by the workspace's own host, with no
+model and no external service in the path — this screen is answered entirely on
+your machine.
 
 <div align="center">
 <img src="workspace/docs/screenshots/release/06-independent-verification.png" width="86%" alt="A VERIFIED result card from watch_verify: two of two checks passed, one confirming the file exists and one confirming its total field equals 60, shown with the contract's sha256 digest.">
@@ -276,6 +314,13 @@ describes a difference; it never issues a verdict of its own.
 Every image is a photograph of a running build, and each caption on
 **[the screenshot page](workspace/docs/screenshots-release.md)** names the build
 it came from. The full gallery is there too.
+
+**What "local-first" means here, precisely.** Your sources, receipts, verdicts
+and memory are stored on your machine, and Library search runs there. It does
+not mean nothing uses the network: `setup` downloads the runtime from npm, some
+Watch extras fetch a model the first time they run, and a hosted model provider
+you configure receives what you send it. The parts that stay local are the
+record and the retrieval over it.
 
 ---
 

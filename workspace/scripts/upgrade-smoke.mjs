@@ -240,8 +240,8 @@ function main() {
   const env = { ...process.env, DSH_HOME: HOME }
 
   // ── version A ─────────────────────────────────────────────────────────────
-  const versionA = '0.1.0-upgrade-a'
-  const versionB = '0.1.0-upgrade-b'
+  const versionA = '0.1.1-upgrade-a'
+  const versionB = '0.1.1-upgrade-b'
   process.stdout.write(`packing version A (${versionA})\n`)
   const tarballsA = packAt(versionA, PACKED_A)
   process.stdout.write(`packing version B (${versionB})\n`)

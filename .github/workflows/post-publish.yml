@@ -76,10 +76,10 @@ jobs:
           # and `release: published` carries no filter, so a `deepwatch-v*`
           # release reached this job too. `${tag#core-v}` strips nothing from
           # a tag that does not start with it, so the version became the
-          # literal string `deepwatch-v0.1.0`, and the loop below spent ten
-          # minutes asking PyPI for it before failing with "watch-skill
-          # deepwatch-v0.1.0 never appeared on PyPI" -- a red check on a
-          # release that had done nothing wrong.
+          # literal string of the whole `deepwatch-v*` tag, and the loop
+          # below spent ten minutes asking PyPI for a version by that name
+          # before failing with "watch-skill <that tag> never appeared on
+          # PyPI" -- a red check on a release that had done nothing wrong.
           if [ "${{ github.event_name }}" = "release" ]; then
             tag="${{ github.event.release.tag_name }}"
             case "$tag" in

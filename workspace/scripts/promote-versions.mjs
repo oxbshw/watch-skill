@@ -41,7 +41,7 @@ const REPO = join(ROOT, '..')
  */
 export const VERSIONS = {
   core: { name: 'Watch Skill', to: '1.4.0', from: ['1.4.0rc1'] },
-  deepwatch: { name: 'DeepWatch', to: '0.1.0', from: ['0.1.0-preview.0'] },
+  deepwatch: { name: 'DeepWatch', to: '0.1.1', from: ['0.1.0-preview.0', '0.1.0'] },
 }
 
 /**
@@ -62,6 +62,15 @@ export const VERSIONS = {
  */
 export const HISTORICAL = [
   'CHANGELOG.md',
+  // A capture of somebody else's dependency graph, carrying a digest of its
+  // own contents. Nothing in it is a claim about this project's version, and
+  // the promotion has no way to tell `powershell-utils@^0.1.0` -- a real third
+  // party that happens to share our number -- from one of ours. Promoting
+  // DeepWatch 0.1.0 to 0.1.1 rewrote exactly that line, which both invented a
+  // dependency range upstream never published and broke the self-digest, so
+  // `managed:check` failed with "edited by hand". Re-capture it; never rewrite
+  // it.
+  'workspace/inventory/dsh-closure.json',
   'docs/release-proof.md',
   'docs/history/',
   'workspace/docs/history/',

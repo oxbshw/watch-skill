@@ -37,7 +37,7 @@ const REVIEWED = JSON.parse(
 
 test('a scoped spec splits on the last @, not the first', () => {
   assert.deepEqual(splitSpec('@scope/name@1.2.3'), { name: '@scope/name', version: '1.2.3' })
-  assert.deepEqual(splitSpec('plain@0.1.0'), { name: 'plain', version: '0.1.0' })
+  assert.deepEqual(splitSpec('plain@0.1.1'), { name: 'plain', version: '0.1.1' })
   assert.equal(splitSpec('@scope/name'), null)
 })
 

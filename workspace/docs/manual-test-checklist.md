@@ -79,7 +79,8 @@ provider credential and must produce zero provider egress until you act.
 External sign-off records what this pass cannot observe, and it is worth
 keeping the two trains apart because they are not in the same position.
 
-*DeepWatch (`@deepwatch/*`, npm).* A genuine first publication: nothing exists
+*DeepWatch (`@deepwatch/*`, npm).* The first `deepwatch-v*` tag published on
+2026-09-07. It was a genuine first publication: nothing existed
 under the scope yet. Record the one-time publisher credential and 2FA, the
 per-package Trusted Publisher configuration that replaces it afterwards, and
 the restricted npm teams.

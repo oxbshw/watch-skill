@@ -3,8 +3,8 @@
  * The order the twenty packages must be published in.
  *
  * npm resolves a dependency at install time, not at publish time, so a
- * registry will happily accept `@deepwatch/cli@0.1.0` naming a
- * `@deepwatch/dsh-bundle@0.1.0` that does not exist yet. The version number is
+ * registry will happily accept `@deepwatch/cli@0.1.1` naming a
+ * `@deepwatch/dsh-bundle@0.1.1` that does not exist yet. The version number is
  * then spent: it cannot be republished, and every install of it fails until
  * the missing package appears. Publishing in dependency order is what makes
  * each version resolvable the moment it is public.

@@ -162,8 +162,22 @@ describe('a release resumes only onto bytes it recognises', () => {
 })
 
 describe('an unreachable registry is not an empty one', () => {
+  /**
+   * The spec under test, and the pattern derived from it.
+   *
+   * These were two independent literals, and they drifted the moment a version
+   * promotion touched one of them: the call was rewritten to the new version
+   * and the expectation was not, because its dots are escaped for the regex
+   * and `promote-versions.mjs` matches a plain version string. The test then
+   * failed for a reason that had nothing to do with the behaviour it covers.
+   * Deriving the pattern from the spec is what makes that impossible rather
+   * than merely unlikely.
+   */
+  const SPEC = { name: '@deepwatch/cli', version: '0.1.1' }
+  const literal = text => text.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&')
+
   test('E404 means "not published"', () => {
-    const dist = registryDist('@deepwatch/cli', '0.1.0',
+    const dist = registryDist(SPEC.name, SPEC.version,
       () => ({ status: 1, stdout: '', stderr: "npm error code E404\nnpm error 404 Not Found" }))
     assert.equal(dist, null)
   })
@@ -173,9 +187,9 @@ describe('an unreachable registry is not an empty one', () => {
     // twenty duplicate uploads, every one of which fails, on a release that
     // was actually fine.
     assert.throws(
-      () => registryDist('@deepwatch/cli', '0.1.0',
+      () => registryDist(SPEC.name, SPEC.version,
         () => ({ status: 1, stdout: '', stderr: 'npm error network request to https://registry.npmjs.org failed' })),
-      /npm view @deepwatch\/cli@0\.1\.0 failed/)
+      new RegExp(`npm view ${literal(`${SPEC.name}@${SPEC.version}`)} failed`))
   })
 })
 

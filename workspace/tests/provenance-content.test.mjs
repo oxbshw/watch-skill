@@ -59,17 +59,21 @@ function manifestFor(dir, source, overrides = {}) {
 describe('the defect that shipped', () => {
   test('one name@version with two byte sets is a mismatch', () => {
     // The whole reason this file exists. The old composition digest hashed
-    // `@deepwatch/dsh-memory@0.1.0` and could not tell these apart.
+    // `@deepwatch/dsh-memory@0.1.1` and could not tell these apart.
     const hardened = 'export function restrictAll(directory) {}'
     const stale = 'export function nothingOfTheSort() {}'
 
-    const dir = sealedSet({ 'deepwatch-dsh-memory-0.1.0.tgz': stale })
+    const dir = sealedSet({ 'deepwatch-dsh-memory-0.1.1.tgz': stale })
     const sealed = manifestFor(dir, {})
     // Seal the hardened bytes, ship the stale ones — the exact substitution.
+    // One spec, used to build the substitution and to match the refusal.
+    // These were two literals and the version promotion moved only one of
+    // them, so the test failed on its own bookkeeping rather than on the
+    // behaviour it covers.
+    const SUBSTITUTED = { name: '@deepwatch/dsh-memory', version: '0.1.1' }
     sealed.artifacts = sealed.artifacts.map(entry => ({
       ...entry,
-      name: '@deepwatch/dsh-memory',
-      version: '0.1.0',
+      ...SUBSTITUTED,
       sha256: sha256(hardened),
     }))
     writeFileSync(join(dir, 'SHA256SUMS'), sha256sums(sealed), 'utf8')
@@ -78,14 +82,16 @@ describe('the defect that shipped', () => {
     assert.equal(result.ok, false)
     const mismatch = result.failures.find(item => item.code === 'content_mismatch')
     assert.ok(mismatch, 'a differing byte set must be reported')
-    assert.match(mismatch.detail, /@deepwatch\/dsh-memory@0\.1\.0/)
+    assert.ok(
+      mismatch.detail.includes(`${SUBSTITUTED.name}@${SUBSTITUTED.version}`),
+      `the refusal must name the artifact it refused: ${mismatch.detail}`)
   })
 
   test('identical bytes under the same version pass', () => {
     // The other half: the gate must not cry wolf on an honest set, or it gets
     // switched off and the next stale tarball ships behind it.
     const bytes = 'export function restrictAll(directory) {}'
-    const dir = sealedSet({ 'deepwatch-dsh-memory-0.1.0.tgz': bytes })
+    const dir = sealedSet({ 'deepwatch-dsh-memory-0.1.1.tgz': bytes })
     const sealed = manifestFor(dir, {})
     writeFileSync(join(dir, 'SHA256SUMS'), sha256sums(sealed), 'utf8')
 
@@ -97,7 +103,7 @@ describe('the defect that shipped', () => {
 
 describe('the source a set claims', () => {
   test('a set sealed from a dirty tree is rejected', () => {
-    const dir = sealedSet({ 'deepwatch-dsh-memory-0.1.0.tgz': 'x' })
+    const dir = sealedSet({ 'deepwatch-dsh-memory-0.1.1.tgz': 'x' })
     const sealed = manifestFor(dir, { clean: false, dirtyEntries: 9 })
     writeFileSync(join(dir, 'SHA256SUMS'), sha256sums(sealed), 'utf8')
 
@@ -109,7 +115,7 @@ describe('the source a set claims', () => {
   test('an artifact older than the accepted source is rejected', () => {
     // `--expect-commit` is the accepted head. A set sealed anywhere else is
     // stale by definition, however well-formed it is.
-    const dir = sealedSet({ 'deepwatch-dsh-memory-0.1.0.tgz': 'x' })
+    const dir = sealedSet({ 'deepwatch-dsh-memory-0.1.1.tgz': 'x' })
     const sealed = manifestFor(dir, { commit: 'a13c6e56d9434a734977f35c144162ca16c3d725' })
     writeFileSync(join(dir, 'SHA256SUMS'), sha256sums(sealed), 'utf8')
 
@@ -125,7 +131,7 @@ describe('the source a set claims', () => {
   })
 
   test('a commit that does not match the checkout is drift', () => {
-    const dir = sealedSet({ 'deepwatch-dsh-memory-0.1.0.tgz': 'x' })
+    const dir = sealedSet({ 'deepwatch-dsh-memory-0.1.1.tgz': 'x' })
     const sealed = manifestFor(dir, { commit: '0'.repeat(40), tree: '1'.repeat(40) })
     const result = verifyProvenance({ artifactsDir: dir, manifest: sealed })
     assert.ok(result.failures.some(item => item.code === 'source_commit_drift'))
@@ -135,10 +141,10 @@ describe('the source a set claims', () => {
 
 describe('a set with a hole is not a set', () => {
   test('a sealed artifact that is not there is reported', () => {
-    const dir = sealedSet({ 'deepwatch-dsh-memory-0.1.0.tgz': 'x' })
+    const dir = sealedSet({ 'deepwatch-dsh-memory-0.1.1.tgz': 'x' })
     const sealed = manifestFor(dir, {})
     sealed.artifacts.push({
-      file: 'deepwatch-dsh-tools-0.1.0.tgz', sha256: 'a'.repeat(64), bytes: 1, kind: 'npm',
+      file: 'deepwatch-dsh-tools-0.1.1.tgz', sha256: 'a'.repeat(64), bytes: 1, kind: 'npm',
     })
     writeFileSync(join(dir, 'SHA256SUMS'), sha256sums(sealed), 'utf8')
 
@@ -148,8 +154,8 @@ describe('a set with a hole is not a set', () => {
 
   test('an artifact nobody sealed is reported', () => {
     const dir = sealedSet({
-      'deepwatch-dsh-memory-0.1.0.tgz': 'x',
-      'deepwatch-dsh-tools-0.1.0.tgz': 'y',
+      'deepwatch-dsh-memory-0.1.1.tgz': 'x',
+      'deepwatch-dsh-tools-0.1.1.tgz': 'y',
     })
     const sealed = manifestFor(dir, {})
     sealed.artifacts = sealed.artifacts.filter(entry => !entry.file.includes('tools'))
@@ -160,7 +166,7 @@ describe('a set with a hole is not a set', () => {
   })
 
   test('a manifest entry with no usable digest is reported', () => {
-    const dir = sealedSet({ 'deepwatch-dsh-memory-0.1.0.tgz': 'x' })
+    const dir = sealedSet({ 'deepwatch-dsh-memory-0.1.1.tgz': 'x' })
     const sealed = manifestFor(dir, {})
     sealed.artifacts = sealed.artifacts.map(entry => ({ ...entry, sha256: 'short' }))
     const result = verifyProvenance({ artifactsDir: dir, manifest: sealed })
@@ -170,29 +176,29 @@ describe('a set with a hole is not a set', () => {
 
 describe('the inventory and SHA256SUMS are one fact', () => {
   test('a disagreement between them is rejected', () => {
-    const dir = sealedSet({ 'deepwatch-dsh-memory-0.1.0.tgz': 'x' })
+    const dir = sealedSet({ 'deepwatch-dsh-memory-0.1.1.tgz': 'x' })
     const sealed = manifestFor(dir, {})
     writeFileSync(
       join(dir, 'SHA256SUMS'),
-      `${'b'.repeat(64)}  deepwatch-dsh-memory-0.1.0.tgz\n`, 'utf8')
+      `${'b'.repeat(64)}  deepwatch-dsh-memory-0.1.1.tgz\n`, 'utf8')
 
     const result = verifyProvenance({ artifactsDir: dir, manifest: sealed })
     assert.ok(result.failures.some(item => item.code === 'sums_disagree'))
   })
 
   test('SHA256SUMS naming a file the manifest does not is rejected', () => {
-    const dir = sealedSet({ 'deepwatch-dsh-memory-0.1.0.tgz': 'x' })
+    const dir = sealedSet({ 'deepwatch-dsh-memory-0.1.1.tgz': 'x' })
     const sealed = manifestFor(dir, {})
     writeFileSync(
       join(dir, 'SHA256SUMS'),
-      `${sha256sums(sealed)}${'c'.repeat(64)}  deepwatch-dsh-ghost-0.1.0.tgz\n`, 'utf8')
+      `${sha256sums(sealed)}${'c'.repeat(64)}  deepwatch-dsh-ghost-0.1.1.tgz\n`, 'utf8')
 
     const result = verifyProvenance({ artifactsDir: dir, manifest: sealed })
     assert.ok(result.failures.some(item => item.code === 'sums_extra'))
   })
 
   test('a set with no SHA256SUMS at all is rejected', () => {
-    const dir = sealedSet({ 'deepwatch-dsh-memory-0.1.0.tgz': 'x' })
+    const dir = sealedSet({ 'deepwatch-dsh-memory-0.1.1.tgz': 'x' })
     const result = verifyProvenance({ artifactsDir: dir, manifest: manifestFor(dir, {}) })
     assert.ok(result.failures.some(item => item.code === 'sums_missing'))
   })
@@ -200,10 +206,10 @@ describe('the inventory and SHA256SUMS are one fact', () => {
 
 describe('what a room installed', () => {
   test('an installed package outside the sealed set is reported', () => {
-    const dir = sealedSet({ 'deepwatch-dsh-memory-0.1.0.tgz': 'x' })
+    const dir = sealedSet({ 'deepwatch-dsh-memory-0.1.1.tgz': 'x' })
     const sealed = manifestFor(dir, {})
     sealed.artifacts = sealed.artifacts.map(entry => ({
-      ...entry, name: '@deepwatch/dsh-memory', version: '0.1.0',
+      ...entry, name: '@deepwatch/dsh-memory', version: '0.1.1',
     }))
 
     const installed = mkdtempSync(join(tmpdir(), 'dw-inst-'))
@@ -211,17 +217,17 @@ describe('what a room installed', () => {
     mkdirSync(pkg, { recursive: true })
     writeFileSync(
       join(pkg, 'package.json'),
-      JSON.stringify({ name: '@deepwatch/dsh-ghost', version: '0.1.0' }), 'utf8')
+      JSON.stringify({ name: '@deepwatch/dsh-ghost', version: '0.1.1' }), 'utf8')
 
     const result = verifyProvenance({ artifactsDir: dir, manifest: sealed, installedDir: installed })
     assert.ok(result.failures.some(item => item.code === 'installed_unsealed'))
   })
 
   test('an installed version that differs from the sealed one is reported', () => {
-    const dir = sealedSet({ 'deepwatch-dsh-memory-0.1.0.tgz': 'x' })
+    const dir = sealedSet({ 'deepwatch-dsh-memory-0.1.1.tgz': 'x' })
     const sealed = manifestFor(dir, {})
     sealed.artifacts = sealed.artifacts.map(entry => ({
-      ...entry, name: '@deepwatch/dsh-memory', version: '0.1.0',
+      ...entry, name: '@deepwatch/dsh-memory', version: '0.1.1',
     }))
 
     const installed = mkdtempSync(join(tmpdir(), 'dw-inst-'))
@@ -241,7 +247,7 @@ describe('every failure is actionable', () => {
     // A gate whose message is "provenance failed" sends somebody to re-run the
     // build; one that says "these bytes are from an older commit" sends them to
     // repack. The second is the only useful kind.
-    const dir = sealedSet({ 'deepwatch-dsh-memory-0.1.0.tgz': 'x' })
+    const dir = sealedSet({ 'deepwatch-dsh-memory-0.1.1.tgz': 'x' })
     const sealed = manifestFor(dir, { commit: '0'.repeat(40), clean: false, dirtyEntries: 3 })
     const result = verifyProvenance({ artifactsDir: dir, manifest: sealed })
     assert.ok(result.failures.length > 0)

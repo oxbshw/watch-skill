@@ -1,5 +1,86 @@
 # Changelog
 
+## DeepWatch v0.1.1 — 2026-09-07
+
+A patch for one defect: **the published product could not be installed.**
+
+`npx --yes @deepwatch/cli@0.1.0 setup --yes`, against an isolated
+`DEEPWATCH_HOME`, exited 2 with
+
+```
+deepwatch: no DeepWatch artifact directory was given, and the DeepWatch
+           packages are not published, so there is nowhere to get them.
+```
+
+while twenty packages were on npm. `--version` worked, which is why the release
+smoke did not catch it: a version string is not an installation.
+
+Watch Skill is unchanged and stays at **1.4.0**. The 0.1.0 packages, tag and
+release assets are untouched.
+
+### The refusal, and the two faults behind it
+
+The message was written while the `@deepwatch` scope really was empty, and it
+outlived its reason. Removing it exposed two more, each of which would have
+produced a worse failure than the refusal did:
+
+**The manifest would have named no DeepWatch packages at all.** The provisioner
+copies tarballs into the runtime and builds the install manifest from the list
+it copied. In registry mode that phase returned early without adding anything,
+so the list stayed empty — and `managedManifest` interpolated a file name that
+did not exist, producing the specification `file:.artifacts/null`. Both are
+reproduced against the published 0.1.0 build in
+`tests/registry-install.test.mjs`.
+
+**The profile install read tarballs off disk.** After the first two were fixed,
+setup installed 548 packages, started the Harness, and then failed in the
+composition phase with *"the managed runtime kept no DeepWatch artifacts"* —
+correct for an `--artifacts` install and wrong for a registry one, where there
+are no tarballs by design.
+
+### What a registry install does now
+
+The DeepWatch packages are installed by name at one exact version, from the
+same registry and in the same `npm install` as the pinned Harness and its
+generated peer set. The names come from `DEEPWATCH_PACKAGES`, generated from
+the workspace manifests by the same walk that orders a publication, so an
+install and a release cannot disagree about which packages exist. `@deepwatch/cli`
+is excluded from the managed runtime in both modes.
+
+`--artifacts` is unchanged and remains the explicit alternative for an
+air-gapped machine or a checkout build. It is still the only mode that hashes
+tarballs itself, before and after copying; a registry install is checked by npm
+against each package's published integrity. Download consent, `--offline`,
+staging, failure recovery and profile protection are all as they were.
+
+The receipt records which mode was used. A registry install writes
+`deepwatchSource: "registry"`, a null artifact origin, and `integrity: null`
+per package — not a digest this product did not compute, and not a claim that
+anything came from local artifacts.
+
+### Documentation, now that the scope exists
+
+`deepwatch.registryStatus` is `published`, which inverts the guard that
+required every `@deepwatch` install command to carry a pending notice into one
+that forbids it. Twenty-eight pages said the scope was empty; the generated
+package READMEs were regenerated and the hand-written pages corrected.
+`SCOPE_PUBLISHED` is true, so `doctor` reports the registry state rather than
+explaining that there isn't one.
+
+### Two fixes found on the way
+
+**A version promotion rewrote a third party.** Promoting DeepWatch 0.1.0 to
+0.1.1 also rewrote `powershell-utils: ^0.1.0` inside the captured DSH closure —
+an unrelated package that happens to share the number. That invented a
+dependency range upstream never published and broke the capture's self-digest.
+`inventory/dsh-closure.json` is now historical and never rewritten.
+
+**Three sentences recorded history in files that get promoted.** A note that
+0.1.0 published on a date is a record, but it lived in an active surface, so the
+next promotion would have silently changed it to 0.1.1. They name the tag
+pattern instead, which stays true across every bump.
+
+
 ## v1.4.0 — 2026-09-06
 
 The first stable release of both products in this repository. Watch Skill

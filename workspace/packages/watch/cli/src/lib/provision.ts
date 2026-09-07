@@ -58,7 +58,7 @@ import { installInvocation } from './install.js'
 import { resolveBundle } from './bundle.js'
 import { composeProfile } from './compose.js'
 import {
-  MANAGED_DEPENDENCIES, MANIFEST_DIGEST, REQUIRED_PEER_COUNT,
+  DEEPWATCH_PACKAGES, MANAGED_DEPENDENCIES, MANIFEST_DIGEST, REQUIRED_PEER_COUNT,
 } from '../generated/managed-runtime.js'
 import {
   BUNDLE_PACKAGE, BUNDLE_VERSION, HARNESS_PACKAGE, HARNESS_REGISTRY, HARNESS_VERSION,
@@ -73,17 +73,61 @@ export const DEEPWATCH_PACKAGE_COUNT = 20
 /** The internal directory the runtime keeps its own copy of the tarballs in. */
 export const ARTIFACT_DIR = '.artifacts'
 
-/** One DeepWatch package the managed root must contain, and where it came from. */
+/**
+ * One DeepWatch package the managed root must contain, and where it came from.
+ *
+ * The four nullable fields are the ones only a tarball has. In registry mode
+ * there is no file, no path it was read from, and no digest this product
+ * computed: npm resolves the name at the exact version and checks it against
+ * the registry's own `dist.integrity`. Recording `null` there rather than an
+ * empty string is what keeps the receipt honest — a provenance field that
+ * says "" reads as "checked and found nothing", and this is "not applicable,
+ * because a different check applies".
+ */
 export interface ManagedPackage {
   readonly name: string
   readonly version: string
-  /** The tarball's file name, as the inventory records it. */
-  readonly file: string
+  /** Which of the two sources this entry came from. Never inferred later. */
+  readonly source: SourceMode
+  /** The tarball's file name, as the inventory records it. Null from a registry. */
+  readonly file: string | null
   /** Where it was read from. Replaced by the runtime's own copy before install. */
-  readonly from: string
-  readonly bytes: number
-  /** `sha256:…`, verified at read and again after the copy. */
-  readonly integrity: string
+  readonly from: string | null
+  readonly bytes: number | null
+  /** `sha256:…`, verified at read and again after the copy. Null from a registry. */
+  readonly integrity: string | null
+}
+
+/**
+ * The release set as registry specifications, at one exact version.
+ *
+ * The names are generated from the workspace manifests by the same walk that
+ * orders a publication, so this cannot drift from what was released. The
+ * version is the CLI's own: the DeepWatch packages are published as one set at
+ * one version, which `tests/cli.test.mjs` holds the bundle constant to.
+ *
+ * No digest is attached deliberately. Inventing one here would mean either
+ * shipping twenty hashes that a patch release has to regenerate, or computing
+ * them from whatever the registry served — which proves nothing about what was
+ * released. npm already checks each tarball against the registry's integrity
+ * on install, and `installedPackages` re-reads the resulting tree.
+ */
+export function registryPackages(version: string): readonly ManagedPackage[] {
+  return DEEPWATCH_PACKAGES
+    // The same exclusion `readArtifacts` makes, for the same reason: the CLI is
+    // the thing the person already ran, and the managed runtime is the Harness
+    // and what it composes. Installing a second copy of the CLI inside it would
+    // make the two modes build different trees from the same release.
+    .filter(name => name !== '@deepwatch/cli')
+    .map(name => ({
+      name,
+      version,
+      source: 'registry' as const,
+      file: null,
+      from: null,
+      bytes: null,
+      integrity: null,
+    }))
 }
 
 /** What provisioning would do, in the words it prints before doing it. */
@@ -385,6 +429,7 @@ export function readArtifacts(directory: string): ArtifactSet | ArtifactFailure 
     packages.push({
       name,
       version: record.version,
+      source: 'local-artifacts',
       file,
       from: tarball,
       bytes: stats.size,
@@ -516,10 +561,13 @@ export function managedManifest(packages: readonly ManagedPackage[]): string {
     dependencies[name] = version
   }
   for (const entry of packages) {
-    // A relative specification, so the runtime describes itself without
-    // carrying an absolute path from the machine that built it into a file the
-    // product reads.
-    dependencies[entry.name] = `file:${ARTIFACT_DIR}/${entry.file}`
+    // A relative specification for a tarball, so the runtime describes itself
+    // without carrying an absolute path from the machine that built it into a
+    // file the product reads; an exact version for a registry install, for the
+    // same reason every other entry above is exact.
+    dependencies[entry.name] = entry.source === 'registry'
+      ? entry.version
+      : `file:${ARTIFACT_DIR}/${entry.file as string}`
   }
   const ordered: Record<string, string> = {}
   for (const name of Object.keys(dependencies).sort()) {
@@ -694,22 +742,36 @@ export async function provisionManagedRuntime(
 
     const kept: ManagedPackage[] = []
     await phase('artifact-copy', () => {
-      if (options.mode !== 'local-artifacts') return
+      if (options.mode !== 'local-artifacts') {
+        // Nothing to copy: npm fetches each package by name at the exact
+        // version the manifest names, and checks it against the registry's own
+        // integrity. The entries still have to reach `kept`, because that list
+        // is what the manifest is built from -- leaving it empty is how a
+        // registry install produced a runtime containing no DeepWatch packages
+        // at all.
+        kept.push(...options.packages)
+        return
+      }
       const into = join(staging, ARTIFACT_DIR)
       mkdirSync(into, { recursive: true })
       for (const entry of options.packages) {
-        copyFileSync(entry.from, join(into, entry.file))
-        kept.push({ ...entry, from: join(into, entry.file) })
+        const file = entry.file as string
+        copyFileSync(entry.from as string, join(into, file))
+        kept.push({ ...entry, from: join(into, file) })
       }
     })
 
     await phase('artifact-recheck', () => {
       // The copies are hashed again. A byte that changed between the check and
       // the install is exactly what this exists for, and it costs a second.
+      // Registry entries are skipped rather than faked: there is no local file
+      // to re-hash, and npm has already matched the tarball it fetched against
+      // the registry's published integrity.
       for (const entry of kept) {
-        const actual = createHash('sha256').update(readFileSync(entry.from)).digest('hex')
+        if (entry.source !== 'local-artifacts') continue
+        const actual = createHash('sha256').update(readFileSync(entry.from as string)).digest('hex')
         if (`sha256:${actual}` !== entry.integrity) {
-          throw new PhaseFailure(`${entry.file} changed between verification and copy`)
+          throw new PhaseFailure(`${entry.file as string} changed between verification and copy`)
         }
       }
     })
@@ -806,6 +868,11 @@ export async function provisionManagedRuntime(
         env: options.env,
         timeoutMs: BOOT_TIMEOUT_MS,
         bootProbe: true,
+        // The rehearsal composes the same way the real one will, from the same
+        // source. Hard-coding either mode here would rehearse a composition
+        // nobody is going to perform.
+        deepwatchMode: options.mode,
+        deepwatchVersion: BUNDLE_VERSION,
         onStep: say,
       })
       if (composed.outcome !== 'composed' && composed.outcome !== 'already-composed') {

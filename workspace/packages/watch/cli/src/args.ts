@@ -24,10 +24,10 @@ Options
   --yes, -y                 agree to the download \`setup\` describes first
   --offline                 never reach the network; refuse instead
   --profile <name>          which profile to use (default: deepwatch)
-  --artifacts <dir>         where the packed DeepWatch tarballs and their
-                            packed-artifacts.json inventory are. \`setup\` needs
-                            this until the packages are published; they are
-                            never fetched from a registry.
+  --artifacts <dir>         install the DeepWatch packages from packed tarballs
+                            in this directory, with their packed-artifacts.json
+                            inventory, instead of from the registry. For a
+                            checkout build or an air-gapped machine.
   --workspace <dir>         the directory DeepWatch works in. One canonical
                             root for the agent's files, the shell, Watch
                             containment and the verifier. Defaults to the
