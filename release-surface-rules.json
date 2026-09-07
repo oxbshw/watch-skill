@@ -124,12 +124,14 @@
     {
       "file": "workspace/docs/package-notes.json",
       "rule": "phantom-repository",
-      "why": "carries the `watch-workspace` profile row that mounts @deepwatch/dsh-workspace, which is an identifier in somebody’s YAML rather than a repository anybody could clone"
+      "why": "the `watch-workspace` profile row that mounts @deepwatch/dsh-workspace is an identifier in somebody’s YAML, not a repository anybody could clone. Scoped to lines holding that row: any other stale reference in this file still fires.",
+      "contains": "id: watch-workspace"
     },
     {
       "file": "workspace/packages/watch/workspace/README.md",
       "rule": "phantom-repository",
-      "why": "carries the `watch-workspace` profile row that mounts @deepwatch/dsh-workspace, which is an identifier in somebody’s YAML rather than a repository anybody could clone"
+      "why": "the `watch-workspace` profile row that mounts @deepwatch/dsh-workspace is an identifier in somebody’s YAML, not a repository anybody could clone. Scoped to lines holding that row: any other stale reference in this file still fires.",
+      "contains": "id: watch-workspace"
     }
   ]
 }

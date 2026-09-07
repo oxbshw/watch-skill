@@ -60,7 +60,23 @@ function globToRegExp(glob) {
 
 const INCLUDE = CONFIG.surfaces.include.map(globToRegExp)
 const EXCLUDE = CONFIG.surfaces.exclude.map(globToRegExp)
-const EXEMPT = new Set(CONFIG.exemptions.map(entry => `${entry.file}\u0000${entry.rule}`))
+/**
+ * Exemptions, keyed by file and rule.
+ *
+ * An entry without `contains` excuses the whole file, which is the blunt form
+ * and is what most of these need. An entry *with* `contains` excuses only the
+ * lines holding that text — so a file may carry one legitimate phrase a rule
+ * would otherwise flag without going blind to every other occurrence of it.
+ * `watch-workspace` is exactly that: a real profile row id, and also the name
+ * of a repository that does not exist.
+ */
+const EXEMPT = new Map()
+for (const entry of CONFIG.exemptions) {
+  const key = `${entry.file}\u0000${entry.rule}`
+  const scoped = EXEMPT.get(key)
+  if (entry.contains === undefined) EXEMPT.set(key, null)
+  else if (scoped !== null) EXEMPT.set(key, [...(scoped ?? []), entry.contains])
+}
 
 const findings = []
 
@@ -68,11 +84,14 @@ const findings = []
 function scan(label, text, exemptKey = label) {
   const lines = text.split(/\r?\n/)
   for (const rule of RULES) {
-    if (EXEMPT.has(`${exemptKey}\u0000${rule.id}`)) continue
+    const key = `${exemptKey}\u0000${rule.id}`
+    if (EXEMPT.has(key) && EXEMPT.get(key) === null) continue
+    const allowed = EXEMPT.get(key) ?? []
     for (let i = 0; i < lines.length; i += 1) {
       rule.re.lastIndex = 0
       const found = rule.re.exec(lines[i])
       if (found === null) continue
+      if (allowed.some(text_ => lines[i].includes(text_))) continue
       findings.push({
         file: label,
         line: i + 1,

@@ -144,6 +144,56 @@ describe('the gate fails on a file that breaks a rule', () => {
   })
 })
 
+describe('a scoped exemption excuses a line, never a file', () => {
+  // The exemption exists because `watch-workspace` is both a real profile row
+  // id and the name of a repository that does not exist. Excusing the whole
+  // file would switch the rule off exactly where the confusing name lives --
+  // so the excuse is scoped to the row, and this proves the rest of that same
+  // file is still scanned.
+  const EXEMPTED = join(REPO, 'workspace', 'packages', 'watch', 'workspace', 'README.md')
+
+  test('a genuine stale reference in the exempted file is still reported', () => {
+    const original = readFileSync(EXEMPTED, 'utf8')
+    // The row this file is allowed to contain, unchanged, plus a real one.
+    assert.ok(original.includes('id: watch-workspace'),
+      'the fixture assumes this file carries the allowed profile row')
+    let output
+    let status = 0
+    try {
+      writeFileSync(EXEMPTED,
+        `${original}\n\nClone watch-workspace and run pnpm install.\n`, 'utf8')
+      try {
+        output = execFileSync(
+          process.execPath, [join(ROOT, 'scripts', 'verify-release-surface.mjs'), '--json'],
+          { cwd: ROOT, encoding: 'utf8' })
+      } catch (error) {
+        status = error.status
+        output = error.stdout
+      }
+    } finally {
+      writeFileSync(EXEMPTED, original, 'utf8')
+    }
+
+    assert.equal(status, 1, 'a stale repository reference passed inside an exempted file')
+    const result = JSON.parse(output)
+    const hits = result.findings.filter(finding =>
+      finding.rule === 'phantom-repository'
+      && finding.file.endsWith('packages/watch/workspace/README.md'))
+    assert.equal(hits.length, 1,
+      `the planted reference was not reported: ${JSON.stringify(result.findings)}`)
+  })
+
+  test('and the allowed row in that same file is still not reported', () => {
+    // The other half: with nothing planted, the file is clean even though it
+    // contains the string the rule matches.
+    const output = execFileSync(
+      process.execPath, [join(ROOT, 'scripts', 'verify-release-surface.mjs'), '--json'],
+      { cwd: ROOT, encoding: 'utf8' })
+    const result = JSON.parse(output)
+    assert.equal(result.ok, true, JSON.stringify(result.findings, null, 2))
+  })
+})
+
 describe('the exemptions stay narrow', () => {
   test('each names one exact file, one rule, and a reason', () => {
     for (const exemption of CONFIG.exemptions) {

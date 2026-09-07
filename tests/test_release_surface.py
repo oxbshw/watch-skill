@@ -31,7 +31,18 @@ CONFIG = json.loads((REPO / "release-surface-rules.json").read_text(encoding="ut
 RULES = [
     (rule["id"], re.compile(rule["pattern"]), rule["why"]) for rule in CONFIG["rules"]
 ]
-EXEMPT = {(entry["file"], entry["rule"]) for entry in CONFIG["exemptions"]}
+#: Exemptions, keyed by (file, rule).
+#:
+#: ``None`` excuses the whole file. A tuple of strings excuses only the lines
+#: containing one of them, so a file may hold one legitimate phrase a rule
+#: would otherwise flag without going blind to every other occurrence.
+EXEMPT: dict[tuple[str, str], tuple[str, ...] | None] = {}
+for _entry in CONFIG["exemptions"]:
+    _key = (_entry["file"], _entry["rule"])
+    if "contains" not in _entry:
+        EXEMPT[_key] = None
+    elif EXEMPT.get(_key, ()) is not None:
+        EXEMPT[_key] = tuple(EXEMPT.get(_key) or ()) + (_entry["contains"],)
 
 #: Text that is fine in source and not fine in something a user is handed.
 #:
@@ -44,10 +55,14 @@ DETECTOR_FILES = {"scripts/secret_scan.py", "scripts/validate_agent_docs.py"}
 def findings_in(label: str, text: str, key: str | None = None) -> list[str]:
     found = []
     for rule_id, pattern, why in RULES:
-        if ((key or label), rule_id) in EXEMPT:
+        exempt_key = ((key or label), rule_id)
+        allowed = EXEMPT.get(exempt_key, ())
+        if exempt_key in EXEMPT and allowed is None:
             continue
         for number, line in enumerate(text.splitlines(), start=1):
             match = pattern.search(line)
+            if match and any(a in line for a in (allowed or ())):
+                continue
             if match:
                 found.append(f"{label}:{number} [{rule_id}] {why} -- {line.strip()[:110]}")
                 break
