@@ -114,18 +114,22 @@ describe('the manifest the managed runtime is built from', () => {
   test('artifact entries still install from the copied tarball', () => {
     // The other half of the branch, so a fix for registry mode cannot quietly
     // break the mode that already worked.
+    // The tarball name is derived, not written twice: a fixture that names one
+    // version beside a `version` field holding another is the drift this
+    // repository has a whole script to catch.
+    const file = `deepwatch-dsh-bundle-${VERSION}.tgz`
     const artifact = {
       name: '@deepwatch/dsh-bundle',
       version: VERSION,
       source: 'local-artifacts',
-      file: 'deepwatch-dsh-bundle-0.1.0.tgz',
-      from: 'D:/somewhere/deepwatch-dsh-bundle-0.1.0.tgz',
+      file,
+      from: `D:/somewhere/${file}`,
       bytes: 1234,
       integrity: 'sha256:abc',
     }
     const manifest = JSON.parse(managedManifest([artifact]))
     assert.equal(manifest.dependencies['@deepwatch/dsh-bundle'],
-      `file:${ARTIFACT_DIR}/deepwatch-dsh-bundle-0.1.0.tgz`)
+      `file:${ARTIFACT_DIR}/${file}`)
   })
 
   test('a registry manifest still carries the whole audited closure', () => {

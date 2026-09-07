@@ -4812,7 +4812,7 @@ packages:
     resolution: {integrity: sha512-wQ0b/W4Fr01qtpHlqSqspcj3EhBvimsdh0KlHhH8HRZnMsEa0ea2fTULOXOS9ccQr3om+GcGRk4e+isrZWV8qQ==}
     engines: {node: '>=16.20.0'}
 
-  powershell-utils@0.1.1:
+  powershell-utils@0.1.0:
     resolution: {integrity: sha512-dM0jVuXJPsDN6DvRpea484tCUaMiXWjuCn++HGTqUWzGDjv5tZkEZldAJ/UMlqRYGFrD/etByo4/xOuC/snX2A==}
     engines: {node: '>=20'}
 
@@ -5241,7 +5241,7 @@ packages:
   yauzl@2.10.0:
     resolution: {integrity: sha512-p4a9I6X6nu6IhoGmBqAcbJy1mlC4j27vEPZX9F4L4/vZT3Lyq1VkFHw/V/PUcB9Buo+DG3iHkT0x3Qya58zc3g==}
 
-  yocto-queue@0.1.1:
+  yocto-queue@0.1.0:
     resolution: {integrity: sha512-rVksvsnNCdJ/ohGc6xgPwyN8eheCxsiLM8mxuE/t/mOVqJewPuO1miLpTHQiRgTKCLexL4MeAFVagts7HmNZ2Q==}
     engines: {node: '>=10'}
 
@@ -10705,7 +10705,7 @@ snapshots:
 
   p-limit@3.1.0:
     dependencies:
-      yocto-queue: 0.1.1
+      yocto-queue: 0.1.0
 
   p-locate@5.0.0:
     dependencies:
@@ -10738,7 +10738,7 @@ snapshots:
 
   pkce-challenge@5.0.1: {}
 
-  powershell-utils@0.1.1: {}
+  powershell-utils@0.1.0: {}
 
   powershell-utils@0.2.1: {}
 
@@ -11192,7 +11192,7 @@ snapshots:
   wsl-utils@1.0.0:
     dependencies:
       is-wsl: 3.1.1
-      powershell-utils: 0.1.1
+      powershell-utils: 0.1.0
 
   yaml@2.9.0: {}
 
@@ -11201,7 +11201,7 @@ snapshots:
       buffer-crc32: 0.2.13
       fd-slicer: 1.1.0
 
-  yocto-queue@0.1.1: {}
+  yocto-queue@0.1.0: {}
 
   yuku-ast@0.8.7:
     dependencies:

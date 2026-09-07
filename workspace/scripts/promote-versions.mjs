@@ -62,15 +62,28 @@ export const VERSIONS = {
  */
 export const HISTORICAL = [
   'CHANGELOG.md',
-  // A capture of somebody else's dependency graph, carrying a digest of its
-  // own contents. Nothing in it is a claim about this project's version, and
-  // the promotion has no way to tell `powershell-utils@^0.1.0` -- a real third
-  // party that happens to share our number -- from one of ours. Promoting
-  // DeepWatch 0.1.0 to 0.1.1 rewrote exactly that line, which both invented a
-  // dependency range upstream never published and broke the self-digest, so
-  // `managed:check` failed with "edited by hand". Re-capture it; never rewrite
-  // it.
+  // Two records of somebody else's dependency graph. Nothing in either is a
+  // claim about this project's version, and the promotion cannot tell
+  // `powershell-utils@0.1.0` -- a real third party that happens to share our
+  // number -- from one of ours.
+  //
+  // Promoting DeepWatch 0.1.0 to 0.1.1 rewrote exactly those lines. In the
+  // closure it invented a dependency range upstream never published and broke
+  // the capture's self-digest, so `managed:check` failed with "edited by
+  // hand". In the lockfile it rewrote `powershell-utils` and `yocto-queue` to
+  // versions that do not exist, and every CI job died at install with
+  //
+  //     ERR_PNPM_FETCH_404  GET .../yocto-queue-0.1.1.tgz: Not Found
+  //
+  // The lockfile is here and `uv.lock` deliberately is not, and the difference
+  // is what each records about *us*. `uv.lock` carries the Python project's
+  // own version, which is a live claim that must move. A pnpm lockfile records
+  // this workspace's own packages as `link:packages/...` with
+  // `specifier: workspace:*` and no version string at all -- so every version
+  // in it belongs to somebody else, and the promotion has no legitimate work
+  // to do here.
   'workspace/inventory/dsh-closure.json',
+  'workspace/pnpm-lock.yaml',
   'docs/release-proof.md',
   'docs/history/',
   'workspace/docs/history/',
@@ -91,6 +104,11 @@ export const HISTORICAL = [
  * script exists to catch, and blanket-exempting the suite would hide it.
  */
 export const FIXTURES = [
+  // Quotes the command that failed, at the version that shipped it:
+  //   npx --yes @deepwatch/cli@<that version> setup --yes
+  // Promoting it would make the test claim a later version failed, and
+  // the whole point of the file is which one did.
+  'workspace/tests/registry-install.test.mjs',
   'workspace/tests/first-publish.test.mjs',
   'workspace/tests/stable-versions.test.mjs',
   // This file. It has to name the versions it promotes *from*, in VERSIONS
