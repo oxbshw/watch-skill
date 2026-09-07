@@ -133,14 +133,17 @@ class TestTheExemptionIsScopedToOneOccurrence:
     @staticmethod
     def _findings_for(line: str) -> list[str]:
         cases = TestTheExemptionIsScopedToOneOccurrence
-        original = cases.EXEMPTED.read_text(encoding="utf-8")
+        # Bytes, not text: `write_text` emits os.linesep, which would rewrite
+        # this tracked file's endings on Windows.
+        original = cases.EXEMPTED.read_bytes()
         try:
             cases.EXEMPTED.write_text(f"{original}\n{line}\n", encoding="utf-8")
             relative = str(cases.EXEMPTED.relative_to(REPO)).replace("\\", "/")
-            found = findings_in(relative, cases.EXEMPTED.read_text(encoding="utf-8"))
+            found = findings_in(
+                relative, cases.EXEMPTED.read_bytes().decode("utf-8"))
             return [f for f in found if "[phantom-repository]" in f]
         finally:
-            cases.EXEMPTED.write_text(original, encoding="utf-8")
+            cases.EXEMPTED.write_bytes(original)
 
     def test_the_allowed_row_is_not_reported_however_it_is_spaced(self) -> None:
         cases = json.loads(
