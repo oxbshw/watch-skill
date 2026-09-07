@@ -241,47 +241,37 @@ Harness composed with Watch Skill, so every tool call leaves a receipt and
 
 Four screens, in the order you meet them.
 
-<table>
-<tr>
-<td width="50%" valign="top">
+<div align="center">
+<img src="workspace/docs/screenshots/release/05-ordinary-task.png" width="86%" alt="A DeepWatch session titled 'Create totals.json and read sum'. Write, Read and Pwsh tool rows are listed, each naming a workspace-relative path such as owner-test/totals.json, and the reply states the file contents and the total read back from it.">
+</div>
 
-<img src="workspace/docs/screenshots/release/05-ordinary-task.png" width="100%" alt="A DeepWatch session titled 'Create totals.json and read sum'. Write, Read and Pwsh tool rows are listed, each naming a workspace-relative path such as owner-test/totals.json, and the reply states the file contents and the total read back from it.">
-
-**An ordinary task.** Nobody mentioned Watch. Every row is a receipt, every
+**1 · An ordinary task.** Nobody mentioned Watch. Every row is a receipt, every
 path is workspace-relative, and the total was read back from the file rather
 than remembered.
 
-</td>
-<td width="50%" valign="top">
+<div align="center">
+<img src="workspace/docs/screenshots/release/08-library-receipts.png" width="86%" alt="The Library screen showing thirteen matches, with rows for read and write on owner-test/totals.json and a pwsh call. A notice reads 'Index ready. Answered by this workspace's own host', and the page is marked Local-first.">
+</div>
 
-<img src="workspace/docs/screenshots/release/08-library-receipts.png" width="100%" alt="The Library screen showing thirteen matches, with rows for read and write on owner-test/totals.json and a pwsh call. A notice reads 'Index ready. Answered by this workspace's own host', and the page is marked Local-first.">
+**2 · Evidence, retrieved.** Every source and every receipt this workspace
+recorded, searched on the workspace's own host — no service, no model, nothing
+leaving the machine.
 
-**Evidence, retrieved.** Every source and every receipt this workspace
-recorded, searched on the workspace's own host — no service, no model.
+<div align="center">
+<img src="workspace/docs/screenshots/release/06-independent-verification.png" width="86%" alt="A VERIFIED result card from watch_verify: two of two checks passed, one confirming the file exists and one confirming its total field equals 60, shown with the contract's sha256 digest.">
+</div>
 
-</td>
-</tr>
-<tr>
-<td width="50%" valign="top">
+**3 · Independent verification.** `watch_verify` froze a contract and Watch
+Core answered. The agent did not grade itself: the contract's SHA-256 is on
+screen, and the same contract run from a different directory fails.
 
-<img src="workspace/docs/screenshots/release/06-independent-verification.png" width="100%" alt="A VERIFIED result card from watch_verify: two of two checks passed, one confirming the file exists and one confirming its total field equals 60, shown with the contract's sha256 digest.">
+<div align="center">
+<img src="workspace/docs/screenshots/release/09-compare-two-records.png" width="86%" alt="The Compare screen with two verification records selected. The left is a FAILED watch_verify and the right a VERIFIED one from the run that repaired the file; the difference table counts each as present on one side only.">
+</div>
 
-**Independent verification.** `watch_verify` froze a contract and Watch Core
-answered. The agent did not grade itself: the contract's SHA-256 is on screen,
-and the same contract run from a different directory fails.
-
-</td>
-<td width="50%" valign="top">
-
-<img src="workspace/docs/screenshots/release/09-compare-two-records.png" width="100%" alt="The Compare screen with two verification records selected. The left is a FAILED watch_verify, the right a VERIFIED one from the run that repaired the file, and the difference table counts them as present on one side each.">
-
-**Compare, on real outcomes.** Two runs of one contract — the broken claim and
-its repair — with the verdicts Core issued for each. A comparison describes a
-difference; it never issues a verdict of its own.
-
-</td>
-</tr>
-</table>
+**4 · Compare, on real outcomes.** Two runs of one contract — a broken claim
+and its repair — carrying the verdicts Core issued for each. A comparison
+describes a difference; it never issues a verdict of its own.
 
 Every image is a photograph of a running build, and each caption on
 **[the screenshot page](workspace/docs/screenshots-release.md)** names the build
