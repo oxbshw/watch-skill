@@ -2,9 +2,9 @@
   "name": "@deepwatch/monorepo",
   "version": "0.1.2",
   "deepwatch": {
-    "$comment": "registryStatus is what every page that shows an install command reads. While it is \"unpublished\", those pages must say so: nothing exists under the @deepwatch scope until the deepwatch-v0.1.2 tag publishes it. Set it to \"published\" in the same change that records the first publication, and let the tests that follow it fail loudly if it is set early.",
+    "$comment": "registryStatus is what every page that shows an install command reads. It was 'unpublished' until the scope existed, and those pages said so rather than printing a command that resolves nothing. firstPublicationTag records which tag first put the scope on npm: it is history, so it names the tag that did it and never the version being prepared.",
     "registryStatus": "published",
-    "firstPublicationTag": "deepwatch-v0.1.2"
+    "firstPublicationTag": "deepwatch-v0.1.0"
   },
   "description": "DeepWatch — an evidence-native agent distribution built on DeepSeek Harness",
   "private": true,

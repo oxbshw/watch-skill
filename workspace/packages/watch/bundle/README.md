@@ -17,15 +17,22 @@ That is the whole installation. The package declares `dsh.bundle.patch`, so DSH
 reconciles it into the profile's layer stack and applies
 [`cordis.patch.yml`](cordis.patch.yml) after its own layers.
 
-For the full experience, install the engine too:
+This bundle's media capabilities are the engine's, so install it with the
+extras rather than bare:
 
 ```bash
-pip install watch-skill
+pip install 'watch-skill[standard,ocr]'
 ```
 
-`watch-skill` is on PyPI and the newest published version is 1.4.1 — the
-release this bundle is built against. The Bridge finds the executable on
-`PATH` and connects on its own.
+`[standard]` is frames, retrieval and MCP; `[ocr]` reads on-screen text. A bare
+`pip install watch-skill` leaves you with a Core that cannot extract a frame —
+the Bridge connects to it and every media tool answers
+`perceive.missing_dependency` on the first video.
+
+`watch-skill` is on PyPI and the newest published version is 1.4.1, the release
+this bundle was built against. The Bridge finds the executable on `PATH` and
+connects on its own; `watch-skill doctor` names the exact command for anything
+still missing.
 
 ## Stability
 

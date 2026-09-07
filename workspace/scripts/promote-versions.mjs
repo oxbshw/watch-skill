@@ -41,7 +41,12 @@ const REPO = join(ROOT, '..')
  */
 export const VERSIONS = {
   core: { name: 'Watch Skill', to: '1.4.1', from: ['1.4.0rc1', '1.4.0'] },
-  deepwatch: { name: 'DeepWatch', to: '0.1.2', from: ['0.1.0-preview.0', '0.1.0', '0.1.1'] },
+  // `0.1.0-preview.0` and `0.1.0` are gone from `from` because their promotions
+  // are finished: nothing active carries either, and the one place `0.1.0`
+  // still appears is `firstPublicationTag`, which records the tag that first
+  // put the scope on npm. That is a fact about a release that happened, and
+  // leaving the version in this list would rewrite it every time.
+  deepwatch: { name: 'DeepWatch', to: '0.1.2', from: ['0.1.1'] },
 }
 
 /**
