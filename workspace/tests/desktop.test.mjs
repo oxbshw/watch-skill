@@ -615,7 +615,7 @@ describe('updates are checked in an order that is the security property', () => 
       manifest: manifest(PACKAGE),
       packageBytes: PACKAGE,
       keys: [DEV_KEY],
-      installedVersion: '0.1.1',
+      installedVersion: '0.1.2',
       currentSchemaVersion: 1,
       supportedSchemaVersions: [1],
     })
@@ -630,7 +630,7 @@ describe('updates are checked in an order that is the security property', () => 
       manifest: forged,
       packageBytes: PACKAGE,
       keys: [DEV_KEY],
-      installedVersion: '0.1.1',
+      installedVersion: '0.1.2',
       currentSchemaVersion: 1,
       supportedSchemaVersions: [1],
     })
@@ -643,7 +643,7 @@ describe('updates are checked in an order that is the security property', () => 
       manifest: manifest(PACKAGE, { keyId: 'someone-else' }),
       packageBytes: PACKAGE,
       keys: [DEV_KEY],
-      installedVersion: '0.1.1',
+      installedVersion: '0.1.2',
       currentSchemaVersion: 1,
       supportedSchemaVersions: [1],
     })
@@ -656,7 +656,7 @@ describe('updates are checked in an order that is the security property', () => 
       manifest: manifest(PACKAGE),
       packageBytes: Buffer.from('a different package entirely'),
       keys: [DEV_KEY],
-      installedVersion: '0.1.1',
+      installedVersion: '0.1.2',
       currentSchemaVersion: 1,
       supportedSchemaVersions: [1],
     })
@@ -666,7 +666,7 @@ describe('updates are checked in an order that is the security property', () => 
 
   test('a silent downgrade is refused', () => {
     const decision = checkUpdate({
-      manifest: manifest(PACKAGE, { version: '0.1.1' }),
+      manifest: manifest(PACKAGE, { version: '0.1.2' }),
       packageBytes: PACKAGE,
       keys: [DEV_KEY],
       installedVersion: '0.3.0',
@@ -682,7 +682,7 @@ describe('updates are checked in an order that is the security property', () => 
       manifest: manifest(PACKAGE, { schemaVersion: 1 }),
       packageBytes: PACKAGE,
       keys: [DEV_KEY],
-      installedVersion: '0.1.1',
+      installedVersion: '0.1.2',
       currentSchemaVersion: 4,
       supportedSchemaVersions: [1],
     })
@@ -694,7 +694,7 @@ describe('updates are checked in an order that is the security property', () => 
     const forged = { ...manifest(PACKAGE), signature: 'AAAA' }
     const decision = checkUpdate({
       manifest: forged, packageBytes: PACKAGE, keys: [DEV_KEY],
-      installedVersion: '0.1.1', currentSchemaVersion: 1, supportedSchemaVersions: [1],
+      installedVersion: '0.1.2', currentSchemaVersion: 1, supportedSchemaVersions: [1],
     })
     assert.notEqual(decision.refusal.fix, '')
   })
@@ -711,13 +711,13 @@ describe('updates are checked in an order that is the security property', () => 
   test('versions compare numerically, not lexically', () => {
     assert.equal(compareVersions('0.10.0', '0.9.0'), 1)
     assert.equal(compareVersions('1.0.0', '1.0.0'), 0)
-    assert.equal(compareVersions('0.1.1', '0.2.0'), -1)
+    assert.equal(compareVersions('0.1.2', '0.2.0'), -1)
   })
 })
 
 describe('rollback happens on the second failure, not the first', () => {
   const current = { version: '0.2.0', path: 'C:/app/0.2.0', schemaVersion: 1, installedAt: '2026-08-27T00:00:00Z' }
-  const previous = { version: '0.1.1', path: 'C:/app/0.1.1', schemaVersion: 1, installedAt: '2026-08-01T00:00:00Z' }
+  const previous = { version: '0.1.2', path: 'C:/app/0.1.2', schemaVersion: 1, installedAt: '2026-08-01T00:00:00Z' }
 
   test('one failure is a crash and the build is tried again', () => {
     const state = recordFailedLaunch({ current, previous, failedLaunches: 0 })
@@ -729,7 +729,7 @@ describe('rollback happens on the second failure, not the first', () => {
     for (let i = 0; i < ROLLBACK_AFTER_FAILED_LAUNCHES; i += 1) state = recordFailedLaunch(state)
     const decision = decideLaunch(state)
     assert.equal(decision.action, 'rollback')
-    assert.equal(decision.build.version, '0.1.1')
+    assert.equal(decision.build.version, '0.1.2')
     assert.match(decision.reason, /rolling back/)
   })
 
@@ -745,11 +745,11 @@ describe('rollback happens on the second failure, not the first', () => {
     const before = { current: previous, previous: null, failedLaunches: 0 }
     const after = applyUpdate(before, current)
     assert.equal(after.current.version, '0.2.0')
-    assert.equal(after.previous.version, '0.1.1')
+    assert.equal(after.previous.version, '0.1.2')
     assert.equal(after.failedLaunches, 0)
 
     const rolled = rollback({ ...after, failedLaunches: 2 })
-    assert.equal(rolled.current.version, '0.1.1')
+    assert.equal(rolled.current.version, '0.1.2')
     assert.equal(rolled.failedLaunches, 0)
     assert.equal(rolled.previous, null, 'the build that failed is not kept as a rollback target')
   })

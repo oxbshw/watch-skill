@@ -173,7 +173,7 @@ describe('an unreachable registry is not an empty one', () => {
    * Deriving the pattern from the spec is what makes that impossible rather
    * than merely unlikely.
    */
-  const SPEC = { name: '@deepwatch/cli', version: '0.1.1' }
+  const SPEC = { name: '@deepwatch/cli', version: '0.1.2' }
   const literal = text => text.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&')
 
   test('E404 means "not published"', () => {

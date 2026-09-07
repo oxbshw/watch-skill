@@ -30,7 +30,8 @@
  * need. Whichever was used is recorded in the receipt as the mode, so an
  * installation can always say where its packages came from.
  *
- * This was a refusal until 0.1.1, and the refusal outlived its reason: it was
+ * This was a refusal until the scope was published, and the refusal outlived
+ * its reason: it was
  * written while the scope was empty, and it survived publication, so the first
  * thing a new user met was `setup` exiting 2 to say the packages "are not
  * published" while twenty of them were on npm.

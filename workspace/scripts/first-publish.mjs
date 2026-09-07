@@ -118,7 +118,7 @@ function diagnostics(result, lines = 12) {
  * The dist-tag a version shape earns, by the same rule the release workflow uses.
  *
  * This was hardcoded to `preview`, which was right while every version was
- * `0.1.1-preview.N` and silently wrong the moment one was not: a stable `0.1.1`
+ * `0.1.1-preview.N` and silently wrong the moment one was not: a stable `0.1.2`
  * published under `preview` leaves `npm i @deepwatch/cli` resolving nothing,
  * because `latest` would not exist. A prerelease must never take `latest`, and a
  * stable release must never take anything else.

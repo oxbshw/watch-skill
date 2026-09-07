@@ -23,17 +23,17 @@ For the full experience, install the engine too:
 pip install watch-skill
 ```
 
-`watch-skill` is on PyPI and the newest published version is 1.4.0 — the
+`watch-skill` is on PyPI and the newest published version is 1.4.1 — the
 release this bundle is built against. The Bridge finds the executable on
 `PATH` and connects on its own.
 
 ## Stability
 
-`0.1.1` — a stable release. Stable means tested, documented and supported —
+`0.1.2` — a stable release. Stable means tested, documented and supported —
 not 1.0. This is a pre-1.0 line, and semantic versioning gives `0.x` no
 compatibility guarantee across minor versions: **a `0.MINOR` bump may change or
 remove surface, and a patch will not.** Depend on it with a tilde range
-(`~0.1.1`) if you want that difference enforced by your lockfile rather than by
+(`~0.1.2`) if you want that difference enforced by your lockfile rather than by
 a changelog. The usual major-version promise starts at 1.0.
 
 ## What you get

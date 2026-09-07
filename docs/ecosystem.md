@@ -51,7 +51,7 @@ Places you can reach the project from another tool.
 | [SkillsMP](https://skillsmp.com/creators/oxbshw/watch-skill) | Browse and install from the creator page |
 | [PyPI](https://pypi.org/project/watch-skill/) | `pip install 'watch-skill[standard]'` |
 | [MCP registry](https://registry.modelcontextprotocol.io) | `io.github.oxbshw/watch-skill`, for MCP clients that resolve from the registry |
-| [GitHub Container Registry](https://github.com/oxbshw/watch-skill/pkgs/container/watch-skill) | `docker pull ghcr.io/oxbshw/watch-skill:1.4.0` |
+| [GitHub Container Registry](https://github.com/oxbshw/watch-skill/pkgs/container/watch-skill) | `docker pull ghcr.io/oxbshw/watch-skill:1.4.1` |
 
 Per-client setup for 26 agents — Claude Code, Cursor, Codex, Copilot, Gemini
 CLI, Cline, Zed and the rest — is in [docs/agents/](agents/README.md).

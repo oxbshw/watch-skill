@@ -12,7 +12,7 @@
  */
 
 /** Kept in step with this package's `version` by the test named above. */
-export const VERSION = '0.1.1'
+export const VERSION = '0.1.2'
 
 /** The Harness package DeepWatch composes. Official, unforked, unpatched. */
 export const HARNESS_PACKAGE = '@deepseek-ai/dsh'
@@ -39,21 +39,26 @@ export const HARNESS_VERSION = '0.1.1-rc.2'
  * against it, so a release that bumps a package version without regenerating
  * both fails a gate instead of shipping a CLI that vouches for the wrong build.
  */
-export const RELEASE_RUNTIME_DIGEST = 'sha256:78f518f936eb118f0a8ecbd453af42be7eb2d8f9c5bca750ddd4fe56489bb5d2'
+export const RELEASE_RUNTIME_DIGEST = 'sha256:d275fa6df457b1f5eced10fdab140f4c2041f561ff77bc92313ab32f95e5f16a'
 
 /**
  * Whether the `@deepwatch` scope exists on a public registry yet.
  *
- * `false`, and it must stay false until the publish step actually runs. The
- * distinction is not pedantry: `doctor` used to report that an installation
- * "matches the published composition", which was untrue of every installation
- * that has ever existed — nothing has been published, so nothing can match it.
- * A person reading that line would reasonably conclude they were running a
- * released build and that a registry could confirm it.
+ * `true` since the first `deepwatch-v*` tag: the twenty packages are on npm
+ * and `setup` fetches them by name. It was `false` for longer than the code
+ * around it assumed, and the distinction is not pedantry. `doctor` used to
+ * report that an installation "matches the published composition", which was
+ * untrue of every installation that had ever existed — nothing was published,
+ * so nothing could match it, and a person reading that line would reasonably
+ * conclude a registry had confirmed their build.
  *
- * What `doctor` can honestly say is narrower and more useful: these are the
- * packages this CLI was built to compose, and the digest agrees with the
- * release manifest. That is a *recorded* composition, not a published one.
+ * What `doctor` says either way is narrower than that and does not depend on
+ * this flag: these are the packages this CLI was built to compose, and the
+ * digest agrees with the release manifest. That is a *recorded* composition.
+ * The flag decides only whether the plan offers a registry install or a
+ * local-artifact one, and it must not be flipped ahead of a publish — a plan
+ * that names a registry version nobody uploaded fails at the fetch, after the
+ * user has agreed to it.
  */
 export const SCOPE_PUBLISHED = true
 
@@ -63,12 +68,12 @@ export const HARNESS_REGISTRY = 'https://registry.npmjs.org'
 /**
  * The DeepWatch profile layer `setup` composes.
  *
- * Never fetched from a registry — nobody published this scope. `setup`
- * installs it from a verified local tarball into the managed runtime, beside
- * the Harness, and `lib/bundle.ts` resolves it from the Harness's own anchor
- * and proves it is inside that runtime. It is *not* resolved from this CLI's
- * installation: that is a different directory, and assuming otherwise is the
- * mistake `tests/resolution-model.test.mjs` exists to keep out.
+ * `setup` installs it into the managed runtime beside the Harness — from the
+ * registry by default, or from verified local tarballs with `--artifacts` —
+ * and `lib/bundle.ts` resolves it from the Harness's own anchor and proves it
+ * is inside that runtime. It is *not* resolved from this CLI's installation:
+ * that is a different directory, and assuming otherwise is the mistake
+ * `tests/resolution-model.test.mjs` exists to keep out.
  */
 export const BUNDLE_PACKAGE = '@deepwatch/dsh-bundle'
 

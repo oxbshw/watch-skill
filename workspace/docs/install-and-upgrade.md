@@ -4,9 +4,9 @@ Two products, two package managers, two upgrade stories. This page covers both
 and is honest about which parts have been exercised and which have not.
 
 > **Registry status.** `watch-skill` is on PyPI and the newest published
-> version is 1.4.0 — `pip install 'watch-skill[standard]'` gives you the
+> version is 1.4.1 — `pip install 'watch-skill[standard]'` gives you the
 > release this page describes. The twenty `@deepwatch` packages are on npm;
-> `deepwatch-v0.1.1` was the first publication and every command below has
+> the first `deepwatch-v*` tag was the first publication, and every command below has
 > been run against the registry.
 
 ---
@@ -146,14 +146,14 @@ directory.
 
 ### Compatibility policy
 
-The `@deepwatch/*` packages are `0.1.1`. **Stable means tested, documented and
+The `@deepwatch/*` packages are `0.1.2`. **Stable means tested, documented and
 supported — not 1.0.** Semantic versioning gives `0.x` no compatibility
 guarantee across minor versions: a `0.MINOR` bump may change or remove surface,
-and a patch will not. Pin with a tilde range (`~0.1.1`) if you want that
+and a patch will not. Pin with a tilde range (`~0.1.2`) if you want that
 enforced by your lockfile rather than by a changelog. The usual major-version
 promise starts at 1.0.
 
-Watch Skill is `1.4.0` and is on the 1.x line, where a minor release adds and a
+Watch Skill is `1.4.1` and is on the 1.x line, where a minor release adds and a
 major release is where a removal may happen. The Bridge protocol between them
 carries its own version and is negotiated at handshake; a Host and an engine
 that cannot agree fail closed and say so.

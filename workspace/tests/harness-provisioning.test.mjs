@@ -180,7 +180,7 @@ describe('nothing reaches the network unless setup was told to', () => {
 
   test('setup with no artifact directory plans a registry install, and fetches nothing unasked', () => {
     const room = cleanRoom()
-    // This asserted a refusal until 0.1.1, and the refusal was the defect: the
+    // This asserted a refusal until 0.1.2, and the refusal was the defect: the
     // scope had been published for a day and `setup` still exited 2 saying the
     // packages were not. Naming no `--artifacts` is now the ordinary path, so
     // what has to hold is the property the old test was really protecting --
