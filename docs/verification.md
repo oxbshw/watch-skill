@@ -29,6 +29,23 @@ Four, and all four are real answers:
 with zero frames scored 92/100 and passed; an unreachable judge passed; a
 critic that returned nothing passed. Absent evidence now reports itself.
 
+Through the Bridge and the Host tool the same four are spelled `VERIFIED`,
+`FAILED`, `UNVERIFIED` and `INCONCLUSIVE`. Measured on one contract, so that
+"it fails" is not used for all of them:
+
+| What was asked | Verdict |
+| --- | --- |
+| Checks run against the directory that holds the files, and pass | `VERIFIED` |
+| Checks run against a directory that does not hold them, and report false | `FAILED` |
+| An expectation in prose, with no executable check behind it | `UNVERIFIED` |
+| A required check that could not be evaluated at all | `INCONCLUSIVE`, with that check's own `passed` left `null` |
+| No workspace given to measure against | refused — `verify.workspace_unresolved`, not a verdict |
+
+The last row is deliberate. Given no directory the verifier used to measure
+against whatever directory its own process started in, and a file the agent had
+written correctly came back `INCONCLUSIVE` — honest, and useless. Core refuses
+instead of guessing.
+
 ## Assurance levels
 
 The verdict says what happened. The assurance level says how much to trust it.
