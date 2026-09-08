@@ -239,18 +239,43 @@ success and a correctly rejected false success.
 
 ### Where things stand now
 
-Checked against the live services on 2026-09-08.
+Checked against the live services on 2026-09-08, after `core-v1.4.2` and
+`deepwatch-v0.1.3`.
 
 | Channel | State |
 |---|---|
-| PyPI `watch-skill` | Four versions published: `1.2.0`, `1.3.0rc2`, `1.4.0` and `1.4.1`. `latest` is **1.4.1**, and it is installable — `pip install 'watch-skill[standard,ocr]'` resolves it. |
-| npm `@deepwatch/*` | **Twenty packages published at 0.1.2.** Every one carries `latest = 0.1.2`, serves a tarball over HTTP 200, and matches the sha512 of the artifact sealed to the `deepwatch-v0.1.2` GitHub Release byte for byte. npm attestations are present (npm publish v0.1 and SLSA provenance v1), published through GitHub OIDC Trusted Publishing. |
-| Public install | `npx @deepwatch/cli@0.1.2 --version` answers `0.1.2`; `npm install @deepwatch/cli@0.1.2` resolves the whole closure, sixteen `@deepwatch` packages. The release workflow's own npx smoke is green on `ubuntu-latest`, `macos-latest` and `windows-latest` (run 34171236337). |
-| GitHub releases | `deepwatch-v0.1.2` is the latest release, carrying twenty tarballs plus `SHA256SUMS`, `provenance.json`, `publish-plan.json`, `packed-artifacts.json` and an attestation bundle. `core-v1.4.1` carries the Core wheel and sdist. |
+| PyPI `watch-skill` | Five versions published; `latest` is **1.4.2**. A clean `uv pip install 'watch-skill[standard,ocr]==1.4.2'` resolves and the binary reports `1.4.2`. |
+| npm `@deepwatch/*` | **Twenty packages published at 0.1.3.** Every one carries `latest = 0.1.3`, serves a tarball over HTTP 200, and matches the sha512 of the artifact sealed by the release run byte for byte. Published through GitHub OIDC Trusted Publishing, behind the `npm` Environment's required review. |
+| Public install, Core | The post-publish smoke resolves `watch-skill[standard]==1.4.2` from PyPI with `uvx` on **ubuntu-latest, macos-latest and windows-latest** — all three green (run 34223538373). |
+| Public install, DeepWatch | The release run's own npx smoke is green on **ubuntu-latest, macos-latest and windows-latest** (run 34222342322). For 0.1.2 the same check was red on two of the three; §"The closure, not the package" below says why. |
+| Clean consumer room | `npx @deepwatch/cli@0.1.3 setup --yes` composed a runtime from the registry with no checkout present, the profile served on loopback, Core reported `phase: ready`, `transport: stdio`, `coreVersion: 1.4.2`, `contractsMatch: true`, and a scripted run drove `watch_list_sources` and `watch_moment` to real answers across a request advertising 22 `watch_*` tools. |
+| GitHub releases | `deepwatch-v0.1.3` and `core-v1.4.2`, each carrying its own sealed assets. `core-v1.4.1` and `deepwatch-v0.1.2` are untouched and still point at `db879a3`. |
 | GHCR `ghcr.io/oxbshw/watch-skill` | OCI index with `linux/amd64` and `linux/arm64`, plus two attestation manifests. |
 | Agent Skills (skills.sh) | Badge and project page both return HTTP 200. |
-| MCP Registry | `server.json` committed and schema-validated; not yet published. |
+| MCP Registry | The `core-v1.4.2` release published the server entry. |
 | Desktop | Not distributed. There is no installer and no packaging job; the `electron-builder` block configures a build nothing runs. Deferred, and stated as deferred. |
+
+**The closure, not the package.** 0.1.2's published-install check went red on
+Linux and macOS with `ETARGET: No matching version found for
+@deepwatch/dsh-bundle@^0.1.2`, while every package was in fact on the registry.
+The readiness step waited for `@deepwatch/cli` and then asked `npx` to resolve
+sixteen packages; a replica holding the first and not yet the rest satisfied the
+gate and failed the install. It now walks the whole `@deepwatch` closure —
+packument, tarball `HEAD`, recursing through `@deepwatch/` dependencies — under
+a bounded deadline with its own npm cache, and then starts the CLI rather than
+only printing a version. An `ETARGET` naming a version the registry does not
+hold still fails immediately, because that is a wrong dependency range and not a
+slow replica; authentication, integrity and version-assertion failures stay
+fatal too. 0.1.3 was green on all three platforms first time.
+
+**Reproducibility, measured.** The twenty tarballs the release run sealed were
+compared against a local pack of the same commit: eighteen are byte-identical.
+The two that carry CSS modules — `dsh-client-evidence` and
+`dsh-client-settings` — differ only in the per-build class-name prefix the
+bundler mints (`EvqOtW_` here, `QTfmaG_` there), and are identical once that
+prefix is normalised. The published bytes are the ones the release run built
+from the tag; a second machine does not reproduce them exactly, and that is a
+known limit of this build rather than a claim it does.
 
 ### The pre-publication snapshot, kept as history
 
