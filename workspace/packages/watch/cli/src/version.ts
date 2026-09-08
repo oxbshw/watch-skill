@@ -12,7 +12,7 @@
  */
 
 /** Kept in step with this package's `version` by the test named above. */
-export const VERSION = '0.1.2'
+export const VERSION = '0.1.3'
 
 /** The Harness package DeepWatch composes. Official, unforked, unpatched. */
 export const HARNESS_PACKAGE = '@deepseek-ai/dsh'

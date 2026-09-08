@@ -12,9 +12,9 @@ timestamped evidence, and answers *did that actually work?* with a
 deterministic contract rather than a model's opinion. Add it to the agent you
 already use over MCP.
 
-**DeepWatch** is a ready-made agent workspace — the official DeepSeek Harness
-with Watch Skill already composed in — where a tool call leaves a receipt you
-can open, and a result can be checked by something other than the agent that
+**DeepWatch** is a ready-made agent workspace, built on the official DeepSeek
+Harness with Watch Skill already composed in, where a tool call leaves a receipt
+you can open and a result can be checked by something other than the agent that
 produced it.
 
 **Python · PyPI**
@@ -84,8 +84,9 @@ Any agent can use it: **MCP**, a **CLI**, or a **REST** API.
 
 ### <img src="workspace/packages/watch/brand/assets/watch-orca-32.png" alt="" width="22" align="absmiddle"> DeepWatch — the workspace
 
-The official [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)
-with Watch Skill composed in, installed by one command. You get an agent that
+Built on the official
+[DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness), with Watch
+Skill composed in, installed by one command. You get an agent that
 can see and prove, without wiring anything together yourself.
 
 Every tool call leaves a receipt naming what it touched. Every path a tool
@@ -161,9 +162,11 @@ npx skills add oxbshw/watch-skill -g
 
 ### 2. The whole workspace
 
-**Prerequisites.** Node **22.19+ or 24+**. Python 3.11+ only if you want the
-perception and verification engine — DeepWatch starts without it and reports
-every Watch capability as unavailable until it is there.
+**Prerequisites.** Node `^22.19 || >=24`, which is what the CLI's `engines`
+declares. Python 3.11, 3.12 or 3.13 — the versions CI runs and the classifiers
+list — and only if you want the perception and verification engine. DeepWatch
+starts without it and reports every Watch capability as unavailable until it is
+there.
 
 ```bash
 # 1. the engine that sees and proves (optional, but it is the point)
@@ -197,8 +200,11 @@ peers, and the DeepWatch packages at this release's version, into a runtime
 under your DeepWatch home. It prints the registry, the versions and the
 destination and stops for your agreement; `--yes` agrees in advance and
 `--offline` refuses outright. Nothing is installed globally except the CLI you
-installed yourself. `--artifacts <dir>` installs from verified local tarballs
-instead, for an air-gapped machine or a checkout build.
+installed yourself. `--artifacts <dir>` takes the *DeepWatch* packages from
+verified local tarballs this product hashes itself instead of from the registry,
+which is what a checkout build wants. It does not make the install offline: the
+pinned Harness and its generated peer closure are fetched from npm in that mode
+too, and the plan `setup` prints says so before it fetches anything.
 
 **A model provider is not required to start.** The workspace boots, the Library
 works and Watch tools answer without one. You need a provider for the *agent* —
@@ -241,14 +247,26 @@ above is what tells you the pieces work together.
 ### 3. Into a DeepSeek Harness you already run
 
 ```bash
+cd /path/to/the/project/you/are/working/on
 dsh plugin --profile <your-profile> add @deepwatch/dsh-bundle
-dsh --profile <your-profile> web
+dsh --profile <your-profile>
 ```
 
-**Name the same profile twice.** `dsh plugin add` writes into the profile you
-name and `dsh web` serves the profile *it* is given, so installing into one and
-serving another leaves you looking at an agent with no `watch_*` tools and no
-error to explain it. Both commands take `--profile`; give them the same value.
+**There is no `web` subcommand.** `dsh web` is an alias of `dsh --profile web`,
+so `dsh --profile <your-profile> web` boots your profile and then hands `web`
+to the app as an argument — which is not what you meant and does not say so.
+The Harness prints this itself under `dsh --help`: *`dsh --profile web` — boot
+the web profile (same as: `dsh web`)*. Name your profile once, after
+`--profile`, and pass nothing else.
+
+**Name the same profile in both commands.** `dsh plugin add` writes into the
+profile you name; installing into one and booting another leaves you looking at
+an agent with no `watch_*` tools and no error to explain it.
+
+**Start it from your project directory.** The receipt journal is written under
+the working directory the Host is launched in, so `cd` there first — otherwise
+the Library indexes a directory you are not working in and reports `empty`.
+
 To check what a profile actually composes before you start it:
 
 ```bash
@@ -279,8 +297,8 @@ video. The Bridge finds the executable on `PATH` by itself.
 
 Full guide: **[`@deepwatch/dsh-bundle`](workspace/packages/watch/bundle/README.md)**.
 
-**Requirements.** Node ≥ 22.19 and Python 3.11, 3.12 or 3.13 — the versions CI
-runs and the classifiers declare. Windows, macOS and Linux.
+**Requirements.** The same as everywhere else here: Node `^22.19 || >=24`, and
+Python 3.11, 3.12 or 3.13 for the engine. Windows, macOS and Linux.
 
 ---
 
@@ -353,9 +371,9 @@ own — the correction is yours to give — and nothing is uploaded.
 
 ## The DeepWatch Workspace
 
-Everything above is the engine, and any agent can use it. DeepWatch is the
-official DeepSeek Harness with Watch Skill already composed in, so an agent you
-run there produces receipts and verdicts without you wiring anything up.
+Everything above is the engine, and any agent can use it. DeepWatch is built on
+the official DeepSeek Harness with Watch Skill already composed in, so an agent
+you run there produces receipts and verdicts without you wiring anything up.
 
 The rest of this section is one job, end to end. **A checkout page charges the
 wrong amount, and all you have is a screen recording of it.**
@@ -399,8 +417,11 @@ Now the agent has somewhere to start. It reads the evidence, finds `orderTotal`
 in `cart.js`, and sees that the tax it computed never reaches the return value.
 
 Every file it touches leaves a receipt naming the path, and every path a tool
-declares is resolved against one workspace boundary — a write outside it is
-refused rather than logged.
+declares is resolved against one workspace boundary. A write outside it is
+refused *and* written down: the file is not touched, and the journal gains a
+receipt tagged `scope:outside_workspace` / `state:cancelled` naming the attempt.
+Both halves matter — a boundary that refused silently would leave you no way to
+tell it had ever been tested.
 
 <div align="center">
 <img src="workspace/docs/screenshots/release/05-ordinary-task.png" width="86%" alt="A DeepWatch session listing Write, Read and Pwsh tool rows, each naming a workspace-relative path, with the reply stating the file contents and the total read back from it.">
@@ -418,12 +439,37 @@ verdict the agent does not author — `VERIFIED`, `FAILED`, `UNVERIFIED` or
 </div>
 
 The contract's SHA-256 is on screen, so you can tell it is the same contract.
-Run it from a different directory and it fails.
+
+The verdict is the answer, and each of the four means something different.
+Measured on the contract above: against the repaired workspace it is
+`VERIFIED`; pointed at a directory that does not hold those files the checks
+still run and report false, so it is `FAILED`; an expectation written as prose
+with no executable check behind it is `UNVERIFIED` — honest, and not a pass;
+and a check that cannot be evaluated at all comes back `INCONCLUSIVE` with the
+check's own status left `null` rather than folded into a false. Given no
+workspace to measure against, Core refuses the request outright
+(`verify.workspace_unresolved`) instead of guessing a directory.
 
 ### 5 · Come back to it tomorrow
 
-Restart everything. The Library still holds every source, receipt and verdict,
-and each one reopens with the identity it was recorded under.
+Restart everything — kill the process, start it again. Both records come back,
+and they are two different stores worth telling apart.
+
+**Watch Core's index of sources** lives in the Watch data directory. It is
+there whether anything is open or not, and `watch-skill list` reads it with no
+workspace involved. **The Library's index of receipts** is the Host's own: the
+journal is written under the workspace at `.watch/receipts`, and the Library
+rebuilds its index from that file on Refresh. It is derived and safe to discard.
+
+That is why the Library follows the workspace. Run the app from the directory
+you are working in; a Host started somewhere else journals somewhere else, and
+a Library that reports `empty` after a restart is usually pointed at the wrong
+directory rather than missing data.
+
+Measured on the run above: fourteen receipts written, the process killed, and
+after the restart all fourteen reopen — same record ids, same last revision,
+and the two that Core had ruled on still carrying their own verdicts,
+`VERIFIED` for the repair and `INCONCLUSIVE` for a check that could not run.
 
 <div align="center">
 <img src="workspace/docs/screenshots/release/08-library-receipts.png" width="86%" alt="The Library screen showing matches with rows for read and write on workspace-relative paths and a pwsh call. A notice reads 'Index ready. Answered by this workspace's own host', and the page is marked Local-first.">

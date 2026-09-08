@@ -237,6 +237,28 @@ success and a correctly rejected false success.
 
 ## Distribution
 
+### Where things stand now
+
+Checked against the live services on 2026-09-08.
+
+| Channel | State |
+|---|---|
+| PyPI `watch-skill` | Four versions published: `1.2.0`, `1.3.0rc2`, `1.4.0` and `1.4.1`. `latest` is **1.4.1**, and it is installable — `pip install 'watch-skill[standard,ocr]'` resolves it. |
+| npm `@deepwatch/*` | **Twenty packages published at 0.1.2.** Every one carries `latest = 0.1.2`, serves a tarball over HTTP 200, and matches the sha512 of the artifact sealed to the `deepwatch-v0.1.2` GitHub Release byte for byte. npm attestations are present (npm publish v0.1 and SLSA provenance v1), published through GitHub OIDC Trusted Publishing. |
+| Public install | `npx @deepwatch/cli@0.1.2 --version` answers `0.1.2`; `npm install @deepwatch/cli@0.1.2` resolves the whole closure, sixteen `@deepwatch` packages. The release workflow's own npx smoke is green on `ubuntu-latest`, `macos-latest` and `windows-latest` (run 34171236337). |
+| GitHub releases | `deepwatch-v0.1.2` is the latest release, carrying twenty tarballs plus `SHA256SUMS`, `provenance.json`, `publish-plan.json`, `packed-artifacts.json` and an attestation bundle. `core-v1.4.1` carries the Core wheel and sdist. |
+| GHCR `ghcr.io/oxbshw/watch-skill` | OCI index with `linux/amd64` and `linux/arm64`, plus two attestation manifests. |
+| Agent Skills (skills.sh) | Badge and project page both return HTTP 200. |
+| MCP Registry | `server.json` committed and schema-validated; not yet published. |
+| Desktop | Not distributed. There is no installer and no packaging job; the `electron-builder` block configures a build nothing runs. Deferred, and stated as deferred. |
+
+### The pre-publication snapshot, kept as history
+
+Everything under this heading was true on **2026-09-03**, before any of the
+above was published. It is kept because it is the evidence that the checks
+below were run against a candidate rather than against a registry — not
+because it describes the release. Read it as a dated record.
+
 Every channel below was checked against the live service on 2026-09-03 rather
 than copied from an earlier report.
 
@@ -256,6 +278,8 @@ registry — testing what PyPI already has would say nothing about `1.4.0rc1`.
 
 The README states PyPI as the install channel and no longer reads as though
 `npx skills add` were installing an npm package.
+
+*(End of the 2026-09-03 snapshot.)*
 
 ### Installed-wheel checks
 

@@ -31,7 +31,7 @@ name: Post-publish
 # because two things are still true: PyPI accepts an upload before its CDN
 # serves the file, and a `workflow_dispatch` with a version typed into it must
 # verify *that* version. Reading the version off the tag is also what lets the
-# failure be honest -- "1.4.1 never appeared on PyPI" instead of a green run
+# failure be honest -- "1.4.2 never appeared on PyPI" instead of a green run
 # against 1.3.0.
 
 on:

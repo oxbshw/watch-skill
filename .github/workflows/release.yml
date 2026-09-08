@@ -62,7 +62,7 @@ jobs:
           echo "version=${version}" >> "$GITHUB_OUTPUT"
 
           # PEP 440 pre-release markers, read off the *version* and not the
-          # tag: `core-v0.1.2` contains a hyphen, and classifying on the tag
+          # tag: `core-v0.1.3` contains a hyphen, and classifying on the tag
           # made every stable release look like a prerelease. Without this an
           # rc produced a release GitHub labels "Latest", so anyone landing on
           # the repository was shown a release candidate as the current one.
@@ -118,7 +118,7 @@ jobs:
           # nothing else that happens to be in this directory.
           #
           # It used to list everything `os.listdir` returned, which is how
-          # `core-v1.4.1` failed before it published anything: `uv build`
+          # `core-v1.4.2` failed before it published anything: `uv build`
           # writes a `.gitignore` into its output directory, `upload-artifact`
           # excludes hidden files by default, and the next job checked a
           # manifest entry for a file the sealed set had never contained. The

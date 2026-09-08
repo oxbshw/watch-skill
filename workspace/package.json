@@ -1,6 +1,6 @@
 {
   "name": "@deepwatch/monorepo",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "deepwatch": {
     "$comment": "registryStatus is what every page that shows an install command reads. It was 'unpublished' until the scope existed, and those pages said so rather than printing a command that resolves nothing. firstPublicationTag records which tag first put the scope on npm: it is history, so it names the tag that did it and never the version being prepared.",
     "registryStatus": "published",

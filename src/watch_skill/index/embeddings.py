@@ -65,7 +65,7 @@ def warm_native_imports() -> None:
     loading the numpy C extension deadlocks and never returns.
 
     The symptom is asymmetric and misleading in both. Measured on the Bridge
-    against 1.4.1: the first ``watch.library.search`` in a fresh Core did not
+    against 1.4.2: the first ``watch.library.search`` in a fresh Core did not
     answer in fifteen minutes; a second search issued afterwards, in the same
     process, answered in 51 seconds, and a third in 1.2. Everything that does
     not embed stayed instant throughout, so the engine looked healthy and the

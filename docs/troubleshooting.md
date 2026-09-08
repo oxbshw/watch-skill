@@ -115,6 +115,46 @@ Bounded, but reclaimable: `watch-skill clean --all` (cache to its size
 cap + old loops + orphaned frame dirs), `--dry-run` first to see what
 would go.
 
+## DeepWatch workspace
+
+**The agent has no `watch_*` tools, and nothing says why**
+`dsh plugin add` writes into the profile you name and the launcher boots the
+profile *it* is given. Installing into one and booting another leaves a working
+agent with none of the tools and no error, because nothing went wrong — you are
+looking at a different profile. Check what the one you boot actually composes:
+
+```bash
+dsh --profile <your-profile> --dump-config | grep watch-
+```
+
+**`dsh --profile <name> web` boots the wrong thing**
+There is no `web` subcommand. `dsh web` is an alias of `dsh --profile web`, so
+adding `web` after your own profile name boots your profile and passes `web` to
+the app as an argument. Name the profile once, after `--profile`, and pass
+nothing else.
+
+**The Library says `empty` after a restart, and Refresh does not help**
+Receipts are journalled under the *launch* directory, at `.watch/receipts`. A
+Host started somewhere other than your project journals somewhere else, and
+Refresh re-reads what is on disk — which, in that directory, is nothing. `cd`
+to your project first, then start it. The receipts were never lost; they are
+under the directory the earlier run was launched from.
+
+**`watch_library_search` answers `no_roots_configured`**
+That is a different index from the receipt journal, and it is empty by design:
+the deployment has not said which directories hold evidence records. Set the
+`watch-tools` row's `libraryRoots`. The receipt journal needs no such setting.
+
+**A provider that worked yesterday needs testing again today**
+The routing guard will not send to a binding no provider test has proved, and a
+Host restart is a new process with nothing proved in it. Saved is not tested.
+Run the provider test again; it spends one deliberately tiny request.
+
+**`watch_moment` fails on a Core that is otherwise healthy**
+Engines before 1.4.2 raise instead of answering: the Bridge tried to iterate its
+result instead of serialising it, so every call failed and the Host's own
+parameter-name mismatch hid it. `pip install -U 'watch-skill[standard,ocr]'`.
+
 ## REST API
 
 **`config.public_bind_no_token` on startup**

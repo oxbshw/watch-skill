@@ -59,7 +59,7 @@ function manifestFor(dir, source, overrides = {}) {
 describe('the defect that shipped', () => {
   test('one name@version with two byte sets is a mismatch', () => {
     // The whole reason this file exists. The old composition digest hashed
-    // `@deepwatch/dsh-memory@0.1.2` and could not tell these apart.
+    // `@deepwatch/dsh-memory@0.1.3` and could not tell these apart.
     const hardened = 'export function restrictAll(directory) {}'
     const stale = 'export function nothingOfTheSort() {}'
 
@@ -70,7 +70,7 @@ describe('the defect that shipped', () => {
     // These were two literals and the version promotion moved only one of
     // them, so the test failed on its own bookkeeping rather than on the
     // behaviour it covers.
-    const SUBSTITUTED = { name: '@deepwatch/dsh-memory', version: '0.1.2' }
+    const SUBSTITUTED = { name: '@deepwatch/dsh-memory', version: '0.1.3' }
     sealed.artifacts = sealed.artifacts.map(entry => ({
       ...entry,
       ...SUBSTITUTED,
@@ -209,7 +209,7 @@ describe('what a room installed', () => {
     const dir = sealedSet({ 'deepwatch-dsh-memory-0.1.1.tgz': 'x' })
     const sealed = manifestFor(dir, {})
     sealed.artifacts = sealed.artifacts.map(entry => ({
-      ...entry, name: '@deepwatch/dsh-memory', version: '0.1.2',
+      ...entry, name: '@deepwatch/dsh-memory', version: '0.1.3',
     }))
 
     const installed = mkdtempSync(join(tmpdir(), 'dw-inst-'))
@@ -217,7 +217,7 @@ describe('what a room installed', () => {
     mkdirSync(pkg, { recursive: true })
     writeFileSync(
       join(pkg, 'package.json'),
-      JSON.stringify({ name: '@deepwatch/dsh-ghost', version: '0.1.2' }), 'utf8')
+      JSON.stringify({ name: '@deepwatch/dsh-ghost', version: '0.1.3' }), 'utf8')
 
     const result = verifyProvenance({ artifactsDir: dir, manifest: sealed, installedDir: installed })
     assert.ok(result.failures.some(item => item.code === 'installed_unsealed'))
@@ -227,7 +227,7 @@ describe('what a room installed', () => {
     const dir = sealedSet({ 'deepwatch-dsh-memory-0.1.1.tgz': 'x' })
     const sealed = manifestFor(dir, {})
     sealed.artifacts = sealed.artifacts.map(entry => ({
-      ...entry, name: '@deepwatch/dsh-memory', version: '0.1.2',
+      ...entry, name: '@deepwatch/dsh-memory', version: '0.1.3',
     }))
 
     const installed = mkdtempSync(join(tmpdir(), 'dw-inst-'))
