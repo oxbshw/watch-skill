@@ -1,6 +1,6 @@
 {
   "name": "@deepwatch/dsh-core-bridge",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "Host plugin: the typed Bridge between DeepSeek Harness and Watch Core",
   "type": "module",
   "license": "MIT",
@@ -18,8 +18,13 @@
     "deepwatch",
     "deepseek-harness",
     "watch-skill",
+    "ai-agent",
+    "agent-workspace",
     "bridge",
-    "watch-core"
+    "watch-core",
+    "json-rpc",
+    "stdio",
+    "python"
   ],
   "main": "lib/index.js",
   "types": "lib/index.d.ts",

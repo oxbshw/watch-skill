@@ -48,13 +48,13 @@ Mounted as a profile row, and it must come before `watch-library`: the Library's
 
 ## Stability
 
-`0.1.3` — a stable release.
+`0.1.4` — a stable release.
 
 Stable means tested, documented and supported — not 1.0. This is a
 pre-1.0 line, and semantic versioning gives `0.x` no compatibility
 guarantee across minor versions: **a `0.MINOR` bump may change or remove
 surface, and a patch will not.** Depend on it with a tilde range
-(`~0.1.3`) if you want that difference enforced by your lockfile
+(`~0.1.4`) if you want that difference enforced by your lockfile
 rather than by a changelog. The usual major-version promise starts at 1.0.
 
 ## Side effects

@@ -10,7 +10,7 @@
  *
  * The wrong fix is a `--force` or a "skip what exists" flag, because "exists"
  * is not the question. The question is whether what exists **is what this run
- * would have uploaded**. If the registry holds `@deepwatch/cli@0.1.3` built
+ * would have uploaded**. If the registry holds `@deepwatch/cli@0.1.4` built
  * from a different commit, skipping it silently ships a release whose halves
  * disagree, and no later check would catch it: every gate compares
  * `name@version`, and both byte sets wear the same version.

@@ -1,6 +1,6 @@
 {
   "name": "@deepwatch/dsh-library",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "Library — sources, revisions, index state, search, facets and collections",
   "type": "module",
   "license": "MIT",
@@ -18,8 +18,13 @@
     "deepwatch",
     "deepseek-harness",
     "watch-skill",
+    "ai-agent",
+    "agent-workspace",
     "library",
-    "index"
+    "index",
+    "search",
+    "evidence",
+    "receipts"
   ],
   "dsh": {
     "client": {

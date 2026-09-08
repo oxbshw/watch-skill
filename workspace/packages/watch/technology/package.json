@@ -1,6 +1,6 @@
 {
   "name": "@deepwatch/dsh-technology",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "Technology descriptors, capability lifecycle, and role bindings over DSH Models and Providers",
   "type": "module",
   "license": "MIT",
@@ -18,7 +18,12 @@
     "deepwatch",
     "deepseek-harness",
     "watch-skill",
-    "technology",
+    "ai-agent",
+    "agent-workspace",
+    "capabilities",
+    "role-bindings",
+    "providers",
+    "models",
     "inventory"
   ],
   "main": "lib/index.js",

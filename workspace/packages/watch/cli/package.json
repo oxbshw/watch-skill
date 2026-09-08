@@ -1,6 +1,6 @@
 {
   "name": "@deepwatch/cli",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "DeepWatch — set up and run the agent workspace built on DeepSeek Harness and powered by Watch Skill",
   "type": "module",
   "license": "MIT",
@@ -18,8 +18,14 @@
     "deepwatch",
     "deepseek-harness",
     "watch-skill",
+    "ai-agent",
+    "agent-workspace",
     "cli",
-    "agent"
+    "mcp",
+    "video-understanding",
+    "evidence",
+    "verification",
+    "local-first"
   ],
   "bin": {
     "deepwatch": "./lib/bin.js"

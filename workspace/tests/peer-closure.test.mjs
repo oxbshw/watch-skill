@@ -101,7 +101,7 @@ describe('deciding whether a version satisfies a range', () => {
     const cases = [
       ['0.1.1-rc.2', '^0.1.1-rc.2', true],
       ['0.1.1-rc.2', '0.1.1-rc.2', true],
-      ['0.1.1-rc.2', '^0.1.3', false],
+      ['0.1.1-rc.2', '^0.1.4', false],
       ['4.0.2', '^4.0.1', true],
       ['4.0.1', '4.0.1', true],
       ['4.0.1', '^4.0.2', false],
@@ -155,7 +155,7 @@ describe('deciding whether a version satisfies a range', () => {
   })
 
   test('prereleases order below the release they lead to', () => {
-    assert.ok(compare(parseVersion('0.1.1-rc.2'), parseVersion('0.1.3')) < 0)
+    assert.ok(compare(parseVersion('0.1.1-rc.2'), parseVersion('0.1.4')) < 0)
     assert.ok(compare(parseVersion('0.1.1-rc.2'), parseVersion('0.1.1-rc.10')) < 0)
     assert.equal(compare(parseVersion('1.2.3'), parseVersion('1.2.3')), 0)
   })

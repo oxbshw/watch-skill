@@ -151,7 +151,7 @@ Host restart is a new process with nothing proved in it. Saved is not tested.
 Run the provider test again; it spends one deliberately tiny request.
 
 **`watch_moment` fails on a Core that is otherwise healthy**
-Engines before 1.4.2 raise instead of answering: the Bridge tried to iterate its
+Engines before 1.4.3 raise instead of answering: the Bridge tried to iterate its
 result instead of serialising it, so every call failed and the Host's own
 parameter-name mismatch hid it. `pip install -U 'watch-skill[standard,ocr]'`.
 

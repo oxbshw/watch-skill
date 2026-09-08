@@ -1,6 +1,6 @@
 {
   "name": "@deepwatch/dsh-memory",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "Host plugin: durable, correctable, scoped memory over an append-only event ledger",
   "type": "module",
   "license": "MIT",
@@ -18,7 +18,12 @@
     "deepwatch",
     "deepseek-harness",
     "watch-skill",
-    "memory"
+    "ai-agent",
+    "agent-workspace",
+    "memory",
+    "event-sourcing",
+    "append-only",
+    "ledger"
   ],
   "main": "lib/index.js",
   "types": "lib/index.d.ts",

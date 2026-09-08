@@ -278,7 +278,7 @@ rather than a consequence of pushing.
 | --- | --- | --- |
 | `0.1.1-preview.N` | `preview` | early, and not what `npm i` should give anyone |
 | `0.1.1-rc.N` | `next` | a candidate, opted into deliberately |
-| `0.1.3` | `latest` | the version this project stands behind |
+| `0.1.4` | `latest` | the version this project stands behind |
 
 The first stable release took `latest`, and so does every stable release after it.
 
@@ -369,7 +369,7 @@ Then, and only then, the recovery is a new version.
    guessing:
 
    ```bash
-   npm deprecate @deepwatch/dsh-library@0.1.3 "incomplete release; use 0.1.3"
+   npm deprecate @deepwatch/dsh-library@0.1.4 "incomplete release; use 0.1.4"
    ```
 
 3. **Tag again**, with the new version, and approve the environment.

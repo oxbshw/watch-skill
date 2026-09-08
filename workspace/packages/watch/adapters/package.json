@@ -1,6 +1,6 @@
 {
   "name": "@deepwatch/dsh-adapters",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "Optional adapters: Obsidian vaults and LLMWiki bundles. Watch works fully without either.",
   "type": "module",
   "license": "MIT",
@@ -18,8 +18,12 @@
     "deepwatch",
     "deepseek-harness",
     "watch-skill",
+    "ai-agent",
+    "agent-workspace",
     "adapters",
-    "perception"
+    "obsidian",
+    "llmwiki",
+    "integrations"
   ],
   "main": "lib/index.js",
   "types": "lib/index.d.ts",

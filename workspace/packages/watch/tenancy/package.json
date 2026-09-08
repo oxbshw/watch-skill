@@ -1,6 +1,6 @@
 {
   "name": "@deepwatch/dsh-tenancy",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "Tenants, roles, remote workers, sharing and audit — enforced server-side",
   "type": "module",
   "license": "MIT",
@@ -18,8 +18,12 @@
     "deepwatch",
     "deepseek-harness",
     "watch-skill",
+    "ai-agent",
+    "agent-workspace",
     "tenancy",
-    "workspace"
+    "rbac",
+    "audit",
+    "collaboration"
   ],
   "main": "lib/index.js",
   "types": "lib/index.d.ts",

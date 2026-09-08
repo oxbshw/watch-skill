@@ -113,7 +113,7 @@ function registryStatus() {
 
 /** The tag that publishes the scope for the first time. */
 function firstPublicationTag() {
-  return WORKSPACE_MANIFEST.deepwatch?.firstPublicationTag ?? 'deepwatch-v0.1.3'
+  return WORKSPACE_MANIFEST.deepwatch?.firstPublicationTag ?? 'deepwatch-v0.1.4'
 }
 
 const WORKSPACE_MANIFEST = JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8'))
@@ -300,7 +300,7 @@ function page(manifest, dir) {
 
   // "Stable" and "1.0" are different claims, and a `0.x` version makes only
   // the first one. Said here rather than left to convention: a dependent
-  // reading "a stable release" beside `^0.1.3` would reasonably expect the
+  // reading "a stable release" beside `^0.1.4` would reasonably expect the
   // guarantee a 1.x line gives, and this line does not give it.
   if (/^0\./.test(version) && !version.includes('-')) {
     lines.push(
