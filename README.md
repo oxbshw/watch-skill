@@ -182,7 +182,19 @@ mkdir my-project
 deepwatch web --workspace ./my-project
 ```
 
-`deepwatch web` prints a local URL and opens the workspace there.
+`deepwatch web` prints a local URL and opens the workspace there. This is the
+first thing you see:
+
+<div align="center">
+<img src="workspace/docs/screenshots/wide-01-onboarding.png" width="88%" alt="The DeepWatch first-run notice: the heading 'See what happened. Prove what worked.', a line saying the local evidence workspace is ready and that local capabilities need no provider and no network, an installation status panel reading 'Ready now 2 — Watch Core and Agent Model passed their runtime gates' beside 'Needs setup 10 — saved is never presented as tested', a 'Private by default' note, and the actions View diagnostics, Explore offline and Finish setup.">
+</div>
+
+Two numbers rather than one fraction, because "installed" and "proved" are
+different facts and a single percentage would blur them. **Ready now** counts
+what has passed a runtime gate. **Needs setup** counts what has not been
+configured or not been tested — saved is never presented as tested. You can
+open the workspace without a provider: the Library, the index and the Watch
+tools all work locally.
 
 **Without a global install**, the same package through `npx`:
 
@@ -221,10 +233,18 @@ Four steps in the workspace itself, in this order. The last one is the point.
 | **Run provider test** | Sends one real request to that exact binding and reports what came back. |
 | **Ready** | Only now will the workspace send anything to it. |
 
-Saved is not presented as tested. A binding with no successful provider test
+<div align="center">
+<img src="workspace/docs/screenshots/release/02-provider-ready.png" width="88%" alt="DeepWatch Settings on Role Bindings. Chat is marked Ready, bound to OpenRouter and deepseek/deepseek-v4-pro, with the actions Change model, Run provider test and Unassign Chat. Visual perception and Speech to text are each marked Not configured with nothing assigned and a Choose a model button.">
+</div>
+
+**Saved is not presented as tested.** A binding with no successful provider test
 behind it is blocked, and the turn says so: *"…is bound but no provider test
 has proved it, so nothing may be sent to it yet."* Re-run the test after a host
 restart — the binding persists, the proof does not.
+
+A capability is assigned per role, not per provider. A role with nothing
+assigned says so and never quietly falls back to another role's model, which is
+why two of the three above read *Not configured* rather than inheriting Chat's.
 
 #### A first task worth running
 
@@ -378,6 +398,11 @@ you run there produces receipts and verdicts without you wiring anything up.
 The rest of this section is one job, end to end. **A checkout page charges the
 wrong amount, and all you have is a screen recording of it.**
 
+Give the recording to the engine · ask it where the amount went wrong · repair
+the code · prove the repair from outside the agent · come back to the record
+tomorrow. Every figure and verdict below is from the run that produced this
+section, on Watch Skill 1.4.2 and DeepWatch 0.1.3.
+
 ### 1 · Give the recording to the engine
 
 Four seconds of somebody changing a quantity. Nothing is typed about what is
@@ -515,9 +540,18 @@ verdict of its own.
 <img src="workspace/docs/screenshots/release/09-compare-two-records.png" width="86%" alt="The Compare screen with two verification records selected: a FAILED watch_verify on the left and a VERIFIED one on the right from the run that repaired the file, with a difference table counting each as present on one side only.">
 </div>
 
-Every image is a photograph of a running build, and each caption on
-**[the screenshot page](workspace/docs/screenshots-release.md)** names the build
-it came from. The full gallery is there too.
+Every image here is a photograph of a running build, and they do not all come
+from the same one — saying they did would be the easiest false claim on this
+page. The onboarding shot is from the current gallery, retaken against **Watch
+Skill 1.4.2 and DeepWatch 0.1.3** with the deterministic browser scenario
+passing 42 of 42 in front of it; a gate refuses the set when the shots and the
+engine they were taken against disagree. The Settings and result-card shots are
+from the `1.4.0` / `0.1.1` candidate, kept because nothing in this release
+changed the surface each one shows.
+
+**[The screenshot page](workspace/docs/screenshots-release.md)** names the build
+behind every image, and carries the full 57-shot gallery across three
+viewports.
 
 **What "local-first" means here, precisely.** Your sources, receipts, verdicts
 and memory are stored on your machine, and Library search runs there. It does
@@ -525,6 +559,18 @@ not mean nothing uses the network: `setup` downloads the runtime from npm, some
 Watch extras fetch a model the first time they run, and a hosted model provider
 you configure receives what you send it. The parts that stay local are the
 record and the retrieval over it.
+
+Capture is a separate consent from any of that. Every source the workspace can
+record is listed with the permission it needs and whether that permission has
+been asked for — and nothing is asked for until you use it:
+
+<div align="center">
+<img src="workspace/docs/screenshots/release/10-perception-sources.png" width="88%" alt="DeepWatch Settings on Sources, listing Screen, Window, Camera, Microphone and Live session. Each is tagged Local and Not requested, with the permission shown as 'Requested at first use'; the live session inherits its sources, and the supervised browser needs no OS permission.">
+</div>
+
+Holding a provider key does not permit media to leave the machine, and a cloud
+engine needs its own consent even with the network open. Those are two separate
+switches on purpose.
 
 ---
 
