@@ -59,6 +59,23 @@ ALLOWED: dict[str, str] = {
     # a small runner, not a way of not running.
     "governed browsers and needs about":
         "the runner did not have the free memory the scenario states it needs",
+    "the browser governor refused at the moment it decided":
+        "the runner did not have the free memory the governor requires",
+
+    # Windows-only capture, and the display it needs. `gdigrab` exists on one
+    # platform; the rest of this file needs a desktop session, which a hosted
+    # runner does not have. Both refuse rather than reporting an uncaptured
+    # window as a captured one.
+    "gdigrab window capture is implemented for Windows only":
+        "runs on the Windows cells",
+    "no interactive display":
+        "needs a desktop session; run it on a workstation, not a hosted runner",
+
+    # An inverted assertion: it checks that a contract requiring an assurance
+    # level is *refused* on a machine that cannot reach that level. A runner
+    # that can reach it has nothing to refuse, so there is nothing to assert.
+    "so a contract requiring it is not expected to be refused":
+        "asserts a refusal, and this machine has the capability to refuse over",
 }
 
 

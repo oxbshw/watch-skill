@@ -163,6 +163,21 @@ jobs:
       - name: Generate the video-backend fixtures
         run: uv run python benchmarks/video_backends/make_fixtures.py
 
+      # `app/` carries axe-core and the ext-apps SDK, and two surface suites
+      # gate on them being installed. Nothing in this job had ever installed
+      # them, so the accessibility tests skipped on every run this workflow has
+      # had -- an accessibility suite that never executes is worse than none,
+      # because the row is there and it is reassuring.
+      - name: Node for the app fixtures
+        uses: actions/setup-node@v6
+        with:
+          node-version: '22.19.0'
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - name: Install the app's test dependencies
+        run: npm ci --prefix app
+
       # `pipefail` explicitly. GitHub's `shell: bash` sets it, and relying on
       # that would mean a pipeline whose exit status is `tee`'s -- a suite that
       # failed would report success, which is the one outcome this job may
