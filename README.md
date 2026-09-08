@@ -423,20 +423,52 @@ receipt tagged `scope:outside_workspace` / `state:cancelled` naming the attempt.
 Both halves matter — a boundary that refused silently would leave you no way to
 tell it had ever been tested.
 
-<div align="center">
-<img src="workspace/docs/screenshots/release/05-ordinary-task.png" width="86%" alt="A DeepWatch session listing Write, Read and Pwsh tool rows, each naming a workspace-relative path, with the reply stating the file contents and the total read back from it.">
-</div>
+Here is what it actually left behind, from the run that produced this section.
+Fourteen rows went into the journal and they fold to twelve receipts, because
+two were written twice — once when the tool returned, and again when Core's
+verdict arrived. The four `todo_write` and `glob` rows are left out here; these
+are the eight that touched something:
+
+| Receipt | Verdict |
+| --- | --- |
+| `watch_list_sources` | — |
+| `watch_ask_source` | — |
+| `read — checkout/cart.js` | — |
+| `read — checkout/index.html` | — |
+| `watch_moment` | — |
+| **`edit — checkout/cart.js`** | **VERIFIED** |
+| `watch_verify` | INCONCLUSIVE |
+| `pwsh` | — |
+
+The model was told a customer was charged the wrong amount and that a recording
+existed. It was not told what the bug was, and nothing in the workspace names
+it. It listed the sources, asked the recording, pulled a moment out of it, read
+two files, changed one line, and ran a verification of its own — which came
+back `INCONCLUSIVE`, because the checks it wrote could not be evaluated. That
+answer is reported as it stands rather than rounded to a pass.
 
 ### 4 · Prove the repair, from outside the agent
 
 The contract was frozen before the repair and lives outside the directory the
 agent can write to. Watch Core evaluates it in a separate process and returns a
 verdict the agent does not author — `VERIFIED`, `FAILED`, `UNVERIFIED` or
-`INCONCLUSIVE`. Before the repair it is `FAILED`: *expected 22, got 20*.
+`INCONCLUSIVE`.
+
+The contract for the run above is
+`c98bd4ae3d13864869ae02be46cdba48fb97f790ec50feead6e30d17ccc007b0`, and its
+digest was taken before the agent started. Before the repair Core returned
+`fail` on all three checks — *expected 22, got 20*, *expected 33, got 30*, and
+`#total text = '$20.00'` read out of the rendered page. Afterwards, against the
+same unchanged contract, all three pass and the page renders `$22.00`.
 
 <div align="center">
-<img src="workspace/docs/screenshots/release/06-independent-verification.png" width="86%" alt="A VERIFIED result card from watch_verify: two of two checks passed, one confirming the file exists and one confirming its total field, shown with the contract's sha256 digest.">
+<img src="workspace/docs/screenshots/release/06-independent-verification.png" width="86%" alt="A VERIFIED result card from watch_verify: two of two checks passed, one confirming a file exists and one confirming its total field, shown with the contract's sha256 digest.">
 </div>
+
+*The card above is photographed from a different task — the `totals.json` one
+in [Start here](#a-first-task-worth-running) — because it is what a `VERIFIED`
+card looks like. It is not a picture of the checkout repair; that repair's
+evidence is the contract and the receipts named above.*
 
 The contract's SHA-256 is on screen, so you can tell it is the same contract.
 
