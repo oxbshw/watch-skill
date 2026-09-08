@@ -448,9 +448,21 @@ if (sessionId !== null) {
     'Use your subagent tool to delegate this to a child task, and report back in '
     + 'one sentence what it found: how many JSON files are under owner-test, and '
     + 'what they are called.')
-  await wait(2_500)
-  const delegationPhase = phaseSlice(journalled(RECEIPTS), beforeDelegation, sessionId)
-  const child = delegationSucceeded(delegationPhase, ['totals.json'])
+  // A child outlives the turn that started it, and how long by is the child's
+  // business. A fixed 2.5 s wait made this claim a race: one run's child had
+  // answered by then and the next run's was still `[running]` when the journal
+  // was read, so the same build reported the capability working and then not.
+  //
+  // Bounded, and it stops the moment there is an answer -- a slow child costs
+  // the wait and a broken one costs the ceiling, rather than both costing the
+  // same guess.
+  let delegationPhase = phaseSlice(journalled(RECEIPTS), beforeDelegation, sessionId)
+  let child = delegationSucceeded(delegationPhase, ['totals.json'])
+  for (let waited = 0; !child.ok && waited < 60_000; waited += 2_500) {
+    await wait(2_500)
+    delegationPhase = phaseSlice(journalled(RECEIPTS), beforeDelegation, sessionId)
+    child = delegationSucceeded(delegationPhase, ['totals.json'])
+  }
   claim('LJ-14 the delegated child completed and reported what it found',
     delegated.settled && child.ok,
     { settled: delegated.settled, reason: delegated.reason, ...child,
