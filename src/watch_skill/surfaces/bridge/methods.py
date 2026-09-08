@@ -20,6 +20,7 @@ import json
 import logging
 import threading
 from collections.abc import Callable
+from dataclasses import asdict
 from datetime import UTC, datetime
 from typing import Any
 
@@ -232,7 +233,12 @@ def source_moment(params: dict[str, Any]) -> Any:
         )
     window_ms = params.get("windowMs") or 10_000
     context = get_moment(source_id, float(timestamp_ms) / 1000.0, window=float(window_ms) / 1000.0)
-    payload = context.to_dict() if hasattr(context, "to_dict") else dict(context)
+    # `MomentContext` is a dataclass and has never had a `to_dict`, so the
+    # `hasattr` fell through to `dict(context)` and a dataclass is not
+    # iterable: every call that got this far raised `TypeError`. None ever did.
+    # The Host sent this method its own parameter name, so the request was
+    # refused a step earlier and the crash behind it stayed invisible.
+    payload = asdict(context)
     # Frame paths are absolute on this machine. They are useful to Core and
     # disclosive to the Host, so they are rewritten rather than forwarded.
     return scrub(payload)

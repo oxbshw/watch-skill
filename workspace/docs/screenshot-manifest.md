@@ -10,9 +10,9 @@ saw on opening the file — not what the tool reported about it.
 | Shots | 57 |
 | Captured | 57 |
 | Not captured | 0 |
-| Pass | 57 |
+| Pass | 55 |
 | Blocked | 0 |
-| Fail | 0 |
+| Fail | 2 |
 | Duplicate groups | 0 |
 
 No two shots are byte-identical. An earlier capture had sixteen that were.
@@ -44,7 +44,7 @@ which nothing in the capture changes.
 | wide-07-settings-about | docs/screenshots/wide-07-settings-about.png | wide | captured | versions, the DSH commit, honest attribution, and licences including the weights position | About section; active section=About | pass |
 | wide-08-sidebar-collapsed | docs/screenshots/wide-08-sidebar-collapsed.png | wide | captured | the 56px rail with the mark visible and the attribution not reflowed into it | the collapsed rail: mark visible, attribution not reflowed; active section=About | pass with note |
 | narrow-03-workspace | docs/screenshots/narrow-03-workspace.png | narrow | captured | the workspace entered without configuring anything, with the mark and attribution in place | the workspace, entered without configuring any provider; active section=n/a | pass |
-| narrow-05-mode-chat | docs/screenshots/narrow-05-mode-chat.png | narrow | captured | DSH's own conversation view, unchanged, as one tab among seven | selected=Chat; deterministic stub reply visible=true | pass |
+| narrow-05-mode-chat | docs/screenshots/narrow-05-mode-chat.png | narrow | captured | DSH's own conversation view, unchanged, as one tab among seven | selected=Chat; deterministic stub reply visible=false | fail |
 | narrow-05-mode-trajectory | docs/screenshots/narrow-05-mode-trajectory.png | narrow | captured | DSH's own trajectory view, unchanged | selected mode=Trajectory | pass |
 | narrow-05-mode-watch | docs/screenshots/narrow-05-mode-watch.png | narrow | captured | the verification surface, with completed and verified kept apart | selected=Watch; completed-not-verified boundary visible=true | pass |
 | narrow-05-mode-live | docs/screenshots/narrow-05-mode-live.png | narrow | captured | every source with the permission it would ask for, and nothing started by opening the page | selected mode=Live | pass |
@@ -62,7 +62,7 @@ which nothing in the capture changes.
 | narrow-07-settings-about | docs/screenshots/narrow-07-settings-about.png | narrow | captured | versions, the DSH commit, honest attribution, and licences including the weights position | About section; active section=About | pass |
 | narrow-08-sidebar-collapsed | docs/screenshots/narrow-08-sidebar-collapsed.png | narrow | captured | the 56px rail with the mark visible and the attribution not reflowed into it | the collapsed rail: mark visible, attribution not reflowed; active section=About | pass with note |
 | compact-03-workspace | docs/screenshots/compact-03-workspace.png | compact | captured | the workspace entered without configuring anything, with the mark and attribution in place | the workspace, entered without configuring any provider; active section=n/a | pass |
-| compact-05-mode-chat | docs/screenshots/compact-05-mode-chat.png | compact | captured | DSH's own conversation view, unchanged, as one tab among seven | selected=Chat; deterministic stub reply visible=true | pass |
+| compact-05-mode-chat | docs/screenshots/compact-05-mode-chat.png | compact | captured | DSH's own conversation view, unchanged, as one tab among seven | selected=Chat; deterministic stub reply visible=false | fail |
 | compact-05-mode-trajectory | docs/screenshots/compact-05-mode-trajectory.png | compact | captured | DSH's own trajectory view, unchanged | selected mode=Trajectory | pass |
 | compact-05-mode-watch | docs/screenshots/compact-05-mode-watch.png | compact | captured | the verification surface, with completed and verified kept apart | selected=Watch; completed-not-verified boundary visible=true | pass |
 | compact-05-mode-live | docs/screenshots/compact-05-mode-live.png | compact | captured | every source with the permission it would ask for, and nothing started by opening the page | selected mode=Live | pass |

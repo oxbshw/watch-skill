@@ -45,7 +45,7 @@ reaches npm by accident.
 
 The tag namespaces must not overlap, and this is the sharpest edge in the
 arrangement. `.github/workflows/release.yml` triggers on `tags: ["v*"]` and
-publishes Core to PyPI. A Workspace release tagged `v0.1.2` would therefore
+publishes Core to PyPI. A Workspace release tagged `v0.1.3` would therefore
 publish Watch Core, built from whatever the root happened to contain. The
 `workspace-v*` prefix is what keeps that from being possible, and it is a
 convention rather than a mechanism until the release workflow refuses a tag

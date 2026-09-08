@@ -102,7 +102,7 @@ describe('the two products release on separate trains', () => {
   })
 
   test('Core classifies a prerelease from the version, not the tag', () => {
-    // `core-v0.1.2` contains a hyphen, and the `*-*` arm of that case
+    // `core-v0.1.3` contains a hyphen, and the `*-*` arm of that case
     // statement would have made every stable release a prerelease.
     const classify = CORE.slice(CORE.indexOf('case "$version" in'))
     assert.ok(classify.startsWith('case "$version" in'),
@@ -375,7 +375,7 @@ describe('the release runs the gates the way CI runs them', () => {
     // contract skips instead of running.
     //
     // workspace-ci does both. The release train did neither, and the first
-    // `deepwatch-v0.1.2` tag stopped at `inventory:check` with "upstream
+    // `deepwatch-v0.1.3` tag stopped at `inventory:check` with "upstream
     // checkout missing". Nothing was published — every publishing step is
     // gated on that job — but the release could not complete either.
     const workspace = readFileSync(join(WORKFLOWS, 'workspace-ci.yml'), 'utf8')
@@ -454,9 +454,9 @@ describe('the npm release ends in something a person can link to', () => {
     const { notes } = await import('../scripts/gen-release-notes.mjs')
     const inventory = {
       packages: [
-        { name: '@deepwatch/dsh-bundle', version: '0.1.2', bytes: 10_000,
+        { name: '@deepwatch/dsh-bundle', version: '0.1.3', bytes: 10_000,
           file: 'deepwatch-dsh-bundle-0.1.1.tgz', sha256: 'a'.repeat(64) },
-        { name: '@deepwatch/cli', version: '0.1.2', bytes: 70_000,
+        { name: '@deepwatch/cli', version: '0.1.3', bytes: 70_000,
           file: 'deepwatch-cli-0.1.1.tgz', sha256: 'b'.repeat(64) },
       ],
     }
@@ -465,7 +465,7 @@ describe('the npm release ends in something a person can link to', () => {
 
     // Nor does supplying all fourteen make it one. That was the first
     // correction, and it was also wrong: `dsh plugin add` shells out to pnpm,
-    // which resolves the bundle's `^0.1.2` sibling ranges from the registry
+    // which resolves the bundle's `^0.1.3` sibling ranges from the registry
     // whether or not the tarballs are on the command line. Tested against a
     // stock Harness profile; it reaches npmjs.org either way.
     assert.doesNotMatch(page, /takes fourteen of them, not one/)
@@ -485,8 +485,8 @@ describe('the npm release ends in something a person can link to', () => {
 describe('one repository, two trains, and no crossed wires', () => {
   test('the published smoke ignores a release from the other train', () => {
     // `release: published` carries no tag filter, and this workflow stripped
-    // `core-v` from whatever tag arrived. A `deepwatch-v0.1.2` release
-    // therefore asked PyPI for `watch-skill` version `deepwatch-v0.1.2`,
+    // `core-v` from whatever tag arrived. A `deepwatch-v0.1.3` release
+    // therefore asked PyPI for `watch-skill` version `deepwatch-v0.1.3`,
     // sixty times over ten minutes, and failed — a red check on a release that
     // had done nothing wrong.
     const post = readFileSync(join(WORKFLOWS, 'post-publish.yml'), 'utf8')
@@ -523,23 +523,24 @@ describe('the published smoke retries a flake and never a finding', () => {
   // A published smoke is the one check that runs against something nobody can
   // take back, so it has to be believable in both directions. Retrying
   // everything makes a broken publish look slow instead of broken; retrying
-  // nothing makes a CDN that is thirty seconds behind look like a broken
+  // nothing makes a replica that is thirty seconds behind look like a broken
   // publish. Each smoke retries the fetch and asserts the version outside the
   // loop, and each names the failures it will not retry.
+  const POST = readFileSync(join(WORKFLOWS, 'post-publish.yml'), 'utf8')
   const SMOKES = [
     ['release-deepwatch.yml', DEEPWATCH, 'npx-err.log',
       ['EINTEGRITY', 'ENEEDAUTH', 'E401', 'E403']],
-    ['post-publish.yml', readFileSync(join(WORKFLOWS, 'post-publish.yml'), 'utf8'),
-      'uvx-err.log', ['hash mismatch', 'Failed to build', 'No solution found']],
+    ['post-publish.yml', POST, 'uvx-err.log',
+      ['hash mismatch', 'Failed to build', 'No solution found']],
   ]
 
   for (const [name, workflow, log, fatal] of SMOKES) {
     test(`${name} bounds its retries and backs off`, () => {
-      assert.match(workflow, /attempt=0\s*\n\s*delay=5/,
+      assert.ok(/attempt=0\s*\n\s*delay=5/.test(workflow),
         `${name} does not start a bounded retry`)
-      assert.match(workflow, /delay=\$\(\(delay \* 2\)\)/,
+      assert.ok(/delay=\$\(\(\s*delay \* 2/.test(workflow),
         `${name} retries without backing off`)
-      assert.match(workflow, /if \[ "\$attempt" -ge 4 \]/,
+      assert.ok(/-ge 4 \]/.test(workflow) || /-ge "\$\{deadline\}" \]/.test(workflow),
         `${name} has no ceiling on its retries`)
     })
 
@@ -548,7 +549,7 @@ describe('the published smoke retries a flake and never a finding', () => {
         assert.ok(workflow.includes(marker),
           `${name} would retry ${marker}, which says the same thing every time`)
       }
-      assert.match(workflow, /a reason a retry cannot fix/,
+      assert.ok(workflow.includes('a reason a retry cannot fix'),
         `${name} does not distinguish the two kinds of failure`)
     })
 
@@ -566,8 +567,54 @@ describe('the published smoke retries a flake and never a finding', () => {
       // A package that installs and reports the wrong version is a finding.
       // Retrying it would eventually report the same wrong version, slower.
       const afterLoop = workflow.split('done\n').slice(1).join('done\n')
-      assert.match(afterLoop, /test "\$\{?reported\}?" = "\$\{?(version|requested)\}?"/,
+      assert.ok(/test "\$\{?reported\}?" = "\$\{?(version|requested|VERSION)\}?"/.test(afterLoop),
         `${name} asserts the version somewhere a retry could paper over`)
     })
   }
+
+  test('the npm smoke waits for the closure, not just the entry point', () => {
+    // `deepwatch-v0.1.3` went red here. The gate waited for
+    // `@deepwatch/cli@0.1.3`, which answered on the first check; npx then
+    // resolved its dependencies and `@deepwatch/dsh-bundle@^0.1.3` was not
+    // visible to that replica. Every package had in fact been published, and
+    // an independent read minutes later found all twenty.
+    const smoke = job(DEEPWATCH, 'smoke')
+    assert.ok(smoke.includes('@deepwatch/'),
+      'the readiness walk does not know the scope it is waiting for')
+    assert.ok(smoke.includes('dependencies'),
+      'the readiness walk does not follow dependencies')
+    assert.ok(smoke.includes("method: 'HEAD'"),
+      'a packument listing a tarball it cannot serve would pass')
+    assert.ok(smoke.includes('DEADLINE_MS'), 'the wait is unbounded')
+  })
+
+  test('an ETARGET is judged rather than retried or refused wholesale', () => {
+    // One error covers a replica that is behind and a dependency range that is
+    // simply wrong. Only the first is worth waiting out, and the second has to
+    // stay red -- so the package the error names is asked about directly.
+    const smoke = job(DEEPWATCH, 'smoke')
+    assert.ok(smoke.includes('*ETARGET*)'), 'ETARGET is not handled at all')
+    assert.ok(smoke.includes('is not on the registry at all'),
+      'a wrong dependency range would be retried until the deadline')
+    assert.ok(smoke.includes('outside this scope; the range is wrong'),
+      "an ETARGET for somebody else's package would be treated as ours")
+    assert.ok(smoke.includes('a replica is behind'),
+      'a genuine propagation delay is not named as one')
+  })
+
+  test('the npm smoke resolves from a cache it owns', () => {
+    const smoke = job(DEEPWATCH, 'smoke')
+    assert.ok(smoke.includes('npm_config_cache='),
+      'the cache is inherited rather than isolated')
+    assert.ok(smoke.includes('rm -rf "${npm_config_cache}"'),
+      'a warm cache would answer for the registry')
+  })
+
+  test('the npm smoke starts the CLI, not only resolves it', () => {
+    // Printing a version proves resolution. It does not prove the thing runs.
+    const smoke = job(DEEPWATCH, 'smoke')
+    assert.ok(smoke.includes('doctor --json'), 'nothing in the smoke starts the CLI')
+    assert.ok(smoke.includes('findings'),
+      'the startup check asserts nothing about what came back')
+  })
 })

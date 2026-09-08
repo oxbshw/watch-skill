@@ -40,13 +40,13 @@ const REPO = join(ROOT, '..')
  * left on an older prerelease is exactly what this exists to catch.
  */
 export const VERSIONS = {
-  core: { name: 'Watch Skill', to: '1.4.1', from: ['1.4.0rc1', '1.4.0'] },
+  core: { name: 'Watch Skill', to: '1.4.2', from: ['1.4.0rc1', '1.4.0', '1.4.1'] },
   // `0.1.0-preview.0` and `0.1.0` are gone from `from` because their promotions
   // are finished: nothing active carries either, and the one place `0.1.0`
   // still appears is `firstPublicationTag`, which records the tag that first
   // put the scope on npm. That is a fact about a release that happened, and
   // leaving the version in this list would rewrite it every time.
-  deepwatch: { name: 'DeepWatch', to: '0.1.2', from: ['0.1.1'] },
+  deepwatch: { name: 'DeepWatch', to: '0.1.3', from: ['0.1.1', '0.1.2'] },
 }
 
 /**
@@ -115,6 +115,18 @@ export const HISTORICAL = [
   // `gen-managed-runtime.mjs` own them and their `:check` gates fail when
   // they disagree with the tree -- so this project's own versions in them
   // move by regeneration, which is the only way they should move at all.
+  // The record of a capture that happened, written by the capture itself. Its
+  // `coreVersion` is the engine the screenshots were actually taken against,
+  // and a promotion that rewrites it turns evidence into a claim -- the shots
+  // stay as they were and the file starts naming a build they never saw. It
+  // moves when the gallery is recaptured, which is the only thing that should
+  // move it. `screenshot-evidence.test.mjs` fails while the two disagree.
+  // Announcement copy is written *about* a release: "1.4.1 shipped a defect"
+  // is the sentence, and promoting the number turns it into a claim about the
+  // release being announced. It is reviewed by hand before anybody posts it,
+  // which is the check that matters here.
+  'docs/announcement-drafts.md',
+  'workspace/docs/screenshots/scenario.json',
   'workspace/inventory/packages.json',
   'workspace/inventory/managed-runtime.json',
   'docs/release-proof.md',

@@ -82,6 +82,9 @@ Runnable counterparts live in the [example catalog](../examples/README.md).
 
 - [Release proof](release-proof.md) — test results, browser benchmark, packaging
   and security checks, and the limits of each.
+- [Announcement drafts](announcement-drafts.md) — unpublished copy for the
+  current release, kept here so its claims can be checked before anyone posts
+  one, with a list of the things not to say.
 - [VLM performance](vlm-performance.md) — the measured local vision model:
   revision, latency, memory, and the failure modes a live session exposed.
 - [Benchmarks](../benchmarks/) — methods, fixtures, and committed results.

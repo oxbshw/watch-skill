@@ -101,11 +101,11 @@ every version resolves the moment it is public —
 
 ## Versioning
 
-All twenty move together and share the workspace version. `0.1.2` is a stable
+All twenty move together and share the workspace version. `0.1.3` is a stable
 release: tested, documented and supported — **not 1.0**. Semantic versioning
 gives `0.x` no compatibility guarantee across minor versions, so a `0.MINOR`
 bump may change or remove surface and a patch will not. Depend on a tilde range
-(`~0.1.2`) if you want that enforced by your lockfile rather than by a
+(`~0.1.3`) if you want that enforced by your lockfile rather than by a
 changelog.
 
 Watch Core versions independently, on PyPI, and the Bridge negotiates a protocol

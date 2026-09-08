@@ -13,6 +13,19 @@ this package is the part of it that composes into somebody else's Harness.
 dsh plugin --profile web add @deepwatch/dsh-bundle
 ```
 
+Name your own profile in place of `web` if you have one, and boot the same one:
+
+```bash
+cd <your-project>
+dsh --profile web
+```
+
+There is no `web` subcommand — `dsh web` *is* `dsh --profile web`, so writing
+`dsh --profile <name> web` boots `<name>` and hands `web` to the app as an
+argument. And start it from the directory you are working in: the receipt
+journal is written under the launch directory, so a Host started elsewhere
+journals elsewhere and the Library reports `empty`.
+
 That is the whole installation. The package declares `dsh.bundle.patch`, so DSH
 reconciles it into the profile's layer stack and applies
 [`cordis.patch.yml`](cordis.patch.yml) after its own layers.
@@ -29,18 +42,19 @@ pip install 'watch-skill[standard,ocr]'
 the Bridge connects to it and every media tool answers
 `perceive.missing_dependency` on the first video.
 
-`watch-skill` is on PyPI and the newest published version is 1.4.1, the release
-this bundle was built against. The Bridge finds the executable on `PATH` and
-connects on its own; `watch-skill doctor` names the exact command for anything
-still missing.
+`watch-skill` is on PyPI. This bundle is built against **1.4.2** and needs at
+least that version: on every engine before it, `watch_moment` raises rather
+than answering, because the Bridge tried to iterate its result instead of
+serialising it. The Bridge finds the executable on `PATH` and connects on its
+own; `watch-skill doctor` names the exact command for anything still missing.
 
 ## Stability
 
-`0.1.2` — a stable release. Stable means tested, documented and supported —
+`0.1.3` — a stable release. Stable means tested, documented and supported —
 not 1.0. This is a pre-1.0 line, and semantic versioning gives `0.x` no
 compatibility guarantee across minor versions: **a `0.MINOR` bump may change or
 remove surface, and a patch will not.** Depend on it with a tilde range
-(`~0.1.2`) if you want that difference enforced by your lockfile rather than by
+(`~0.1.3`) if you want that difference enforced by your lockfile rather than by
 a changelog. The usual major-version promise starts at 1.0.
 
 ## What you get

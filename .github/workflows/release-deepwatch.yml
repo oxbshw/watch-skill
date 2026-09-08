@@ -126,7 +126,7 @@ jobs:
       # none — which is every checkout this job ever makes.
       #
       # Left out, `npm run check` stops at `inventory:check` with "upstream
-      # checkout missing", and it stopped there on the first `deepwatch-v0.1.2`
+      # checkout missing", and it stopped there on the first `deepwatch-v0.1.3`
       # tag. Nothing was published, because every publishing step is gated on
       # this job, which is the design working — but the release train had never
       # been run end to end, and this is the step it was missing.
@@ -420,34 +420,127 @@ jobs:
 
       # No checkout. The point is that somebody with nothing but node can run
       # the published CLI, and a source tree on disk would weaken that.
-      - name: The published CLI resolves and reports its own version
+      # What `npx` needs is not one package: it is the whole closure that
+      # package depends on. Waiting for `@deepwatch/cli` alone is what turned
+      # `deepwatch-v0.1.3` red — the CLI answered on the first check, npx then
+      # resolved its dependencies, and `@deepwatch/dsh-bundle@^0.1.3` was not
+      # visible to that replica yet:
+      #
+      #   npm error notarget No matching version found for
+      #                     @deepwatch/dsh-bundle@^0.1.3
+      #
+      # Every package was in fact published, and an independent read minutes
+      # later found all twenty. The gate was measuring the wrong thing.
+      - name: Wait for the whole published set, not just the entry point
         shell: bash
+        env:
+          VERSION: ${{ needs.verify.outputs.version }}
         run: |
           set -euo pipefail
-          version="${{ needs.verify.outputs.version }}"
+          cat > closure.mjs <<'NODE'
+          /**
+           * Every `@deepwatch/*` package this release's CLI needs, resolvable.
+           *
+           * The set publishes as one version, so the closure is walked at that
+           * version rather than by evaluating ranges here -- and the ranges are
+           * then checked by npm itself in the resolution step that follows,
+           * which is the only thing that can be trusted to agree with npm.
+           *
+           * Metadata and tarball are asked about separately. A packument that
+           * lists a version whose tarball 404s is a different fault from one
+           * that has not appeared, and only one of them is worth waiting out.
+           */
+          const version = process.env.VERSION
+          const DEADLINE_MS = Number(process.env.DEADLINE_MS ?? 900000)
+          const POLL_MS = 10000
+          const started = Date.now()
+          const left = () => DEADLINE_MS - (Date.now() - started)
 
-          # npm accepts a publish before every replica serves it.
-          for attempt in $(seq 1 30); do
-            if npm view "@deepwatch/cli@${version}" version >/dev/null 2>&1; then
-              echo "@deepwatch/cli@${version} is on the registry (after ${attempt} check(s))"
+          const packument = async name => {
+            const url = 'https://registry.npmjs.org/' + name.replace('/', '%2f')
+            const r = await fetch(url, { headers: { 'cache-control': 'no-cache' } })
+            if (r.status === 404) return null
+            if (!r.ok) throw new Error(name + ': registry HTTP ' + String(r.status))
+            return r.json()
+          }
+
+          const survey = async () => {
+            const need = new Set(['@deepwatch/cli'])
+            const done = new Set()
+            const missing = []
+            const broken = []
+            while (need.size > 0) {
+              const name = [...need][0]
+              need.delete(name)
+              if (done.has(name)) continue
+              done.add(name)
+              const doc = await packument(name)
+              const release = doc?.versions?.[version]
+              if (release === undefined) { missing.push(name + '@' + version); continue }
+              const head = await fetch(release.dist.tarball, { method: 'HEAD' })
+              if (!head.ok) broken.push(name + ' tarball HTTP ' + String(head.status))
+              for (const dep of Object.keys(release.dependencies ?? {})) {
+                if (dep.startsWith('@deepwatch/')) need.add(dep)
+              }
+            }
+            return { checked: done.size, missing, broken }
+          }
+
+          for (;;) {
+            const { checked, missing, broken } = await survey()
+            if (broken.length > 0) {
+              // A tarball that 404s behind a packument that lists it is not a
+              // replica catching up; it is a broken publication.
+              console.log('::error::the registry lists versions it cannot serve:')
+              for (const line of broken) console.log('  ' + line)
+              process.exit(1)
+            }
+            if (missing.length === 0) {
+              console.log(checked + ' package(s) at ' + version + ', metadata and tarballs, after '
+                + Math.round((Date.now() - started) / 1000) + 's')
               break
-            fi
-            if [ "$attempt" -eq 30 ]; then
-              echo "::error::@deepwatch/cli@${version} never appeared on the registry."
-              exit 1
-            fi
-            sleep 10
-          done
+            }
+            if (left() <= 0) {
+              console.log('::error::' + missing.length + ' package(s) never appeared at ' + version + ':')
+              for (const line of missing) console.log('  ' + line)
+              process.exit(1)
+            }
+            console.log('waiting for ' + missing.length + ' of ' + checked + ': ' + missing.join(', '))
+            await new Promise(r => setTimeout(r, POLL_MS))
+          }
+          NODE
+          node closure.mjs
 
-          # Retry only what a second attempt could plausibly fix.
+      - name: The published CLI resolves and reports its own version
+        shell: bash
+        env:
+          VERSION: ${{ needs.verify.outputs.version }}
+        run: |
+          set -euo pipefail
+          version="${VERSION}"
+
+          # A cache this job owns, so "it resolves" is a statement about the
+          # registry rather than about whatever a previous step left behind.
+          export npm_config_cache="${RUNNER_TEMP}/deepwatch-smoke-cache"
+          rm -rf "${npm_config_cache}"
+
+          # Retry only what a second attempt could plausibly fix, and decide
+          # that per failure rather than by its exit code.
           #
-          # A replica that has not caught up, a dropped connection, a 429 or a
-          # 5xx are worth another go. An authentication failure or an integrity
-          # mismatch are not: they say the same thing next time, and retrying
-          # them turns a red check into a slow red check while burying the
-          # sentence that explained it. The version assertion is outside the
-          # loop for the same reason — a CLI that installs and then reports the
-          # wrong version is a finding, not a flake.
+          # `ETARGET` is the one that needs judging. It is what a replica
+          # serving a stale packument says, and it is also what a genuinely
+          # wrong dependency range says, and those must not share a fate: the
+          # first is worth waiting out and the second has to stay red. So the
+          # package it names is asked about directly. If it is one of ours and
+          # the registry already holds this version, the resolver is behind and
+          # this is worth retrying. If it is not ours, or the version is not
+          # there at all, the range is wrong and no amount of waiting fixes it.
+          #
+          # Authentication, integrity and permission failures are never
+          # retried, and the version assertion is outside the loop for the same
+          # reason: a CLI that installs and reports the wrong version is a
+          # finding, not a flake.
+          deadline=$(( $(date +%s) + 600 ))
           attempt=0
           delay=5
           until reported=$(npx --yes "@deepwatch/cli@${version}" --version 2>npx-err.log); do
@@ -458,20 +551,63 @@ jobs:
                 cat npx-err.log
                 exit 1
                 ;;
+              *ETARGET*)
+                named=$(grep -oE '@deepwatch/[a-z-]+@[^ ]*' npx-err.log | head -1 | cut -d@ -f1-2)
+                if [ -z "${named}" ]; then
+                  echo "::error::ETARGET for a package outside this scope; the range is wrong:"
+                  cat npx-err.log
+                  exit 1
+                fi
+                if ! npm view "${named}@${version}" version >/dev/null 2>&1; then
+                  echo "::error::${named}@${version} is not on the registry at all."
+                  echo "::error::That is a wrong dependency range, not propagation."
+                  npm view "${named}" versions 2>&1 | tail -3 || true
+                  exit 1
+                fi
+                echo "ETARGET on ${named}, which the registry does hold at ${version}: a replica is behind."
+                ;;
             esac
-            if [ "$attempt" -ge 4 ]; then
-              echo "::error::npx @deepwatch/cli@${version} failed ${attempt} times over 35s:"
+            if [ "$(date +%s)" -ge "${deadline}" ]; then
+              echo "::error::npx @deepwatch/cli@${version} did not resolve within the deadline:"
               cat npx-err.log
               exit 1
             fi
             echo "attempt ${attempt} failed; retrying in ${delay}s"
             tail -n 20 npx-err.log
             sleep "${delay}"
-            delay=$((delay * 2))
+            delay=$(( delay * 2 > 60 ? 60 : delay * 2 ))
           done
 
           echo "reported: ${reported}"
           test "${reported}" = "${version}"
+
+      # Resolving and printing a version is not starting. `doctor` is the
+      # cheapest thing that actually boots the CLI, reads the machine and
+      # returns structured findings, and it is what a person runs first.
+      - name: The published CLI starts and reports on the machine
+        shell: bash
+        env:
+          VERSION: ${{ needs.verify.outputs.version }}
+        run: |
+          set -euo pipefail
+          export npm_config_cache="${RUNNER_TEMP}/deepwatch-smoke-cache"
+          export DEEPWATCH_HOME="${RUNNER_TEMP}/deepwatch-smoke-home"
+          npx --yes "@deepwatch/cli@${VERSION}" doctor --json > doctor.json 2>doctor-err.log || true
+          node -e '
+            const fs = require("node:fs")
+            const raw = fs.readFileSync("doctor.json", "utf8")
+            let report
+            try { report = JSON.parse(raw) } catch {
+              console.log("::error::doctor did not print JSON:")
+              console.log(raw.slice(0, 600))
+              process.exit(1)
+            }
+            if (!Array.isArray(report.findings) || report.findings.length === 0) {
+              console.log("::error::doctor started and reported nothing to report")
+              process.exit(1)
+            }
+            console.log("doctor: " + String(report.findings.length) + " finding(s) on a clean machine")
+          '
 
   # The announcement, after the thing it announces.
   #

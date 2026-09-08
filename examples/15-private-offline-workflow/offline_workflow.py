@@ -34,7 +34,7 @@ def _make_clip(work: Path) -> Path:
     draw.rounded_rectangle((55, 55, 905, 485), radius=24, fill=(29, 49, 66))
     draw.text((100, 125), "DEPLOYMENT STATUS", fill=(96, 210, 190), font=_font(48))
     draw.text((100, 225), "API HEALTHY", fill=(235, 239, 242), font=_font())
-    draw.text((100, 325), "RELEASE 1.4.1", fill=(242, 174, 73), font=_font())
+    draw.text((100, 325), "RELEASE 1.4.2", fill=(242, 174, 73), font=_font())
     image.save(frame)
 
     clip = work / "private-release.mp4"

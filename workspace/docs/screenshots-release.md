@@ -14,10 +14,19 @@ the surface any of them shows.
 
 The gallery next door — [`docs/screenshots/`](screenshots/), 57 shots across
 three viewports — is the one that moves every release, and it was retaken on
-2026-09-08 against **Watch Core 1.4.1** and **DeepWatch 0.1.2**, from a profile
-composed out of this candidate's own sealed tarballs, with the deterministic
-E2E scenario passing 42 of 42 in front of it. Its manifest records the engine
-version it was connected to, and a gate refuses the pair when they disagree.
+2026-09-08 against **Watch Core 1.4.2** and **DeepWatch 0.1.3**, from a profile
+`deepwatch setup --artifacts` composed out of this candidate's own packed
+tarballs, with the deterministic E2E scenario passing 42 of 42 in front of it.
+Its manifest records the engine version it was connected to, and a gate refuses
+the pair when they disagree.
+
+Fifty-five of the fifty-seven carry a `pass` verdict. Two do not, and the
+manifest says why rather than hiding it: `narrow-05-mode-chat` and
+`compact-05-mode-chat` were taken while the turn was still running, so the
+reply is not on screen in them. That is the capture's timing and not the
+product's behaviour — the same shot at the wide viewport, taken first, has the
+reply — but a shot that does not show what its caption claims is recorded as a
+failure, because the alternative is a gallery that grades itself.
 
 **How they were made.** `deepwatch setup --artifacts <dir>` composed the room
 from the twenty sealed tarballs; Watch Core was installed from the sealed wheel;

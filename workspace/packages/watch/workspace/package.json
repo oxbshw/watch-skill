@@ -1,6 +1,6 @@
 {
   "name": "@deepwatch/dsh-workspace",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Browser half: the DeepWatch product shell — modes, header, inspector and sensory timeline",
   "type": "module",
   "license": "MIT",

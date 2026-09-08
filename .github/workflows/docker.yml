@@ -88,7 +88,7 @@ jobs:
             # `release: published` does not reach this workflow when the
             # release was created by `GITHUB_TOKEN` — GitHub does not raise
             # workflow events for actions a workflow token took, which is loop
-            # prevention working as designed. `core-v1.4.1` published to PyPI,
+            # prevention working as designed. `core-v1.4.2` published to PyPI,
             # completed its Release, and no image was ever pushed for it: the
             # registry held `main` and a `latest` from some earlier path, and
             # nothing said so.
