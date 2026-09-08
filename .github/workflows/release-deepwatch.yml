@@ -126,7 +126,7 @@ jobs:
       # none — which is every checkout this job ever makes.
       #
       # Left out, `npm run check` stops at `inventory:check` with "upstream
-      # checkout missing", and it stopped there on the first `deepwatch-v0.1.3`
+      # checkout missing", and it stopped there on the first `deepwatch-v0.1.4`
       # tag. Nothing was published, because every publishing step is gated on
       # this job, which is the design working — but the release train had never
       # been run end to end, and this is the step it was missing.
@@ -422,12 +422,12 @@ jobs:
       # the published CLI, and a source tree on disk would weaken that.
       # What `npx` needs is not one package: it is the whole closure that
       # package depends on. Waiting for `@deepwatch/cli` alone is what turned
-      # `deepwatch-v0.1.3` red — the CLI answered on the first check, npx then
-      # resolved its dependencies, and `@deepwatch/dsh-bundle@^0.1.3` was not
+      # `deepwatch-v0.1.4` red — the CLI answered on the first check, npx then
+      # resolved its dependencies, and `@deepwatch/dsh-bundle@^0.1.4` was not
       # visible to that replica yet:
       #
       #   npm error notarget No matching version found for
-      #                     @deepwatch/dsh-bundle@^0.1.3
+      #                     @deepwatch/dsh-bundle@^0.1.4
       #
       # Every package was in fact published, and an independent read minutes
       # later found all twenty. The gate was measuring the wrong thing.

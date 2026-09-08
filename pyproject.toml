@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "watch-skill"
-version = "1.4.2"
+version = "1.4.3"
 description = "Give any agent a video input: watch, index, ask, and iterate on video via MCP, CLI, REST, and Python."
 # readme is produced by hatch-fancy-pypi-readme below: the file's relative
 # paths only resolve on GitHub, and PyPI renders the description standalone.
@@ -12,7 +12,18 @@ dynamic = ["readme"]
 requires-python = ">=3.11"
 license = { text = "MIT" }
 authors = [{ name = "oxbshw" }]
-keywords = ["video", "agents", "mcp", "vision", "transcription", "ffmpeg", "yt-dlp"]
+# What somebody would type looking for this, not a summary of the README.
+# PyPI matches these directly, and the previous seven named the ingredients
+# ("ffmpeg", "yt-dlp") rather than the job.
+keywords = [
+    "video", "video-understanding", "video-analysis", "screen-recording",
+    "agents", "ai-agent", "agent-tools", "agent-observability",
+    "mcp", "model-context-protocol",
+    "vision", "computer-vision", "ocr", "multimodal",
+    "transcription", "speech-to-text", "whisper",
+    "verification", "evidence", "receipts", "timestamps",
+    "local-first", "ffmpeg", "yt-dlp",
+]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
@@ -22,8 +33,13 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Topic :: Multimedia :: Video",
+    "Topic :: Multimedia :: Sound/Audio :: Speech",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
     "Topic :: Scientific/Engineering :: Image Recognition",
+    "Topic :: Software Development :: Testing",
+    "Topic :: Software Development :: Quality Assurance",
+    "Environment :: Console",
+    "Intended Audience :: Information Technology",
 ]
 dependencies = [
     "pydantic>=2.13,<3",
@@ -70,9 +86,13 @@ all = ["watch-skill[perceive,ocr,whisper,index,mcp,api,loop,attest]"]
 [project.scripts]
 watch-skill = "watch_skill.surfaces.cli.main:app"
 
+# PyPI renders these as the project sidebar, in this order. Every one points at
+# something that exists on `main`; a dead sidebar link is worse than a short one.
 [project.urls]
 Homepage = "https://github.com/oxbshw/watch-skill"
 Documentation = "https://github.com/oxbshw/watch-skill/tree/main/docs"
+"Getting started" = "https://github.com/oxbshw/watch-skill/blob/main/docs/getting-started.md"
+"Release proof" = "https://github.com/oxbshw/watch-skill/blob/main/docs/release-proof.md"
 Changelog = "https://github.com/oxbshw/watch-skill/blob/main/CHANGELOG.md"
 Issues = "https://github.com/oxbshw/watch-skill/issues"
 Source = "https://github.com/oxbshw/watch-skill"

@@ -1,6 +1,6 @@
 {
   "name": "@deepwatch/dsh-client-settings",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "Browser half: the Watch Technology & Capability Center — role bindings, engines, sources, memory, verification, diagnostics, about",
   "type": "module",
   "license": "MIT",
@@ -18,8 +18,13 @@
     "deepwatch",
     "deepseek-harness",
     "watch-skill",
+    "ai-agent",
+    "agent-workspace",
+    "ui",
+    "react",
     "settings",
-    "ui"
+    "diagnostics",
+    "role-bindings"
   ],
   "dsh": {
     "client": {

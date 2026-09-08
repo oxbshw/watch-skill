@@ -1,20 +1,40 @@
-# Watch Skill
+# Watch Skill and DeepWatch
 
-> A local-first video intelligence layer for AI agents. It turns videos, live
-> streams, meetings, and screen recordings into a searchable, timestamped
-> index, so an agent can answer questions about footage and cite the exact
-> moment behind each answer. THE LOOP extends this to the agent's own work:
-> record a browser or desktop session, critique it against plain-language
-> criteria, and prove the fix.
+> Two products in one repository, and they work apart.
+>
+> **Watch Skill** is a local-first video intelligence and verification engine
+> for AI agents. It turns videos, live streams, meetings and screen recordings
+> into a searchable, timestamped index, so an agent can answer questions about
+> footage and cite the exact moment behind each answer — and it answers *did
+> that actually work?* with a deterministic contract evaluated in a separate
+> process rather than with a model's opinion. THE LOOP extends this to the
+> agent's own work: record a browser or desktop session, critique it against
+> plain-language criteria, and prove the fix.
+>
+> **DeepWatch** is a ready-made agent workspace built on the official DeepSeek
+> Harness with Watch Skill composed in, where every tool call leaves a receipt
+> you can open and a result can be checked by something other than the agent
+> that produced it.
 
-Python 3.11+, MIT licensed. Available as Claude Code skills, 39 MCP tools, a
-CLI, a REST API, and native adapters for LangChain/LangGraph, CrewAI, the
-OpenAI Agents SDK, LlamaIndex, and AutoGen.
+Watch Skill: Python 3.11–3.13, MIT licensed, on PyPI as `watch-skill`.
+Available as Claude Code skills, 39 MCP tools, a CLI, a REST API, a stdio
+Bridge, and native adapters for LangChain/LangGraph, CrewAI, the OpenAI Agents
+SDK, LlamaIndex and AutoGen.
 
-Install:
+DeepWatch: Node `^22.19 || >=24`, MIT licensed, twenty `@deepwatch/*` packages
+on npm. Runs in a browser. The Desktop build is not distributed.
+
+Install the engine:
 
 ```bash
 uvx --from "watch-skill[standard]" watch-skill setup
+```
+
+Install the workspace:
+
+```bash
+npx --yes @deepwatch/cli setup
+npx --yes @deepwatch/cli web --workspace ./my-project
 ```
 
 MCP server configuration:
@@ -38,12 +58,20 @@ Key facts, so answers about this project stay accurate:
   boundary, not a missing feature.
 - Data lives in `~/.watch-skill/` and can be relocated with
   `WATCHSKILL_DATA_DIR`.
-- The repository holds a second product, DeepWatch: the Web and Desktop agent
-  product built on the official DeepSeek Harness packages and powered by Watch
-  Skill for perception, evidence, memory and independent verification. It lives
-  in `workspace/`, needs Node and pnpm rather than Python, and installs and
-  releases independently. Its `@deepwatch/*` npm packages are not published, so
-  `npx @deepwatch/cli` does not work.
+- The repository holds a second product, DeepWatch: the agent workspace built
+  on the official DeepSeek Harness and powered by Watch Skill for perception,
+  evidence, memory and independent verification. It lives in `workspace/`,
+  needs Node rather than Python, and releases on its own train. Twenty
+  `@deepwatch/*` packages are published to npm; `npx --yes @deepwatch/cli setup`
+  builds the runtime and `deepwatch web` opens the workspace. It runs in a
+  browser. The Desktop build is not distributed: there is no installer and no
+  packaging job, and that is stated rather than implied.
+- In DeepWatch every tool call leaves a receipt naming what it touched, every
+  declared path is resolved against one workspace boundary, and a write outside
+  it is refused *and* journalled. Results carry a verdict from Watch Core —
+  `VERIFIED`, `FAILED`, `UNVERIFIED` or `INCONCLUSIVE` — computed in a separate
+  process from a contract frozen before the work started, so it is not the
+  agent's opinion of its own output.
 - The Browser Runtime can drive a browser as well as watch one. Every action
   carries an expectation written before it runs, and an action with no
   expectation is reported as unverified rather than as a success. A page that

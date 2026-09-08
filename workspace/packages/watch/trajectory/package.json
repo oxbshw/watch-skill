@@ -1,6 +1,6 @@
 {
   "name": "@deepwatch/dsh-trajectory",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "Watch records inside the DeepSeek Harness Trajectory, with unified selection, deep links and replay",
   "type": "module",
   "license": "MIT",
@@ -18,8 +18,12 @@
     "deepwatch",
     "deepseek-harness",
     "watch-skill",
+    "ai-agent",
+    "agent-workspace",
     "trajectory",
-    "replay"
+    "receipts",
+    "audit-trail",
+    "observability"
   ],
   "main": "lib/index.js",
   "types": "lib/index.d.ts",

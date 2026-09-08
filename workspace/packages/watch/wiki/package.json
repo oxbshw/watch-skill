@@ -1,6 +1,6 @@
 {
   "name": "@deepwatch/dsh-wiki",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "Deterministic workspace wiki projections over the memory ledger",
   "type": "module",
   "license": "MIT",
@@ -18,8 +18,11 @@
     "deepwatch",
     "deepseek-harness",
     "watch-skill",
+    "ai-agent",
+    "agent-workspace",
     "wiki",
-    "documentation"
+    "knowledge-base",
+    "notes"
   ],
   "main": "lib/index.js",
   "types": "lib/index.d.ts",

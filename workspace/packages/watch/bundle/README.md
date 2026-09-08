@@ -42,7 +42,7 @@ pip install 'watch-skill[standard,ocr]'
 the Bridge connects to it and every media tool answers
 `perceive.missing_dependency` on the first video.
 
-`watch-skill` is on PyPI. This bundle is built against **1.4.2** and needs at
+`watch-skill` is on PyPI. This bundle is built against **1.4.3** and needs at
 least that version: on every engine before it, `watch_moment` raises rather
 than answering, because the Bridge tried to iterate its result instead of
 serialising it. The Bridge finds the executable on `PATH` and connects on its
@@ -50,11 +50,11 @@ own; `watch-skill doctor` names the exact command for anything still missing.
 
 ## Stability
 
-`0.1.3` — a stable release. Stable means tested, documented and supported —
+`0.1.4` — a stable release. Stable means tested, documented and supported —
 not 1.0. This is a pre-1.0 line, and semantic versioning gives `0.x` no
 compatibility guarantee across minor versions: **a `0.MINOR` bump may change or
 remove surface, and a patch will not.** Depend on it with a tilde range
-(`~0.1.3`) if you want that difference enforced by your lockfile rather than by
+(`~0.1.4`) if you want that difference enforced by your lockfile rather than by
 a changelog. The usual major-version promise starts at 1.0.
 
 ## What you get

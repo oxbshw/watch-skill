@@ -1,6 +1,6 @@
 {
   "name": "@deepwatch/dsh-client-brand",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "Browser half: the Watch product identity and its semantic status tokens",
   "type": "module",
   "license": "MIT",
@@ -18,8 +18,12 @@
     "deepwatch",
     "deepseek-harness",
     "watch-skill",
-    "brand",
-    "ui"
+    "ai-agent",
+    "agent-workspace",
+    "ui",
+    "react",
+    "design-tokens",
+    "branding"
   ],
   "dsh": {
     "client": {

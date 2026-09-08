@@ -18,7 +18,7 @@
  * for a version conflict that is not there.
  *
  * Prereleases follow npm's rule, because the whole DSH baseline is one:
- * `0.1.1-rc.2` satisfies `^0.1.1-rc.2` and does **not** satisfy `^0.1.3`. A
+ * `0.1.1-rc.2` satisfies `^0.1.1-rc.2` and does **not** satisfy `^0.1.4`. A
  * prerelease is only ever admitted by a comparator that named a prerelease on
  * the same `major.minor.patch`, which is what stops an `rc` leaking into a
  * range whose author never considered one.
@@ -149,7 +149,7 @@ function parsePartial(text) {
 function upperBound(version, given, kind) {
   const zero = /** @type {(string | number)[]} */ ([0])
   if (kind === 'caret') {
-    // `^1.2.3` → `<2.0.0`; `^0.1.3` → `<0.2.0`; `^0.0.3` → `<0.0.4`. The 0.x
+    // `^1.2.3` → `<2.0.0`; `^0.1.4` → `<0.2.0`; `^0.0.3` → `<0.0.4`. The 0.x
     // rule, where the leftmost non-zero field is the one that may not move.
     if (version.major !== 0 || given === 1) {
       return { major: version.major + 1, minor: 0, patch: 0, pre: zero }
@@ -219,7 +219,7 @@ function satisfiesAll(version, set) {
   }
   if (version.pre.length === 0) return true
   // npm's prerelease rule: a prerelease is only admitted by a range that named
-  // a prerelease on the same numeric tuple. Without this, `^0.1.3` would admit
+  // a prerelease on the same numeric tuple. Without this, `^0.1.4` would admit
   // `0.2.0-rc.1`, and every `-rc` baseline in this closure would compare wrong.
   return set.some(comparator =>
     comparator.version.pre.length > 0

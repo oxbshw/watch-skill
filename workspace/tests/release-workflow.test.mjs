@@ -102,7 +102,7 @@ describe('the two products release on separate trains', () => {
   })
 
   test('Core classifies a prerelease from the version, not the tag', () => {
-    // `core-v0.1.3` contains a hyphen, and the `*-*` arm of that case
+    // `core-v0.1.4` contains a hyphen, and the `*-*` arm of that case
     // statement would have made every stable release a prerelease.
     const classify = CORE.slice(CORE.indexOf('case "$version" in'))
     assert.ok(classify.startsWith('case "$version" in'),
@@ -375,7 +375,7 @@ describe('the release runs the gates the way CI runs them', () => {
     // contract skips instead of running.
     //
     // workspace-ci does both. The release train did neither, and the first
-    // `deepwatch-v0.1.3` tag stopped at `inventory:check` with "upstream
+    // `deepwatch-v0.1.4` tag stopped at `inventory:check` with "upstream
     // checkout missing". Nothing was published — every publishing step is
     // gated on that job — but the release could not complete either.
     const workspace = readFileSync(join(WORKFLOWS, 'workspace-ci.yml'), 'utf8')
@@ -454,9 +454,9 @@ describe('the npm release ends in something a person can link to', () => {
     const { notes } = await import('../scripts/gen-release-notes.mjs')
     const inventory = {
       packages: [
-        { name: '@deepwatch/dsh-bundle', version: '0.1.3', bytes: 10_000,
+        { name: '@deepwatch/dsh-bundle', version: '0.1.4', bytes: 10_000,
           file: 'deepwatch-dsh-bundle-0.1.1.tgz', sha256: 'a'.repeat(64) },
-        { name: '@deepwatch/cli', version: '0.1.3', bytes: 70_000,
+        { name: '@deepwatch/cli', version: '0.1.4', bytes: 70_000,
           file: 'deepwatch-cli-0.1.1.tgz', sha256: 'b'.repeat(64) },
       ],
     }
@@ -465,7 +465,7 @@ describe('the npm release ends in something a person can link to', () => {
 
     // Nor does supplying all fourteen make it one. That was the first
     // correction, and it was also wrong: `dsh plugin add` shells out to pnpm,
-    // which resolves the bundle's `^0.1.3` sibling ranges from the registry
+    // which resolves the bundle's `^0.1.4` sibling ranges from the registry
     // whether or not the tarballs are on the command line. Tested against a
     // stock Harness profile; it reaches npmjs.org either way.
     assert.doesNotMatch(page, /takes fourteen of them, not one/)
@@ -485,8 +485,8 @@ describe('the npm release ends in something a person can link to', () => {
 describe('one repository, two trains, and no crossed wires', () => {
   test('the published smoke ignores a release from the other train', () => {
     // `release: published` carries no tag filter, and this workflow stripped
-    // `core-v` from whatever tag arrived. A `deepwatch-v0.1.3` release
-    // therefore asked PyPI for `watch-skill` version `deepwatch-v0.1.3`,
+    // `core-v` from whatever tag arrived. A `deepwatch-v0.1.4` release
+    // therefore asked PyPI for `watch-skill` version `deepwatch-v0.1.4`,
     // sixty times over ten minutes, and failed — a red check on a release that
     // had done nothing wrong.
     const post = readFileSync(join(WORKFLOWS, 'post-publish.yml'), 'utf8')
@@ -573,9 +573,9 @@ describe('the published smoke retries a flake and never a finding', () => {
   }
 
   test('the npm smoke waits for the closure, not just the entry point', () => {
-    // `deepwatch-v0.1.3` went red here. The gate waited for
-    // `@deepwatch/cli@0.1.3`, which answered on the first check; npx then
-    // resolved its dependencies and `@deepwatch/dsh-bundle@^0.1.3` was not
+    // `deepwatch-v0.1.4` went red here. The gate waited for
+    // `@deepwatch/cli@0.1.4`, which answered on the first check; npx then
+    // resolved its dependencies and `@deepwatch/dsh-bundle@^0.1.4` was not
     // visible to that replica. Every package had in fact been published, and
     // an independent read minutes later found all twenty.
     const smoke = job(DEEPWATCH, 'smoke')

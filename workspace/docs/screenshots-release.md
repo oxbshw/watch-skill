@@ -14,7 +14,7 @@ the surface any of them shows.
 
 The gallery next door — [`docs/screenshots/`](screenshots/), 57 shots across
 three viewports — is the one that moves every release, and it was retaken on
-2026-09-08 against **Watch Core 1.4.2** and **DeepWatch 0.1.3**, from a profile
+2026-09-08 against **Watch Core 1.4.3** and **DeepWatch 0.1.4**, from a profile
 `deepwatch setup --artifacts` composed out of this candidate's own packed
 tarballs, with the deterministic E2E scenario passing 42 of 42 in front of it.
 Its manifest records the engine version it was connected to, and a gate refuses

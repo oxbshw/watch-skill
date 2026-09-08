@@ -3,14 +3,14 @@
   "note": "Integrity digests are over each package’s own source, path-sensitive so a rename changes them. The compatibility block is what an installed build is checked against; the migration block is what it can open.",
   "release": {
     "name": "@deepwatch/monorepo",
-    "version": "0.1.3",
+    "version": "0.1.4",
     "engines": {
       "node": "^22.19.0 || >=24.0.0"
     }
   },
   "compatibility": {
     "deepseekHarness": "0.1.1-rc.2 @ b150a551b8d465e31e418e1b2eaf5e79bbb7d28e",
-    "watchCore": "watch-skill 1.4.2, Bridge protocol 1",
+    "watchCore": "watch-skill 1.4.3, Bridge protocol 1",
     "bridgeProtocol": {
       "min": 1,
       "max": 1
@@ -47,134 +47,134 @@
     "algorithm": "sha256",
     "scope": "first-party package source, excluding node_modules and build output",
     "composition": {
-      "all": "sha256:cd01253b94497131cffbbc817e16e6696479f46c7bbb0b14349e44600bfb3bc4",
-      "runtime": "sha256:d33241d062ff36e7e42036388589061fe779a36a66d34f9fff7bb26ad21cf767"
+      "all": "sha256:58d67cb9c166ed84bcd57a8f25cc51b799898bfff86f99c6932623092b2fface",
+      "runtime": "sha256:781d715f525de5907d0c30f305dc380acd6ce3fb816b719ef891b06e63dd8005"
     },
     "packages": [
       {
         "name": "@deepwatch/dsh-adapters",
-        "version": "0.1.3",
-        "integrity": "sha256:6b6ace3c71b8b2b816d072e203709b2f4b4227e317e20d03ac26b0d13d2205e7",
+        "version": "0.1.4",
+        "integrity": "sha256:8f964f9d96710dad53c42140b4beaada495210ebcba31c5c50e32718d552945d",
         "sourceFiles": 6
       },
       {
         "name": "@deepwatch/dsh-client-brand",
-        "version": "0.1.3",
-        "integrity": "sha256:862e47c410c2dd36277d0679c75ecb380684eb574a2bb38b17f78845a10b2b0d",
+        "version": "0.1.4",
+        "integrity": "sha256:765757f2522737c5c44b6705897e8605aa29921d6e9ba229bf9829eca627f9d1",
         "sourceFiles": 10
       },
       {
         "name": "@deepwatch/dsh-bundle",
-        "version": "0.1.3",
-        "integrity": "sha256:23de503a5f6c6a79102a37fac3be18bf0e251df1a5efb916af41555b4906ea9c",
+        "version": "0.1.4",
+        "integrity": "sha256:58b3b9088c73af8bfb36a18e97297ea3664da6a306e202162592ad42a57de239",
         "sourceFiles": 7
       },
       {
         "name": "@deepwatch/cli",
-        "version": "0.1.3",
-        "integrity": "sha256:7c4ee960f8757c50729d5ad9bd7c065b59ede69a0d1e6823cd2673f95c7fb45a",
+        "version": "0.1.4",
+        "integrity": "sha256:49ff1a7dab78390128b100560ef33e5494c0a31e583c63b2e59ee475d37a429f",
         "sourceFiles": 12
       },
       {
         "name": "@deepwatch/dsh-client-evidence",
-        "version": "0.1.3",
-        "integrity": "sha256:cac9ec7f4dde201d2797436212066d4615957e350f14af143c58407374b5da86",
+        "version": "0.1.4",
+        "integrity": "sha256:b052108fd195f3b7dee6754546eeb8be4ebd8a0741214d3a482a327bb58511e1",
         "sourceFiles": 18
       },
       {
         "name": "@deepwatch/dsh-client-memory",
-        "version": "0.1.3",
-        "integrity": "sha256:5ea45d2ab38194afaea882f94d35c61751e2d1fc07e2b012a0d769c72297af8a",
+        "version": "0.1.4",
+        "integrity": "sha256:5e3bc7d8327f021034190e8ba6b8ed4e893e607c080968601c2b77a7a347c622",
         "sourceFiles": 10
       },
       {
         "name": "@deepwatch/dsh-client-remotes",
-        "version": "0.1.3",
-        "integrity": "sha256:1f8bd926e3913782d39f0f222fa44db8a76993e3e7ecd563bbddb26291481b19",
+        "version": "0.1.4",
+        "integrity": "sha256:7d3d6693e4ecce3f6d815710dc487d2f34069faf365fe13449ef5023fa637894",
         "sourceFiles": 6
       },
       {
         "name": "@deepwatch/dsh-client-settings",
-        "version": "0.1.3",
-        "integrity": "sha256:346c1dac4f19dbe921684ebeeef3046bb9ff0ba0f7f7e28dd824bef2109245b8",
+        "version": "0.1.4",
+        "integrity": "sha256:24ab0da826900d1bdb31f8da2263047c8f93cf7ad82f696f87a581bc553d7e00",
         "sourceFiles": 16
       },
       {
         "name": "@deepwatch/dsh-contracts",
-        "version": "0.1.3",
-        "integrity": "sha256:13bcfd654e00ab89c2bbbe3b8af73a6f95e5e3b54d4044920328f3c8cc76f7c7",
+        "version": "0.1.4",
+        "integrity": "sha256:e0c3a6b94b5193c2e2c68b38c0183cfb64d609cf18db6a6103e46df6d2656867",
         "sourceFiles": 18
       },
       {
         "name": "@deepwatch/dsh-core-bridge",
-        "version": "0.1.3",
-        "integrity": "sha256:1263ee6c0419489550182d23e45bce1b187cd78f7715839c75ccfd4be7ac0d5d",
+        "version": "0.1.4",
+        "integrity": "sha256:ae8ec300fc8e9c0a9ada252efec80b9af104a7a5828d4f47fd99d27a1a15b399",
         "sourceFiles": 7
       },
       {
         "name": "@deepwatch/dsh-library",
-        "version": "0.1.3",
-        "integrity": "sha256:3db65604ee313d3be25aa07faf56752ed210f4e8a95507164a96666a3702f908",
+        "version": "0.1.4",
+        "integrity": "sha256:2ca02ac699872db10b5e6a55b2e8fa94b00429a4e4ca06195b2dd96a04850cac",
         "sourceFiles": 15
       },
       {
         "name": "@deepwatch/dsh-live",
-        "version": "0.1.3",
-        "integrity": "sha256:d9fcd4933b4107a79ac9a67221555d97ac9201cc7ef7f1d0651d7d69fd943e2a",
+        "version": "0.1.4",
+        "integrity": "sha256:cc8a37ff9445b7c0484a26c3de8c69161e9c65b323a250f85316cee68282265c",
         "sourceFiles": 14
       },
       {
         "name": "@deepwatch/dsh-memory",
-        "version": "0.1.3",
-        "integrity": "sha256:0b4f4ff169713e2c72625d0513de23b9390c87f50ece90530bee963f634b4ca0",
+        "version": "0.1.4",
+        "integrity": "sha256:cb9dfc82ac69741c9804bdf9db083aba94957ffc5e87fb1ce7ab6615b829ead5",
         "sourceFiles": 11
       },
       {
         "name": "@deepwatch/dsh-sdk",
-        "version": "0.1.3",
-        "integrity": "sha256:4f778e239a86bece4a5d343fdc8cfef3be301ee43eedc0120a52bb6fde2dfc8b",
+        "version": "0.1.4",
+        "integrity": "sha256:d63f62c58f4be32c24d6f9a6b21891c96c91c83ac45e11cfcab626673367de8c",
         "sourceFiles": 7
       },
       {
         "name": "@deepwatch/dsh-technology",
-        "version": "0.1.3",
-        "integrity": "sha256:187fa714fbc7722159a86b266d74df29ec187a16ae975dc02d0c483f0bb205f3",
+        "version": "0.1.4",
+        "integrity": "sha256:78a973254df69522456205cffa1984fca96d5f5439be338df1d41d1480cfe4c2",
         "sourceFiles": 15
       },
       {
         "name": "@deepwatch/dsh-tenancy",
-        "version": "0.1.3",
-        "integrity": "sha256:f1acdd2a8c2eb5a93c1af90e896bbf46d5109706b6bcd335f8b9601ae6c3d0ae",
+        "version": "0.1.4",
+        "integrity": "sha256:696833800a4cecff87c71909f54d848307b47bbf7c434d5661e6529ef0739682",
         "sourceFiles": 9
       },
       {
         "name": "@deepwatch/dsh-tools",
-        "version": "0.1.3",
-        "integrity": "sha256:d707b60ac62b985fa10fe17d795a6b25e8e4b987f07b654c1e355a994cc5ab04",
+        "version": "0.1.4",
+        "integrity": "sha256:3fa376c7989c3bde8f1a51b0cf53cdd7f2527cd18945f218421cadb9e34dce90",
         "sourceFiles": 11
       },
       {
         "name": "@deepwatch/dsh-trajectory",
-        "version": "0.1.3",
-        "integrity": "sha256:332d64a1c6025ade914d33930dfc8b1180af7afd913d25c7edad84ce0e4cbcd4",
+        "version": "0.1.4",
+        "integrity": "sha256:91d565c9f2f7c0d237e7e50ab921fd062bedeed8e4f5da8733ad19fc6bd97a87",
         "sourceFiles": 10
       },
       {
         "name": "@deepwatch/dsh-wiki",
-        "version": "0.1.3",
-        "integrity": "sha256:adbb4621e84fa94d4d5de614ec1c2a8b72a9771994bfedca63256f85bd410dd2",
+        "version": "0.1.4",
+        "integrity": "sha256:99baba7acf540e3fedbefeb13c88ba9f721b5b00a7c9b6558e653b9f4eee0d29",
         "sourceFiles": 5
       },
       {
         "name": "@deepwatch/dsh-workspace",
-        "version": "0.1.3",
-        "integrity": "sha256:cd1a37b6c830479a7bdbc010b25908aa9302a0908cc51a7c9f683f2c01f397e3",
+        "version": "0.1.4",
+        "integrity": "sha256:63b992cb6b41e24501a26f1b71f5e705b1e45a5da9ba95ec8f3ed78f07dcf89f",
         "sourceFiles": 15
       },
       {
         "name": "@deepwatch/desktop",
-        "version": "0.1.3",
-        "integrity": "sha256:9cde9c622dc617f22a0c992664bb62d6d3893e28c5c8118e6da6c76b03831036",
+        "version": "0.1.4",
+        "integrity": "sha256:0fddd3133302a1090798c2fd821d43bf95541fa2e3dbf06063133efc63391b72",
         "sourceFiles": 11
       }
     ]
@@ -183,19 +183,19 @@
     "spdxVersion": "SPDX-2.3",
     "dataLicense": "CC0-1.0",
     "SPDXID": "SPDXRef-DOCUMENT",
-    "name": "@deepwatch/monorepo-0.1.3",
-    "documentNamespace": "https://github.com/oxbshw/watch-skill/spdx/@deepwatch/monorepo/0.1.3",
+    "name": "@deepwatch/monorepo-0.1.4",
+    "documentNamespace": "https://github.com/oxbshw/watch-skill/spdx/@deepwatch/monorepo/0.1.4",
     "creationInfo": {
       "creators": [
         "Tool: watch-gen-release-manifest"
       ],
-      "created": "2026-09-08T05:03:05Z"
+      "created": "2026-09-08T16:36:38Z"
     },
     "packages": [
       {
         "SPDXID": "SPDXRef-Package--deepwatch-dsh-adapters",
         "name": "@deepwatch/dsh-adapters",
-        "versionInfo": "0.1.3",
+        "versionInfo": "0.1.4",
         "licenseDeclared": "MIT",
         "licenseConcluded": "NOASSERTION",
         "downloadLocation": "NOASSERTION",
@@ -204,14 +204,14 @@
         "checksums": [
           {
             "algorithm": "SHA256",
-            "checksumValue": "6b6ace3c71b8b2b816d072e203709b2f4b4227e317e20d03ac26b0d13d2205e7"
+            "checksumValue": "8f964f9d96710dad53c42140b4beaada495210ebcba31c5c50e32718d552945d"
           }
         ]
       },
       {
         "SPDXID": "SPDXRef-Package--deepwatch-dsh-client-brand",
         "name": "@deepwatch/dsh-client-brand",
-        "versionInfo": "0.1.3",
+        "versionInfo": "0.1.4",
         "licenseDeclared": "MIT",
         "licenseConcluded": "NOASSERTION",
         "downloadLocation": "NOASSERTION",
@@ -220,14 +220,14 @@
         "checksums": [
           {
             "algorithm": "SHA256",
-            "checksumValue": "862e47c410c2dd36277d0679c75ecb380684eb574a2bb38b17f78845a10b2b0d"
+            "checksumValue": "765757f2522737c5c44b6705897e8605aa29921d6e9ba229bf9829eca627f9d1"
           }
         ]
       },
       {
         "SPDXID": "SPDXRef-Package--deepwatch-dsh-bundle",
         "name": "@deepwatch/dsh-bundle",
-        "versionInfo": "0.1.3",
+        "versionInfo": "0.1.4",
         "licenseDeclared": "MIT",
         "licenseConcluded": "NOASSERTION",
         "downloadLocation": "NOASSERTION",
@@ -236,14 +236,14 @@
         "checksums": [
           {
             "algorithm": "SHA256",
-            "checksumValue": "23de503a5f6c6a79102a37fac3be18bf0e251df1a5efb916af41555b4906ea9c"
+            "checksumValue": "58b3b9088c73af8bfb36a18e97297ea3664da6a306e202162592ad42a57de239"
           }
         ]
       },
       {
         "SPDXID": "SPDXRef-Package--deepwatch-cli",
         "name": "@deepwatch/cli",
-        "versionInfo": "0.1.3",
+        "versionInfo": "0.1.4",
         "licenseDeclared": "MIT",
         "licenseConcluded": "NOASSERTION",
         "downloadLocation": "NOASSERTION",
@@ -252,14 +252,14 @@
         "checksums": [
           {
             "algorithm": "SHA256",
-            "checksumValue": "7c4ee960f8757c50729d5ad9bd7c065b59ede69a0d1e6823cd2673f95c7fb45a"
+            "checksumValue": "49ff1a7dab78390128b100560ef33e5494c0a31e583c63b2e59ee475d37a429f"
           }
         ]
       },
       {
         "SPDXID": "SPDXRef-Package--deepwatch-dsh-client-evidence",
         "name": "@deepwatch/dsh-client-evidence",
-        "versionInfo": "0.1.3",
+        "versionInfo": "0.1.4",
         "licenseDeclared": "MIT",
         "licenseConcluded": "NOASSERTION",
         "downloadLocation": "NOASSERTION",
@@ -268,14 +268,14 @@
         "checksums": [
           {
             "algorithm": "SHA256",
-            "checksumValue": "cac9ec7f4dde201d2797436212066d4615957e350f14af143c58407374b5da86"
+            "checksumValue": "b052108fd195f3b7dee6754546eeb8be4ebd8a0741214d3a482a327bb58511e1"
           }
         ]
       },
       {
         "SPDXID": "SPDXRef-Package--deepwatch-dsh-client-memory",
         "name": "@deepwatch/dsh-client-memory",
-        "versionInfo": "0.1.3",
+        "versionInfo": "0.1.4",
         "licenseDeclared": "MIT",
         "licenseConcluded": "NOASSERTION",
         "downloadLocation": "NOASSERTION",
@@ -284,14 +284,14 @@
         "checksums": [
           {
             "algorithm": "SHA256",
-            "checksumValue": "5ea45d2ab38194afaea882f94d35c61751e2d1fc07e2b012a0d769c72297af8a"
+            "checksumValue": "5e3bc7d8327f021034190e8ba6b8ed4e893e607c080968601c2b77a7a347c622"
           }
         ]
       },
       {
         "SPDXID": "SPDXRef-Package--deepwatch-dsh-client-remotes",
         "name": "@deepwatch/dsh-client-remotes",
-        "versionInfo": "0.1.3",
+        "versionInfo": "0.1.4",
         "licenseDeclared": "MIT",
         "licenseConcluded": "NOASSERTION",
         "downloadLocation": "NOASSERTION",
@@ -300,14 +300,14 @@
         "checksums": [
           {
             "algorithm": "SHA256",
-            "checksumValue": "1f8bd926e3913782d39f0f222fa44db8a76993e3e7ecd563bbddb26291481b19"
+            "checksumValue": "7d3d6693e4ecce3f6d815710dc487d2f34069faf365fe13449ef5023fa637894"
           }
         ]
       },
       {
         "SPDXID": "SPDXRef-Package--deepwatch-dsh-client-settings",
         "name": "@deepwatch/dsh-client-settings",
-        "versionInfo": "0.1.3",
+        "versionInfo": "0.1.4",
         "licenseDeclared": "MIT",
         "licenseConcluded": "NOASSERTION",
         "downloadLocation": "NOASSERTION",
@@ -316,14 +316,14 @@
         "checksums": [
           {
             "algorithm": "SHA256",
-            "checksumValue": "346c1dac4f19dbe921684ebeeef3046bb9ff0ba0f7f7e28dd824bef2109245b8"
+            "checksumValue": "24ab0da826900d1bdb31f8da2263047c8f93cf7ad82f696f87a581bc553d7e00"
           }
         ]
       },
       {
         "SPDXID": "SPDXRef-Package--deepwatch-dsh-contracts",
         "name": "@deepwatch/dsh-contracts",
-        "versionInfo": "0.1.3",
+        "versionInfo": "0.1.4",
         "licenseDeclared": "MIT",
         "licenseConcluded": "NOASSERTION",
         "downloadLocation": "NOASSERTION",
@@ -332,14 +332,14 @@
         "checksums": [
           {
             "algorithm": "SHA256",
-            "checksumValue": "13bcfd654e00ab89c2bbbe3b8af73a6f95e5e3b54d4044920328f3c8cc76f7c7"
+            "checksumValue": "e0c3a6b94b5193c2e2c68b38c0183cfb64d609cf18db6a6103e46df6d2656867"
           }
         ]
       },
       {
         "SPDXID": "SPDXRef-Package--deepwatch-dsh-core-bridge",
         "name": "@deepwatch/dsh-core-bridge",
-        "versionInfo": "0.1.3",
+        "versionInfo": "0.1.4",
         "licenseDeclared": "MIT",
         "licenseConcluded": "NOASSERTION",
         "downloadLocation": "NOASSERTION",
@@ -348,14 +348,14 @@
         "checksums": [
           {
             "algorithm": "SHA256",
-            "checksumValue": "1263ee6c0419489550182d23e45bce1b187cd78f7715839c75ccfd4be7ac0d5d"
+            "checksumValue": "ae8ec300fc8e9c0a9ada252efec80b9af104a7a5828d4f47fd99d27a1a15b399"
           }
         ]
       },
       {
         "SPDXID": "SPDXRef-Package--deepwatch-dsh-library",
         "name": "@deepwatch/dsh-library",
-        "versionInfo": "0.1.3",
+        "versionInfo": "0.1.4",
         "licenseDeclared": "MIT",
         "licenseConcluded": "NOASSERTION",
         "downloadLocation": "NOASSERTION",
@@ -364,14 +364,14 @@
         "checksums": [
           {
             "algorithm": "SHA256",
-            "checksumValue": "3db65604ee313d3be25aa07faf56752ed210f4e8a95507164a96666a3702f908"
+            "checksumValue": "2ca02ac699872db10b5e6a55b2e8fa94b00429a4e4ca06195b2dd96a04850cac"
           }
         ]
       },
       {
         "SPDXID": "SPDXRef-Package--deepwatch-dsh-live",
         "name": "@deepwatch/dsh-live",
-        "versionInfo": "0.1.3",
+        "versionInfo": "0.1.4",
         "licenseDeclared": "MIT",
         "licenseConcluded": "NOASSERTION",
         "downloadLocation": "NOASSERTION",
@@ -380,14 +380,14 @@
         "checksums": [
           {
             "algorithm": "SHA256",
-            "checksumValue": "d9fcd4933b4107a79ac9a67221555d97ac9201cc7ef7f1d0651d7d69fd943e2a"
+            "checksumValue": "cc8a37ff9445b7c0484a26c3de8c69161e9c65b323a250f85316cee68282265c"
           }
         ]
       },
       {
         "SPDXID": "SPDXRef-Package--deepwatch-dsh-memory",
         "name": "@deepwatch/dsh-memory",
-        "versionInfo": "0.1.3",
+        "versionInfo": "0.1.4",
         "licenseDeclared": "MIT",
         "licenseConcluded": "NOASSERTION",
         "downloadLocation": "NOASSERTION",
@@ -396,14 +396,14 @@
         "checksums": [
           {
             "algorithm": "SHA256",
-            "checksumValue": "0b4f4ff169713e2c72625d0513de23b9390c87f50ece90530bee963f634b4ca0"
+            "checksumValue": "cb9dfc82ac69741c9804bdf9db083aba94957ffc5e87fb1ce7ab6615b829ead5"
           }
         ]
       },
       {
         "SPDXID": "SPDXRef-Package--deepwatch-dsh-sdk",
         "name": "@deepwatch/dsh-sdk",
-        "versionInfo": "0.1.3",
+        "versionInfo": "0.1.4",
         "licenseDeclared": "MIT",
         "licenseConcluded": "NOASSERTION",
         "downloadLocation": "NOASSERTION",
@@ -412,14 +412,14 @@
         "checksums": [
           {
             "algorithm": "SHA256",
-            "checksumValue": "4f778e239a86bece4a5d343fdc8cfef3be301ee43eedc0120a52bb6fde2dfc8b"
+            "checksumValue": "d63f62c58f4be32c24d6f9a6b21891c96c91c83ac45e11cfcab626673367de8c"
           }
         ]
       },
       {
         "SPDXID": "SPDXRef-Package--deepwatch-dsh-technology",
         "name": "@deepwatch/dsh-technology",
-        "versionInfo": "0.1.3",
+        "versionInfo": "0.1.4",
         "licenseDeclared": "MIT",
         "licenseConcluded": "NOASSERTION",
         "downloadLocation": "NOASSERTION",
@@ -428,14 +428,14 @@
         "checksums": [
           {
             "algorithm": "SHA256",
-            "checksumValue": "187fa714fbc7722159a86b266d74df29ec187a16ae975dc02d0c483f0bb205f3"
+            "checksumValue": "78a973254df69522456205cffa1984fca96d5f5439be338df1d41d1480cfe4c2"
           }
         ]
       },
       {
         "SPDXID": "SPDXRef-Package--deepwatch-dsh-tenancy",
         "name": "@deepwatch/dsh-tenancy",
-        "versionInfo": "0.1.3",
+        "versionInfo": "0.1.4",
         "licenseDeclared": "MIT",
         "licenseConcluded": "NOASSERTION",
         "downloadLocation": "NOASSERTION",
@@ -444,14 +444,14 @@
         "checksums": [
           {
             "algorithm": "SHA256",
-            "checksumValue": "f1acdd2a8c2eb5a93c1af90e896bbf46d5109706b6bcd335f8b9601ae6c3d0ae"
+            "checksumValue": "696833800a4cecff87c71909f54d848307b47bbf7c434d5661e6529ef0739682"
           }
         ]
       },
       {
         "SPDXID": "SPDXRef-Package--deepwatch-dsh-tools",
         "name": "@deepwatch/dsh-tools",
-        "versionInfo": "0.1.3",
+        "versionInfo": "0.1.4",
         "licenseDeclared": "MIT",
         "licenseConcluded": "NOASSERTION",
         "downloadLocation": "NOASSERTION",
@@ -460,14 +460,14 @@
         "checksums": [
           {
             "algorithm": "SHA256",
-            "checksumValue": "d707b60ac62b985fa10fe17d795a6b25e8e4b987f07b654c1e355a994cc5ab04"
+            "checksumValue": "3fa376c7989c3bde8f1a51b0cf53cdd7f2527cd18945f218421cadb9e34dce90"
           }
         ]
       },
       {
         "SPDXID": "SPDXRef-Package--deepwatch-dsh-trajectory",
         "name": "@deepwatch/dsh-trajectory",
-        "versionInfo": "0.1.3",
+        "versionInfo": "0.1.4",
         "licenseDeclared": "MIT",
         "licenseConcluded": "NOASSERTION",
         "downloadLocation": "NOASSERTION",
@@ -476,14 +476,14 @@
         "checksums": [
           {
             "algorithm": "SHA256",
-            "checksumValue": "332d64a1c6025ade914d33930dfc8b1180af7afd913d25c7edad84ce0e4cbcd4"
+            "checksumValue": "91d565c9f2f7c0d237e7e50ab921fd062bedeed8e4f5da8733ad19fc6bd97a87"
           }
         ]
       },
       {
         "SPDXID": "SPDXRef-Package--deepwatch-dsh-wiki",
         "name": "@deepwatch/dsh-wiki",
-        "versionInfo": "0.1.3",
+        "versionInfo": "0.1.4",
         "licenseDeclared": "MIT",
         "licenseConcluded": "NOASSERTION",
         "downloadLocation": "NOASSERTION",
@@ -492,14 +492,14 @@
         "checksums": [
           {
             "algorithm": "SHA256",
-            "checksumValue": "adbb4621e84fa94d4d5de614ec1c2a8b72a9771994bfedca63256f85bd410dd2"
+            "checksumValue": "99baba7acf540e3fedbefeb13c88ba9f721b5b00a7c9b6558e653b9f4eee0d29"
           }
         ]
       },
       {
         "SPDXID": "SPDXRef-Package--deepwatch-dsh-workspace",
         "name": "@deepwatch/dsh-workspace",
-        "versionInfo": "0.1.3",
+        "versionInfo": "0.1.4",
         "licenseDeclared": "MIT",
         "licenseConcluded": "NOASSERTION",
         "downloadLocation": "NOASSERTION",
@@ -508,14 +508,14 @@
         "checksums": [
           {
             "algorithm": "SHA256",
-            "checksumValue": "cd1a37b6c830479a7bdbc010b25908aa9302a0908cc51a7c9f683f2c01f397e3"
+            "checksumValue": "63b992cb6b41e24501a26f1b71f5e705b1e45a5da9ba95ec8f3ed78f07dcf89f"
           }
         ]
       },
       {
         "SPDXID": "SPDXRef-Package--deepwatch-desktop",
         "name": "@deepwatch/desktop",
-        "versionInfo": "0.1.3",
+        "versionInfo": "0.1.4",
         "licenseDeclared": "MIT",
         "licenseConcluded": "NOASSERTION",
         "downloadLocation": "NONE",
@@ -524,7 +524,7 @@
         "checksums": [
           {
             "algorithm": "SHA256",
-            "checksumValue": "9cde9c622dc617f22a0c992664bb62d6d3893e28c5c8118e6da6c76b03831036"
+            "checksumValue": "0fddd3133302a1090798c2fd821d43bf95541fa2e3dbf06063133efc63391b72"
           }
         ]
       }

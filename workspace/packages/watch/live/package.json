@@ -1,6 +1,6 @@
 {
   "name": "@deepwatch/dsh-live",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "Live mode — cursors, gaps, clocks, reconnect and a bounded buffer",
   "type": "module",
   "license": "MIT",
@@ -18,8 +18,12 @@
     "deepwatch",
     "deepseek-harness",
     "watch-skill",
+    "ai-agent",
+    "agent-workspace",
     "live",
-    "capture"
+    "capture",
+    "screen-capture",
+    "streaming"
   ],
   "dsh": {
     "client": {

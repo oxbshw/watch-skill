@@ -401,7 +401,7 @@ wrong amount, and all you have is a screen recording of it.**
 Give the recording to the engine · ask it where the amount went wrong · repair
 the code · prove the repair from outside the agent · come back to the record
 tomorrow. Every figure and verdict below is from the run that produced this
-section, on Watch Skill 1.4.2 and DeepWatch 0.1.3.
+section, on Watch Skill 1.4.3 and DeepWatch 0.1.3.
 
 ### 1 · Give the recording to the engine
 
@@ -543,10 +543,10 @@ verdict of its own.
 Every image here is a photograph of a running build, and they do not all come
 from the same one — saying they did would be the easiest false claim on this
 page. The onboarding shot is from the current gallery, retaken against **Watch
-Skill 1.4.2 and DeepWatch 0.1.3** with the deterministic browser scenario
+Skill 1.4.3 and DeepWatch 0.1.4** with the deterministic browser scenario
 passing 42 of 42 in front of it; a gate refuses the set when the shots and the
 engine they were taken against disagree. The Settings and result-card shots are
-from the `1.4.0` / `0.1.1` candidate, kept because nothing in this release
+from the `1.4.3` / `0.1.4` candidate, kept because nothing in this release
 changed the surface each one shows.
 
 **[The screenshot page](workspace/docs/screenshots-release.md)** names the build

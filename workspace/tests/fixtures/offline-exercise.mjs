@@ -243,7 +243,7 @@ try {
       manifest,
       packageBytes: bytes,
       keys: [{ keyId: 'dev-1', publicKeyPem: publicKey.export({ type: 'spki', format: 'pem' }).toString(), production: false }],
-      installedVersion: '0.1.3',
+      installedVersion: '0.1.4',
       currentSchemaVersion: 1,
       supportedSchemaVersions: [1],
     })

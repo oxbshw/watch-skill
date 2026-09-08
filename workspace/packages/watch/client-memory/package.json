@@ -1,6 +1,6 @@
 {
   "name": "@deepwatch/dsh-client-memory",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "Browser half: the Memory product surfaces — taste, timeline, wiki, decisions, lessons, failures, sources",
   "type": "module",
   "license": "MIT",
@@ -18,8 +18,12 @@
     "deepwatch",
     "deepseek-harness",
     "watch-skill",
+    "ai-agent",
+    "agent-workspace",
+    "ui",
+    "react",
     "memory",
-    "ui"
+    "timeline"
   ],
   "dsh": {
     "client": {

@@ -62,8 +62,8 @@ function runtime(packages, { harness = null } = {}) {
 describe('the digest is a function of the composition and nothing else', () => {
   test('the same packages give the same digest', () => {
     const packages = [
-      { name: `${SCOPE}/dsh-tools`, version: '0.1.3' },
-      { name: `${SCOPE}/dsh-contracts`, version: '0.1.3' },
+      { name: `${SCOPE}/dsh-tools`, version: '0.1.4' },
+      { name: `${SCOPE}/dsh-contracts`, version: '0.1.4' },
     ]
     assert.equal(compositionDigest(packages), compositionDigest(packages))
   })
@@ -102,8 +102,8 @@ describe('the digest is a function of the composition and nothing else', () => {
 describe('reading an installation', () => {
   test('every first-party package is found, sorted', () => {
     const nodeModules = runtime({
-      [`${SCOPE}/dsh-tools`]: '0.1.3',
-      [`${SCOPE}/dsh-contracts`]: '0.1.3',
+      [`${SCOPE}/dsh-tools`]: '0.1.4',
+      [`${SCOPE}/dsh-contracts`]: '0.1.4',
       '@other/thing': '9.9.9',
     })
     const found = readComposition(nodeModules)
@@ -123,7 +123,7 @@ describe('reading an installation', () => {
   })
 
   test('a package whose manifest will not parse is left out rather than guessed', () => {
-    const nodeModules = runtime({ [`${SCOPE}/dsh-tools`]: '0.1.3' })
+    const nodeModules = runtime({ [`${SCOPE}/dsh-tools`]: '0.1.4' })
     const broken = join(nodeModules, SCOPE, 'dsh-broken')
     mkdirSync(broken, { recursive: true })
     writeFileSync(join(broken, 'package.json'), '{ not json', 'utf8')
@@ -149,7 +149,7 @@ describe('reading an installation', () => {
 describe('nothing about this machine gets into the report', () => {
   test('no absolute path, user name or clock reading is rendered', () => {
     const nodeModules = runtime({
-      [`${SCOPE}/dsh-tools`]: '0.1.3',
+      [`${SCOPE}/dsh-tools`]: '0.1.4',
     }, { harness: HARNESS_VERSION })
     const rendered = renderProvenance(describeProvenance(nodeModules)).join('\n')
 
@@ -160,14 +160,14 @@ describe('nothing about this machine gets into the report', () => {
   })
 
   test('the serialised provenance carries no path either', () => {
-    const nodeModules = runtime({ [`${SCOPE}/dsh-tools`]: '0.1.3' })
+    const nodeModules = runtime({ [`${SCOPE}/dsh-tools`]: '0.1.4' })
     const serialised = JSON.stringify(describeProvenance(nodeModules))
     assert.equal(serialised.includes(BASE), false)
     assert.equal(serialised.includes(nodeModules.replace(/\\/g, '\\\\')), false)
   })
 
   test('two machines with the same install agree', () => {
-    const packages = { [`${SCOPE}/dsh-tools`]: '0.1.3' }
+    const packages = { [`${SCOPE}/dsh-tools`]: '0.1.4' }
     assert.equal(
       describeProvenance(runtime(packages)).compositionDigest,
       describeProvenance(runtime(packages)).compositionDigest)
