@@ -123,9 +123,13 @@ jobs:
       - uses: astral-sh/setup-uv@v7
         with:
           python-version: ${{ matrix.python }}
+      # `espeak-ng` alongside ffmpeg because the fixture generator needs a system
+      # voice for the speech fixture. Without one it still renders the visual
+      # fixture and says it skipped the other, which would leave half the
+      # video-backend group gated on a package that costs a few hundred KB.
       - name: Install ffmpeg (Linux)
         if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg espeak-ng
       - name: Install ffmpeg (Windows)
         if: runner.os == 'Windows'
         run: choco install ffmpeg -y --no-progress
@@ -151,13 +155,35 @@ jobs:
       - name: Install Playwright browser + recording ffmpeg (Windows)
         if: runner.os == 'Windows'
         run: uv run playwright install chromium ffmpeg
+      # Generated, never committed -- they are 700 KB of rendered video and the
+      # generator is deterministic. Nineteen seconds here, and the whole
+      # `tests/bench/test_video_backend_*` group runs instead of skipping
+      # itself with "fixtures not generated". It skipped in every CI run this
+      # workflow has ever had, and the suite was green the entire time.
+      - name: Generate the video-backend fixtures
+        run: uv run python benchmarks/video_backends/make_fixtures.py
+
+      # `pipefail` explicitly. GitHub's `shell: bash` sets it, and relying on
+      # that would mean a pipeline whose exit status is `tee`'s -- a suite that
+      # failed would report success, which is the one outcome this job may
+      # never produce.
       - name: Run the offline suite
-        run: uv run pytest -q -m "not network" --timeout 300
+        run: |
+          set -eo pipefail
+          uv run pytest -q -m "not network" --timeout 300 -rs | tee pytest-report.txt
+        shell: bash
         env:
           # keep CI hermetic: no live vision backends, no cloud keys
           WATCHSKILL_VISION_CHEAP_PROVIDER: anthropic
           WATCHSKILL_VISION_STRONG_PROVIDER: anthropic
           FASTEMBED_CACHE_PATH: ci-model-cache
+
+      # A skip reads as a pass, so every one of them has to be a skip somebody
+      # signed off on. This fails the job on any other.
+      - name: No unaccounted-for skips
+        if: always()
+        shell: bash
+        run: uv run python scripts/check_skips.py pytest-report.txt
 
   # The always-present Core status, and the context branch protection requires.
   #

@@ -496,6 +496,16 @@ jobs:
         working-directory: .
         shell: bash
         run: |
+          # `.venv`, which is where the repository's own tooling looks, and
+          # `.venv-core` for the Bridge suites that name it. They were only
+          # `.venv-core` before, and `workspace-canonical.test.mjs` asks
+          # `<root>/.venv` whether Core agrees with the launcher -- so five
+          # tests in the "Core agrees with the launcher" group skipped
+          # themselves on every platform cell with "no interpreter at
+          # .../.venv", in a job that had just installed Core one directory
+          # along. A skip reads as a pass.
+          uv venv .venv
+          uv pip install --python .venv --quiet .
           uv venv .venv-core
           uv pip install --python .venv-core --quiet .
           # `$GITHUB_WORKSPACE`, not `$PWD`. Bash on a Windows runner reports
