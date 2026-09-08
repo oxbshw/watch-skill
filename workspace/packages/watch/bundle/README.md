@@ -16,7 +16,7 @@ dsh plugin --profile web add @deepwatch/dsh-bundle
 Name your own profile in place of `web` if you have one, and boot the same one:
 
 ```bash
-cd /path/to/your/project
+cd <your-project>
 dsh --profile web
 ```
 
@@ -43,10 +43,10 @@ the Bridge connects to it and every media tool answers
 `perceive.missing_dependency` on the first video.
 
 `watch-skill` is on PyPI. This bundle is built against **1.4.2** and needs at
-least that: on 1.4.1 and earlier, `watch_moment` raises rather than answering,
-because the Bridge tried to iterate its result instead of serialising it. The
-Bridge finds the executable on `PATH` and connects on its own; `watch-skill
-doctor` names the exact command for anything still missing.
+least that version: on every engine before it, `watch_moment` raises rather
+than answering, because the Bridge tried to iterate its result instead of
+serialising it. The Bridge finds the executable on `PATH` and connects on its
+own; `watch-skill doctor` names the exact command for anything still missing.
 
 ## Stability
 

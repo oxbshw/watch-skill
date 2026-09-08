@@ -247,7 +247,7 @@ above is what tells you the pieces work together.
 ### 3. Into a DeepSeek Harness you already run
 
 ```bash
-cd /path/to/the/project/you/are/working/on
+cd <your-project>
 dsh plugin --profile <your-profile> add @deepwatch/dsh-bundle
 dsh --profile <your-profile>
 ```

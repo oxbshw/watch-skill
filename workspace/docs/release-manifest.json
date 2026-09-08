@@ -66,13 +66,13 @@
       {
         "name": "@deepwatch/dsh-bundle",
         "version": "0.1.3",
-        "integrity": "sha256:afafc0f1f746e35066102a1cf5dd89bbc9385a7564135be782dc30dc456c8bf6",
+        "integrity": "sha256:23de503a5f6c6a79102a37fac3be18bf0e251df1a5efb916af41555b4906ea9c",
         "sourceFiles": 7
       },
       {
         "name": "@deepwatch/cli",
         "version": "0.1.3",
-        "integrity": "sha256:deb20fa9b00171c8897afd4ec20df702703af445716ca6dcddbe9a4892e43df7",
+        "integrity": "sha256:7c4ee960f8757c50729d5ad9bd7c065b59ede69a0d1e6823cd2673f95c7fb45a",
         "sourceFiles": 12
       },
       {
@@ -189,7 +189,7 @@
       "creators": [
         "Tool: watch-gen-release-manifest"
       ],
-      "created": "2026-09-08T02:45:29Z"
+      "created": "2026-09-08T05:03:05Z"
     },
     "packages": [
       {
@@ -236,7 +236,7 @@
         "checksums": [
           {
             "algorithm": "SHA256",
-            "checksumValue": "afafc0f1f746e35066102a1cf5dd89bbc9385a7564135be782dc30dc456c8bf6"
+            "checksumValue": "23de503a5f6c6a79102a37fac3be18bf0e251df1a5efb916af41555b4906ea9c"
           }
         ]
       },
@@ -252,7 +252,7 @@
         "checksums": [
           {
             "algorithm": "SHA256",
-            "checksumValue": "deb20fa9b00171c8897afd4ec20df702703af445716ca6dcddbe9a4892e43df7"
+            "checksumValue": "7c4ee960f8757c50729d5ad9bd7c065b59ede69a0d1e6823cd2673f95c7fb45a"
           }
         ]
       },

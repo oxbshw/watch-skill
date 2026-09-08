@@ -121,6 +121,11 @@ export const HISTORICAL = [
   // stay as they were and the file starts naming a build they never saw. It
   // moves when the gallery is recaptured, which is the only thing that should
   // move it. `screenshot-evidence.test.mjs` fails while the two disagree.
+  // Announcement copy is written *about* a release: "1.4.1 shipped a defect"
+  // is the sentence, and promoting the number turns it into a claim about the
+  // release being announced. It is reviewed by hand before anybody posts it,
+  // which is the check that matters here.
+  'docs/announcement-drafts.md',
   'workspace/docs/screenshots/scenario.json',
   'workspace/inventory/packages.json',
   'workspace/inventory/managed-runtime.json',
