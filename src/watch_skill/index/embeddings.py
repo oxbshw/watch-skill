@@ -10,15 +10,71 @@ FTS5 keyword search only — hybrid retrieval just loses its vector half.
 """
 from __future__ import annotations
 
+import gc
 import struct
 import sys
+import threading
+import time
 
 MODEL_NAME = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
 _models: dict[str, object] = {}
 _unavailable = False
+# Guards _models: a load, a use and the idle unload never interleave, and two
+# first searches arriving together construct the model once.
+_lock = threading.Lock()
+_last_used = 0.0
+_idle_timer: threading.Timer | None = None
+
+
+def _idle_seconds() -> float:
+    """Seconds without an embedding call before the model is released; 0 keeps it."""
+    from watch_skill.config import get_settings  # noqa: PLC0415
+
+    return get_settings().embedding_idle_seconds
+
+
+def _touch() -> None:
+    """Record a use and re-arm the idle release. The caller holds ``_lock``."""
+    global _last_used, _idle_timer
+    _last_used = time.monotonic()
+    if _idle_timer is not None:
+        _idle_timer.cancel()
+        _idle_timer = None
+    idle = _idle_seconds()
+    if idle <= 0:
+        return
+    _idle_timer = threading.Timer(idle, _unload_if_idle, args=(idle,))
+    _idle_timer.daemon = True
+    _idle_timer.start()
+
+
+def _unload_if_idle(idle: float) -> None:
+    """Release every loaded model if none was used for ``idle`` seconds.
+
+    The model is most of a server's memory (about 580 MB of ~680 MB for the
+    default), and a long-lived server spends most of its life not embedding.
+    The native libraries stay imported, so the next load happens on whatever
+    thread needs it without the import deadlock described in
+    :func:`warm_native_imports`.
+    """
+    with _lock:
+        if _models and time.monotonic() - _last_used >= idle - 0.5:
+            _models.clear()
+            gc.collect()
+            print("[watch-skill] embedding model released after idle", file=sys.stderr)
 
 
 def _get_model(name: str):
+    """The loaded model for ``name``, loading it first if needed; ``None`` if unavailable."""
+    with _lock:
+        model = _load_locked(name)
+        if model is not None:
+            _touch()
+        return model
+
+
+def _load_locked(name: str):
+    """Load ``name`` into ``_models`` once. The caller holds ``_lock``."""
     global _unavailable
     if name in _models or _unavailable:
         return _models.get(name)
@@ -76,45 +132,25 @@ def warm_native_imports() -> None:
     same shape and one of them warmed. It lives here now so a third cannot be
     written without it.
 
-    Best-effort by design: :func:`warm_up` degrades to keyword-only search on a
-    box where fastembed is missing or unloadable, and serving must start either
-    way.
+    Only the imports happen here, not the model: the native extensions are
+    what must load on a thread the server owns, while the model itself loads
+    on first use and is released after ``embedding_idle_seconds`` without one.
+    That keeps an idle server at about 100 MB instead of about 680 MB.
+
+    Best-effort by design: a box where fastembed is missing or unloadable
+    degrades to keyword-only search, and serving must start either way.
     """
     try:
-        from watch_skill.index.db import connect, get_meta  # noqa: PLC0415
-
-        warm_up()
-        # Retrieval embeds with the model recorded in the index, not the
-        # current default, so an index built by an older release pulls a
-        # second model in -- lazily, on a worker thread, which is the exact
-        # deadlock this function exists to prevent. Warm that one too.
-        conn = connect()
-        try:
-            recorded = get_meta(conn, "embedding_model")
-        finally:
-            conn.close()
-        if recorded and recorded != MODEL_NAME:
-            warm_up(recorded)
+        import_native_stack()
     except Exception as exc:  # noqa: BLE001 - never block serving on a warmup
         print(f"[watch-skill] embedding warmup skipped ({exc})", file=sys.stderr)
 
 
-def warm_up(model_name: str | None = None) -> bool:
-    """Load the embedding stack on the CALLING thread. Returns availability.
-
-    Import this chain — fastembed, then numpy's and onnxruntime's native
-    extensions — on a long-lived server's main thread, before any request can
-    reach it. Every call site is otherwise lazy, so in the stdio MCP server the
-    first import lands inside a FastMCP worker thread, where loading the numpy
-    C extension deadlocks: the thread parks in ``create_module`` and never
-    returns. Two consecutive faulthandler dumps 35s apart showed the identical
-    frame, and the tools that need vectors (``search_videos``, ``ask_video``)
-    hung forever while ``list_videos``, which never embeds, stayed instant.
-
-    Warming costs a few seconds of startup once and is best-effort: a box
-    without fastembed degrades to keyword-only search exactly as before.
-    """
-    return _get_model(model_name or MODEL_NAME) is not None
+def import_native_stack() -> None:
+    """Import fastembed and the numpy and onnxruntime extensions it loads."""
+    import fastembed  # noqa: F401, PLC0415
+    import numpy  # noqa: F401, PLC0415
+    import onnxruntime  # noqa: F401, PLC0415
 
 
 def embed_texts(texts: list[str], model_name: str | None = None) -> list[list[float]] | None:

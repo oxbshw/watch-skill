@@ -190,6 +190,14 @@ class Settings(BaseSettings):
         "two models never mix. The big models want ~2 GB+ RAM: not for the "
         "8 GB reference machine.",
     )
+    embedding_idle_seconds: float = Field(
+        default=300,
+        description="Release the embedding model after this many seconds "
+        "without a search or index write, and load it again on the next one "
+        "(a fraction of a second from the local cache). The model is most of "
+        "a server's memory: ~100 MB idle instead of ~680 MB. 0 keeps it "
+        "loaded for the life of the process.",
+    )
     webhook_url: str | None = Field(
         default=None,
         description="POST every monitor event here as JSON (n8n/Zapier/your "
