@@ -47,22 +47,21 @@ def test_serve_warms_native_imports_on_the_main_thread_before_running() -> None:
     warmed_on: list[str] = []
     order: list[str] = []
 
-    def fake_warm(model_name: str | None = None) -> bool:
+    def fake_warm() -> None:
         warmed_on.append(threading.current_thread().name)
         order.append("warm")
-        return True
 
     def fake_run(*args: object, **kwargs: object) -> None:
         order.append("run")
 
     from watch_skill.index import embeddings
 
-    original_warm, original_run = embeddings.warm_up, server.mcp.run
-    embeddings.warm_up, server.mcp.run = fake_warm, fake_run
+    original_warm, original_run = embeddings.import_native_stack, server.mcp.run
+    embeddings.import_native_stack, server.mcp.run = fake_warm, fake_run
     try:
         server.main()
     finally:
-        embeddings.warm_up, server.mcp.run = original_warm, original_run
+        embeddings.import_native_stack, server.mcp.run = original_warm, original_run
 
     assert order[0] == "warm", "the import must be warmed before serving starts"
     assert "run" in order, "serving must still start after the warmup"
@@ -78,53 +77,43 @@ def test_warmup_failure_does_not_block_serving() -> None:
 
     started: list[str] = []
 
-    def exploding_warm(model_name: str | None = None) -> bool:
+    def exploding_warm() -> None:
         raise RuntimeError("no fastembed on this box")
 
     from watch_skill.index import embeddings
 
-    original_warm, original_run = embeddings.warm_up, server.mcp.run
-    embeddings.warm_up = exploding_warm
+    original_warm, original_run = embeddings.import_native_stack, server.mcp.run
+    embeddings.import_native_stack = exploding_warm
     server.mcp.run = lambda *a, **k: started.append("run")
     try:
         server.main()
     finally:
-        embeddings.warm_up, server.mcp.run = original_warm, original_run
+        embeddings.import_native_stack, server.mcp.run = original_warm, original_run
 
     assert started == ["run"]
 
 
-def test_warmup_also_covers_the_model_the_index_actually_uses() -> None:
-    """An index built by an older release records a different model name.
+def test_warmup_imports_the_native_stack_without_loading_a_model() -> None:
+    """Startup pays for the imports, not the model.
 
-    Retrieval embeds with the recorded model, so warming only the current
-    default leaves a second native load to happen lazily — on a worker thread,
-    which is the deadlock. This index really does record all-MiniLM-L6-v2
-    while the default is the multilingual model, so the gap is not theoretical.
+    The imports are what must happen on the main thread. The model is most of
+    the process's memory and loads on first use instead — including a model
+    an older index recorded, which now loads on a worker thread with the
+    native extensions already in place.
     """
+    pytest.importorskip("fastembed")
+    import sys
+
     from watch_skill.index import embeddings
-    from watch_skill.index.db import connect, set_meta
-    from watch_skill.surfaces.mcp import server
 
-    conn = connect()
+    models = dict(embeddings._models)
+    embeddings._models.clear()
     try:
-        with conn:
-            set_meta(conn, "embedding_model", "sentence-transformers/all-MiniLM-L6-v2")
+        embeddings.warm_native_imports()
+        assert embeddings._models == {}, "the warm-up loaded a model"
+        assert {"fastembed", "numpy", "onnxruntime"} <= set(sys.modules)
     finally:
-        conn.close()
-
-    warmed: list[str | None] = []
-    original_warm, original_run = embeddings.warm_up, server.mcp.run
-    embeddings.warm_up = lambda model_name=None: (warmed.append(model_name), True)[1]
-    server.mcp.run = lambda *a, **k: None
-    try:
-        server.main()
-    finally:
-        embeddings.warm_up, server.mcp.run = original_warm, original_run
-
-    assert "sentence-transformers/all-MiniLM-L6-v2" in [w for w in warmed if w], (
-        f"the index's own embedding model was never warmed (warmed: {warmed})"
-    )
+        embeddings._models.update(models)
 
 
 @pytest.mark.parametrize("path", HOT_PATH_SPAWN_SITES, ids=lambda p: p.name)

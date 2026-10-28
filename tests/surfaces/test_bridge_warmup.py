@@ -81,10 +81,10 @@ def test_the_warm_up_never_stops_a_server_from_starting(
     """A box that cannot load the model still serves, keyword-only, and says so."""
     from watch_skill.index import embeddings
 
-    def _explode(_model: str | None = None) -> bool:
+    def _explode() -> None:
         raise RuntimeError("no onnxruntime for this CPU")
 
-    monkeypatch.setattr(embeddings, "warm_up", _explode)
+    monkeypatch.setattr(embeddings, "import_native_stack", _explode)
     embeddings.warm_native_imports()
     assert "warmup skipped" in capsys.readouterr().err
 
@@ -92,14 +92,15 @@ def test_the_warm_up_never_stops_a_server_from_starting(
 def test_the_shared_warm_up_has_exactly_one_implementation() -> None:
     """A second copy is a second place to forget it.
 
-    Discriminated by what the implementation actually does — call `warm_up`,
-    which is the load — rather than by how long it is. A delegating wrapper
-    imports the shared one and calls it; only the owner touches `warm_up`.
+    Discriminated by what the implementation actually does — call
+    `import_native_stack`, which is the import — rather than by how long it is.
+    A delegating wrapper imports the shared one and calls it; only the owner
+    touches `import_native_stack`.
     """
     owners = [
         py.relative_to(SRC).as_posix()
         for py in sorted(SRC.rglob("*.py"))
-        if "warm_up(" in py.read_text(encoding="utf-8-sig")
+        if "import_native_stack(" in py.read_text(encoding="utf-8-sig")
     ]
     assert owners == ["index/embeddings.py"], (
-        f"the load is performed in more than one place: {owners}")
+        f"the import is performed in more than one place: {owners}")
