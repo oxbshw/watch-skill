@@ -55,7 +55,7 @@ perceive = [
     "scenedetect>=0.7,<0.8",
     "opencv-python-headless>=5.0,<6",
     "imagehash>=4.3,<5",
-    "Pillow>=12.3,<13",
+    "Pillow>=12.3,<14",
 ]
 ocr = ["rapidocr>=3.9,<4", "onnxruntime>=1.27,<2", "python-bidi>=0.6,<1"]
 whisper = ["faster-whisper>=1.2,<2"]
